@@ -24,3 +24,5 @@ npm run validate
 Edit the factory in `factory/`, run `node factory/install.mjs`, and commit both.
 The host, status and recovery commands are the `automation:*` npm scripts; see
 the factory README for GitHub configuration and the local host.
+
+Smoke check after the factory reset.
