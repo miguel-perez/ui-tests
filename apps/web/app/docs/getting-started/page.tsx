@@ -1,31 +1,25 @@
-import Link from 'next/link'
-import { commands, example } from '../../../lib/copy'
-/** The getting-started guide: install, init and mount, write the test, run dev mode, read the result. */
-export default function GettingStarted() {
-  return <main className="mx-auto max-w-3xl px-6 py-12"><Link className="text-sm font-semibold text-primary" href="/">← ui-tests</Link><h1 className="mt-10 text-4xl font-semibold tracking-tight">Your first local rehearsal</h1><p className="mt-5">Node 22 or newer and a Next.js App Router application are required. Start with yourself in development mode.</p>
-    <section className="mt-10"><h2 className="text-2xl font-semibold">1. Install</h2><pre><code>{commands.install}</code></pre></section>
-    <section className="mt-10"><h2 className="text-2xl font-semibold">2. Init and mount</h2><pre><code>{commands.init}</code></pre><p>Init writes the config, example test and Vitest exclusion. It preserves existing author files. Mount the integration in your root layout:</p><pre><code>{`import { UiTests } from 'ui-tests/next'
+import { CodeBlock } from '../../../components/code-block'
+import { SiteShell } from '../../../components/site-shell'
+import { commands, example, guide, snippets, rehearsal, progress, ui } from '../../../lib/copy'
 
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body>{children}<UiTests /></body></html>
-}`}</code></pre><p>Mount the player at <code>app/ui-tests/[run]/page.tsx</code>:</p><pre><code>{`import { Player } from 'ui-tests/next'
-export default async function Page({ params, searchParams }: {
-  params: Promise<{ run: string }>
-  searchParams: Promise<{ token?: string }>
-}) {
-  return <Player runId={(await params).run} token={(await searchParams).token} />
-}`}</code></pre><p>Mount the development collector at <code>app/api/ui-tests/route.ts</code>:</p><pre><code>{`import { createCollector } from 'ui-tests/server'
-export const runtime = 'nodejs'
-export const GET = createCollector()
-export const POST = GET`}</code></pre></section>
-    <section className="mt-10"><h2 className="text-2xl font-semibold">3. Write the test</h2><p>Save this as <code>landing.ui.test.ts</code>. Write the people’s goal, not instructions about the interface.</p><pre><code>{example}</code></pre><p>Configure the local target in <code>ui-tests.config.ts</code>:</p><pre><code>{`import { defineConfig } from 'ui-tests'
-export default defineConfig({ target: { url: process.env.PREVIEW_URL ?? 'http://localhost:3000' } })`}</code></pre></section>
-    <section className="mt-10"><h2 className="text-2xl font-semibold">4. Run dev mode</h2><p>Start your app, then run the rehearsal in another terminal from the application directory:</p><pre><code>{`${commands.dev}\n# In another terminal\n${commands.run}`}</code></pre><p>Consent, read the scenario, begin the task and use “I’m done” or “I can’t do this”. Answer the ease and confidence questions even if you stopped.</p><p>To run this repository from a clean clone:</p><pre><code>{`npm ci
-npm run dev
-# In another terminal
-cd apps/web
-npx ui-tests`}</code></pre></section>
-    <section className="mt-10"><h2 className="text-2xl font-semibold">5. Read the result</h2><p>The CLI runs the outcome against the saved URL and DOM, then opens a trace on a separate local port. The trace includes issue moments, expected and actual evidence, timing and the derived rules. It is never served by your app.</p><p className="my-4 font-semibold">Rehearsal: 0 of 5 planned attempts recorded.</p><p>A rehearsal does not count toward the sample plan. A minutes-only goal produces issues without a result sentence. Stop the viewer with Ctrl+C; local records are in <code>.ui-tests/</code>.</p><pre><code>{`npx ui-tests lint
-npx ui-tests verify <run-id>`}</code></pre></section>
-  </main>
+const anchors = ['install', 'init-and-mount', 'write-the-test', 'run-dev-mode', 'read-the-result']
+function StepLinks() {
+  return <ol>{guide.titles.map((title, index) => <li key={title}><a href={`#${anchors[index]}`}><span className="step-number">0{index + 1}</span>{title}</a></li>)}</ol>
+}
+
+export default function GettingStarted() {
+  return <SiteShell><div className="docs-layout site-width">
+    <div className="docs-sidebar"><nav aria-label={ui.steps}><p className="eyebrow">{ui.steps}</p><StepLinks /></nav></div>
+    <main id="content" className="docs-content">
+      <header className="docs-intro"><p className="eyebrow">{ui.guide}</p><h1>{guide.title}</h1><p>{guide.intro}</p></header>
+      <aside className="tip" aria-label={ui.tip}><strong>{ui.tip}</strong><p>{guide.requirement}</p></aside>
+      <section id={anchors[0]}><h2><span>01</span>{guide.titles[0]}</h2><p>{guide.install}</p><CodeBlock code={commands.install} label={ui.shell} language={ui.shell} /></section>
+      <section id={anchors[1]}><h2><span>02</span>{guide.titles[1]}</h2><CodeBlock code={commands.init} label={ui.shell} language={ui.shell} /><p>{guide.init}</p><CodeBlock code={snippets.layout} label="app/layout.tsx" /><p>{guide.player}</p><CodeBlock code={snippets.player} label="app/ui-tests/[run]/page.tsx" /><p>{guide.collector}</p><CodeBlock code={snippets.collector} label="app/api/ui-tests/route.ts" /></section>
+      <section id={anchors[2]}><h2><span>03</span>{guide.titles[2]}</h2><p>{guide.write}</p><CodeBlock code={example} label="landing.ui.test.ts" /><p>{guide.scenario}</p><p>{guide.config}</p><CodeBlock code={snippets.config} label="ui-tests.config.ts" /></section>
+      <section id={anchors[3]}><h2><span>04</span>{guide.titles[3]}</h2><p>{guide.run}</p><CodeBlock code={snippets.run} label={ui.shell} language={ui.shell} /><p>{guide.participate}</p><p>{guide.clone}</p><CodeBlock code={snippets.clone} label={ui.shell} language={ui.shell} /></section>
+      <section id={anchors[4]}><h2><span>05</span>{guide.titles[4]}</h2><p>{guide.result}</p><p>{guide.isolation}</p><CodeBlock code={rehearsal} label={ui.output} language={ui.output} /><p>{guide.sentence}</p><p>{guide.finish}</p><CodeBlock code={snippets.inspect} label={ui.shell} language={ui.shell} /></section>
+      <aside className="progress-note" aria-label={ui.progress}><p>{progress}</p></aside>
+    </main>
+    <div className="docs-rail"><nav aria-label={ui.onPage}><p className="eyebrow">{ui.onPage}</p><StepLinks /></nav></div>
+  </div></SiteShell>
 }
