@@ -1,19 +1,51 @@
 #!/usr/bin/env node
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join, resolve } from 'node:path';
-import { pathToFileURL } from 'node:url';
-import { cliPrefix, payloadDir, render, requiredScripts, seedDir, templateVars, topLevel, walk } from './lib.mjs';
+import { existsSync, lstatSync, mkdirSync, readdirSync, readFileSync, realpathSync, rmdirSync, unlinkSync, writeFileSync } from 'node:fs';
+import { basename, dirname, join, sep } from 'node:path';
+import { MANIFEST, cliPrefix, isMain, managedPaths, manifestText, payloadDir, readManifest, render, requiredScripts, resolveRepoName, safeRelative, seedDir, templateVars, topLevel, walk } from './lib.mjs';
+
+const PRUNABLE = ['.archon/workflows', '.github/workflows'];
+
+function insideRoot(realRoot, path) {
+  return path === realRoot || path.startsWith(realRoot.endsWith(sep) ? realRoot : realRoot + sep);
+}
 
 export function install({ root = topLevel(), prefix = cliPrefix([], root), log = console.log } = {}) {
   const vars = templateVars(root, prefix);
-  const report = { written: [], unchanged: [], seeded: [], skipped: [], ignores: [], scripts: [] };
-  for (const rel of walk(payloadDir)) {
+  const repo = resolveRepoName(root);
+  if (!repo.fromRemote) log(`warning: no usable origin remote; {{REPO}} falls back to "${repo.name}". Run \`git remote add origin git@github.com:OWNER/NAME.git\` and reinstall.`);
+  const previous = readManifest(root);
+  if (previous === undefined) throw new Error(`${MANIFEST} is not a JSON list of paths; repair or delete it, then reinstall.`);
+  const report = { written: [], removed: [], unchanged: [], seeded: [], skipped: [], ignores: [], scripts: [] };
+  const managed = managedPaths();
+  for (const rel of managed) {
     const target = join(root, rel);
     const content = render(readFileSync(join(payloadDir, rel), 'utf8'), vars);
     if (existsSync(target) && readFileSync(target, 'utf8') === content) { report.unchanged.push(rel); continue; }
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, content);
     report.written.push(rel);
+  }
+  const current = new Set(managed);
+  const realRoot = realpathSync(root);
+  for (const rel of [...new Set(previous || [])].sort()) {
+    if (current.has(rel) || !safeRelative(rel) || !existsSync(join(root, rel))) continue;
+    // Text checks cannot see symlinks: the real parent must stay inside the real root, and only files are removed.
+    if (!insideRoot(realRoot, realpathSync(dirname(join(root, rel)))) || lstatSync(join(root, rel)).isDirectory()) {
+      report.skipped.push(rel);
+      continue;
+    }
+    unlinkSync(join(root, rel));
+    report.removed.push(rel);
+    for (let dir = dirname(rel); PRUNABLE.some(base => dir.startsWith(base + '/')); dir = dirname(dir)) {
+      if (!lstatSync(join(root, dir)).isDirectory() || readdirSync(join(root, dir)).length) break;
+      rmdirSync(join(root, dir));
+    }
+  }
+  const manifestPath = join(root, MANIFEST);
+  if (!existsSync(manifestPath) || readFileSync(manifestPath, 'utf8') !== manifestText(managed)) {
+    mkdirSync(dirname(manifestPath), { recursive: true });
+    writeFileSync(manifestPath, manifestText(managed));
+    report.written.push(MANIFEST);
   }
   for (const rel of walk(seedDir)) {
     if (rel === 'gitignore.lines') continue;
@@ -44,7 +76,7 @@ export function install({ root = topLevel(), prefix = cliPrefix([], root), log =
   return report;
 }
 
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
+if (isMain(import.meta.url)) {
   const root = topLevel();
   install({ root, prefix: cliPrefix(process.argv.slice(2), root) });
 }

@@ -112,13 +112,47 @@ def wait_port(port):
 WEBHOOK_EVENTS = ["check_run", "issues", "issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
 
 def sync_webhook(repository, url, hook_id, secret, env):
-    """Point the saved hook at url, creating one when none is saved. Returns the hook id, or None to retry."""
+    """Point the saved hook at url, else adopt this host's previous tunnel hook, else create one.
+    Returns the hook id, or None to retry. The secret only travels on stdin."""
     config = {"url": url + "/webhooks/github", "content_type": "json", "secret": secret, "insecure_ssl": "0"}
+    hooks = "repos/" + repository + "/hooks"
+    previous_file = runtime / "tunnel-url.previous"
+    previous = previous_file.read_text().strip() if previous_file.exists() else ""
+    # Only a hook still pointing at the tunnel this host last registered is evidence of ownership.
+    owned_url = previous + "/webhooks/github" if re.fullmatch(r"https://[a-z0-9-]+\.trycloudflare\.com", previous) else None
+
+    def update(candidate):
+        return run([gh, "api", "--method", "PATCH", hooks + "/" + candidate, "--input", "-"],
+                   input=json.dumps({"config": config, "events": WEBHOOK_EVENTS, "active": True}), env=env).returncode == 0
+
+    def registered(candidate):
+        atomic_write(previous_file, url + "\n")
+        return candidate
+
+    def save(candidate):
+        atomic_write(runtime / "webhook-id", candidate + "\n")
+        return registered(candidate)
+
     if hook_id.isdigit():
-        result = run([gh, "api", "--method", "PATCH", "repos/" + repository + "/hooks/" + hook_id, "--input", "-"],
-                     input=json.dumps({"config": config, "active": True}), env=env)
-        return hook_id if result.returncode == 0 else None
-    result = run([gh, "api", "--method", "POST", "repos/" + repository + "/hooks", "--input", "-"],
+        if update(hook_id):
+            return registered(hook_id)
+        if run([gh, "api", hooks + "/" + hook_id], env=env).returncode == 0:
+            return None
+        # The saved hook is gone; forget it and fall through to adopt or create.
+        (runtime / "webhook-id").unlink(missing_ok=True)
+    listed = run([gh, "api", hooks + "?per_page=100"], env=env)
+    if listed.returncode != 0:
+        return None
+    try:
+        existing = json.loads(listed.stdout)
+    except ValueError:
+        return None
+    for hook in existing if isinstance(existing, list) else []:
+        config_url = str((hook.get("config") or {}).get("url") or "") if isinstance(hook, dict) else ""
+        if owned_url and config_url == owned_url:
+            candidate = str(hook.get("id", ""))
+            return save(candidate) if candidate.isdigit() and update(candidate) else None
+    result = run([gh, "api", "--method", "POST", hooks, "--input", "-"],
                  input=json.dumps({"name": "web", "active": True, "events": WEBHOOK_EVENTS, "config": config}), env=env)
     if result.returncode != 0:
         return None
@@ -126,10 +160,7 @@ def sync_webhook(repository, url, hook_id, secret, env):
         created = str(json.loads(result.stdout)["id"])
     except (ValueError, KeyError, TypeError):
         return None
-    if not created.isdigit():
-        return None
-    atomic_write(runtime / "webhook-id", created + "\n")
-    return created
+    return save(created) if created.isdigit() else None
 
 archon = os.environ["ARCHON_LOCAL_BINARY"]
 gh = shutil.which("gh")
@@ -156,6 +187,8 @@ try:
             if auth.returncode or not auth.stdout.strip():
                 raise RuntimeError("GitHub authentication unavailable. Run gh auth login, then restart.")
             env = os.environ.copy()
+            # Archon forwards its env to worktree agents; the host root would mask each worktree's own root.
+            env.pop("ARCHON_REPO_ROOT", None)
             env.update({"GITHUB_TOKEN": auth.stdout.strip(), "WEBHOOK_SECRET": secret,
                         "GITHUB_BOT_MENTION": "archon", "HOST": "127.0.0.1"})
             allowed = os.environ.get("ARCHON_ALLOWED_USERS", "").strip()
@@ -176,13 +209,13 @@ try:
             launch([archon, "serve", "--cwd", str(root), "--port", "3090", "--quiet"], "server.log", env)
             wait_port(3090)
             proxy_env = os.environ.copy()
-            for key in ("GITHUB_TOKEN", "GH_TOKEN", "WEBHOOK_SECRET"):
+            for key in ("GITHUB_TOKEN", "GH_TOKEN", "WEBHOOK_SECRET", "ARCHON_REPO_ROOT"):
                 proxy_env.pop(key, None)
             launch([sys.executable, str(scripts_dir / "archon-webhook-proxy.py"), "--secret-file", str(secret_path)], "proxy.log", proxy_env)
             wait_port(3091)
             # Cloudflare receives no GitHub credential or webhook secret in its environment.
             tunnel_env = os.environ.copy()
-            for key in ("GITHUB_TOKEN", "GH_TOKEN", "WEBHOOK_SECRET"):
+            for key in ("GITHUB_TOKEN", "GH_TOKEN", "WEBHOOK_SECRET", "ARCHON_REPO_ROOT"):
                 tunnel_env.pop(key, None)
             (runtime / "tunnel-url").unlink(missing_ok=True)
             launch([str(cloudflared), "tunnel", "--no-autoupdate", "--url", "http://127.0.0.1:3091"], "tunnel.log", tunnel_env, True)

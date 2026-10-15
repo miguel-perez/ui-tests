@@ -23,3 +23,5 @@ jobs:
           node-version: '22.22.0'
       - run: mkdir -p .archon/runtime
       - run: npm run validate
+      - name: Runtime tests under a foreign ARCHON_REPO_ROOT
+        run: ARCHON_REPO_ROOT="$(mktemp -d)" python3 scripts/test_archon_runtime.py

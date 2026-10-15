@@ -104,7 +104,7 @@ class RuntimeTests(unittest.TestCase):
         production = dict(ARCHON_HOME='/production/home', DATABASE_URL='postgres://production',
                           ARCHON_DOCKER='true', WORKSPACE_PATH='/registered/source',
                           CALLER_SETTING='retained', ARCHON_LOCAL_BINARY='/verified/archon')
-        allowed = dict(production, ARCHON_ALLOWED_USERS='alice,bob')
+        allowed = dict(production, ARCHON_ALLOWED_USERS='alice,bob', ARCHON_REPO_ROOT='/host/checkout')
         for configured in (production, {'ARCHON_LOCAL_BINARY': '/verified/archon'}, allowed):
             with self.subTest(configured=configured), tempfile.TemporaryDirectory(dir=runtime.ROOT / '.archon/runtime') as temp:
                 root = Path(temp)
@@ -128,6 +128,8 @@ class RuntimeTests(unittest.TestCase):
                     self.assertEqual(launch.call_args.args[0],
                                      ['/verified/archon', 'serve', '--cwd', str(root), '--port', '3090', '--quiet'])
                     env = launch.call_args.kwargs['env']
+                    # The host root must not leak into agents running in worktrees.
+                    self.assertNotIn('ARCHON_REPO_ROOT', env)
                     for key in ('ARCHON_HOME', 'DATABASE_URL', 'ARCHON_DOCKER', 'WORKSPACE_PATH', 'CALLER_SETTING'):
                         if key in configured:
                             self.assertEqual(env[key], configured[key])
@@ -136,15 +138,103 @@ class RuntimeTests(unittest.TestCase):
                     expected_users = configured.get('ARCHON_ALLOWED_USERS', 'test-token')
                     self.assertEqual(env['GITHUB_ALLOWED_USERS'], expected_users)
                     self.assertEqual(launch.call_args.kwargs['cwd'], root)
-                    namespace['run'] = lambda command, **kwargs: SimpleNamespace(returncode=0, stdout='{"id": 42}')
-                    self.assertEqual(namespace['sync_webhook']('owner/name', 'https://t.trycloudflare.com', '', 'x' * 32, {}), '42')
-                    self.assertEqual((storage / 'webhook-id').read_text(), '42\n')
-                    namespace['run'] = lambda command, **kwargs: SimpleNamespace(returncode=1, stdout='')
-                    self.assertIsNone(namespace['sync_webhook']('owner/name', 'https://t.trycloudflare.com', '42', 'x' * 32, {}))
-                    namespace['run'] = lambda command, **kwargs: SimpleNamespace(returncode=0, stdout='not json')
-                    (storage / 'webhook-id').unlink()
-                    self.assertIsNone(namespace['sync_webhook']('owner/name', 'https://t.trycloudflare.com', '', 'x' * 32, {}))
-                    self.assertFalse((storage / 'webhook-id').exists())
+                    self.check_sync_webhook(namespace, storage)
+
+    def check_sync_webhook(self, namespace, storage):
+        secret, url = 's' * 40, 'https://new.trycloudflare.com'
+        saved = storage / 'webhook-id'
+        previous = storage / 'tunnel-url.previous'
+
+        def stub(responses):
+            calls = []
+
+            def run(command, **kwargs):
+                calls.append((command, kwargs.get('input')))
+                method = command[command.index('--method') + 1] if '--method' in command else 'GET'
+                path = next(item for item in command if item.startswith('repos/')).split('?')[0]
+                code, stdout = responses.get((method, path), (1, ''))
+                return SimpleNamespace(returncode=code, stdout=stdout)
+            namespace['run'] = run
+            return calls
+
+        def sync(hook_id):
+            return namespace['sync_webhook']('owner/name', url, hook_id, secret, {})
+
+        hooks = 'repos/owner/name/hooks'
+        events = ['check_run', 'issues', 'issue_comment', 'pull_request',
+                  'pull_request_review', 'pull_request_review_comment']
+        saved.unlink(missing_ok=True)
+        previous.unlink(missing_ok=True)
+        # Create: nothing to adopt, so POST the full hook definition with the secret on stdin only.
+        calls = stub({('GET', hooks): (0, '[{"id": 7, "config": {"url": "https://example.com/webhooks/github"}}]'),
+                      ('POST', hooks): (0, '{"id": 42}')})
+        self.assertEqual(sync(''), '42')
+        self.assertEqual(saved.read_text(), '42\n')
+        # Every successful sync records the URL this host registered, for later adoption.
+        self.assertEqual(previous.read_text(), url + '\n')
+        posted = [(command, body) for command, body in calls if 'POST' in command]
+        self.assertEqual(len(posted), 1)
+        payload = json.loads(posted[0][1])
+        self.assertEqual(payload['name'], 'web')
+        self.assertEqual(payload['events'], events)
+        self.assertEqual(payload['config']['content_type'], 'json')
+        self.assertEqual(payload['config']['secret'], secret)
+        self.assertEqual(payload['config']['url'], url + '/webhooks/github')
+        for command, _ in calls:
+            self.assertFalse(any(secret in item for item in command))
+        # PATCH success keeps the saved id.
+        calls = stub({('PATCH', hooks + '/42'): (0, '{"id": 42}')})
+        self.assertEqual(sync('42'), '42')
+        self.assertEqual([command[3] for command, _ in calls], ['PATCH'])
+        self.assertEqual(json.loads(calls[0][1])['config']['secret'], secret)
+        self.assertEqual(json.loads(calls[0][1])['events'], events)
+        # PATCH failing while the hook still exists retries without touching the saved id.
+        calls = stub({('GET', hooks + '/42'): (0, '{"id": 42}')})
+        self.assertIsNone(sync('42'))
+        self.assertEqual(saved.read_text(), '42\n')
+        self.assertFalse(any('POST' in command for command, _ in calls))
+        # Deleted hook: unlink the stale id, then create in the same call.
+        calls = stub({('GET', hooks): (0, '[]'), ('POST', hooks): (0, '{"id": 43}')})
+        self.assertEqual(sync('42'), '43')
+        self.assertEqual(saved.read_text(), '43\n')
+        self.assertEqual([command[3] if '--method' in command else 'GET' for command, _ in calls],
+                         ['PATCH', 'GET', 'GET', 'POST'])
+        listed = json.dumps([{'id': 7, 'config': {'url': 'https://example.com/webhooks/github'}},
+                             {'id': 9, 'config': {'url': 'https://old.trycloudflare.com/webhooks/github'}}])
+        # Another host's tunnel hook is never adopted: with no previous URL, or a different one, create.
+        for recorded in (None, 'https://mine.trycloudflare.com'):
+            saved.unlink()
+            if recorded is None:
+                previous.unlink(missing_ok=True)
+            else:
+                previous.write_text(recorded + '\n')
+            calls = stub({('GET', hooks): (0, listed), ('PATCH', hooks + '/9'): (0, '{"id": 9}'),
+                          ('POST', hooks): (0, '{"id": 50}')})
+            self.assertEqual(sync(''), '50')
+            self.assertEqual(saved.read_text(), '50\n')
+            self.assertFalse(any('PATCH' in command for command, _ in calls))
+        # Adopt this host's own previous tunnel hook instead of creating a duplicate.
+        saved.unlink()
+        previous.write_text('https://old.trycloudflare.com\n')
+        calls = stub({('GET', hooks): (0, listed), ('PATCH', hooks + '/9'): (0, '{"id": 9}')})
+        self.assertEqual(sync(''), '9')
+        self.assertEqual(saved.read_text(), '9\n')
+        self.assertEqual(previous.read_text(), url + '\n')
+        patched = [(command, body) for command, body in calls if 'PATCH' in command]
+        self.assertEqual(len(patched), 1)
+        self.assertIn(hooks + '/9', patched[0][0])
+        self.assertEqual(json.loads(patched[0][1])['config']['url'], url + '/webhooks/github')
+        self.assertEqual(json.loads(patched[0][1])['events'], events)
+        self.assertFalse(any('POST' in command for command, _ in calls))
+        # Unusable responses retry and write nothing.
+        saved.unlink()
+        for body in ('not json', '{"id": "abc"}', '{}'):
+            stub({('GET', hooks): (0, '[]'), ('POST', hooks): (0, body)})
+            self.assertIsNone(sync(''))
+            self.assertFalse(saved.exists())
+        stub({('POST', hooks): (0, '{"id": 44}')})
+        self.assertIsNone(sync(''))
+        self.assertFalse(saved.exists())
 
     def test_service_plist_retains_configured_production_state(self):
         import io
@@ -251,7 +341,9 @@ class RuntimeTests(unittest.TestCase):
         env = dict(os.environ)
         env.pop('ARCHON_REPO_ROOT', None)
         detected = real_subprocess.run(['bash', '-c', probe], capture_output=True, text=True, env=env, cwd=runtime.HERE)
-        self.assertEqual(Path(detected.stdout.strip()).resolve(), runtime.ROOT)
+        # Compare against git itself, not runtime.ROOT, which honours an inherited ARCHON_REPO_ROOT.
+        top = real_subprocess.check_output(['git', 'rev-parse', '--show-toplevel'], cwd=runtime.HERE, text=True, env=env).strip()
+        self.assertEqual(Path(detected.stdout.strip()).resolve(), Path(top).resolve())
 
     def test_selection_fails_closed(self):
         with tempfile.TemporaryDirectory(dir=runtime.ROOT / '.archon/runtime') as temp:
