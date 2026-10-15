@@ -4,7 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync, realpathSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
-import { render, requiredScripts, topLevel, repoName } from './lib.mjs';
+import { managedPaths, render, requiredScripts, topLevel, repoName } from './lib.mjs';
 import { install } from './install.mjs';
 
 function consumer(t) {
@@ -56,7 +56,7 @@ test('a second install changes nothing', t => {
   install({ root, prefix: 'factory', log() {} });
   const before = readFileSync(join(root, 'package.json'), 'utf8');
   const report = install({ root, prefix: 'factory', log() {} });
-  assert.deepEqual([report.written, report.seeded, report.ignores, report.scripts], [[], [], [], []]);
+  assert.deepEqual([report.written, report.removed, report.seeded, report.ignores, report.scripts], [[], [], [], [], []]);
   assert.equal(readFileSync(join(root, 'package.json'), 'utf8'), before);
 });
 
@@ -93,4 +93,54 @@ test('an empty prefix renders factory paths as ./', t => {
   const root = consumer(t);
   install({ root, prefix: '', log() {} });
   assert.match(readFileSync(join(root, '.github/workflows/merge-gate.yml'), 'utf8'), /python3 \.\/automation\/merge_gate\.py/);
+});
+
+test('install records the managed set and removes paths the payload no longer ships', t => {
+  const root = consumer(t);
+  const first = install({ root, prefix: 'factory', log() {} });
+  assert.deepEqual(first.removed, []);
+  const manifestPath = join(root, '.archon/factory-managed.json');
+  const managed = managedPaths();
+  assert.deepEqual(managed, [...managed].sort());
+  assert.equal(readFileSync(manifestPath, 'utf8'), JSON.stringify(managed, null, 2) + '\n');
+  // Simulate a payload rename: the previous install shipped a file the payload no longer has.
+  const old = '.archon/workflows/renamed/old-step.yaml';
+  mkdirSync(join(root, '.archon/workflows/renamed'), { recursive: true });
+  writeFileSync(join(root, old), 'stale\n');
+  writeFileSync(manifestPath, JSON.stringify([...managed, old, 'gone-already.yml'].sort(), null, 2) + '\n');
+  const logged = [];
+  const report = install({ root, prefix: 'factory', log: line => logged.push(line) });
+  assert.deepEqual(report.removed, [old]);
+  assert.ok(!existsSync(join(root, old)));
+  assert.ok(!existsSync(join(root, '.archon/workflows/renamed')));
+  assert.ok(existsSync(join(root, '.archon/workflows')));
+  assert.ok(logged.includes(`removed: ${old}`));
+  assert.equal(readFileSync(manifestPath, 'utf8'), JSON.stringify(managed, null, 2) + '\n');
+});
+
+test('manifest entries outside the consumer root are never deleted', t => {
+  const root = consumer(t);
+  install({ root, prefix: 'factory', log() {} });
+  const outside = join(root, '..', `outside-${process.pid}.txt`);
+  writeFileSync(outside, 'keep\n');
+  t.after(() => rmSync(outside, { force: true }));
+  writeFileSync(join(root, '.archon/factory-managed.json'), JSON.stringify([`../outside-${process.pid}.txt`, outside]));
+  const report = install({ root, prefix: 'factory', log() {} });
+  assert.deepEqual(report.removed, []);
+  assert.ok(existsSync(outside));
+});
+
+test('install warns when {{REPO}} falls back to the directory name', t => {
+  const root = consumer(t);
+  execFileSync('git', ['-C', root, 'remote', 'remove', 'origin']);
+  const logged = [];
+  install({ root, prefix: 'factory', log: line => logged.push(line) });
+  const fallback = root.split('/').pop();
+  const warning = logged.find(line => line.startsWith('warning:'));
+  assert.ok(warning, 'expected a fallback warning');
+  assert.match(warning, new RegExp(`"${fallback}"`));
+  assert.match(warning, /git remote add origin/);
+  const quiet = [];
+  install({ root: consumer(t), prefix: 'factory', log: line => quiet.push(line) });
+  assert.ok(!quiet.some(line => line.startsWith('warning:')));
 });
