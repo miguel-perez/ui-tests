@@ -8,6 +8,7 @@ import { participantView, createCollector } from '../packages/ui-tests/src/serve
 import { promise, ladder, sections, example, commands, progress } from '../apps/web/lib/copy'
 
 beforeEach(resetContexts)
+/** Authors the landing context with the given goal options and returns the contexts. */
 function authored(options = { happyPath: ['/', '/docs/getting-started'] }) {
   context({ users: 'developers', purpose: 'find out whether people can use what I built' }, () => {
     goal('start trying ui-tests', options, () => outcome(({ page }) => expect(page.url()).toContain('/docs/getting-started')))
@@ -57,6 +58,7 @@ describe('authoring and derivation', () => {
     assert(lint(getContexts()).map(d => d.rule)).toEqual(['one-outcome', 'under-30-minutes'])
   })
 })
+/** Matches any string. */
 function expectString() { return assert.any(String) }
 describe('storage, verification and participant boundary', () => {
   it('persists runs, attempts, events and snapshots; validates tokens', async () => {

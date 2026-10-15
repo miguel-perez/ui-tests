@@ -2,7 +2,9 @@ import { parseHTML } from 'linkedom'
 import { AssertionFailure, MissingEvidence, type Goal, type Hook, type Snapshot } from './index.ts'
 import type { Event, Run } from './storage.ts'
 
+/** The verdict of one hook: correct, incorrect with a diff, or unknown with a reason and possibly a pending validation question. */
 export type HookResult = { status: 'correct' | 'incorrect' | 'unknown'; reason?: string; diff?: { expected: unknown; actual: unknown }; question?: { question: string; choices: string[]; expected: string } }
+/** Runs one hook against a snapshot, exposing a DOM query and the participant's recorded answers. Assertion failures become `incorrect`; missing evidence becomes `unknown`. */
 async function execute(hook: Hook, snapshot: Snapshot | undefined, answers: Record<string, string> = {}): Promise<HookResult> {
   if (!snapshot?.url || !snapshot.dom) return { status: 'unknown', reason: 'Missing end-state snapshot' }
   try {
@@ -19,6 +21,7 @@ async function execute(hook: Hook, snapshot: Snapshot | undefined, answers: Reco
     return { status: 'unknown', reason: error instanceof Error ? error.message : String(error) }
   }
 }
+/** Runs the goal's outcome and task checks against the stored evidence, then applies the terminal-reason and happy-path rules. Returns the outcome result with per-task results. */
 export async function verify(run: Run, goal: Goal, events: Event[] = []) {
   const compiled = run.context.goals[run.goalIndex]
   let result: HookResult = goal.outcomes[0] ? await execute(goal.outcomes[0], run.snapshot, run.answers) : { status: 'unknown', reason: 'Issues-only exploration: no outcome' }
@@ -30,6 +33,7 @@ export async function verify(run: Run, goal: Goal, events: Event[] = []) {
   else if (tasks.some((task, index) => task.status === 'unknown' && goal.tasks[index].check)) result = { status: 'unknown', reason: 'Evidence for a task check is missing', question: tasks.find(task => task.question)?.question }
   return { ...result, tasks }
 }
+/** Derives the first issue signals from one attempt: giving up or timing out, dead clicks, pauses over five seconds, URLs off the happy path and an SEQ of 3 or below. */
 export function issues(run: Run, events: Event[]) {
   const happyPath = run.context.goals[run.goalIndex].happyPath
   const found: { kind: string; at: number; detail: string }[] = []

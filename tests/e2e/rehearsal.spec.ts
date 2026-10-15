@@ -5,10 +5,12 @@ import { mkdir, writeFile, rm } from 'node:fs/promises'
 import { promisify } from 'node:util'
 import path from 'node:path'
 import { parseHTML } from 'linkedom'
+/** The visible text of a rendered trace page. */
 function traceText(html: string) { return parseHTML(html).document.body.textContent ?? '' }
 
 let child: ChildProcess
 let player: string, trace: string, output: string, authoredFile: string
+/** Starts the CLI in dev mode against the landing test or an inline fixture and captures the player and trace URLs. */
 async function start(body?: string) {
   const root = process.cwd()
   let file = path.join(root, 'apps/web/landing.ui.test.ts')
@@ -24,6 +26,7 @@ async function start(body?: string) {
   await expect.poll(() => output, { timeout: 5000, message: 'CLI must open player within five seconds' }).toContain('Player: ')
   player = /Player: (\S+)/.exec(output)![1]; trace = /Trace: (\S+)/.exec(output)![1]
 }
+/** Walks consent and the scenario card with the keyboard, checking axe at each stage, until the taskbar appears. */
 async function begin(page: Page) {
   await page.goto(player)
   await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
@@ -33,6 +36,7 @@ async function begin(page: Page) {
   await page.getByRole('button', { name: 'Begin task' }).focus(); await page.keyboard.press('Enter')
   await expect(page.getByRole('complementary', { name: 'Your task' })).toBeVisible()
 }
+/** Answers the SEQ question with the keyboard and waits for the thank-you page and the CLI outcome. */
 async function questions(page: Page) {
   await expect(page.getByRole('heading', { name: 'A few final questions' })).toBeVisible({ timeout: 15_000 })
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])

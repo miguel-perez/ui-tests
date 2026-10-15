@@ -3,6 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server'
 import type { Run, Event } from './storage.ts'
 import { issues } from './verify.ts'
 
+/** Renders the rehearsal trace as a static HTML page: outcome, issue signals, timings, URL path versus happy path, events, the end-state snapshot and the compiled context with its rules. */
 export function renderTrace(run: Run, events: Event[]) {
   const goal = run.context.goals[run.goalIndex]
   return '<!DOCTYPE html>' + renderToStaticMarkup(<html lang="en"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>Rehearsal trace</title></head><body><main style={{ maxWidth: 1000, margin: '48px auto', padding: 24, fontFamily: 'system-ui', lineHeight: 1.6 }}>

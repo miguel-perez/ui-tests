@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { commands, example } from '../../../lib/copy'
+/** The getting-started guide: install, init and mount, write the test, run dev mode, read the result. */
 export default function GettingStarted() {
   return <main className="mx-auto max-w-3xl px-6 py-12"><Link className="text-sm font-semibold text-primary" href="/">← ui-tests</Link><h1 className="mt-10 text-4xl font-semibold tracking-tight">Your first local rehearsal</h1><p className="mt-5">Node 22 or newer and a Next.js App Router application are required. Start with yourself in development mode.</p>
     <section className="mt-10"><h2 className="text-2xl font-semibold">1. Install</h2><pre><code>{commands.install}</code></pre></section>

@@ -13,8 +13,11 @@ import type { Context } from './index.ts'
 
 const args = process.argv.slice(2)
 const command = args[0]?.startsWith('-') ? 'dev' : args[0] ?? 'dev'
+/** Returns the value that follows a CLI flag, if present. */
 function option(name: string) { const i = args.indexOf(name); return i < 0 ? undefined : args[i + 1] }
+/** Whether a file is accessible. */
 async function exists(file: string) { try { await access(file); return true } catch { return false } }
+/** Recursively lists `*.ui.test.ts` files, skipping dot directories, `node_modules` and `factory`. */
 async function findTests(dir: string): Promise<string[]> {
   const files: string[] = []
   for (const entry of await readdir(dir, { withFileTypes: true })) {
@@ -25,11 +28,13 @@ async function findTests(dir: string): Promise<string[]> {
   }
   return files.sort()
 }
+/** Opens a URL in the default browser unless `--no-open` was given. */
 function open(url: string) {
   if (args.includes('--no-open')) return
   const child = process.platform === 'darwin' ? spawn('open', [url]) : process.platform === 'win32' ? spawn('cmd', ['/c', 'start', '', url]) : spawn('xdg-open', [url])
   child.on('error', () => console.log(`Open this URL in your browser: ${url}`)); child.unref()
 }
+/** Writes `ui-tests.config.ts`, the example test and the Vitest exclusion, preserving existing files, then prints the mount instructions. */
 async function init() {
   const files: Record<string, string> = {
     'ui-tests.config.ts': `import { defineConfig } from 'ui-tests'\nexport default defineConfig({ target: { url: process.env.PREVIEW_URL ?? 'http://localhost:3000' } })\n`,
@@ -55,6 +60,7 @@ async function init() {
   }
   console.log(`Mount instructions:\n1. Import { UiTests } from 'ui-tests/next' and mount <UiTests /> in your root layout body.\n2. In app/ui-tests/[run]/page.tsx render <Player runId={run} token={token} /> from 'ui-tests/next'.\n3. In app/api/ui-tests/route.ts export GET and POST = createCollector() from 'ui-tests/server'; export const runtime = 'nodejs'.\n4. Run npm run dev, then npx ui-tests.`)
 }
+/** Entry point: `init`, `verify <run-id>`, `lint`, or dev mode, which compiles and lints the test file, starts the trace viewer, opens the player and verifies each attempt when it finishes. */
 async function main() {
   if (command === 'init') return init()
   if (command === 'verify') {
@@ -91,6 +97,7 @@ async function main() {
     .filter(entry => (selectedContext === undefined || entry.contextIndex === Number(selectedContext)) && (selectedGoal === undefined || entry.goalIndex === Number(selectedGoal)))
   if (!pending.length) throw new Error('No matching context/goal; --context and --goal are zero-based indices.')
   let active = pending.shift()!
+  /** Creates the next rehearsal run for the active context and goal and records its hooks bundle. */
   function createRun() {
     active.compiled.author = config.author ?? result.authored[active.contextIndex].author ?? userInfo().username
     const created = store.create(active.compiled, active.goalIndex)
@@ -111,7 +118,9 @@ async function main() {
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(Number(option('--port') ?? 0), '127.0.0.1', resolve) })
   const address = server.address(); if (!address || typeof address === 'string') throw new Error('Viewer did not start')
   const viewerOrigin = `http://127.0.0.1:${address.port}`
+  /** The trace viewer URL for the current run, keyed by its token. */
   function traceUrl() { return `${viewerOrigin}/${run.id}/${run.token}` }
+  /** Prints the player and trace URLs and opens the player. */
   function launch() {
     const player = new URL(`/ui-tests/${run.id}`, target); player.searchParams.set('token', run.token)
     console.log(`Player: ${player}\nTrace: ${traceUrl()}\nRun: ${run.id}`)
@@ -138,6 +147,7 @@ async function main() {
       }
     } catch (error) { console.error(error) } finally { verifying = false }
   }, 100)
+  /** Shuts down the viewer and storage and exits. */
   function stop() { clearInterval(interval); server.close(); store.close(); process.exit(0) }
   process.on('SIGINT', stop); process.on('SIGTERM', stop)
 }

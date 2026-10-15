@@ -3,6 +3,7 @@ import { ArrowUpRight, Check, Minus } from 'lucide-react'
 import { buttonVariants } from '../components/ui/button'
 import { promise, ladder, sections, example, progress } from '../lib/copy'
 
+/** The landing page: the promise, the quality ladder with an example result, the example context, and what you write, what is derived and what you get back. */
 export default function Home() {
   return <main className="mx-auto max-w-5xl px-6 py-10 md:px-12 md:py-14">
     <header className="flex items-center justify-between border-b border-border pb-7"><span className="text-xl font-bold tracking-tight">ui-tests<span className="text-primary">.</span></span><span className="rounded-full border border-border px-3 py-1 text-xs">R0 / local rehearsal</span></header>

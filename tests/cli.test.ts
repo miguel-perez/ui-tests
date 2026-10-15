@@ -8,6 +8,7 @@ import { SQLiteAdapter } from '../packages/ui-tests/src/storage'
 const exec = promisify(execFile)
 const cli = path.resolve('packages/ui-tests/bin/ui-tests.mjs')
 const directories: string[] = []
+/** Creates a temporary project directory under `.ui-tests`, removed after each test. */
 async function fixture() {
   await mkdir('.ui-tests', { recursive: true })
   const directory = await mkdtemp(path.resolve('.ui-tests', 'cli-test-')); directories.push(directory); return directory

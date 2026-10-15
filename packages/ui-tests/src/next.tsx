@@ -3,13 +3,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
+/** The participant view served by the collector; see `participantView` for the allowlist. */
 type Participant = { id: string; author: string; purpose: string; status: string; scenario: string; tasks: string[]; timeout: number; startedAt: number; verificationReady: boolean; validation?: { question: string; choices: string[] } }
 const endpoint = '/api/ui-tests'
+/** Posts a collector message and returns the updated participant view. */
 async function send(body: unknown) {
   const response = await fetch(endpoint, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
   if (!response.ok) throw new Error(`Could not save (${response.status}). Please try again.`)
   return response.json() as Promise<Participant>
 }
+/** Serialises the current document with scripts, styles, the taskbar, input values and sensitive attributes removed. */
 function snapshot() {
   const root = document.documentElement.cloneNode(true) as HTMLElement
   root.querySelectorAll('script, style, noscript, [data-research-taskbar]').forEach(node => node.remove())
@@ -19,13 +22,14 @@ function snapshot() {
   root.querySelectorAll('*').forEach(node => { for (const attribute of Array.from(node.attributes)) if (/^on|token|secret|password/i.test(attribute.name)) node.removeAttribute(attribute.name) })
   return { url: location.origin + location.pathname, dom: root.outerHTML }
 }
+/** A short, stable label for an element: tag, id and aria-label. */
 function targetLabel(element: Element) {
   return `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${element.getAttribute('aria-label') ? `[${element.getAttribute('aria-label')}]` : ''}`.slice(0, 300)
 }
 const panelStyle: React.CSSProperties = { position: 'fixed', zIndex: 2147483647, bottom: 16, left: 16, maxWidth: 'min(420px, calc(100vw - 32px))', padding: 20, borderRadius: 'var(--radius, 12px)', border: '1px solid var(--border, #aaa)', background: 'var(--background, #fff)', color: 'var(--foreground, #171717)', fontFamily: 'inherit', boxShadow: '0 8px 36px #0002' }
 const buttonStyle: React.CSSProperties = { padding: '10px 14px', borderRadius: 'var(--radius, 6px)', border: '1px solid var(--border, #aaa)', background: 'var(--primary, #222)', color: 'var(--primary-foreground, white)', cursor: 'pointer', font: 'inherit', margin: '8px 8px 0 0' }
 
-/** Mount once in the root layout. The portal survives App Router navigation. */
+/** Mount once in the root layout. When the `ui-tests-run` cookie names an active run, records clicks, URL changes, scroll, masked input and pauses, and renders the floating taskbar in a portal that survives App Router navigation. */
 export function UiTests() {
   const [run, setRun] = useState<Participant>()
   const [step, setStep] = useState(0)
@@ -40,11 +44,14 @@ export function UiTests() {
     if (!run || location.pathname.startsWith('/ui-tests/')) return
     let lastActivity = Date.now(), lastUrl = '', paused = false, cancelled = false
     const timers = new Set<ReturnType<typeof setTimeout>>()
+    /** Queues one event for the collector, preserving order across navigation. */
     function record(event: Record<string, unknown>) {
       if (cancelled) return
       queue.current = queue.current.then(() => send({ action: 'events', events: [{ at: Date.now(), url: location.origin + location.pathname, ...event }] })).catch(err => { setError(String(err)) })
     }
+    /** Marks activity so the pause detector restarts. */
     function activity() { lastActivity = Date.now(); paused = false }
+    /** Records a click with whether the page changed within 300 ms; taskbar clicks are ignored. */
     function click(event: MouseEvent) {
       const element = event.target instanceof Element ? event.target.closest('button,a,input,[role=button]') ?? event.target : null
       if (!element || element.closest('[data-research-taskbar]')) return
@@ -53,8 +60,10 @@ export function UiTests() {
       const timer = setTimeout(() => { record({ type: 'click', target, changed: before !== document.body.innerHTML || url !== location.href }); timers.delete(timer) }, 300)
       timers.add(timer)
     }
+    /** Records that an input changed, without its value. */
     function input(event: globalThis.Event) { activity(); if (event.target instanceof Element && !event.target.closest('[data-research-taskbar]')) record({ type: 'input', target: targetLabel(event.target) }) }
     let lastScroll = 0
+    /** Records scroll position at most twice a second. */
     function scroll() { activity(); if (Date.now() - lastScroll > 500) { lastScroll = Date.now(); record({ type: 'scroll', target: `y=${Math.round(window.scrollY)}` }) } }
     const interval = setInterval(() => {
       if (location.pathname !== lastUrl) { lastUrl = location.pathname; record({ type: 'url' }) }
@@ -63,6 +72,7 @@ export function UiTests() {
     document.addEventListener('click', click, true); document.addEventListener('input', input, true); window.addEventListener('scroll', scroll); document.addEventListener('keydown', activity)
     return () => { cancelled = true; clearInterval(interval); timers.forEach(clearTimeout); document.removeEventListener('click', click, true); document.removeEventListener('input', input, true); window.removeEventListener('scroll', scroll); document.removeEventListener('keydown', activity) }
   }, [run])
+  /** Ends the attempt with the given reason, sends the end-state snapshot and moves to the questions. */
   async function finish(reason: 'done' | 'gave up' | 'timed out') {
     if (!run || busy) return
     setBusy(true)
@@ -92,6 +102,7 @@ export function UiTests() {
   </aside>, document.body)
 }
 
+/** The participant player at `/ui-tests/[run]`: consent, the scenario card, then the SEQ and confidence questions. It never shows the happy path, the hooks or the trace. */
 export function Player({ runId, token }: { runId: string; token?: string }) {
   const [run, setRun] = useState<Participant>()
   const [stage, setStage] = useState(token ? 'consent' : 'questions')

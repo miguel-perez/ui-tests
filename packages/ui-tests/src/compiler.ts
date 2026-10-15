@@ -6,18 +6,25 @@ import { pathToFileURL } from 'node:url'
 import { z } from 'zod'
 import { resetContexts, type Context, type Goal } from './index.ts'
 
+/** Human-readable derivation rules, shown beside each derived field in the compiled context and the trace. */
 export const rule = { scenario: 'template(goal, fixture names); no happy path input', timeout: 'max(180, (happy-path length or task count or 1) × 90) seconds', sample: 'ceil(log(1-confidence) / log(1-prevalence))', impression: 'purpose recognition with template distractors', fit: 'purpose-derived relevance, frequency and current approach' }
+/** Deterministic scenario text from the goal and fixture names; the happy path is never an input. A model generator can replace this function later. */
 export function generateTemplate(goal: string, fixtures: string[] = []) {
   return `Imagine you want to ${goal}.${fixtures.length ? ` Use ${fixtures.join(', ')}.` : ''} Work as you normally would, then tell us when you are finished.`
 }
+/** Attempts needed to notice a problem affecting "1 in N" people at the given confidence. */
 export function sampleSize(affecting = '1 in 3', confidence = 0.85) {
   const match = /^1 in (\d+)$/.exec(affecting)
   if (!match || Number(match[1]) < 2 || confidence <= 0 || confidence >= 1) throw new Error('catch: use affecting "1 in N" (N ≥ 2) and confidence between 0 and 1')
   return Math.ceil(Math.log(1 - confidence) / Math.log(1 - 1 / Number(match[1])))
 }
+/** The result sentence for a rehearsal: rehearsal attempts never count toward the planned sample. */
 export function sentence(planned = 5) { return `Rehearsal: 0 of ${planned} planned attempts recorded.` }
+/** One lint finding: the rule, its severity, the reason, the authoring source and the fix. */
 export type Diagnostic = { rule: string; severity: 'error' | 'warning'; reason: string; source: string; fix: string }
+/** Interface words that belong in `task()` steps, not in goal names. */
 const interfaceTerms = /\b(click|tap|button|link|menu|dropdown|checkbox|screen|page|tab|scroll|open)\b/i
+/** Runs the authoring rules over the contexts and returns every finding with its rule, reason, source and fix. */
 export function lint(contexts: Context[]): Diagnostic[] {
   const diagnostics: Diagnostic[] = []
   for (const c of contexts) {
@@ -38,7 +45,9 @@ export function lint(contexts: Context[]): Diagnostic[] {
   }
   return diagnostics
 }
+/** Zod schema enforced on each authored context before compilation. */
 export const contextSchema = z.object({ users: z.string().min(1), purpose: z.string().min(1), goals: z.array(z.object({ name: z.string().min(1), options: z.object({ happyPath: z.array(z.string().startsWith('/')).optional(), minutes: z.number().positive().optional(), scenario: z.string().optional(), fixtures: z.array(z.string()).optional(), catch: z.object({ affecting: z.string(), confidence: z.number().gt(0).lt(1) }).optional() }), tasks: z.array(z.object({ name: z.string() })) })) })
+/** Validates each context and derives its id, name, impression stage, fit questions and, per goal, the shape, scenario, timeout, sample plan and result sentence, each with the rule that produced it. */
 export function compile(contexts: Context[]) {
   return contexts.map(c => {
     contextSchema.parse(c)
@@ -65,7 +74,9 @@ export function compile(contexts: Context[]) {
     }
   })
 }
+/** A compiled context as written to `context.json` and stored with each run. */
 export type CompiledContext = ReturnType<typeof compile>[number]
+/** Bundles a `*.ui.test.ts` file with esbuild, evaluates it, lints it and writes `context.json`. Returns the authored contexts, the compiled contexts, the diagnostics and the hooks bundle path the CLI later imports. */
 export async function compileFile(file: string, output: string) {
   await mkdir(output, { recursive: true })
   const bundle = path.resolve(output, `hooks-${randomUUID()}.mjs`)

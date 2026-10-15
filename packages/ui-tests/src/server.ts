@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { SQLiteAdapter, type Run, type StorageAdapter } from './storage.ts'
 
-// An explicit allowlist: no compiler data, answers, hooks, trace or happy paths cross this boundary.
+/** Projects a run onto what the participant may see. An explicit allowlist: no compiler data, answers, hooks, trace or happy paths cross this boundary. */
 export function participantView(run: Run) {
   const goal = run.context.goals[run.goalIndex]
   const pending = (run.result as { question?: { question: string; choices: string[] } } | undefined)?.question
@@ -17,8 +17,11 @@ const message = z.discriminatedUnion('action', [
   z.object({ action: z.literal('end'), reason: z.enum(['done', 'gave up', 'timed out']), snapshot }),
   z.object({ action: z.literal('questions'), seq: z.number().int().min(1).max(7), confidence: z.number().int().min(1).max(5), answers: z.record(z.string(), z.string()).optional() }),
 ])
+/** Reads the run id and token from the `ui-tests-run` cookie. */
 function cookie(request: Request) { return /(?:^|;\s*)ui-tests-run=([^;]+)/.exec(request.headers.get('cookie') ?? '')?.[1]?.split('.') }
+/** Builds the `/api/ui-tests` route handler. GET returns the participant view; POST handles consent, begin, events, end and questions, validated with Zod and bound to the run's token. */
 export function createCollector(getStorage: () => StorageAdapter = () => new SQLiteAdapter()) {
+  /** Handles one collector request; storage is opened and closed per request. */
   return async function handler(request: Request) {
     // Collector is deliberately development-only in this slice.
     if (process.env.NODE_ENV === 'production') return new Response('Rehearsals require dev mode', { status: 404 })
