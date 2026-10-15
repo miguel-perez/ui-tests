@@ -85,13 +85,15 @@ test('task steps advance individually and run checks against their own snapshots
   await page.getByRole('button', { name: 'Done with this step' }).click()
   await expect(page.getByText('Find the instructions', { exact: true })).toBeVisible()
   await page.getByRole('link', { name: 'Get started' }).click(); await expect(page).toHaveURL(/\/docs\/getting-started$/)
-  // Hold the separate verifier process so readiness cannot depend on machine speed.
-  child.kill('SIGSTOP')
+  // POSIX-only: Windows cannot suspend the verifier with SIGSTOP/SIGCONT.
+  // Keep the normal completion and saved-hook checks on every platform.
+  const canPauseVerifier = process.platform !== 'win32'
+  if (canPauseVerifier) child.kill('SIGSTOP')
   try {
     await page.getByRole('button', { name: "I'm done" }).click()
     await expect(page.getByRole('heading', { name: 'A few final questions' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Send answers' })).toBeDisabled()
-  } finally { child.kill('SIGCONT') }
+    if (canPauseVerifier) await expect(page.getByRole('button', { name: 'Send answers' })).toBeDisabled()
+  } finally { if (canPauseVerifier) child.kill('SIGCONT') }
   await questions(page)
   expect(traceText(await (await request.get(trace)).text())).toContain('"status": "correct"')
   await rm(authoredFile)
