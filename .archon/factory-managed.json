@@ -1,0 +1,22 @@
+[
+  ".archon/commands/deliver.md",
+  ".archon/workflows/automation/deliver/autonomous-delivery.yaml",
+  ".archon/workflows/automation/deliver/commands/implement-and-publish.md",
+  ".archon/workflows/automation/deliver/fixtures/already-merged.stubs.yaml",
+  ".archon/workflows/automation/deliver/fixtures/approved.stubs.yaml",
+  ".archon/workflows/automation/deliver/fixtures/correction.stubs.yaml",
+  ".archon/workflows/automation/deliver/scripts/delivery-status.ts",
+  ".archon/workflows/automation/deliver/scripts/read-published-pr.ts",
+  ".archon/workflows/automation/retry/autonomous-pr-retry.yaml",
+  ".archon/workflows/automation/retry/fixtures/approved.stubs.yaml",
+  ".archon/workflows/automation/retry/scripts/delivery-status.ts",
+  ".archon/workflows/automation/retry/scripts/resolve-pr.ts",
+  ".archon/workflows/automation/review/autonomous-review.yaml",
+  ".archon/workflows/automation/review/commands/address-review.md",
+  ".archon/workflows/automation/review/scripts/enable-auto-merge.ts",
+  ".archon/workflows/automation/review/scripts/wait-for-review.ts",
+  ".coderabbit.yaml",
+  ".github/workflows/delivery-status.yml",
+  ".github/workflows/merge-gate.yml",
+  ".github/workflows/review-event.yml"
+]
