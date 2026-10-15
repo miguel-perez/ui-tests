@@ -4,3 +4,10 @@ assistant: opencode
 assistants:
   opencode:
     model: openai/gpt-6.1-sol
+# Code-writing nodes bind '@implementer'. Rebind it for one run with
+# `--model @implementer=<provider>/<model>`, for example
+# `--model @implementer=opencode/openrouter/openai/gpt-6-astra` for a design pass.
+aliases:
+  '@implementer':
+    provider: opencode
+    model: openrouter/deepseek/deepseek-v4-pro-0813

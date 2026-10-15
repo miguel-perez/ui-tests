@@ -5,7 +5,7 @@ import { compile, lint, generateTemplate, sentence, sampleSize } from '../packag
 import { SQLiteAdapter } from '../packages/ui-tests/src/storage'
 import { verify, issues } from '../packages/ui-tests/src/verify'
 import { participantView, createCollector } from '../packages/ui-tests/src/server'
-import { promise, ladder, sections, example, commands, progress } from '../apps/web/lib/copy'
+import * as siteCopy from '../apps/web/lib/copy'
 
 beforeEach(resetContexts)
 /** Authors the landing context with the given goal options and returns the contexts. */
@@ -151,6 +151,12 @@ describe('storage, verification and participant boundary', () => {
 })
 it('keeps README, landing context and rendered copy word-for-word aligned', async () => {
   const readme = await readFile('README.md', 'utf8')
-  for (const text of [promise, progress, example, ...Object.values(commands), ...ladder.flat(), ...sections.flat()]) assert(readme).toContain(text)
-  assert((await readFile('apps/web/landing.ui.test.ts', 'utf8')).trim()).toBe(example)
+  function strings(value: unknown): string[] {
+    if (typeof value === 'string') return [value]
+    return Object.values(value as Record<string, unknown>).flatMap(strings)
+  }
+  for (const text of strings(siteCopy)) assert(readme).toContain(text)
+  assert((await readFile('apps/web/landing.ui.test.ts', 'utf8')).trim()).toBe(siteCopy.example)
+  assert(readme).not.toMatch(/\b(?:pass|compliant|certified)\b|%|!/i)
+  assert(strings(siteCopy).join('\n')).not.toMatch(/\b(?:pass|compliant|certified)\b|%|!|synthetic users|AI participants|agent runs|hosted track/i)
 })
