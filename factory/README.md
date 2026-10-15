@@ -130,7 +130,9 @@ Runs the Node and Python test suites. The provider and model for the Archon
 workflows are set in `payload/.archon/workflows/**` and `payload/seed/.archon/config.yaml`;
 changing them per consumer is a known limitation.
 The code-writing nodes (`implement` in `autonomous-delivery` and `repair`
-in `autonomous-review`) override the workflow model with
+in `autonomous-review`) bind the `@implementer` alias, which `.archon/config.yaml` points at
 `openrouter/deepseek/deepseek-v4-pro-0813` to save cost; the scripts and the
-workflow default stay on `openai/gpt-6.1-sol`. OpenCode must already be
-connected to OpenRouter on the host.
+workflow default stay on `openai/gpt-6.1-sol`. Rebind the alias for one run with
+`npm run automation:deliver -- --model @implementer=<provider>/<model> ...`, for
+example `@implementer=opencode/openrouter/openai/gpt-6-astra`. OpenCode must
+already be connected to OpenRouter on the host.

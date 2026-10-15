@@ -56,7 +56,7 @@ test('a second install changes nothing', t => {
   install({ root, prefix: 'factory', log() {} });
   const before = readFileSync(join(root, 'package.json'), 'utf8');
   const report = install({ root, prefix: 'factory', log() {} });
-  assert.deepEqual([report.written, report.removed, report.seeded, report.ignores, report.scripts], [[], [], [], [], []]);
+  assert.deepEqual([report.written, report.removed, report.seeded, report.migrated, report.ignores, report.scripts], [[], [], [], [], [], []]);
   assert.equal(readFileSync(join(root, 'package.json'), 'utf8'), before);
 });
 
@@ -67,8 +67,13 @@ test('seeds, customized scripts and existing ignore lines are preserved', t => {
   writeFileSync(join(root, '.gitignore'), 'node_modules/\n/docs/\n');
   writeFileSync(join(root, 'package.json'), JSON.stringify({ name: 'x', scripts: { validate: 'true', 'automation:status': 'custom' } }));
   const report = install({ root, prefix: 'factory', log() {} });
-  assert.equal(readFileSync(join(root, '.archon/config.yaml'), 'utf8'), 'assistant: claude\n');
+  const config = readFileSync(join(root, '.archon/config.yaml'), 'utf8');
+  assert.ok(config.startsWith('assistant: claude\n'));
+  assert.match(config, /^aliases:\n  '@implementer':\n    provider: opencode\n    model: \S+$/m);
   assert.ok(report.skipped.includes('.archon/config.yaml'));
+  assert.deepEqual(report.migrated, ['.archon/config.yaml']);
+  assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, []);
+  assert.equal(readFileSync(join(root, '.archon/config.yaml'), 'utf8'), config);
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   assert.equal(pkg.scripts['automation:status'], 'custom');
   assert.equal(pkg.scripts.validate, 'true');
@@ -190,4 +195,61 @@ test('stale entries that are directories are skipped, not removed', t => {
   assert.deepEqual(report.removed, []);
   assert.ok(report.skipped.includes(entry));
   assert.ok(existsSync(join(root, entry, 'inner/file.txt')));
+});
+
+
+test('an existing aliases block gains @implementer without a duplicate key; a config that has it is untouched', t => {
+  const root = consumer(t);
+  mkdirSync(join(root, '.archon'), { recursive: true });
+  const withAliases = "assistant: opencode\naliases:\n  '@cheap':\n    provider: opencode\n    model: x/y\n";
+  writeFileSync(join(root, '.archon/config.yaml'), withAliases);
+  assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, ['.archon/config.yaml']);
+  const config = readFileSync(join(root, '.archon/config.yaml'), 'utf8');
+  assert.equal(config.match(/^aliases:$/gm).length, 1);
+  assert.match(config, /^aliases:\n  '@implementer':\n    provider: opencode\n    model: \S+\n  '@cheap':\n/m);
+  const pinned = "assistant: opencode\naliases:\n  '@implementer':\n    provider: opencode\n    model: mine/model\n";
+  writeFileSync(join(root, '.archon/config.yaml'), pinned);
+  assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, []);
+  assert.equal(readFileSync(join(root, '.archon/config.yaml'), 'utf8'), pinned);
+});
+
+test('aliases with a trailing comment are extended in place; an inline mapping is left alone with a warning', t => {
+  const root = consumer(t);
+  mkdirSync(join(root, '.archon'), { recursive: true });
+  const commented = "assistant: opencode\naliases: # local models\n  '@cheap':\n    provider: opencode\n    model: x/y\ntiers:\n  small:\n    provider: opencode\n    model: a/b\n";
+  writeFileSync(join(root, '.archon/config.yaml'), commented);
+  assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, ['.archon/config.yaml']);
+  const config = readFileSync(join(root, '.archon/config.yaml'), 'utf8');
+  assert.equal(config.match(/^aliases:/gm).length, 1);
+  assert.match(config, /^aliases: # local models\n  '@implementer':\n    provider: opencode\n    model: \S+\n  '@cheap':\n/m);
+  assert.match(config, /^tiers:\n  small:\n/m);
+  const inline = "assistant: opencode\naliases: { '@cheap': { provider: opencode, model: x/y } }\n";
+  writeFileSync(join(root, '.archon/config.yaml'), inline);
+  const warned = [];
+  const report = install({ root, prefix: 'factory', log: line => warned.push(line) });
+  assert.deepEqual(report.migrated, []);
+  assert.equal(report.warnings.length, 1);
+  assert.ok(warned.some(line => line.includes('@implementer')));
+  assert.equal(readFileSync(join(root, '.archon/config.yaml'), 'utf8'), inline);
+});
+
+test('an @implementer key outside the root aliases mapping does not count as migrated', t => {
+  const root = consumer(t);
+  mkdirSync(join(root, '.archon'), { recursive: true });
+  const elsewhere = "assistant: opencode\n# '@implementer': mentioned in a comment\nassistants:\n  opencode:\n    model: openai/gpt-6.1-sol\n    '@implementer': not-an-alias\n";
+  writeFileSync(join(root, '.archon/config.yaml'), elsewhere);
+  assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, ['.archon/config.yaml']);
+  const config = readFileSync(join(root, '.archon/config.yaml'), 'utf8');
+  assert.ok(config.startsWith(elsewhere));
+  assert.match(config, /^aliases:\n  '@implementer':\n    provider: opencode\n    model: \S+$/m);
+});
+
+test('an aliases heading that ends the file without a newline still gets a well-formed entry', t => {
+  const root = consumer(t);
+  mkdirSync(join(root, '.archon'), { recursive: true });
+  writeFileSync(join(root, '.archon/config.yaml'), 'assistant: opencode\naliases:');
+  assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, ['.archon/config.yaml']);
+  const config = readFileSync(join(root, '.archon/config.yaml'), 'utf8');
+  assert.match(config, /^assistant: opencode\naliases:\n  '@implementer':\n    provider: opencode\n    model: \S+\n$/);
+  assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, []);
 });
