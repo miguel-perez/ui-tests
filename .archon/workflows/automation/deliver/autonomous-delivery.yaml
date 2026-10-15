@@ -23,7 +23,7 @@ nodes:
 
   - id: implement
     command: implement-and-publish
-    model: openrouter/deepseek/deepseek-v4-pro-0813
+    model: '@implementer'
     depends_on: [status-start]
     trigger_rule: all_done
     context: fresh
