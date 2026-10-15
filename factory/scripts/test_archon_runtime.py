@@ -143,6 +143,7 @@ class RuntimeTests(unittest.TestCase):
     def check_sync_webhook(self, namespace, storage):
         secret, url = 's' * 40, 'https://new.trycloudflare.com'
         saved = storage / 'webhook-id'
+        previous = storage / 'tunnel-url.previous'
 
         def stub(responses):
             calls = []
@@ -160,18 +161,22 @@ class RuntimeTests(unittest.TestCase):
             return namespace['sync_webhook']('owner/name', url, hook_id, secret, {})
 
         hooks = 'repos/owner/name/hooks'
+        events = ['check_run', 'issues', 'issue_comment', 'pull_request',
+                  'pull_request_review', 'pull_request_review_comment']
         saved.unlink(missing_ok=True)
+        previous.unlink(missing_ok=True)
         # Create: nothing to adopt, so POST the full hook definition with the secret on stdin only.
         calls = stub({('GET', hooks): (0, '[{"id": 7, "config": {"url": "https://example.com/webhooks/github"}}]'),
                       ('POST', hooks): (0, '{"id": 42}')})
         self.assertEqual(sync(''), '42')
         self.assertEqual(saved.read_text(), '42\n')
+        # Every successful sync records the URL this host registered, for later adoption.
+        self.assertEqual(previous.read_text(), url + '\n')
         posted = [(command, body) for command, body in calls if 'POST' in command]
         self.assertEqual(len(posted), 1)
         payload = json.loads(posted[0][1])
         self.assertEqual(payload['name'], 'web')
-        self.assertEqual(payload['events'], ['check_run', 'issues', 'issue_comment', 'pull_request',
-                                             'pull_request_review', 'pull_request_review_comment'])
+        self.assertEqual(payload['events'], events)
         self.assertEqual(payload['config']['content_type'], 'json')
         self.assertEqual(payload['config']['secret'], secret)
         self.assertEqual(payload['config']['url'], url + '/webhooks/github')
@@ -182,6 +187,7 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(sync('42'), '42')
         self.assertEqual([command[3] for command, _ in calls], ['PATCH'])
         self.assertEqual(json.loads(calls[0][1])['config']['secret'], secret)
+        self.assertEqual(json.loads(calls[0][1])['events'], events)
         # PATCH failing while the hook still exists retries without touching the saved id.
         calls = stub({('GET', hooks + '/42'): (0, '{"id": 42}')})
         self.assertIsNone(sync('42'))
@@ -193,17 +199,32 @@ class RuntimeTests(unittest.TestCase):
         self.assertEqual(saved.read_text(), '43\n')
         self.assertEqual([command[3] if '--method' in command else 'GET' for command, _ in calls],
                          ['PATCH', 'GET', 'GET', 'POST'])
-        # Adopt an existing tunnel hook instead of creating a duplicate.
-        saved.unlink()
         listed = json.dumps([{'id': 7, 'config': {'url': 'https://example.com/webhooks/github'}},
                              {'id': 9, 'config': {'url': 'https://old.trycloudflare.com/webhooks/github'}}])
+        # Another host's tunnel hook is never adopted: with no previous URL, or a different one, create.
+        for recorded in (None, 'https://mine.trycloudflare.com'):
+            saved.unlink()
+            if recorded is None:
+                previous.unlink(missing_ok=True)
+            else:
+                previous.write_text(recorded + '\n')
+            calls = stub({('GET', hooks): (0, listed), ('PATCH', hooks + '/9'): (0, '{"id": 9}'),
+                          ('POST', hooks): (0, '{"id": 50}')})
+            self.assertEqual(sync(''), '50')
+            self.assertEqual(saved.read_text(), '50\n')
+            self.assertFalse(any('PATCH' in command for command, _ in calls))
+        # Adopt this host's own previous tunnel hook instead of creating a duplicate.
+        saved.unlink()
+        previous.write_text('https://old.trycloudflare.com\n')
         calls = stub({('GET', hooks): (0, listed), ('PATCH', hooks + '/9'): (0, '{"id": 9}')})
         self.assertEqual(sync(''), '9')
         self.assertEqual(saved.read_text(), '9\n')
+        self.assertEqual(previous.read_text(), url + '\n')
         patched = [(command, body) for command, body in calls if 'PATCH' in command]
         self.assertEqual(len(patched), 1)
         self.assertIn(hooks + '/9', patched[0][0])
         self.assertEqual(json.loads(patched[0][1])['config']['url'], url + '/webhooks/github')
+        self.assertEqual(json.loads(patched[0][1])['events'], events)
         self.assertFalse(any('POST' in command for command, _ in calls))
         # Unusable responses retry and write nothing.
         saved.unlink()

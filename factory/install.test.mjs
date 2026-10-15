@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync, realpathSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, readFileSync, writeFileSync, existsSync, rmSync, realpathSync, symlinkSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import { managedPaths, render, requiredScripts, topLevel, repoName } from './lib.mjs';
@@ -143,4 +143,51 @@ test('install warns when {{REPO}} falls back to the directory name', t => {
   const quiet = [];
   install({ root: consumer(t), prefix: 'factory', log: line => quiet.push(line) });
   assert.ok(!quiet.some(line => line.startsWith('warning:')));
+});
+
+test('an unparsable manifest aborts install before anything changes', t => {
+  const root = consumer(t);
+  install({ root, prefix: 'factory', log() {} });
+  const manifestPath = join(root, '.archon/factory-managed.json');
+  const stale = '.archon/workflows/renamed/old-step.yaml';
+  mkdirSync(join(root, '.archon/workflows/renamed'), { recursive: true });
+  writeFileSync(join(root, stale), 'stale\n');
+  writeFileSync(manifestPath, '{ not json');
+  const gate = join(root, '.github/workflows/merge-gate.yml');
+  writeFileSync(gate, 'edited\n');
+  assert.throws(() => install({ root, prefix: 'factory', log() {} }), /\.archon\/factory-managed\.json/);
+  assert.equal(readFileSync(manifestPath, 'utf8'), '{ not json');
+  assert.equal(readFileSync(gate, 'utf8'), 'edited\n');
+  assert.ok(existsSync(join(root, stale)));
+  writeFileSync(manifestPath, JSON.stringify({ not: 'a list' }));
+  assert.throws(() => install({ root, prefix: 'factory', log() {} }), /factory-managed\.json/);
+});
+
+test('stale entries reached through a symlinked parent outside the root are skipped', t => {
+  const root = consumer(t);
+  install({ root, prefix: 'factory', log() {} });
+  const outside = realpathSync(mkdtempSync(join(tmpdir(), 'factory-outside-')));
+  t.after(() => rmSync(outside, { recursive: true, force: true }));
+  writeFileSync(join(outside, 'victim.yml'), 'keep\n');
+  symlinkSync(outside, join(root, '.github/workflows/linked'));
+  const manifestPath = join(root, '.archon/factory-managed.json');
+  const entry = '.github/workflows/linked/victim.yml';
+  writeFileSync(manifestPath, JSON.stringify([...managedPaths(), entry].sort()));
+  const report = install({ root, prefix: 'factory', log() {} });
+  assert.deepEqual(report.removed, []);
+  assert.ok(report.skipped.includes(entry));
+  assert.equal(readFileSync(join(outside, 'victim.yml'), 'utf8'), 'keep\n');
+});
+
+test('stale entries that are directories are skipped, not removed', t => {
+  const root = consumer(t);
+  install({ root, prefix: 'factory', log() {} });
+  const entry = '.archon/workflows/now-a-dir';
+  mkdirSync(join(root, entry, 'inner'), { recursive: true });
+  writeFileSync(join(root, entry, 'inner/file.txt'), 'keep\n');
+  writeFileSync(join(root, '.archon/factory-managed.json'), JSON.stringify([...managedPaths(), entry].sort()));
+  const report = install({ root, prefix: 'factory', log() {} });
+  assert.deepEqual(report.removed, []);
+  assert.ok(report.skipped.includes(entry));
+  assert.ok(existsSync(join(root, entry, 'inner/file.txt')));
 });
