@@ -1,14 +1,26 @@
 {
-  "name": "ui-tests",
+  "name": "ui-tests-workspace",
   "version": "0.0.0",
   "private": true,
   "type": "module",
+  "workspaces": [
+    "apps/web",
+    "packages/ui-tests"
+  ],
+  "overrides": {
+    "postcss": "^8.5.30"
+  },
   "description": "UI research repository delivered by the Archon factory.",
   "engines": {
     "node": ">=22.13"
   },
   "scripts": {
-    "validate": "node factory/check.mjs && npm --prefix factory run validate",
+    "dev": "npm run dev --workspace @ui-tests/web",
+    "build": "npm run build --workspace @ui-tests/web",
+    "test": "vitest run",
+    "test:e2e": "playwright install --with-deps chromium && playwright test",
+    "typecheck": "tsc --noEmit && npm run typecheck --workspace @ui-tests/web",
+    "validate": "node factory/check.mjs && npm --prefix factory run validate && npm run typecheck && npm test && npm run test:e2e",
     "automation:build": "python3 factory/scripts/archon-runtime.py build",
     "automation:verify-sol": "python3 factory/scripts/verify-archon-sol.py",
     "automation:verify-serve": "python3 factory/scripts/verify-archon-serve.py",
@@ -19,5 +31,15 @@
     "automation:stop": "bash factory/scripts/stop-archon.sh",
     "factory:check": "node factory/check.mjs",
     "factory:test": "npm --prefix factory run validate"
+  },
+  "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
+    "@playwright/test": "1.64.1",
+    "@types/better-sqlite3": "9.6.0",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
   }
 }

@@ -6,6 +6,7 @@ node_modules/
 __pycache__/
 *.py[cod]
 /.archon/runtime/
+**/.archon/runtime/
 /artifacts/
 /logs/
 /workflow-source/
@@ -13,3 +14,10 @@ __pycache__/
 .venv/
 .venv-*/
 coverage/
+.next/
+dist/
+playwright-report/
+test-results/
+.ui-tests/
+next-env.d.ts
+*.tsbuildinfo
