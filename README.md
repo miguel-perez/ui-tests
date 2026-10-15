@@ -6,7 +6,7 @@ Usability testing, in your repo
 
 For developers who test code, ship UI and have no researcher. Find where people get stuck, with issue signals, a sentence that says what the evidence means, and a trace to inspect.
 
-[Get started](https://ui-tests.vercel.app/docs/getting-started) · [View on GitHub](https://github.com/miguel-perez/ui-tests)
+[Get started](https://ui-tests.com/docs/getting-started) · [View on GitHub](https://github.com/miguel-perez/ui-tests)
 
 Local rehearsal · example identifiers
 
