@@ -15,7 +15,7 @@ export function install({ root = topLevel(), prefix = cliPrefix([], root), log =
   if (!repo.fromRemote) log(`warning: no usable origin remote; {{REPO}} falls back to "${repo.name}". Run \`git remote add origin git@github.com:OWNER/NAME.git\` and reinstall.`);
   const previous = readManifest(root);
   if (previous === undefined) throw new Error(`${MANIFEST} is not a JSON list of paths; repair or delete it, then reinstall.`);
-  const report = { written: [], removed: [], unchanged: [], seeded: [], skipped: [], migrated: [], ignores: [], scripts: [] };
+  const report = { written: [], removed: [], unchanged: [], seeded: [], skipped: [], migrated: [], warnings: [], ignores: [], scripts: [] };
   const managed = managedPaths();
   for (const rel of managed) {
     const target = join(root, rel);
@@ -56,20 +56,36 @@ export function install({ root = topLevel(), prefix = cliPrefix([], root), log =
     report.seeded.push(rel);
   }
   // The managed workflows bind '@implementer', and Archon throws on an undefined alias, so an
-  // existing config gains the alias without losing anything it already says.
+  // existing config gains the alias without losing anything it already says. Only the root-level
+  // `aliases` mapping counts: a key elsewhere, or in a comment, does not define an alias.
   const configRel = '.archon/config.yaml';
   if (report.skipped.includes(configRel)) {
     const configPath = join(root, configRel);
     const text = readFileSync(configPath, 'utf8');
-    if (!/^\s*['"]?@implementer['"]?\s*:/m.test(text)) {
-      const seed = render(readFileSync(join(seedDir, configRel), 'utf8'), vars);
-      const block = seed.slice(seed.indexOf('# Code-writing nodes'));
-      const entry = block.slice(block.indexOf("  '@implementer':"));
-      const updated = /^aliases:\s*$/m.test(text)
-        ? text.replace(/^aliases:\s*\n/m, match => match + entry)
-        : text.replace(/\n*$/, '\n\n') + block;
-      writeFileSync(configPath, updated);
+    const seed = render(readFileSync(join(seedDir, configRel), 'utf8'), vars);
+    const block = seed.slice(seed.indexOf('# Code-writing nodes'));
+    const entry = block.slice(block.indexOf("  '@implementer':"));
+    const defined = /^[ \t]+['"]?@implementer['"]?[ \t]*:/m;
+    const heading = /^aliases:[ \t]*([^\n]*)$/m.exec(text);
+    if (!heading) {
+      writeFileSync(configPath, text.replace(/\n*$/, '\n\n') + block);
       report.migrated.push(configRel);
+    } else if (/^\{/.test(heading[1].trim())) {
+      // An inline mapping cannot be extended by text; the alias has to be added by hand.
+      const inline = text.slice(heading.index).split('\n')[0];
+      if (!/['"]?@implementer['"]?[ \t]*:/.test(inline)) {
+        report.warnings.push(`${configRel}: add the '@implementer' alias to the inline aliases mapping by hand; the managed workflows bind it.`);
+        log(`warning: ${report.warnings.at(-1)}`);
+      }
+    } else {
+      const bodyStart = heading.index + heading[0].length + 1;
+      const rest = text.slice(bodyStart);
+      const next = /^(?![ \t#\n])/m.exec(rest);
+      const body = next ? rest.slice(0, next.index) : rest;
+      if (!defined.test(body)) {
+        writeFileSync(configPath, text.slice(0, bodyStart) + entry + rest);
+        report.migrated.push(configRel);
+      }
     }
   }
   const ignorePath = join(root, '.gitignore');

@@ -212,3 +212,34 @@ test('an existing aliases block gains @implementer without a duplicate key; a co
   assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, []);
   assert.equal(readFileSync(join(root, '.archon/config.yaml'), 'utf8'), pinned);
 });
+
+test('aliases with a trailing comment are extended in place; an inline mapping is left alone with a warning', t => {
+  const root = consumer(t);
+  mkdirSync(join(root, '.archon'), { recursive: true });
+  const commented = "assistant: opencode\naliases: # local models\n  '@cheap':\n    provider: opencode\n    model: x/y\ntiers:\n  small:\n    provider: opencode\n    model: a/b\n";
+  writeFileSync(join(root, '.archon/config.yaml'), commented);
+  assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, ['.archon/config.yaml']);
+  const config = readFileSync(join(root, '.archon/config.yaml'), 'utf8');
+  assert.equal(config.match(/^aliases:/gm).length, 1);
+  assert.match(config, /^aliases: # local models\n  '@implementer':\n    provider: opencode\n    model: \S+\n  '@cheap':\n/m);
+  assert.match(config, /^tiers:\n  small:\n/m);
+  const inline = "assistant: opencode\naliases: { '@cheap': { provider: opencode, model: x/y } }\n";
+  writeFileSync(join(root, '.archon/config.yaml'), inline);
+  const warned = [];
+  const report = install({ root, prefix: 'factory', log: line => warned.push(line) });
+  assert.deepEqual(report.migrated, []);
+  assert.equal(report.warnings.length, 1);
+  assert.ok(warned.some(line => line.includes('@implementer')));
+  assert.equal(readFileSync(join(root, '.archon/config.yaml'), 'utf8'), inline);
+});
+
+test('an @implementer key outside the root aliases mapping does not count as migrated', t => {
+  const root = consumer(t);
+  mkdirSync(join(root, '.archon'), { recursive: true });
+  const elsewhere = "assistant: opencode\n# '@implementer': mentioned in a comment\nassistants:\n  opencode:\n    model: openai/gpt-6.1-sol\n    '@implementer': not-an-alias\n";
+  writeFileSync(join(root, '.archon/config.yaml'), elsewhere);
+  assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, ['.archon/config.yaml']);
+  const config = readFileSync(join(root, '.archon/config.yaml'), 'utf8');
+  assert.ok(config.startsWith(elsewhere));
+  assert.match(config, /^aliases:\n  '@implementer':\n    provider: opencode\n    model: \S+$/m);
+});
