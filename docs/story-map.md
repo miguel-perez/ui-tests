@@ -120,7 +120,7 @@ Order follows the opportunity map in [`discovery/redesign.md`](discovery/redesig
 - **Development strategy:** opening game. Site on Vercel with landing and getting-started; SDK root-layout component with recorder, taskbar and player; collector and SQLite store; compile and lint; `answer()`; outcome run by the runner; single-attempt trace with issue signals from give-up, dead clicks, pauses and deviation; the sentence.
 - **Confirmation:** [`issues/R0-walking-skeleton.md`](issues/R0-walking-skeleton.md).
 - **Check-in:** Miguel runs it, decides whether the contract holds, and decides whether to make the repository public with the README as the second door.
-- **Status:** done 15 October 2026. Merged in #5 (385975d), verified from a clean clone, production at https://ui-tests.com, issue #3 closed, repository public. Next: a design pass on the site (Vitest and Maze as references; SVG and image generation through OpenRouter) before R1.
+- **Status:** done 15 October 2026. Merged in #5 (385975d), verified from a clean clone, production at https://ui-tests.com, issue #3 closed, repository public. The first design pass (D1, #8, merged in #10) followed a brief that prescribed the layout and was judged a copied template at check-in; it is being redone as D2 with a content-first process, see [`design/content-audit.md`](design/content-audit.md) and [`design/landing-content.md`](design/landing-content.md), before R1.
 
 ### R1: "Real people from my audience, by link, from CI"
 - **Serves:** opportunities 1 and 2 at n = 5: ranked issues across people, the sentence with real counts; the factory plug through the CI check; evidence for the room through the shareable report; fit and recognition for the desirable rung.

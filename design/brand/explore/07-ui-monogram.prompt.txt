@@ -1,0 +1,1 @@
+Minimal flat vector logomark for a developer tool called ui-tests. A single solid black glyph on a plain white background: a monogram of the lowercase letters u and i drawn as one continuous geometric stroke, where the dot of the i is a small mouse pointer. Geometric, one colour, no text, no gradients, no shading, centered with generous margin.
