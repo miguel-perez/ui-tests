@@ -100,7 +100,7 @@ class RuntimeTests(unittest.TestCase):
         class LaunchCaptured(BaseException):
             pass
 
-        script = (runtime.ROOT / 'scripts/start-archon.sh').read_text().split("<<'PY'\n", 1)[1].rsplit('\nPY', 1)[0]
+        script = (runtime.HERE / 'start-archon.sh').read_text().split("<<'PY'\n", 1)[1].rsplit('\nPY', 1)[0]
         production = dict(ARCHON_HOME='/production/home', DATABASE_URL='postgres://production',
                           ARCHON_DOCKER='true', WORKSPACE_PATH='/registered/source',
                           CALLER_SETTING='retained', ARCHON_LOCAL_BINARY='/verified/archon')
@@ -290,7 +290,7 @@ class RuntimeTests(unittest.TestCase):
             scripts = root / 'scripts'
             scripts.mkdir()
             for name in ['start-archon.sh', 'install-archon-service.py', 'archon-runtime.py']:
-                (scripts / name).write_bytes((runtime.ROOT / 'scripts' / name).read_bytes())
+                (scripts / name).write_bytes((runtime.HERE / name).read_bytes())
             marker = root / 'global-called'
             fake = root / 'archon'
             fake.write_text('#!/bin/sh\ntouch "' + str(marker) + '"\n')
