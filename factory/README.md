@@ -22,6 +22,10 @@ node factory/check.mjs
 - Managed copies, overwritten on every install and checked by `check.mjs`:
   `.github/workflows/{merge-gate,review-event,delivery-status}.yml`,
   `.archon/commands/`, `.archon/workflows/`, `.coderabbit.yaml`.
+- `.archon/factory-managed.json`: the sorted list of managed paths from the
+  last install. Commit it. A later install deletes managed files the payload no
+  longer ships (reported as `removed`), and `check.mjs` reports leftovers as
+  `stale`.
 - Seeds, written only if absent and then yours: `.github/workflows/ci.yml`,
   `.archon/config.yaml`, `opencode.json`, `.npmrc`, `AGENTS.md`, and ignore
   lines for `.archon/runtime/` and Archon artifacts.
@@ -29,8 +33,10 @@ node factory/check.mjs
   `package.json`, added only when missing.
 
 Add `node factory/check.mjs && npm --prefix factory run validate` to your
-`validate` script so CI rejects edits to the managed copies. The CI job must be
-named `Automation CI`; the seeded workflow is.
+`validate` script so CI rejects edits to the managed copies. Keep the seeded
+names: the workflow must be named `CI`, because the merge gate triggers on
+`workflow_run: workflows: [CI, PR review event]`, and its job must be named
+`Automation CI`, the required check.
 
 Update later with `git subtree pull --prefix=factory git@github.com:miguel-perez/archon-factory.git main --squash`
 followed by `node factory/install.mjs`. Contribute fixes made inside `factory/`
@@ -84,6 +90,11 @@ pull_request, pull_request_review, pull_request_review_comment) and saves its id
 in `.archon/runtime/webhook-id`; later starts repoint that hook at the new
 tunnel URL.
 
+Recovery: if the saved hook was deleted on GitHub, the host forgets
+`webhook-id` and either adopts an existing hook that points at a
+`*.trycloudflare.com/webhooks/github` URL or creates a new one, then saves that
+id. A failed update of a hook that still exists is retried every 30 seconds.
+
 ```sh
 npm run automation:build          # builds the pinned Archon repair with Bun 1.3.11 into .archon/runtime/bin
 npm run automation:verify-serve   # isolated readiness proof
@@ -93,7 +104,10 @@ npm run automation:start
 npm run automation:stop
 ```
 
-Provide `.archon/runtime/bin/cloudflared` yourself. Environment:
+Provide `.archon/runtime/bin/cloudflared` yourself. The host resolves the
+repository with `gh repo view`; when that fails (no `gh` default repository,
+several remotes), write `owner/name` to `.archon/runtime/repository`.
+Environment:
 
 - `ARCHON_REPO_ROOT`: consumer root override; otherwise the git top level.
 - `ARCHON_ALLOWED_USERS`: comma-separated GitHub logins allowed to trigger
