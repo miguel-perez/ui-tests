@@ -1,0 +1,11 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+node_modules/
+__pycache__/
+*.py[cod]
+/.archon/runtime/
+/artifacts/
+/logs/
+/workflow-source/

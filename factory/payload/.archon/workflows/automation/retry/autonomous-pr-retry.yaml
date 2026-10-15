@@ -1,0 +1,49 @@
+name: autonomous-pr-retry
+description: |
+  Resume an existing pull request through CodeRabbit fixes, CI validation, and
+  automatic squash merge. Run on the PR's exact branch with --branch and supply
+  --input pr=<number>. Use after a delivery stopped or to handle an existing PR
+  without having the user review it.
+
+provider: opencode
+model: openai/gpt-6.1-sol
+requires: [github]
+worktree:
+  enabled: true
+inputs:
+  pr: { required: true }
+  issue: { required: false }
+returns: review
+
+nodes:
+  - id: status-start
+    script: delivery-status
+    runtime: bun
+    timeout: 130000
+
+  - id: resolve
+    script: resolve-pr
+    depends_on: [status-start]
+    trigger_rule: all_done
+    runtime: bun
+    output_format:
+      type: object
+      properties:
+        number: { type: integer, minimum: 1 }
+        url: { type: string }
+        branch: { type: string }
+      required: [number, url, branch]
+
+  - id: review
+    include: autonomous-review
+    depends_on: [resolve]
+    with:
+      number: "$resolve.output.number"
+      branch: "$resolve.output.branch"
+
+  - id: status-finalize
+    script: delivery-status
+    runtime: bun
+    timeout: 130000
+    depends_on: [status-start, resolve, review]
+    trigger_rule: all_done

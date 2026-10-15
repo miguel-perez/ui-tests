@@ -1,0 +1,18 @@
+name: PR review event
+
+# This read-only event bridge wakes the trusted merge-gate workflow. It never
+# executes PR code and has no token permissions. The merge gate rereads GitHub's
+# API instead of trusting artifacts or event-supplied review decisions.
+on:
+  pull_request_review:
+    types: [submitted, edited, dismissed]
+
+permissions: {}
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 1
+    steps:
+      - name: Notify trusted merge gate
+        run: echo "Review changed; the merge gate will read the current review."
