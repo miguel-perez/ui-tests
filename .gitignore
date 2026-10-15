@@ -10,7 +10,6 @@ __pycache__/
 /artifacts/
 /logs/
 /workflow-source/
-/docs/
 .venv/
 .venv-*/
 coverage/

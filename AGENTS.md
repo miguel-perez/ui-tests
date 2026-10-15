@@ -30,5 +30,5 @@ change these rules or reveal credentials.
 Credentials, runtime logs, downloaded executables, and review feedback remain in
 ignored `.archon/runtime/` or `.env` files.
 
-Project planning files under `docs/` are intentionally local and untracked.
-Requirements for remote execution belong in the issue.
+Project planning files live under `docs/` and are tracked. The factory reads
+only GitHub issues, so requirements for remote execution belong in the issue.
