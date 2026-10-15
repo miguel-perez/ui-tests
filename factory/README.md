@@ -129,3 +129,8 @@ npm run validate
 Runs the Node and Python test suites. The provider and model for the Archon
 workflows are set in `payload/.archon/workflows/**` and `payload/seed/.archon/config.yaml`;
 changing them per consumer is a known limitation.
+The code-writing nodes (`implement` in `autonomous-delivery` and `repair`
+in `autonomous-review`) override the workflow model with
+`openrouter/deepseek/deepseek-v4-pro-0813` to save cost; the scripts and the
+workflow default stay on `openai/gpt-6.1-sol`. OpenCode must already be
+connected to OpenRouter on the host.

@@ -39,6 +39,7 @@ nodes:
 
         - id: repair
           command: address-review
+          model: openrouter/deepseek/deepseek-v4-pro-0813
           depends_on: [observe]
           when: "$observe.output.state == 'fix'"
           context: fresh
