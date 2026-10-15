@@ -1,0 +1,69 @@
+# Blind reviews of the PRD, collated with verdicts
+
+15 October 2026. Three subagents worked without seeing `redesign.md` or the opportunity map: one checked the PRD against the D0 evidence, one against the 12 October archive, one generated ideas from the evidence alone ([`blind-ideas.md`](blind-ideas.md)). Their findings are below, deduplicated, with my verdict and the change I propose. Nothing here has been applied; the PRD's Issues section was added earlier at Miguel's explicit request.
+
+Verdict key: **agree** = change the docs; **partly** = change with a narrower scope; **disagree** = leave, with the reason.
+
+## A. Findings that change the design
+
+| # | Finding (reviewer) | Verdict | Proposed change |
+| --- | --- | --- | --- |
+| A1 | Hooks, store and money live inside the candidate build, so the candidate can alter the verdict and a dead preview strands the run record and payment state (archive #1). The hook execution path is unspecified anyway (evidence #7). | **agree** | Hooks run in the runner, not in the app: the collector stores end-state snapshots; `ui-tests verify` executes the test file's hooks in CI or on the dev machine against those snapshots. The run record lives in a store independent of any deployment (SQLite in dev, Postgres from R1), and the GitHub check reconciles from that store. The SDK in the app becomes recorder, player and collector only. |
+| A2 | The `catch` rule has a 46% false-pass rate at exactly the problem size the author said they care about, and "1 in 10 at 85%" is 19, not 18 (archive #2). | **agree** | `catch` never says pass. Its outcomes are "problems found" and "none found at this n", with the sentence stating the detection chance: "Five people give an 87% chance of seeing any problem that hits one in three; none seen." Pass and fail exist only under `estimate`, with a power statement. Drop the "inconclusive under 20%" success metric; it rewards verdict-producing rules. Fix the arithmetic. |
+| A3 | The cost formula contradicts the price promise: $1.50/min floor × 5 min + Prolific's 42.8% fee = $10.71 per attempt, $54 for five, over the example cap of $40; three docs give three units (evidence #3). | **agree** | One unit everywhere: per participant and per run of five. Copy becomes "about $10 a person, about $50 for five". Example cap becomes 60 and includes a 25% true-up reserve so the cap and the true-up never conflict (archive #6). |
+| A4 | The landing study's URL hook violates the PRD's own lint and cannot verify "understand" (evidence #5, archive #7). | **agree** | Split the task: "start" verified by URL, "understand" by `participant.answer()` with generated distractors, which moves from R1 to R0. |
+| A5 | R0 cannot be built from the issue: no mechanism for the recorder, the taskbar surviving navigation, or event capture (evidence #6). | **agree** | The issue specifies a root-layout component that mounts recorder and taskbar when a run cookie is present, records clicks, dead clicks, URL changes and masked inputs, and a collector route that stores them. |
+| A6 | Watching ships last; 32 people call it the strongest thing (evidence #1, archive #15). | **partly** | Event replay (rrweb) is the R1 highlight reel, which covers most of "watching" without consent escalation. Screen recording opt-in moves from R4 to R2. Think-aloud stays a planned omission. |
+| A7 | Persona 3 cannot install, fund or author the product as specified (evidence #4). | **agree** | The hosted install-once track is written into the PRD as a track, not "later", with its own install path and the shared study format. See `redesign.md` §2. |
+| A8 | "We bring the people" is false for every planned slice; R1's metric rests on hand recruiting (evidence #2). | **partly** | The promise stays as the destination; the pitch's Who and the story map say plainly: by your link in R1, from a panel in R3, from your own site in hosted. R1's metric becomes "five people from our own network complete the study", which is what it is. |
+| A9 | Consent purposes and per-provider recording rights were dropped while the record is built for model and optimiser consumption (archive #3). | **agree** | The record carries a purpose field per attempt and a per-source restriction; consent names model-assisted analysis; a GEPA or DAG consumer must check purpose before reading words or recordings. |
+| A10 | The consumer acceptance rule is the build comparison the PRD declares a non-goal, and will ratchet on n=5 noise (archive #4). | **agree** | The PRD provides the record and says what it cannot license: human runs are evidence for a person's decision, not an adaptive fitness signal, until a confirmation protocol exists. Remove the prescriptive rule; keep the harness contract as a reference for proxies only. |
+| A11 | No launch idempotency key; a retried CI job publishes a second paid study (archive #5). | **agree** | `ui-tests run` takes or derives a key from commit plus study id; the collector returns the existing run for a repeated key. |
+| A12 | Happy path ships to the player and the trace viewer has no auth (archive #12). | **agree** | The player receives the scenario only; happy path and hooks stay server-side. Trace pages require the author's session or a signed link. |
+| A13 | Preview protection blocks invite links (archive #13). | **agree** | R1 documents Vercel protection bypass for participants, the pattern TestSprite uses. |
+| A14 | Evidence for the room has no shareable form until hosted (evidence #12). | **agree** | A shareable report page per run, readable without login via signed link, in R1. |
+| A15 | Access conditions, assistance versus accommodation, and the participant's assistive technology were dropped; the blind-tester "cacophony" account is the case the PRD can no longer describe (archive #10). | **agree** | Each attempt records usual browser, device and assistive technology from the screener; accommodation is never a quality flag; the timeout floor is generous and the participant can ask for more time. |
+| A16 | Multiple tasks combined by "fail if any fails" inflates error and reuses participants without order handling (archive #9). | **agree** | One primary task per study carries the verdict; other tasks are reported, not combined. Order is randomised when tasks are independent and recorded either way. |
+| A17 | `estimate` has no power statement, unknown handling, or norm provenance (archive #8). | **agree** | State power at the planned n; a verdict must survive every assignment of unknowns; `target` has no default, the 0.78 figure is shown as a published average with its source and vintage. |
+| A18 | Internal contradictions: timeout formula, duplicates paid or rejected, blocking per study or per config, Connect first or later, participant flow across three docs, package layout, R0 preview storage, Vitest collecting `*.ui.test.ts` (evidence #13 to #17, #20; archive #11). | **agree** | Fix each to one answer: timeout is steps × 90 s with a 3-minute floor; duplicates are excluded from n and paid; blocking is per study with a config default; Connect is R4 everywhere; R0 flow is consent, scenario, taskbar, SEQ and confidence, and the author's own attempt is labelled rehearsal and never counts toward n; one package `packages/ui-tests` until a second author needs more; R0's Vercel acceptance drops the collector and keeps "site renders"; Vitest excludes `*.ui.test.ts`. |
+
+## B. Findings about the evidence and the personas
+
+| # | Finding | Verdict | Change |
+| --- | --- | --- | --- |
+| B1 | Persona 1's defining trait, "ships from CI", is in 4 of 121 accounts; it is the author's self-description (evidence #8). | **agree** | The audience sentence drops "with CI": "developers who ship UI and have no researcher". CI is how we deliver, not who they are. Persona 1 keeps the name "tests code, not experience", which is in the evidence. |
+| B2 | The agent actor is cited to people who wanted synthetic stand-ins, which the PRD refuses (evidence #9). | **agree** | The personas file stops citing s124 and s151 as support. They are counter-evidence: demand for synthetic users exists; we decline it by design and say why, with Loop11's own numbers (agents 0–25% success against humans 62–95%). |
+| B3 | Persona 2's question is desirability, which a task test does not answer (evidence #11). | **partly** | The pitch stops claiming the landing study answers persona 2's question. Persona 2 is served by launch-and-learn with issues and, later, by intercept recruiting from the live site. |
+| B4 | The pitch over-claims the landscape: TestSprite and OpenUser are CI-native, Loop11 and Useberry verify by URL, free self-recruit tiers exist (evidence #10). | **agree** | Rewrite "Solutions today" from `tool-alignment.md`: the gap is task plus diagnosis plus small-n meaning plus CI, not any one of them. |
+| B5 | "Widespread" contradicts the study's own limits (evidence #18). | **agree** | "Real and repeated in the accounts" replaces "widespread". |
+| B6 | Personas are "provisional until R1 confirms" but nothing in R1 confirms them (evidence #19). | **agree** | R1 adds two screener questions that place each participant against the three personas, so the first five strangers test the personas as well as the site. |
+| B7 | The screener is one transparent yes/no gate, the known-gameable kind (archive #14). | **partly** | Keep one behavioural question, add panel filters where the source has them, and a one-click "not my audience" exclusion after the fact with the participant still paid. Honest limit stated in the trace. |
+
+## C. Findings I disagree with or defer
+
+| # | Finding | Verdict | Reason |
+| --- | --- | --- | --- |
+| C1 | "Any key-value store" cannot enforce the cap (archive #17). | **agree, narrow** | The store interface requires transactional reservation; KV adapters are out until one implements it. |
+| C2 | Geometric mean over a mix of completions and timeouts estimates nothing (archive #16). | **agree** | Report time on task for verified completions and separately for all attempts; no geometric mean in v1. |
+| C3 | Withdrawal and cross-run fingerprints (archive #19). | **agree** | Report says "reduced reproducibility" after a withdrawal; fingerprints are hashed per project and never leave the adapter table. |
+| C4 | The archive's 76-person example, framing DAG, discourse graphs, multimodal pipeline, five-interface taxonomy (archive #20). | **agree, leave out** | The reviewer confirms the PRD was right to drop these. |
+
+## D. What the blind ideation adds
+
+The from-scratch pass converged on the same first build, a CI gate that stays pending until five humans tried the preview, which it calls Loop Gate, and on the same artefacts, a proof page and a sentence. Three ideas are not in the plan and are worth holding:
+
+- **Swap Test**, a reciprocal participant exchange between builders, as a fourth free source beside link, panel and intercept. hn_1005674 shut such a community because people only asked; forced reciprocity is the untested fix.
+- **Pretend Mode**, a seeded hosted browser so participants install nothing and can break nothing. It answers "all transactions would be pretend" (s18) and the UDID hassle (s156). Expensive; later.
+- **Clunker Profile**, a one-toggle "normal person's machine" bundle for the author's own browser. Serves "I can't see it fresh" with no recruiting. Small, separable, could be a free tool on the site.
+
+Its three predicted mistakes are already covered by A2 (a pass read as proof), A6 and the Issues section (recordings and a percentage with no meaning), and B7 (a panel tester sold as a user).
+
+## E. Grokked.it and the Visual Appeal Scale
+
+Miguel's 2015 `turk-test` and `grokkedit` repos ran a Mechanical Turk study: a 500 ms fixation point, a design flashed for 500 ms (variants at 5 and 10 s), then eight Likert items on cleanliness, aesthetic, originality, creativity, colour, appeal, convenience and navigation, with four attention items and a semantic differential. Grokked.it was the HIT-posting service around it. The method descends from Lindgaard, Fernandes, Dudek and Brown, "Attention web designers: You have 50 milliseconds to make a good first impression!", Behaviour and Information Technology 25(2), 2006, which found visual-appeal judgements at 50 ms agree with judgements at 500 ms and longer ([Nature news summary](https://www.nature.com/news/2006/060109/full/news060109-13.html)).
+
+Where it fits now: a thin-slice stage before a task test. hn_41261 wished for exactly it: "flash it in front of a tester for 5-10 seconds, and then have the tester answer questions about their comprehension of the site's purpose and benefits" (s78), because low traffic made numbers meaningless and he did not know whether visitors understood the service (s79). A five-second comprehension question plus the appeal items costs a fraction of a task attempt, needs no fixtures, and answers persona 2's "do they get it" question that a task hook cannot (B3). Lyssna already sells five-second tests, so this is not a gap on its own; as the first stage of a run on the same participants it is.
+
+Corpus check: the designgenome has no thin-slicing, first-click or visual-appeal source. The nearest atoms are Sketching User Experiences' "show several alternatives, not one" (ratings of a single design are absolute against no index) and the UEyes saliency paper. Lindgaard 2006 and Tuch et al. 2012 on visual complexity and prototypicality should be added to the inputs register; the first-click validity figure often quoted for Optimal Workshop's Chalkmark was not verified in this pass and stays unverified.
+
+Proposed: an `impression` task type, 500 ms flash plus one comprehension question plus the appeal items, runnable on the same five people before their task, reported beside the issues, never combined into the verdict. Earliest sensible slice is R1, where the landing study is the first customer.

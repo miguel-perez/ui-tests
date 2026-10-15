@@ -1,0 +1,515 @@
+[
+ {
+  "group": "G17",
+  "label": "Take people's stated liking as the evidence I have so far",
+  "people": 4,
+  "n": 4,
+  "charge": 0.38,
+  "neg": 0.0,
+  "pos": 0.94,
+  "strong": [
+   [
+    "s274",
+    "Judge my rapid prototyping without tests as very successful because the consultant and the beta employees are all excited to start using it to save hours on their end."
+   ],
+   [
+    "s244",
+    "Genuinely believe the app we tried hard to build can work, based on the feedback."
+   ]
+  ]
+ },
+ {
+  "group": "G16b",
+  "label": "Learn the hard way what the real difficulty is while building",
+  "people": 8,
+  "n": 27,
+  "charge": 0.378,
+  "neg": 0.48,
+  "pos": 0.31,
+  "strong": [
+   [
+    "s142",
+    "Find, to my surprise, that the tricky part is not the LLM but reliably capturing the selected text, not messing up the user's clipboard, and inserting the rewrite back without breaking formatting."
+   ],
+   [
+    "s237",
+    "Feel glad to have a dialog box with an attached suffix that Just Works, because that is not something I want to fiddle with right now."
+   ]
+  ]
+ },
+ {
+  "group": "G13a",
+  "label": "Push for research against intuition, authority or disinterest",
+  "people": 5,
+  "n": 13,
+  "charge": 0.376,
+  "neg": 0.76,
+  "pos": 0.07,
+  "strong": [
+   [
+    "s441",
+    "Feel exhausted, as a team, that the developers still tear into a new feature in the meeting after we have all come to an agreement on it."
+   ],
+   [
+    "s445",
+    "Think my relationship with the developers was good a year ago but has grown more distant and hostile as our product changes, guided by our research, have grown more ambitious."
+   ]
+  ]
+ },
+ {
+  "group": "G8",
+  "label": "Decide what a finding means before acting: real problem, novelty, small sample, or noise",
+  "people": 10,
+  "n": 24,
+  "charge": 0.371,
+  "neg": 0.67,
+  "pos": 0.12,
+  "strong": [
+   [
+    "s431",
+    "Accept ignoring the second finding because my sample size was so small, but judge the first finding a really big problem."
+   ],
+   [
+    "s38",
+    "Feel depressed by the user testing results even though I have made changes as a result of them."
+   ]
+  ]
+ },
+ {
+  "group": "G7",
+  "label": "Hold my ground against opinion by proving it with observed behaviour",
+  "people": 2,
+  "n": 3,
+  "charge": 0.349,
+  "neg": 0.01,
+  "pos": 0.59,
+  "strong": [
+   [
+    "s202",
+    "Feel glad I held fast to my opinion because it changed an industry for the better."
+   ],
+   [
+    "s462",
+    "Decide to let usability testing of our most important tasks guide the design, because I would rather base decisions on actual behavior than on attitudes."
+   ]
+  ]
+ },
+ {
+  "group": "G10a",
+  "label": "Find participants who match my audience",
+  "people": 7,
+  "n": 11,
+  "charge": 0.338,
+  "neg": 0.44,
+  "pos": 0.28,
+  "strong": [
+   [
+    "s19",
+    "Think the suggestion to forget car-buyer testing and focus on dealership testing is brilliant."
+   ],
+   [
+    "s447",
+    "Regret having no access to the huge existing user group that is out there."
+   ]
+  ]
+ },
+ {
+  "group": "G11",
+  "label": "Hit tools and services that block or price out an individual or a small team",
+  "people": 6,
+  "n": 20,
+  "charge": 0.333,
+  "neg": 0.58,
+  "pos": 0.14,
+  "strong": [
+   [
+    "s183",
+    "Find every candidate tool either unstable, lacking the necessary features, or horrible in usability."
+   ],
+   [
+    "s184",
+    "Find the other tools I looked at not interesting at all."
+   ]
+  ]
+ },
+ {
+  "group": "G5",
+  "label": "Find that watching people use it reveals what I could never see myself",
+  "people": 32,
+  "n": 45,
+  "charge": 0.33,
+  "neg": 0.47,
+  "pos": 0.37,
+  "strong": [
+   [
+    "s264",
+    "Discover in usability testing that our users are extremely confused and stare at the page for minutes because the two-field sign-up form does not look like a sign-up form and they assume it is a log-in form despite the large heading."
+   ],
+   [
+    "s240",
+    "Feel that qualitative user testing is a wonderful revelation because it quickly flared up UX issues in our product that we had not seen."
+   ]
+  ]
+ },
+ {
+  "group": "G5b",
+  "label": "Fear the problems I have not looked for yet",
+  "people": 6,
+  "n": 8,
+  "charge": 0.326,
+  "neg": 0.82,
+  "pos": 0.0,
+  "strong": [
+   [
+    "s196",
+    "Feel it really sucks to get an email saying a user can't register for an account."
+   ],
+   [
+    "s195",
+    "Find replicating bugs tough with all the variables of OS, PC, browser, location and other oddities."
+   ]
+  ]
+ },
+ {
+  "group": "G16a",
+  "label": "Build what I myself need or find missing",
+  "people": 12,
+  "n": 35,
+  "charge": 0.306,
+  "neg": 0.31,
+  "pos": 0.24,
+  "strong": [
+   [
+    "s173",
+    "Feel very annoyed by the un-dismissible ads and calls to action in the free Sudoku games I install on my phone."
+   ],
+   [
+    "s133",
+    "Feel extra annoyed at failing the challenge of tracking my spending, being a senior finance controller at the time."
+   ]
+  ]
+ },
+ {
+  "group": "G15",
+  "label": "Hold building, promoting and testing in tension",
+  "people": 8,
+  "n": 18,
+  "charge": 0.301,
+  "neg": 0.52,
+  "pos": 0.12,
+  "strong": [
+   [
+    "s239",
+    "Feel a little lost over the conflict I feel between acquiring users and developing the product."
+   ],
+   [
+    "s246",
+    "Feel uncomfortable with the state of my product and the initial impression it gives visitors, even though the limited feedback from launching is helpful and interesting."
+   ]
+  ]
+ },
+ {
+  "group": "G6b",
+  "label": "Search for a fix after the test exposes a problem the standard guidance does not solve",
+  "people": 2,
+  "n": 12,
+  "charge": 0.296,
+  "neg": 0.55,
+  "pos": 0.02,
+  "strong": [
+   [
+    "s368",
+    "Feel so disappointed by the result of following aria-live recommendations, which seem to assume page-like content, that I am now searching for any alternatives."
+   ],
+   [
+    "s366",
+    "Feel confident we can make the UI understandable, but stumped about using aria-live regions for content that updates more than once per second without the whole experience becoming cacophony."
+   ]
+  ]
+ },
+ {
+  "group": "G3b",
+  "label": "Turn to a community for how-to or validation because I have no reference to lean on",
+  "people": 26,
+  "n": 29,
+  "charge": 0.293,
+  "neg": 0.18,
+  "pos": 0.16,
+  "strong": [
+   [
+    "s46",
+    "Value the advice from my earlier Ask HN as excellent and take it on board by doing lots of reading and experimenting."
+   ],
+   [
+    "s464",
+    "Want tips or validation for pushing back on design feedback that may be completely off-base."
+   ]
+  ]
+ },
+ {
+  "group": "G3a",
+  "label": "Want outside eyes on what I built because I can no longer see it fresh",
+  "people": 21,
+  "n": 33,
+  "charge": 0.258,
+  "neg": 0.18,
+  "pos": 0.26,
+  "strong": [
+   [
+    "s136",
+    "Feel eager to share my new app with HN."
+   ],
+   [
+    "s475",
+    "Find the senior designer's feedback very helpful, with two of his questions really getting me thinking about my process."
+   ]
+  ]
+ },
+ {
+  "group": "G12",
+  "label": "Weigh whether testing is worth the time and money at all",
+  "people": 7,
+  "n": 16,
+  "charge": 0.254,
+  "neg": 0.53,
+  "pos": 0.14,
+  "strong": [
+   [
+    "s412",
+    "Feel I am spending unnecessary resources and extending the project timeline when user testing detects the same problems I already found through expert review."
+   ],
+   [
+    "s66",
+    "Judge it very worthwhile now to focus on UX enhancements and usability testing, because I am finally a bit freed up from the development grind and traffic has reached a point where even small increases in conversion percentages matter."
+   ]
+  ]
+ },
+ {
+  "group": "G2",
+  "label": "Realize I built on my own assumptions without a feedback loop, and that early enthusiasm did not predict use",
+  "people": 7,
+  "n": 13,
+  "charge": 0.245,
+  "neg": 0.71,
+  "pos": 0.12,
+  "strong": [
+   [
+    "s24",
+    "Judge that my cardinal sin was not building a great first base of users to get a feedback loop going."
+   ],
+   [
+    "s25",
+    "Realize, after reading The Mom Test, that I did all the wrong things first by building a product expecting people to come without real talks with lead users or a feedback loop."
+   ]
+  ]
+ },
+ {
+  "group": "G4",
+  "label": "Discount signals that are not observed behaviour: friends' excitement, surveys, ratings, what people say to please me",
+  "people": 9,
+  "n": 15,
+  "charge": 0.24,
+  "neg": 0.69,
+  "pos": 0.03,
+  "strong": [
+   [
+    "s156",
+    "Feel uncomfortable imposing the UDID hassle of Testflight on future customers because MVP customers differ subtly but significantly from testers."
+   ],
+   [
+    "s493",
+    "Recognize the danger that, with me as the designer doing the testing, users will tell me what they expect I want to hear instead of what is actually on their mind."
+   ]
+  ]
+ },
+ {
+  "group": "G10b",
+  "label": "Get the build somewhere people can safely try it",
+  "people": 6,
+  "n": 12,
+  "charge": 0.226,
+  "neg": 0.38,
+  "pos": 0.12,
+  "strong": [
+   [
+    "s291",
+    "Feel uncomfortable giving our source code away just like that to unknown parties."
+   ],
+   [
+    "s407",
+    "Think guerilla testing the TV app would be really inconvenient because bringing a TV to a coffee shop would draw stares."
+   ]
+  ]
+ },
+ {
+  "group": "G14",
+  "label": "Want to know continuously, in the build loop and in production, whether it works for users",
+  "people": 9,
+  "n": 14,
+  "charge": 0.221,
+  "neg": 0.29,
+  "pos": 0.21,
+  "strong": [
+   [
+    "s214",
+    "Feel that what we are building is so helpful when a customer\u2019s evals catch small models hallucinating ids that would send a campaign to all their contacts."
+   ],
+   [
+    "s211",
+    "Fear degrading MCP performance with our instrumentation, so iterate until the success rate matches running without it."
+   ]
+  ]
+ },
+ {
+  "group": "G13b",
+  "label": "Reconcile what the client or team set up with what I think needs finding out",
+  "people": 4,
+  "n": 18,
+  "charge": 0.219,
+  "neg": 0.42,
+  "pos": 0.06,
+  "strong": [
+   [
+    "s353",
+    "Feel glad that the client is already bought in to UX research, since it spares me the struggle of selling it."
+   ],
+   [
+    "s356",
+    "Worry that changing the already-planned usability tests would seriously inconvenience my client, who has handled the recruiting and logistics so far."
+   ]
+  ]
+ },
+ {
+  "group": "G9c",
+  "label": "Rig up a cheap way to capture what people do",
+  "people": 9,
+  "n": 22,
+  "charge": 0.217,
+  "neg": 0.25,
+  "pos": 0.26,
+  "strong": [
+   [
+    "s49",
+    "Notice, using the BLU phones side by side with my four-year-old iPhone, a remarkable difference in performance and quality that makes the old iPhone feel like an ultra-luxury rocketship."
+   ],
+   [
+    "s491",
+    "Feel eager to test this on people out in the actual field, on site, to get even more ecologically valid data."
+   ]
+  ]
+ },
+ {
+  "group": "G16c",
+  "label": "Reason about whether users will understand, without having watched them",
+  "people": 12,
+  "n": 31,
+  "charge": 0.214,
+  "neg": 0.53,
+  "pos": 0.09,
+  "strong": [
+   [
+    "s324",
+    "Dislike the label because it is too much noise and clutter that makes identification harder and is not sexy, though I am not UX trained."
+   ],
+   [
+    "s4",
+    "Feel the new mockups make it really easy for users to do what they need on the site."
+   ]
+  ]
+ },
+ {
+  "group": "G9a",
+  "label": "Work out the tasks, script and setup so the test is fair",
+  "people": 7,
+  "n": 24,
+  "charge": 0.211,
+  "neg": 0.3,
+  "pos": 0.05,
+  "strong": [
+   [
+    "s380",
+    "Feel uncomfortable about the script because this is my first time, and would rather give users simple tasks and analysis."
+   ],
+   [
+    "s349",
+    "Judge one article's image the best thing I have found while reading, and note the other article only talks about websites, not apps."
+   ]
+  ]
+ },
+ {
+  "group": "G11b",
+  "label": "Build my own tool because nothing does what I need",
+  "people": 6,
+  "n": 10,
+  "charge": 0.208,
+  "neg": 0.41,
+  "pos": 0.1,
+  "strong": [
+   [
+    "s150",
+    "Feel put off by always having to test every new feature or fix in the browser myself, so I research alternatives."
+   ],
+   [
+    "s118",
+    "Decide to build the product because I got tired of doing manual QA for my last SaaS product and did not want to manually test our app."
+   ]
+  ]
+ },
+ {
+  "group": "G1",
+  "label": "Put it in front of real people early, to learn whether anyone wants it and what breaks",
+  "people": 16,
+  "n": 36,
+  "charge": 0.198,
+  "neg": 0.13,
+  "pos": 0.32,
+  "strong": [
+   [
+    "s40",
+    "Feel extremely happy with the response and feedback I got from releasing Polls.io probably a little premature."
+   ],
+   [
+    "s92",
+    "Decide to develop this further only if there is interest, because I have been burnt building unnecessary stuff before and am now very careful to validate first."
+   ]
+  ]
+ },
+ {
+  "group": "G9b",
+  "label": "Handle what happens in the room: whether to intervene, how long it takes, which devices, which users",
+  "people": 3,
+  "n": 7,
+  "charge": 0.167,
+  "neg": 0.48,
+  "pos": 0.0,
+  "strong": [
+   [
+    "s419",
+    "Realize I have no good answer when management asks how long the usability test will take, because I have been too busy with scenarios, prototypes, and recruiting to ever consider it."
+   ],
+   [
+    "s311",
+    "Disagree immediately with adding mobile-device tasks, but cannot come up with any good explanation why it is a bad thing."
+   ]
+  ]
+ },
+ {
+  "group": "G6",
+  "label": "Change or simplify the thing because of what people could not get through",
+  "people": 15,
+  "n": 20,
+  "charge": 0.099,
+  "neg": 0.28,
+  "pos": 0.02,
+  "strong": [
+   [
+    "s523",
+    "Feel unsure which icon to use for the Home tab if all tabs get icons."
+   ],
+   [
+    "s522",
+    "Consider adding small icons to the tabs, unsure whether they would help users detect a tab's purpose by hinting at its main action."
+   ]
+  ]
+ }
+]

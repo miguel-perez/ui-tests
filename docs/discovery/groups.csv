@@ -1,0 +1,38 @@
+study,group_id,level,label,parent_id,parent_label,summaries,people
+study,g35,level3,Find out from real people whether what I built works for them,,,235,85
+study,g36,level3,"Make testing possible: method, people, money, time and buy-in",,,192,65
+study,g37,level3,Build and judge from my own need and reasoning,,,93,31
+study,g28,level2,Get evidence from reality rather than from my own head,g35,Find out from real people whether what I built works for them,101,42
+study,g29,level2,See what people actually do with it,g35,Find out from real people whether what I built works for them,75,42
+study,g30,level2,Act on what the test shows,g35,Find out from real people whether what I built works for them,59,28
+study,g31,level2,Run a sound test without a researcher,g36,"Make testing possible: method, people, money, time and buy-in",83,38
+study,g32,level2,Afford the test and fit it into how I build,g36,"Make testing possible: method, people, money, time and buy-in",78,29
+study,g33,level2,Make testing count with the people around me,g36,"Make testing possible: method, people, money, time and buy-in",31,9
+study,g34,level2,Build and judge from my own need and reasoning,g37,Build and judge from my own need and reasoning,93,31
+study,g1,level1,"Put it in front of real people early, to learn whether anyone wants it and what breaks",g28,Get evidence from reality rather than from my own head,36,16
+study,g2,level1,"Realize I built on my own assumptions without a feedback loop, and that early enthusiasm did not predict use",g28,Get evidence from reality rather than from my own head,13,7
+study,g3,level1,Want outside eyes on what I built because I can no longer see it fresh,g28,Get evidence from reality rather than from my own head,33,21
+study,g4,level1,Turn to a community for how-to or validation because I have no reference to lean on,g31,Run a sound test without a researcher,29,26
+study,g5,level1,"Discount signals that are not observed behaviour: friends' excitement, surveys, ratings, what people say to please me",g28,Get evidence from reality rather than from my own head,15,9
+study,g6,level1,Take people's stated liking as the evidence I have so far,g28,Get evidence from reality rather than from my own head,4,4
+study,g7,level1,Find that watching people use it reveals what I could never see myself,g29,See what people actually do with it,45,32
+study,g8,level1,Fear the problems I have not looked for yet,g29,See what people actually do with it,8,6
+study,g9,level1,Rig up a cheap way to capture what people do,g29,See what people actually do with it,22,9
+study,g10,level1,Change or simplify the thing because of what people could not get through,g30,Act on what the test shows,20,15
+study,g11,level1,Search for a fix after the test exposes a problem the standard guidance does not solve,g30,Act on what the test shows,12,2
+study,g12,level1,Hold my ground against opinion by proving it with observed behaviour,g30,Act on what the test shows,3,2
+study,g13,level1,"Decide what a finding means before acting: real problem, novelty, small sample, or noise",g30,Act on what the test shows,24,10
+study,g14,level1,"Work out the tasks, script and setup so the test is fair",g31,Run a sound test without a researcher,24,7
+study,g15,level1,"Handle what happens in the room: whether to intervene, how long it takes, which devices, which users",g31,Run a sound test without a researcher,7,3
+study,g16,level1,Find participants who match my audience,g31,Run a sound test without a researcher,11,7
+study,g17,level1,Get the build somewhere people can safely try it,g31,Run a sound test without a researcher,12,6
+study,g18,level1,Hit tools and services that block or price out an individual or a small team,g32,Afford the test and fit it into how I build,20,6
+study,g19,level1,Build my own tool because nothing does what I need,g32,Afford the test and fit it into how I build,10,6
+study,g20,level1,Weigh whether testing is worth the time and money at all,g32,Afford the test and fit it into how I build,16,7
+study,g21,level1,"Want to know continuously, in the build loop and in production, whether it works for users",g32,Afford the test and fit it into how I build,14,9
+study,g22,level1,"Hold building, promoting and testing in tension",g32,Afford the test and fit it into how I build,18,8
+study,g23,level1,"Push for research against intuition, authority or disinterest",g33,Make testing count with the people around me,13,5
+study,g24,level1,Reconcile what the client or team set up with what I think needs finding out,g33,Make testing count with the people around me,18,4
+study,g25,level1,Build what I myself need or find missing,g34,Build and judge from my own need and reasoning,35,12
+study,g26,level1,Learn the hard way what the real difficulty is while building,g34,Build and judge from my own need and reasoning,27,8
+study,g27,level1,"Reason about whether users will understand, without having watched them",g34,Build and judge from my own need and reasoning,31,12

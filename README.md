@@ -6,7 +6,7 @@ Usability testing, in your repo
 
 For developers who test code, ship UI and have no researcher. Find where people get stuck, with issue signals, a sentence that says what the evidence means, and a trace to inspect.
 
-[Get started](https://ui-tests.vercel.app/docs/getting-started) · [View on GitHub](https://github.com/miguel-perez/ui-tests)
+[Get started](https://ui-tests.com/docs/getting-started) · [View on GitHub](https://github.com/miguel-perez/ui-tests)
 
 Local rehearsal · example identifiers
 
@@ -220,7 +220,7 @@ Run `npm ci` and `npx playwright install chromium`, then `npm run validate`. Thi
 
 The two npm workspaces are `apps/web` and `packages/ui-tests`. The collector and SQLite adapter are for local development. The player receives an allowlisted participant view; expected answers, happy paths and hooks stay in the CLI. Local SQLite data and compiled hooks live in ignored `.ui-tests/`.
 
-The autonomous factory is vendored in [`factory/`](factory/README.md) from `miguel-perez/archon-factory`. Planning documents live in the untracked local `docs/` directory. To start delivery, open an issue with acceptance criteria and comment:
+The autonomous factory is vendored in [`factory/`](factory/README.md) from `miguel-perez/archon-factory`. Planning documents live in [`docs/`](docs/). To start delivery, open an issue with acceptance criteria and comment:
 
 ```text
 @archon /workflow run autonomous-delivery Implement this issue and satisfy its acceptance criteria.
