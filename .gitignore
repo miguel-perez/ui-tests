@@ -13,3 +13,10 @@ __pycache__/
 .venv/
 .venv-*/
 coverage/
+.next/
+dist/
+playwright-report/
+test-results/
+.ui-tests/
+next-env.d.ts
+*.tsbuildinfo
