@@ -1,4 +1,4 @@
-import { describe, it, expect as assert, beforeEach } from 'vitest'
+import { describe, it, expect as assert, beforeEach, vi } from 'vitest'
 import { readFile } from 'node:fs/promises'
 import { context, goal, task, outcome, expect, getContexts, resetContexts } from '../packages/ui-tests/src/index'
 import { compile, lint, generateTemplate, sentence, sampleSize } from '../packages/ui-tests/src/compiler'
@@ -89,6 +89,24 @@ describe('storage, verification and participant boundary', () => {
       assert(found[1]).toMatchObject({ at: 123, detail: assert.stringContaining('div#inert') })
     } finally { store.close() }
   })
+  it('atomically rejects stale verification without overwriting submitted answers or attempt evidence', () => {
+    const store = new SQLiteAdapter(':memory:')
+    try {
+      const run = store.create(compile(authored())[0]); run.status = 'questions'; store.update(run)
+      const previous = store.get(run.id)!
+      const verifying = structuredClone(previous); verifying.result = { status: 'correct' }
+      run.status = 'finished'; run.answers = { 'Which plan?': 'April' }; run.seq = 3
+      run.snapshot = { url: 'http://localhost/docs/getting-started', dom: '<main>Ready</main>' }
+      store.update(run)
+      assert(store.update(verifying, previous)).toBe(false)
+      assert(store.get(run.id)).toMatchObject({ status: 'finished', answers: run.answers, seq: 3, snapshot: run.snapshot })
+      assert(store.db.prepare('SELECT data FROM attempts').get()).toEqual({ data: assert.stringContaining('"seq":3') })
+      assert(store.db.prepare('SELECT dom FROM snapshots').get()).toEqual({ dom: run.snapshot.dom })
+      const latest = store.get(run.id)!
+      assert(store.update({ ...latest, result: { status: 'correct' } }, latest)).toBe(true)
+      assert(store.get(run.id)?.result).toEqual({ status: 'correct' })
+    } finally { store.close() }
+  })
   it('queries the stored DOM and asks a validation question without leaking its answer', async () => {
     context({ users: 'people', purpose: 'finish my work' }, () => goal('finish', () => outcome(async ({ page, participant }) => {
       expect(page.query('h1')?.textContent).toBe('Ready')
@@ -108,6 +126,25 @@ describe('storage, verification and participant boundary', () => {
     const handler = createCollector(() => new SQLiteAdapter(':memory:'))
     assert((await handler(new Request('http://localhost/api/ui-tests'))).status).toBe(401)
     assert((await handler(new Request('http://localhost/api/ui-tests', { method: 'POST', headers: { origin: 'http://evil.test' }, body: '{}' }))).status).toBe(403)
+  })
+  it('does not let an overlapping recorder request restore an ended attempt to active', async () => {
+    const store = new SQLiteAdapter(':memory:')
+    const close = vi.spyOn(store, 'close').mockImplementation(() => {})
+    try {
+      const run = store.create(compile(authored())[0]); run.status = 'active'; store.update(run)
+      const handler = createCollector(() => store)
+      const headers = { origin: 'http://localhost', cookie: `ui-tests-run=${run.id}.${run.token}` }
+      const recorder = new Request('http://localhost/api/ui-tests', { method: 'POST', headers, body: '{}' })
+      let release!: (value: unknown) => void
+      vi.spyOn(recorder, 'json').mockReturnValue(new Promise(resolve => { release = resolve }))
+      const pending = handler(recorder)
+      const snapshot = { url: 'http://localhost/docs/getting-started', dom: '<main>Ready</main>' }
+      assert((await handler(new Request('http://localhost/api/ui-tests', { method: 'POST', headers, body: JSON.stringify({ action: 'end', reason: 'done', snapshot }) }))).status).toBe(200)
+      release({ action: 'events', events: [{ type: 'url', at: Date.now(), url: snapshot.url }] })
+      assert((await pending).status).toBe(409)
+      assert(store.get(run.id)).toMatchObject({ status: 'questions', reason: 'done', snapshot })
+      assert(store.events(run.id)).toEqual([])
+    } finally { close.mockRestore(); store.close() }
   })
 })
 it('keeps README, landing context and rendered copy word-for-word aligned', async () => {

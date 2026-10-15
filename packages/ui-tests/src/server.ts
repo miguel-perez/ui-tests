@@ -25,11 +25,15 @@ export function createCollector(getStorage: () => StorageAdapter = () => new SQL
     const store = getStorage()
     try {
       const [id, token] = request.headers.get('authorization')?.replace(/^Bearer /, '').split('.') ?? cookie(request) ?? []
-      let run = id && token ? store.authorize(id, token) : undefined
-      if (request.method === 'GET') return run ? Response.json(participantView(run), { headers: { 'Cache-Control': 'no-store' } }) : new Response('Unauthorized', { status: 401 })
+      if (request.method === 'GET') {
+        const run = id && token ? store.authorize(id, token) : undefined
+        return run ? Response.json(participantView(run), { headers: { 'Cache-Control': 'no-store' } }) : new Response('Unauthorized', { status: 401 })
+      }
       if (request.headers.get('origin') !== new URL(request.url).origin) return new Response('Invalid origin', { status: 403 })
       if (Number(request.headers.get('content-length') ?? 0) > 2_100_000) return new Response('Request too large', { status: 413 })
       const body = message.parse(await request.json())
+      // Read current state after body I/O so an overlapping request cannot restore stale state.
+      let run = id && token ? store.authorize(id, token) : undefined
       const headers: Record<string, string> = { 'Cache-Control': 'no-store' }
       if (body.action === 'consent') {
         run = store.authorize(body.id, body.token)
@@ -44,6 +48,7 @@ export function createCollector(getStorage: () => StorageAdapter = () => new SQL
         } else if (body.action === 'events') {
           if (run.status !== 'active') return new Response('Attempt is not active', { status: 409 })
           store.append(run.id, body.events)
+          return Response.json(participantView(run), { headers })
         } else if (body.action === 'end') {
           if (run.status !== 'active') return new Response('Attempt is not active', { status: 409 })
           run.status = 'questions'; run.reason = Date.now() >= run.startedAt + run.context.goals[run.goalIndex].timeout.seconds * 1000 ? 'timed out' : body.reason; run.snapshot = body.snapshot; run.endedAt = Date.now()

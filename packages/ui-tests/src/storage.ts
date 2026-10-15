@@ -11,7 +11,7 @@ export interface StorageAdapter {
   create(context: CompiledContext, goalIndex?: number): Run
   get(id: string): Run | undefined
   authorize(id: string, token: string): Run | undefined
-  update(run: Run): void
+  update(run: Run, previous?: Run): boolean
   append(id: string, events: Event[]): void
   events(id: string): Event[]
   close(): void
@@ -47,11 +47,15 @@ export class SQLiteAdapter implements StorageAdapter {
     if (!run || Buffer.byteLength(token) !== Buffer.byteLength(run.token) || !timingSafeEqual(Buffer.from(token), Buffer.from(run.token))) return undefined
     return run
   }
-  update(run: Run) {
-    this.db.transaction(() => {
-      this.db.prepare('UPDATE runs SET data=? WHERE id=?').run(JSON.stringify(run), run.id)
+  update(run: Run, previous?: Run) {
+    return this.db.transaction(() => {
+      const updated = previous
+        ? this.db.prepare('UPDATE runs SET data=? WHERE id=? AND data=?').run(JSON.stringify(run), run.id, JSON.stringify(previous))
+        : this.db.prepare('UPDATE runs SET data=? WHERE id=?').run(JSON.stringify(run), run.id)
+      if (!updated.changes) return false
       this.db.prepare('UPDATE attempts SET data=? WHERE run_id=?').run(JSON.stringify({ reason: run.reason, seq: run.seq, confidence: run.confidence, startedAt: run.startedAt, endedAt: run.endedAt, rehearsal: true }), run.id)
       if (run.snapshot) this.db.prepare('INSERT OR REPLACE INTO snapshots VALUES (?,?,?)').run(run.id, run.snapshot.url, run.snapshot.dom)
+      return true
     })()
   }
   append(id: string, events: Event[]) {

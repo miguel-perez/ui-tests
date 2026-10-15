@@ -3,6 +3,7 @@ import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { mkdir, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
 import path from 'node:path'
+import { SQLiteAdapter } from '../packages/ui-tests/src/storage'
 
 const exec = promisify(execFile)
 const cli = path.resolve('packages/ui-tests/bin/ui-tests.mjs')
@@ -12,6 +13,19 @@ async function fixture() {
   const directory = await mkdtemp(path.resolve('.ui-tests', 'cli-test-')); directories.push(directory); return directory
 }
 afterEach(async () => { await Promise.all(directories.splice(0).map(dir => rm(dir, { recursive: true, force: true }))) })
+it('rejects non-local targets before persisting any runs or attempts', async () => {
+  const cwd = await fixture()
+  await exec(process.execPath, [cli, 'init'], { cwd })
+  await writeFile(path.join(cwd, 'ui-tests.config.ts'), `export default { target: { url: 'https://example.com' } }`)
+  for (let i = 0; i < 2; i++) {
+    await expect(exec(process.execPath, [cli, '--no-open'], { cwd, env: { ...process.env, UI_TESTS_DATA_DIR: cwd } })).rejects.toMatchObject({ stderr: expect.stringContaining('This slice supports local dev targets only.') })
+  }
+  const store = new SQLiteAdapter(path.join(cwd, 'dev.sqlite'))
+  try {
+    expect(store.db.prepare('SELECT COUNT(*) AS count FROM runs').get()).toEqual({ count: 0 })
+    expect(store.db.prepare('SELECT COUNT(*) AS count FROM attempts').get()).toEqual({ count: 0 })
+  } finally { store.close() }
+})
 it('init preserves author files and existing Vitest settings, adds the exclusion, and is idempotent', async () => {
   const cwd = await fixture()
   const original = `import { defineConfig } from 'vitest/config'\nexport default defineConfig({ test: { environment: 'node', exclude: ['custom/**'] } })\n`

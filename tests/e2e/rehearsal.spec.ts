@@ -37,6 +37,8 @@ async function questions(page: Page) {
   await expect(page.getByRole('heading', { name: 'A few final questions' })).toBeVisible({ timeout: 15_000 })
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   await page.getByLabel('Overall,').selectOption('3')
+  // The CLI verifies snapshots asynchronously; disabled buttons cannot receive keyboard focus.
+  await expect(page.getByRole('button', { name: 'Send answers' })).toBeEnabled({ timeout: 15_000 })
   await page.getByRole('button', { name: 'Send answers' }).focus(); await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
   await expect.poll(() => output).toContain('Outcome:')
@@ -82,7 +84,15 @@ test('task steps advance individually and run checks against their own snapshots
   await begin(page); await expect(page.getByText('Read the promise', { exact: true })).toBeVisible()
   await page.getByRole('button', { name: 'Done with this step' }).click()
   await expect(page.getByText('Find the instructions', { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Get started' }).click(); await expect(page).toHaveURL(/\/docs\/getting-started$/); await page.getByRole('button', { name: "I'm done" }).click(); await questions(page)
+  await page.getByRole('link', { name: 'Get started' }).click(); await expect(page).toHaveURL(/\/docs\/getting-started$/)
+  // Hold the separate verifier process so readiness cannot depend on machine speed.
+  child.kill('SIGSTOP')
+  try {
+    await page.getByRole('button', { name: "I'm done" }).click()
+    await expect(page.getByRole('heading', { name: 'A few final questions' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Send answers' })).toBeDisabled()
+  } finally { child.kill('SIGCONT') }
+  await questions(page)
   expect(traceText(await (await request.get(trace)).text())).toContain('"status": "correct"')
   await rm(authoredFile)
   const { stdout } = await promisify(execFile)(process.execPath, [path.resolve('packages/ui-tests/bin/ui-tests.mjs'), 'verify', new URL(player).pathname.split('/').at(-1)!])

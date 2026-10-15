@@ -97,10 +97,10 @@ async function main() {
     created.hooksBundle = result.bundle; created.authoredContextIndex = active.contextIndex; store.update(created)
     return created
   }
-  let run = createRun()
-  const owned = new Set([run.id])
   const target = new URL(config.target.url)
   if (!['localhost', '127.0.0.1', '[::1]'].includes(target.hostname)) throw new Error('This slice supports local dev targets only.')
+  let run = createRun()
+  const owned = new Set([run.id])
   const server = createServer((request, response) => {
     const [, id, token] = request.url?.split('/') ?? []
     const requested = owned.has(id) ? store.authorize(id, token ?? '') : undefined
@@ -123,12 +123,11 @@ async function main() {
     if (completed || verifying) return
     const current = store.get(run.id)!
     if (!['questions', 'finished'].includes(current.status)) return
+    const previous = structuredClone(current)
     verifying = true
     try {
       current.result = await verify(current, result.authored[active.contextIndex].goals[active.goalIndex], store.events(current.id))
-      const latest = store.get(current.id)!
-      if (latest.status !== current.status || JSON.stringify(latest.answers) !== JSON.stringify(current.answers)) return
-      store.update(current)
+      if (!store.update(current, previous)) return
       if (current.status === 'finished' && !(current.result as { question?: unknown }).question) {
         console.log(`Outcome: ${(current.result as { status: string }).status}\n${active.compiled.goals[active.goalIndex].resultSentence ?? 'Issues-only exploration; no result sentence.'}\nTrace: ${traceUrl()}`)
         open(traceUrl())
