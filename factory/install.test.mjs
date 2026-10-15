@@ -243,3 +243,13 @@ test('an @implementer key outside the root aliases mapping does not count as mig
   assert.ok(config.startsWith(elsewhere));
   assert.match(config, /^aliases:\n  '@implementer':\n    provider: opencode\n    model: \S+$/m);
 });
+
+test('an aliases heading that ends the file without a newline still gets a well-formed entry', t => {
+  const root = consumer(t);
+  mkdirSync(join(root, '.archon'), { recursive: true });
+  writeFileSync(join(root, '.archon/config.yaml'), 'assistant: opencode\naliases:');
+  assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, ['.archon/config.yaml']);
+  const config = readFileSync(join(root, '.archon/config.yaml'), 'utf8');
+  assert.match(config, /^assistant: opencode\naliases:\n  '@implementer':\n    provider: opencode\n    model: \S+\n$/);
+  assert.deepEqual(install({ root, prefix: 'factory', log() {} }).migrated, []);
+});

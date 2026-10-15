@@ -78,12 +78,13 @@ export function install({ root = topLevel(), prefix = cliPrefix([], root), log =
         log(`warning: ${report.warnings.at(-1)}`);
       }
     } else {
-      const bodyStart = heading.index + heading[0].length + 1;
-      const rest = text.slice(bodyStart);
+      // `rest` is what follows the heading line; a heading that ends the file has no newline yet.
+      const lineEnd = heading.index + heading[0].length;
+      const rest = text.slice(lineEnd).replace(/^\n/, '');
       const next = /^(?![ \t#\n])/m.exec(rest);
       const body = next ? rest.slice(0, next.index) : rest;
       if (!defined.test(body)) {
-        writeFileSync(configPath, text.slice(0, bodyStart) + entry + rest);
+        writeFileSync(configPath, text.slice(0, lineEnd) + '\n' + entry + rest);
         report.migrated.push(configRel);
       }
     }
