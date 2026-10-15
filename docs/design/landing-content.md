@@ -1,4 +1,6 @@
-# Landing content, D2
+# Landing content, D2 (first draft, superseded)
+
+**Superseded** by [`landing-content-v2.md`](landing-content-v2.md) and later drafts after the author's review; kept for the record of what was rejected and why. On the figures: 87% is the achieved probability that five independent attempts show a problem affecting one person in three, 1 − (2/3)^5; the compiler's configured default is 85% confidence, from which it plans five attempts. The CLI prints only the rehearsal line today.
 
 16 October 2026. The page written as a document before any layout, following [`content-audit.md`](content-audit.md) §4. Each block has its copy, its artefact, and notes on what the artefact must show. Copy is final unless marked draft; artefacts are described exactly enough to be generated. The non-bending rules from D1 still hold: ISO 9241-11 terms for usability, "evidence for the people clauses of ISO 9241-210", never compliant, certified, pass, or a percentage as a result at n = 5, an honest status, no mention of agent runs or the hosted track, the real `apps/web/landing.ui.test.ts` as the example, the commands unchanged.
 

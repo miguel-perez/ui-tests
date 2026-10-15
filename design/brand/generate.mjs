@@ -24,8 +24,8 @@ mkdirSync(outDir, { recursive: true })
 let calls = 0
 for (const { name, prompt } of prompts) {
   if (calls >= max) break
-  const svgPath = join(outDir, `${name}.svg`), pngPath = join(outDir, `${name}.png`)
-  if (existsSync(svgPath) || existsSync(pngPath)) { console.log('skip', name); continue }
+  // Skip when any saved output exists, whatever format the model returned, so a rerun never pays twice.
+  if (['svg', 'png', 'jpg'].some(ext => existsSync(join(outDir, `${name}.${ext}`)))) { console.log('skip', name); continue }
   writeFileSync(join(outDir, `${name}.prompt.txt`), prompt + '\n')
   calls++
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
@@ -41,12 +41,15 @@ for (const { name, prompt } of prompts) {
   const m = /^data:([^;]+);base64,(.+)$/s.exec(url)
   if (m) {
     const [, mime, b64] = m
-    const ext = mime.includes('svg') ? 'svg' : mime.includes('png') ? 'png' : mime.includes('jpeg') ? 'jpg' : 'bin'
+    if (!/^image\/(svg\+xml|png|jpeg)$/.test(mime)) { console.error(name, 'unexpected data URL type', mime); continue }
+    const ext = mime.includes('svg') ? 'svg' : mime.includes('png') ? 'png' : 'jpg'
     writeFileSync(join(outDir, `${name}.${ext}`), Buffer.from(b64, 'base64'))
     console.log('wrote', name, ext, mime)
   } else {
-    const r = await fetch(url); const buf = Buffer.from(await r.arrayBuffer())
+    const r = await fetch(url)
     const ct = r.headers.get('content-type') ?? ''
+    if (!r.ok || !/^image\/(svg\+xml|png|jpeg)/.test(ct)) { console.error(name, 'remote image rejected', r.status, ct); continue }
+    const buf = Buffer.from(await r.arrayBuffer())
     const ext = ct.includes('svg') ? 'svg' : ct.includes('png') ? 'png' : 'jpg'
     writeFileSync(join(outDir, `${name}.${ext}`), buf); console.log('fetched', name, ext, ct)
   }
