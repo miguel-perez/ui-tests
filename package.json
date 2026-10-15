@@ -1,0 +1,11 @@
+{
+  "name": "archon-factory",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Autonomous delivery factory: Archon implements, CodeRabbit reviews, GitHub merges.",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "validate": "node --test automation/*.test.mjs scripts/listener-cleanup.test.mjs payload.test.mjs install.test.mjs check.test.mjs && python3 -m unittest discover -s automation -p 'test_merge_gate.py' && python3 scripts/test_archon_webhook_proxy.py && python3 scripts/test_archon_runtime.py"
+  }
+}

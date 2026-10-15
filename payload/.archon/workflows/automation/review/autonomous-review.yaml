@@ -1,0 +1,66 @@
+name: autonomous-review
+description: |
+  Building block for autonomous delivery and PR retry. Observe current CodeRabbit
+  review and CI, apply at most five total cumulative correction rounds across
+  runs and continuations without reset (never a sixth), then enable native GitHub
+  auto merge only after a deterministic check certifies the current commit.
+  No human review gate is used; failures retain the open PR and a blocker report.
+
+provider: opencode
+model: openai/gpt-6.1-sol
+requires: [github]
+inputs:
+  number: { required: true }
+  branch: { required: true }
+returns: merge
+
+nodes:
+  - id: review-loop
+    loop_group:
+      max_iterations: 5
+      fresh_context: true
+      until_bash: test $verify.output.state = "approved" || test $verify.output.state = "merged"
+      nodes:
+        - id: observe
+          script: wait-for-review
+          runtime: bun
+          timeout: 1860000
+          with:
+            number: "$INPUTS.number"
+            branch: "$INPUTS.branch"
+          output_format: &review_state
+            type: object
+            properties:
+              state: { type: string, enum: [approved, fix, merged] }
+              head_sha: { type: string }
+              feedback_file: { type: string }
+              summary: { type: string }
+            required: [state, head_sha, feedback_file, summary]
+
+        - id: repair
+          command: address-review
+          depends_on: [observe]
+          when: "$observe.output.state == 'fix'"
+          context: fresh
+          output_type: review-correction
+
+        - id: verify
+          script: wait-for-review
+          runtime: bun
+          timeout: 1860000
+          depends_on: [observe, repair]
+          trigger_rule: none_failed_min_one_success
+          with:
+            number: "$INPUTS.number"
+            branch: "$INPUTS.branch"
+          output_format: *review_state
+
+  - id: merge
+    script: enable-auto-merge
+    runtime: bun
+    timeout: 120000
+    depends_on: [review-loop]
+    with:
+      number: "$INPUTS.number"
+      branch: "$INPUTS.branch"
+    output_type: merge-result

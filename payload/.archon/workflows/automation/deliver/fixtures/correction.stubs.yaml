@@ -1,0 +1,24 @@
+status-start: { state: implementing }
+status-finalize: { state: awaiting-merge }
+fixture:
+  expect: completed
+  reached: [implement, resolve, observe, repair, verify, review__merge]
+  resolved-text-contains:
+    repair: "Feedback artifact: /tmp/example-review.json"
+implement: Implemented and published the task; validation passed.
+resolve:
+  number: 1
+  url: https://github.com/example/repository/pull/1
+  branch: archon/example-task
+observe:
+  state: fix
+  head_sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  feedback_file: /tmp/example-review.json
+  summary: CodeRabbit found a missing error check.
+repair: Correction 4/5 after historical 3/3, leaving at most one further correction. Added the error check, validated, committed, and pushed; continuation does not reset prior usage and no sixth correction is permitted.
+verify:
+  state: approved
+  head_sha: bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb
+  feedback_file: /tmp/example-review.json
+  summary: CodeRabbit approved the corrected commit and CI passed.
+review__merge: Automatic squash merge enabled.

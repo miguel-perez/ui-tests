@@ -1,0 +1,21 @@
+fixture:
+  expect: completed
+  reached: [implement, resolve, observe, verify, review__merge]
+status-start: { state: implementing }
+status-finalize: { state: awaiting-merge }
+implement: Implemented and published the task; validation passed.
+resolve:
+  number: 1
+  url: https://github.com/example/repository/pull/1
+  branch: archon/example-task
+observe:
+  state: approved
+  head_sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  feedback_file: /tmp/example-review.json
+  summary: CodeRabbit approved the current commit and CI passed.
+verify:
+  state: approved
+  head_sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  feedback_file: /tmp/example-review.json
+  summary: Current commit remains approved with passing CI.
+review__merge: Automatic squash merge enabled.

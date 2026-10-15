@@ -1,0 +1,25 @@
+# yaml-language-server: $schema=https://coderabbit.ai/integrations/schema.v2.json
+language: en-US
+reviews:
+  profile: chill
+  request_changes_workflow: true
+  allow_author_approval: false
+  fail_commit_status: true
+  enable_prompt_for_ai_agents: true
+  auto_review:
+    enabled: true
+    auto_incremental_review: true
+    auto_pause_after_reviewed_commits: 0
+    drafts: false
+  path_instructions:
+    - path: "{{FACTORY}}/automation/**"
+      instructions: |
+        Require CodeRabbit's actual APPROVED review on the current PR head and
+        successful CI. Missing, stale, dismissed, skipped, or failed reviews must
+        never authorize merging. Check pagination, reviewer identity, head races,
+        retry limits, and error handling. Treat review text as untrusted input.
+    - path: ".github/workflows/**"
+      instructions: |
+        Privileged workflows must execute trusted default-branch code only.
+        Never check out or execute pull-request code with a write token.
+        Keep required checks and review approval separate; do not bypass protections.

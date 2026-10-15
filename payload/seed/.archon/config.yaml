@@ -1,0 +1,6 @@
+# Project-local backend: OpenCode with the exact openai/gpt-6.1-sol model.
+# Global ~/.archon/config.yaml is intentionally left unchanged.
+assistant: opencode
+assistants:
+  opencode:
+    model: openai/gpt-6.1-sol
