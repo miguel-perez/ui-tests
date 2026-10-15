@@ -1,0 +1,11 @@
+{
+  "name": "ui-tests",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "UI research repository delivered by the Archon factory.",
+  "engines": { "node": ">=22.13" },
+  "scripts": {
+    "validate": "node factory/check.mjs && npm --prefix factory run validate"
+  }
+}
