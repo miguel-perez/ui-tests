@@ -106,5 +106,6 @@ npm run dev
 cd apps/web
 npx ui-tests`,
   inspect: `npx ui-tests lint
-npx ui-tests verify <run-id>`,
+# Replace RUN_ID with the run ID printed by the CLI.
+npx ui-tests verify RUN_ID`,
 }

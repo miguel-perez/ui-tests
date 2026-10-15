@@ -204,7 +204,8 @@ A minutes-only goal produces issues without a result sentence. Stop the viewer w
 
 ```sh
 npx ui-tests lint
-npx ui-tests verify <run-id>
+# Replace RUN_ID with the run ID printed by the CLI.
+npx ui-tests verify RUN_ID
 ```
 
 ### Site navigation and controls
