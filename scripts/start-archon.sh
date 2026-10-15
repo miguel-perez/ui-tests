@@ -30,7 +30,6 @@ import socket
 import subprocess
 import sys
 import time
-import urllib.parse
 
 root = Path(sys.argv[1]).resolve()
 scripts_dir = Path(sys.argv[2]).resolve()
@@ -113,22 +112,30 @@ def wait_port(port):
 WEBHOOK_EVENTS = ["check_run", "issues", "issue_comment", "pull_request", "pull_request_review", "pull_request_review_comment"]
 
 def sync_webhook(repository, url, hook_id, secret, env):
-    """Point the saved hook at url, else adopt an existing tunnel hook, else create one.
+    """Point the saved hook at url, else adopt this host's previous tunnel hook, else create one.
     Returns the hook id, or None to retry. The secret only travels on stdin."""
     config = {"url": url + "/webhooks/github", "content_type": "json", "secret": secret, "insecure_ssl": "0"}
     hooks = "repos/" + repository + "/hooks"
+    previous_file = runtime / "tunnel-url.previous"
+    previous = previous_file.read_text().strip() if previous_file.exists() else ""
+    # Only a hook still pointing at the tunnel this host last registered is evidence of ownership.
+    owned_url = previous + "/webhooks/github" if re.fullmatch(r"https://[a-z0-9-]+\.trycloudflare\.com", previous) else None
 
     def update(candidate):
         return run([gh, "api", "--method", "PATCH", hooks + "/" + candidate, "--input", "-"],
-                   input=json.dumps({"config": config, "active": True}), env=env).returncode == 0
+                   input=json.dumps({"config": config, "events": WEBHOOK_EVENTS, "active": True}), env=env).returncode == 0
+
+    def registered(candidate):
+        atomic_write(previous_file, url + "\n")
+        return candidate
 
     def save(candidate):
         atomic_write(runtime / "webhook-id", candidate + "\n")
-        return candidate
+        return registered(candidate)
 
     if hook_id.isdigit():
         if update(hook_id):
-            return hook_id
+            return registered(hook_id)
         if run([gh, "api", hooks + "/" + hook_id], env=env).returncode == 0:
             return None
         # The saved hook is gone; forget it and fall through to adopt or create.
@@ -142,8 +149,7 @@ def sync_webhook(repository, url, hook_id, secret, env):
         return None
     for hook in existing if isinstance(existing, list) else []:
         config_url = str((hook.get("config") or {}).get("url") or "") if isinstance(hook, dict) else ""
-        host = urllib.parse.urlparse(config_url).hostname or ""
-        if config_url.endswith("/webhooks/github") and host.endswith(".trycloudflare.com"):
+        if owned_url and config_url == owned_url:
             candidate = str(hook.get("id", ""))
             return save(candidate) if candidate.isdigit() and update(candidate) else None
     result = run([gh, "api", "--method", "POST", hooks, "--input", "-"],

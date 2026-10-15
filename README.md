@@ -88,12 +88,15 @@ exposes only the signed webhook endpoint. On first start it creates the GitHub
 webhook for the repository (events: check_run, issues, issue_comment,
 pull_request, pull_request_review, pull_request_review_comment) and saves its id
 in `.archon/runtime/webhook-id`; later starts repoint that hook at the new
-tunnel URL.
+tunnel URL and set its events to that list. Each successful sync records the
+registered tunnel URL in `.archon/runtime/tunnel-url.previous`.
 
-Recovery: if the saved hook was deleted on GitHub, the host forgets
-`webhook-id` and either adopts an existing hook that points at a
-`*.trycloudflare.com/webhooks/github` URL or creates a new one, then saves that
-id. A failed update of a hook that still exists is retried every 30 seconds.
+Recovery: if `webhook-id` is missing or its hook was deleted on GitHub, the
+host adopts only a hook that still points at this host's own previous tunnel
+(`<tunnel-url.previous>/webhooks/github`); with no recorded URL or no match it
+creates a new hook, so another host's tunnel hook on the same repository is
+never taken over. It then saves the id. A failed update of a hook that still
+exists is retried every 30 seconds.
 
 ```sh
 npm run automation:build          # builds the pinned Archon repair with Bun 1.3.11 into .archon/runtime/bin
