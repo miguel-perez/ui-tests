@@ -70,7 +70,7 @@ def main():
     new = not os.path.exists(out)
     fh = open(out, "a", newline=""); w = csv.writer(fh)
     if new: w.writerow(["id", "in_mind", "in_mind_conf", "on_topic", "source", "words", "score", "url", "title", "cost"])
-    lock = threading.Lock(); q = queue.Queue(); total_cost = [0.0]; n = [0]
+    lock = threading.Lock(); q = queue.Queue(); total_cost = [0.0]; n = [0]; failed = []
     for c in todo: q.put(c)
     def worker():
         while True:
@@ -87,10 +87,15 @@ def main():
                     total_cost[0] += cost or 0; n[0] += 1
                     if n[0] % 50 == 0: print(f"{n[0]} scored, ${total_cost[0]:.3f}", file=sys.stderr)
             except Exception as e:
-                with lock: print("ERR", c["id"], e, file=sys.stderr)
+                with lock:
+                    failed.append(c["id"])
+                    print("ERR", c["id"], e, file=sys.stderr)
     ts = [threading.Thread(target=worker) for _ in range(8)]
     [t.start() for t in ts]; [t.join() for t in ts]
     print(f"done: {n[0]} scored, ${total_cost[0]:.3f}", file=sys.stderr)
+    if failed:
+        print(f"{len(failed)} candidates failed and are not in {out}; rerun to retry them: {', '.join(failed)}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()

@@ -27,7 +27,7 @@ def get(url):
     return json.loads(data)
 
 def main(out):
-    seen, items = {}, []
+    seen, items, failed = {}, [], []
     for site in SITES:
         for q in QUERIES:
             url = ("https://api.stackexchange.com/2.3/search/advanced?" + urllib.parse.urlencode({
@@ -35,7 +35,7 @@ def main(out):
             try:
                 d = get(url)
             except Exception as e:
-                print("ERR", site, q, e, file=sys.stderr); continue
+                print("ERR", site, q, e, file=sys.stderr); failed.append(f"{site}: {q}"); continue
             for it in d.get("items", []):
                 key = f"se:{site}:{it['question_id']}"
                 if key in seen: continue
@@ -53,6 +53,9 @@ def main(out):
             time.sleep(0.3)
     json.dump(items, open(out, "w"), indent=1)
     print("wrote", len(items), "candidates to", out, file=sys.stderr)
+    if failed:
+        print(f"{len(failed)} site queries failed; {out} is partial. Failed: {'; '.join(failed)}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
     main(sys.argv[1])

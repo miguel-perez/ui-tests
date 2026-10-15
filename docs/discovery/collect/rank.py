@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Rank scored candidates and draw a calibration sample.
 Usage: python3 -I rank.py scores.csv candidates/se.json candidates/hn.json --out-dir OUT
-Writes ranked.md (top 150 by combined score), calibration.md (20 items spread across the range, blind to score),
+Writes ranked.md (top 200 by combined score), calibration.md (20 items spread across the range, blind to score),
 and summary.txt. Combined = in_mind * on_topic; both columns kept."""
 import sys, csv, json, sys, random, os, statistics
 
@@ -16,6 +16,8 @@ def main():
         r["in_mind"] = float(r["in_mind"]); r["on_topic"] = float(r["on_topic"]); r["combined"] = r["in_mind"] * r["on_topic"]
     scores.sort(key=lambda r: -r["combined"])
     if not scores:
+        for stale in ("ranked.md", "calibration.md", "calibration-key.csv"):
+            if os.path.exists(f"{out}/{stale}"): os.remove(f"{out}/{stale}")
         with open(f"{out}/summary.txt", "w") as f: f.write("scored 0\nno eligible candidates; nothing ranked, no calibration sample\n")
         print("no eligible candidates; wrote summary.txt only"); sys.exit(0)
     def q(xs, p): xs = sorted(xs); return xs[int(p * (len(xs) - 1))]
@@ -27,8 +29,8 @@ def main():
         f.write(f"combined>=0.5 by source: " + ", ".join(f"{s}={sum(1 for r in scores if r['combined']>=.5 and r['source']==s)}" for s in ("stackexchange","hackernews")) + "\n")
         f.write(f"cost total ${sum(float(r['cost'] or 0) for r in scores):.3f}\n")
     with open(f"{out}/ranked.md", "w") as f:
-        f.write("# Ranked candidates (top 150 by in_mind × on_topic)\n\nScores order reading time; they decide nothing.\n\n")
-        for i, r in enumerate(scores[:150], 1):
+        f.write("# Ranked candidates (top 200 by in_mind × on_topic)\n\nScores order reading time; they decide nothing.\n\n")
+        for i, r in enumerate(scores[:200], 1):
             t = texts.get(r["id"], {}); snippet = (t.get("text") or "")[:280].replace("\n", " ")
             f.write(f"{i}. **{r['combined']:.2f}** (mind {r['in_mind']:.2f}, topic {r['on_topic']:.2f}, {r['words']}w, {r['source']}) [{(r['title'] or r['id'])[:90]}]({r['url']})\n   > {snippet}\n\n")
     random.seed(7)
