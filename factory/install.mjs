@@ -15,7 +15,7 @@ export function install({ root = topLevel(), prefix = cliPrefix([], root), log =
   if (!repo.fromRemote) log(`warning: no usable origin remote; {{REPO}} falls back to "${repo.name}". Run \`git remote add origin git@github.com:OWNER/NAME.git\` and reinstall.`);
   const previous = readManifest(root);
   if (previous === undefined) throw new Error(`${MANIFEST} is not a JSON list of paths; repair or delete it, then reinstall.`);
-  const report = { written: [], removed: [], unchanged: [], seeded: [], skipped: [], ignores: [], scripts: [] };
+  const report = { written: [], removed: [], unchanged: [], seeded: [], skipped: [], migrated: [], ignores: [], scripts: [] };
   const managed = managedPaths();
   for (const rel of managed) {
     const target = join(root, rel);
@@ -54,6 +54,23 @@ export function install({ root = topLevel(), prefix = cliPrefix([], root), log =
     mkdirSync(dirname(target), { recursive: true });
     writeFileSync(target, render(readFileSync(join(seedDir, rel), 'utf8'), vars));
     report.seeded.push(rel);
+  }
+  // The managed workflows bind '@implementer', and Archon throws on an undefined alias, so an
+  // existing config gains the alias without losing anything it already says.
+  const configRel = '.archon/config.yaml';
+  if (report.skipped.includes(configRel)) {
+    const configPath = join(root, configRel);
+    const text = readFileSync(configPath, 'utf8');
+    if (!/^\s*['"]?@implementer['"]?\s*:/m.test(text)) {
+      const seed = render(readFileSync(join(seedDir, configRel), 'utf8'), vars);
+      const block = seed.slice(seed.indexOf('# Code-writing nodes'));
+      const entry = block.slice(block.indexOf("  '@implementer':"));
+      const updated = /^aliases:\s*$/m.test(text)
+        ? text.replace(/^aliases:\s*\n/m, match => match + entry)
+        : text.replace(/\n*$/, '\n\n') + block;
+      writeFileSync(configPath, updated);
+      report.migrated.push(configRel);
+    }
   }
   const ignorePath = join(root, '.gitignore');
   const existing = existsSync(ignorePath) ? readFileSync(ignorePath, 'utf8') : '';
