@@ -15,7 +15,7 @@ SITES = ["ux", "stackoverflow", "softwareengineering", "pm"]
 
 def strip(h):
     t = re.sub(r"<pre>.*?</pre>", " ", h, flags=re.S)
-    t = re.sub(r"<[^>]+>", "", t)
+    t = re.sub(r"<[^>]+>", " ", t)
     return re.sub(r"\s+", " ", html.unescape(t)).strip()
 
 def get(url):

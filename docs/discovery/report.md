@@ -1,6 +1,6 @@
 # What goes through people's minds when they try to find out whether others can actually use what they built, and what gets in the way?
 
-Study D0, 15 October 2026. 124 public first-person accounts (Stack Exchange and Hacker News posts, 2009 to 2026), 523 summaries of moment-bound thinking, grouped by shared purpose into 27 groups, 7 broader concerns and 3 top groups. Counts below are of distinct accounts, not of summaries. Every claim traces to account ids and summary ids in `groups.csv`, `summaries.csv` and `rows.csv`.
+Study D0, 15 October 2026. 124 public first-person accounts (Stack Exchange and Hacker News posts, 2009 to 2026), 523 summaries of moment-bound thinking, grouped by shared purpose into 27 groups, 7 broader concerns and 3 top groups. Counts below are of distinct accounts, not of summaries. Group membership and the per-group counts trace to `groups.csv`, which is retained. Summary-level references (`s123`) pointed at `summaries.csv` and `rows.csv`, which were purged on 15 October 2026 with the raw accounts; they identify which summary a claim came from but can no longer be checked against the text without regenerating the study (see `D0-purposes.md`).
 
 ## The short answer
 

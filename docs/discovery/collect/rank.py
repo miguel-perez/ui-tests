@@ -3,7 +3,7 @@
 Usage: python3 -I rank.py scores.csv candidates/se.json candidates/hn.json --out-dir OUT
 Writes ranked.md (top 150 by combined score), calibration.md (20 items spread across the range, blind to score),
 and summary.txt. Combined = in_mind * on_topic; both columns kept."""
-import csv, json, sys, random, os, statistics
+import sys, csv, json, sys, random, os, statistics
 
 def main():
     a = sys.argv[1:]; out = a[a.index("--out-dir") + 1]; os.makedirs(out, exist_ok=True)
@@ -15,6 +15,9 @@ def main():
     for r in scores:
         r["in_mind"] = float(r["in_mind"]); r["on_topic"] = float(r["on_topic"]); r["combined"] = r["in_mind"] * r["on_topic"]
     scores.sort(key=lambda r: -r["combined"])
+    if not scores:
+        with open(f"{out}/summary.txt", "w") as f: f.write("scored 0\nno eligible candidates; nothing ranked, no calibration sample\n")
+        print("no eligible candidates; wrote summary.txt only"); sys.exit(0)
     def q(xs, p): xs = sorted(xs); return xs[int(p * (len(xs) - 1))]
     im = [r["in_mind"] for r in scores]; ot = [r["on_topic"] for r in scores]; cb = [r["combined"] for r in scores]
     with open(f"{out}/summary.txt", "w") as f:

@@ -1,3 +1,5 @@
+Derived in `../redesign.md` §5: importance = 10 × (0.6 × min(people/50, 1) + 0.4 × charge/0.4); opportunity = importance + max(importance − satisfaction, 0). The cap on people/50 is why N2 (53 people) scores 9.0, not 9.36.
+
 | Rank | Need | People of 124 | Charge | Importance | Satisfaction | Opportunity | Best off-the-shelf today |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | 1 | N2 Watch real people and be shown the problems I cannot see | 53 | 0.3 | 9.0 | 4 | **14.0** | Recordings everywhere; auto-detected frustration only on live traffic (Clarity, Contentsquare); no tool runs a task and diagnoses the failure. |

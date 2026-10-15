@@ -43,7 +43,7 @@ What it reports, and what it may say, follows [`../discovery/impression-research
 - **Appeal:** the distribution. It is reliable at 500 ms and predicts the attitude participants bring into the goal through a halo; it is reported as a covariate beside the issues and never as an outcome.
 - **First click:** how many of n clicked on the happy path. On a live page this predicts goal success weakly (about 78% versus 70% in the replication), strongly only when the goal is pure findability; the report says which.
 
-The stage never enters a goal's counts or the sentence. The report quotes these limits beside the result.
+The stage never enters a goal's counts or the sentence. Its denominator is the participants who completed the impression stage, which can exceed a goal's n when someone disconnects before attempting a goal; the report states both numbers. The report quotes these limits beside the result.
 
 ## Fit, before anyone tries a goal
 

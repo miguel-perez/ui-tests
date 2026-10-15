@@ -82,7 +82,7 @@ print("assigned",len(set(all_assigned)),"dups",dups,"missing",missing)
 if "--apply" in sys.argv:
     def run(*a):
         r=subprocess.run(["python3","graph.py",*a],capture_output=True,text=True); out=(r.stdout+r.stderr).strip()
-        if "refused" in out: print("REFUSED:",a[:3],out[:200])
+        if r.returncode!=0 or "refused" in out: sys.exit(f"graph.py {' '.join(a[:3])} failed (exit {r.returncode}): {out[:300]}")
         return out
     gid={}
     for k,(label,members) in L1.items():

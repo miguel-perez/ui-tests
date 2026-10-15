@@ -23,8 +23,9 @@ Public posts are reconnaissance, not participation. No quotes from review sites 
 
 1. Collect with two scripts under `docs/discovery/collect/` (a third, `judge.py`, scores candidates with the rows judge): one for Stack Exchange (queries above plus "usability test my app", "test with real users before launch", "small team user testing"), one for HN (Ask HN threads and comments matching "usability testing", "user testing", "unmoderated"). Each writes one `.txt` per account into `docs/discovery/accounts/`, first line a source URL, body the person's own words only, answers and replies by others dropped.
 2. Rank with the rows judge instead of reading everything. purpose-graphing publishes its judges (CC BY 4.0, `judges/rows.json`); the one scored question, `in-mind-at-the-time`, asks whether a passage conveys the speaker's own thinking, feeling, or personal rule in a recounted situation. Send every candidate post or comment to Jev (`typesafe/jev-1.13` through OpenRouter, temperature 0, key in the ignored `.env`), take the expected rung scaled 0 to 1, and sort. Calibrate the cut on 20 hand-labelled candidates first; a threshold is a tool for ordering reading time, not a verdict. Hand-check from the top until 40 to 80 accounts are in; keep `scores.csv` and `rejected.csv` with reasons. Long threads are split into one candidate per comment so the score lands on a person's words, and an accepted comment keeps its thread link.
-3. Run purpose-graphing as a whole study in `docs/discovery/study/` with the question above. Helpers take one account each.
-4. Read `reports/` and `groups.csv`.
+3. Prepare the accounts. The collectors write JSON candidate arrays, not account files. Hand-label the top 200 ranked candidates as clear, borderline or rejected, then write one text file per kept candidate under `accounts/`, named by source and id (`hn_<id>.txt`, `se_<site>_<id>.txt`), holding the passage as a single first-person turn with its title and link on the first line. This step was done by hand with the ranked list; no script for it is kept, and the labels and account files were purged (see the run log).
+4. Run purpose-graphing as a whole study in `docs/discovery/study/` with the question above. Helpers take one account each.
+5. Read `reports/` and `groups.csv`.
 
 ## Deliverables
 

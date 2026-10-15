@@ -71,7 +71,7 @@ Nine people's obstacle was the organisation, not the method. The product should 
 
 ## 5. Opportunity map, an ODI proxy
 
-Outcome-Driven Innovation scores an outcome by importance and satisfaction on 0 to 10 and ranks by `importance + max(importance − satisfaction, 0)`. The proxy here: importance = 10 × (0.6 × people/50 + 0.4 × charge/0.4), with people the distinct accounts carrying the purpose and charge the mean Jev emotional charge of those summaries; satisfaction = how well the best off-the-shelf tool serves the need for one person without procurement, from [`tool-alignment.md`](tool-alignment.md), on a 1 to 8 scale. These are lenses for where to lean, not measurements.
+Outcome-Driven Innovation scores an outcome by importance and satisfaction on 0 to 10 and ranks by `importance + max(importance − satisfaction, 0)`. The proxy here: importance = 10 × (0.6 × min(people/50, 1) + 0.4 × charge/0.4), with people the distinct accounts carrying the purpose and charge the mean Jev emotional charge of those summaries; satisfaction = how well the best off-the-shelf tool serves the need for one person without procurement, from [`tool-alignment.md`](tool-alignment.md), on a 1 to 8 scale. These are lenses for where to lean, not measurements.
 
 | Rank | Need | People of 124 | Charge | Importance | Satisfaction | Opportunity | Best off-the-shelf today |
 | --- | --- | --- | --- | --- | --- | --- | --- |

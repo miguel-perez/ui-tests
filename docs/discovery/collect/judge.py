@@ -19,7 +19,7 @@ def load_key():
         try:
             for line in open(p):
                 if line.startswith("OPENROUTER_API_KEY="):
-                    return line.split("=", 1)[1].strip().strip('"')
+                    return line.split("=", 1)[1].strip().strip('"').strip("'")
         except FileNotFoundError:
             pass
     sys.exit("no OPENROUTER_API_KEY")
@@ -58,7 +58,7 @@ def main():
     cands = []
     for f in files[1:]:
         cands += json.load(open(f))
-    first_person = re.compile(r"\b(I|I'm|I've|I'd|we|we're|we've|my|our|me)\b")
+    first_person = re.compile(r"\b(I|I'm|I've|I'd|we|we're|we've|my|our|me)\b", re.I)
     cands = [c for c in cands if minw <= c["words"] <= maxw and first_person.search(c["text"])]
     done = set()
     if os.path.exists(out):
