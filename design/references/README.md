@@ -14,3 +14,4 @@ illustration on ui-tests.com must be our own.
 | `optimal-usability-testing.jpg` | https://www.optimalworkshop.com/product/usability-testing | A usability-testing product page: headline, two-paragraph explanation, product screenshot in a tinted rounded panel, two CTAs. |
 | `vercel-home.jpg` | https://vercel.com/home | Type pairing, generous whitespace, a logo row, monochrome palette with a single object as the hero. |
 | `cursor-home.jpg` | https://cursor.com/ | Small headline over a very large product capture; the product itself is the hero. |
+| `linear-home.jpg` | https://linear.app/ | Near-black surface, two-line headline with a one-line subtitle, then the product as a large framed panel; quiet nav; the whole page in one typeface. |
