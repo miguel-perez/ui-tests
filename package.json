@@ -4,8 +4,20 @@
   "private": true,
   "type": "module",
   "description": "UI research repository delivered by the Archon factory.",
-  "engines": { "node": ">=22.13" },
+  "engines": {
+    "node": ">=22.13"
+  },
   "scripts": {
-    "validate": "node factory/check.mjs && npm --prefix factory run validate"
+    "validate": "node factory/check.mjs && npm --prefix factory run validate",
+    "automation:build": "python3 factory/scripts/archon-runtime.py build",
+    "automation:verify-sol": "python3 factory/scripts/verify-archon-sol.py",
+    "automation:verify-serve": "python3 factory/scripts/verify-archon-serve.py",
+    "automation:deliver": "python3 factory/scripts/archon-runtime.py exec workflow run autonomous-delivery",
+    "automation:repair": "python3 factory/scripts/archon-runtime.py exec workflow run autonomous-pr-retry",
+    "automation:status": "node factory/automation/status.mjs",
+    "automation:start": "bash factory/scripts/start-archon.sh",
+    "automation:stop": "bash factory/scripts/stop-archon.sh",
+    "factory:check": "node factory/check.mjs",
+    "factory:test": "npm --prefix factory run validate"
   }
 }

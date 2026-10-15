@@ -1,0 +1,21 @@
+status-start: { state: reviewing }
+status-finalize: { state: merged }
+fixture:
+  expect: completed
+  reached: [implement, resolve, observe, verify, review__merge]
+implement: Implemented and published the task; validation passed.
+resolve:
+  number: 1
+  url: https://github.com/example/repository/pull/1
+  branch: archon/example-task
+observe:
+  state: merged
+  head_sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  feedback_file: /tmp/example-review.json
+  summary: GitHub merged the approved PR before the next observation.
+verify:
+  state: merged
+  head_sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+  feedback_file: /tmp/example-review.json
+  summary: The approved PR remains merged.
+review__merge: Pull request is already merged.
