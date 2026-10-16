@@ -205,7 +205,10 @@ context({
     not: ['has used Weekboard'],
   },
 }, () => {
-  goal('invite a colleague', { happyPath: ['/board', '/settings/members'] }, () => {
+  goal('invite a colleague', {
+    happyPath: ['/board', '/settings/members'],
+    scenario: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.",
+  }, () => {
     outcome(async ({ page }) => {
       expect(await page.textContent('main')).toContain('1 invitation pending')
     })
@@ -344,7 +347,7 @@ You see a link in the terminal, then in your browser the scenario card, your own
 
 You type, in `ui-tests/first.ui.test.ts`:
 
-You see, on the next `npx ui-tests`, the card now reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co. When you think you've finished, press Done. If you get stuck, press I couldn't do this." Pin other wording with `scenario` once you have read it, and `ui-tests lint` prints the screener it drafted from `users` until you write a `screen` block.
+You see, on the next `npx ui-tests`, the card reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co. When you think you've finished, press Done. If you get stuck, press I couldn't do this." Without a `scenario` line the card is drafted from the goal's name, so read that draft and pin your own wording, and `ui-tests lint` prints the screener it drafted from `users` until you write a `screen` block.
 
 You type, in the same file or a new one:
 
