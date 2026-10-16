@@ -114,6 +114,8 @@ async function questions(page: Page, { seq = '3', confidence, validation }: { se
   await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
   await expect.poll(() => output).toContain('Reached the goal:')
 }
+// next dev compiles a route on its first visit; on a cold CI runner that alone can outlast an assertion, so the guide the rehearsals walk to is built first.
+test.beforeAll(async ({ playwright }) => { const site = await playwright.request.newContext({ baseURL: test.info().project.use.baseURL }); expect((await site.get('/docs/getting-started', { timeout: 60_000 })).ok()).toBe(true); await site.dispose() })
 test.afterEach(async () => { if (child) { child.kill('SIGTERM'); await new Promise<void>(resolve => { if (child.exitCode !== null) resolve(); else { child.once('exit', () => resolve()); setTimeout(resolve, 3000) } }) } })
 
 test('keyboard rehearsal, privacy projection, a click that did nothing, off your path, separate trace and the goal reached', async ({ page, request }) => {
@@ -163,7 +165,7 @@ test('keyboard rehearsal, privacy projection, a click that did nothing, off your
   await page.evaluate(() => { const input = document.createElement('input'); input.id = 'private'; input.value = 'DO-NOT-RECORD'; document.body.append(input); input.dispatchEvent(new Event('input', { bubbles: true })); history.pushState({}, '', '/detour') })
   await page.waitForTimeout(350)
   await page.getByRole('link', { name: 'Get started' }).first().focus(); await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/\/docs\/getting-started$/)
+  await expect(page).toHaveURL(/\/docs\/getting-started$/, { timeout: 15_000 })
   await expect(taskbar).toBeVisible()
   await taskbar.getByRole('button', { name: 'Done', exact: true }).focus(); await page.keyboard.press('Enter')
   await taskbar.getByRole('button', { name: 'Not yet' }).click()
