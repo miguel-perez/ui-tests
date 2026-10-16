@@ -7,7 +7,7 @@ Approved markup exported from the design artifacts. Each file is the spec for th
 - **The site's own surfaces are dark.** The attempt view, the report rows, the findings list, the dashboard, the checks box, the terminal and code windows all use the site's Tokyo Night tokens. There is no light product theme.
 - **The demo app under test is light.** Weekboard uses `weekboard-light.css` (Tokyo Night Day): a cool grey canvas, never white.
 - **The participant chrome is the inverse of the host page, with the author's accent.** Scenario card, bar, recording chip and question sheets take the host page's text colour as their surface and its background as their text, opaque, with a hairline and a soft shadow, the host's font, and the one accent the author sets in the config (Weekboard: mint). On the light Weekboard the chrome is therefore dark; on a dark site it would be light. It never shares a panel colour with the host and never carries ui-tests branding. Spec: `docs/discovery/participant-chrome-research.md`.
-- **Labels.** The bar reads "Done" and "I couldn't do this". The card's last line quotes them.
+- **The bar is one small pill.** 40px tall, fully rounded, bottom right by default, draggable, hidden while the person types in the host page. Its leading segment is the recording state (dot, time, pause; no microphone during the task), then the task summary, then Done as a small filled pill and "I couldn't do this" as plain text. The card's last line quotes those two labels.
 
 ## Files
 

@@ -4,12 +4,13 @@
   with a hairline and a soft shadow, the host's font, and the ONE accent the author sets (Weekboard: mint). It never shares a
   panel colour with the host page and never carries ui-tests branding. The site's own product surfaces (attempt view, report
   rows, dashboard) use the site's dark tokens; only the demo app under test is light.
+  The bar is one 40px pill, bottom right by default, draggable, hidden while a host input has focus: recording state as its
+  leading segment (dot, time, pause; no microphone during the task), the task summary, Done, and "I couldn't do this" as text.
 -->
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
 img { display: block; max-width: 100%; }
-.chip, .pill { white-space: nowrap; }
 :root {
   color-scheme: dark;
   --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42;
@@ -54,23 +55,28 @@ img { display: block; max-width: 100%; }
 .talk i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ch-ink); display: inline-grid; place-items: center; }
 .talk i::after { content: ""; width: 5px; height: 8px; border-radius: 3px; background: var(--ch-ink); }
 
-/* The bar: a pill at the bottom centre, the recording chip beside it */
-.bar-wrap { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; }
-.pill { height: 50px; display: flex; align-items: center; gap: 8px; padding: 0 7px 0 10px; background: var(--ch-surface); color: var(--ch-ink); border-radius: 14px; box-shadow: 0 0 0 1px var(--ch-hair), 0 10px 28px rgba(21,26,33,.3); white-space: nowrap; }
-.pill .grip { width: 10px; height: 20px; background: radial-gradient(circle, var(--ch-dim) 1px, transparent 1.3px) 0 0/5px 5px; opacity: .7; }
-.pill .task { font-size: 13px; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+/* The bar: one small pill, bottom right, the recording state as its leading segment */
+.bar-wrap { position: absolute; right: 16px; bottom: 16px; display: flex; }
+.pill { height: 40px; display: flex; align-items: center; gap: 0; padding: 0 6px 0 12px; background: var(--ch-surface); color: var(--ch-ink); border-radius: 20px; box-shadow: 0 0 0 1px var(--ch-hair), 0 8px 24px rgba(21,26,33,.28); white-space: nowrap; font-size: 13px; }
+.pill .seg { display: flex; align-items: center; gap: 8px; height: 40px; }
+.pill .seg + .seg { border-left: 1px solid var(--ch-hair); margin-left: 12px; padding-left: 12px; }
+.pill .rec { font: 500 12px/1 var(--mono); color: var(--ch-dim); }
+.pill .rec .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ch-rec); box-shadow: 0 0 0 3px rgba(245,42,101,.18); }
+.pill .rec .pause { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: var(--ch-dim); }
+.pill .rec .pause:hover { background: var(--ch-hair); color: var(--ch-ink); }
+.pill .rec .pause svg { width: 10px; height: 10px; }
+.pill .task { display: block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ch-ink); line-height: 40px; }
 .pill .task b { font-weight: 500; color: var(--ch-dim); margin-right: 8px; font-size: 12px; }
-.pill .btn { height: 36px; padding: 0 12px; }
-.chip { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--ch-surface); color: var(--ch-ink); border-radius: 12px; box-shadow: 0 0 0 1px var(--ch-hair), 0 10px 28px rgba(21,26,33,.3); font: 500 12px/1 var(--mono); }
-.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ch-rec); }
-.chip .ic { width: 14px; height: 14px; opacity: .75; }
-.chip .ic svg { width: 100%; height: 100%; display: block; }
+.pill .task::after { content: " ›"; color: var(--ch-dim); }
+.pill .done { height: 28px; padding: 0 12px; border-radius: 14px; background: var(--ch-accent); color: var(--ch-accent-ink); font: 500 13px/1 var(--sans); }
+.pill .cant { height: 28px; padding: 0 8px; border-radius: 14px; color: var(--ch-dim); font: 400 13px/1 var(--sans); }
+.pill .cant:hover { color: var(--ch-ink); background: var(--ch-hair); }
+.pill .grip { width: 8px; height: 16px; margin-right: 10px; background: radial-gradient(circle, var(--ch-dim) 1px, transparent 1.3px) 0 0/4px 4px; opacity: .6; }
+.pill .task:hover { text-decoration: underline; text-decoration-color: var(--ch-hair); text-underline-offset: 3px; }
 
 .sheet .step { font-size: 11px; color: var(--ch-dim); letter-spacing: .02em; }
-.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ch-rec); }
 .sheet .step { color: var(--ch-accent); opacity: .9; }
 .opts li.on { box-shadow: inset 0 0 0 1px var(--ch-accent); }
-.chip .dot { box-shadow: 0 0 0 3px rgba(245,42,101,.18); }
 .frame.auto { aspect-ratio: auto; padding: 62px 24px 36px; }
 .frame.auto .sheet { position: relative; left: auto; top: auto; z-index: 1; transform: none; margin: 0 auto; max-height: none; }
 .frame { position: relative; aspect-ratio: 16 / 10; width: 100%; max-width: 800px; border-radius: 8px; overflow: hidden; background: var(--host-bg); border: 1px solid var(--line); }
@@ -99,8 +105,17 @@ img { display: block; max-width: 100%; }
 .cmds-note { margin-bottom: 24px; }
 .whole-top { margin: 0 0 40px; }
 
+.stepper { display: flex; align-items: center; gap: 10px; margin-top: 10px; font: 400 13px/1 var(--mono); color: var(--muted); }
+.stepper button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); display: grid; place-items: center; font: 500 16px/1 var(--sans); color: var(--ink); }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper .where b { color: var(--moment); font-weight: 500; }
+.stepper .dots { display: inline-flex; gap: 5px; margin-left: 6px; }
+.stepper .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.stepper .dots i.on { background: var(--moment); }
+
 body { background: var(--canvas); color: var(--ink); font: 400 15px/1.55 var(--sans); margin: 0; padding: 32px; display: grid; gap: 40px; }
 h2 { font: 500 16px/1.3 var(--sans); margin: 0 0 10px; color: var(--muted); }
+.screener-step[hidden] { display: none; }
 </style>
 <section><h2>Consent</h2>
 <figure class="frame auto" aria-label="Consent screen"><div class="blank"></div><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
@@ -118,18 +133,43 @@ h2 { font: 500 16px/1.3 var(--sans); margin: 0 0 10px; color: var(--muted); }
             </div>
 </figure>
 </section>
-<section><h2>Screener</h2>
-<figure class="frame auto" aria-label="Screener question"><div class="blank"></div><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
-<div class="sheet ch">
-              <span class="step">A few questions first · 1 of 4</span>
+<section><h2>Screener (first of six)</h2>
+<figure class="frame auto" aria-label="Screener questions, one at a time"><div class="blank"></div><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
+<div class="sheet ch screener-step" data-step="1">
+              <span class="step">A few questions first · 1 of 6</span>
               <h4>When did you last sign up for a tool to plan work with a team?</h4>
-              <ul class="opts">
-                <li class="on"><i></i>In the past week</li>
-                <li><i></i>In the past month</li>
-                <li><i></i>Earlier this year</li>
-                <li><i></i>I haven't</li>
-              </ul>
-              <div class="actions"><span class="small">Then: which tools you use, and three questions about planning a week.</span><button class="btn pri">Next</button></div>
+              <ul class="opts"><li class="on "><i></i>In the past week</li><li class=""><i></i>In the past month</li><li class=""><i></i>Earlier this year</li><li class=""><i></i>I haven't</li></ul>
+              <div class="actions"><span class="small">From did and within</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch screener-step" data-step="2" hidden>
+              <span class="step">A few questions first · 2 of 6</span>
+              <h4>Which of these do you use to plan work? Pick all that apply.</h4>
+              <ul class="opts"><li class="sq"><i></i>Trello</li><li class="on sq"><i></i>Asana</li><li class="sq"><i></i>Notion</li><li class="sq"><i></i>Linear</li><li class="sq"><i></i>Basecamp</li><li class="sq"><i></i>None of these</li></ul>
+              <div class="actions"><span class="small">From uses, with one decoy</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch screener-step" data-step="3" hidden>
+              <span class="step">A few questions first · 3 of 6</span>
+              <h4>Which of these have you done? Pick all that apply.</h4>
+              <ul class="opts"><li class="sq"><i></i>Managed a team of more than five</li><li class="sq"><i></i>Used Weekboard</li><li class="on sq"><i></i>Taken a course on planning or project management</li><li class="sq"><i></i>None of these</li></ul>
+              <div class="actions"><span class="small">not, asked among neutral options</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch screener-step" data-step="4" hidden>
+              <span class="step">A few questions first · 4 of 6</span>
+              <h4>When did you last need to plan a week with other people?</h4>
+              <ul class="opts"><li class="on "><i></i>This week</li><li class=""><i></i>This month</li><li class=""><i></i>Earlier this year</li><li class=""><i></i>I don't</li></ul>
+              <div class="actions"><span class="small">From purpose: recency</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch screener-step" data-step="5" hidden>
+              <span class="step">A few questions first · 5 of 6</span>
+              <h4>How do you do it today?</h4>
+              <ul class="opts"><li class="on "><i></i>A shared document or spreadsheet</li><li class=""><i></i>A planning tool</li><li class=""><i></i>Chat and email</li><li class=""><i></i>In my head</li></ul>
+              <div class="actions"><span class="small">From purpose: how, in their words</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch screener-step" data-step="6" hidden>
+              <span class="step">A few questions first · 6 of 6</span>
+              <h4>How much does it matter to you to get this right?</h4>
+              <ul class="opts"><li class="on "><i></i>A lot: it costs me time every week</li><li class=""><i></i>Some</li><li class=""><i></i>Not much</li></ul>
+              <div class="actions"><span class="small">From purpose: importance</span><button class="btn pri next-step" type="button">Next</button></div>
             </div>
 </figure>
 </section>
@@ -153,15 +193,14 @@ h2 { font: 500 16px/1.3 var(--sans); margin: 0 0 10px; color: var(--muted); }
             </div>
 </figure>
 </section>
-<section><h2>The bar and the recording chip</h2>
+<section><h2>The bar</h2>
 <figure class="frame" aria-label="The page under test with the bar"><img class="shot" src="attempt-view/board.jpg" alt="The Weekboard board"><div class="addr"><i></i><i></i><i></i><span>weekboard.app/board</span></div>
 <div class="bar-wrap ch">
-              <div class="chip" aria-label="Recording, 41 seconds"><span class="dot"></span><span>Rec 0:41</span><span class="ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5.5" y="2" width="5" height="8" rx="2.5"/><path d="M3.5 8a4.5 4.5 0 0 0 9 0M8 12.5V15"/></svg></span><span class="ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="3" width="3" height="10" rx="1"/><rect x="9.5" y="3" width="3" height="10" rx="1"/></svg></span></div>
               <div class="pill" role="region" aria-label="Weekboard study">
                 <span class="grip" aria-hidden="true"></span>
-                <span class="task"><b>Task 1 of 1</b>Invite Sam to the board</span>
-                <button class="btn pri">Done</button>
-                <button class="btn ghost">I couldn't do this</button>
+                <span class="seg rec" aria-label="Recording, 41 seconds"><span class="dot"></span><span>0:41</span><button class="pause" type="button" aria-label="Pause recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg></button></span>
+                <button class="seg task" type="button" aria-expanded="false"><b>Task 1 of 1</b>Invite Sam to the board</button>
+                <span class="seg"><button class="done" type="button">Done</button><button class="cant" type="button">I couldn't do this</button></span>
               </div>
             </div>
 </figure>

@@ -4,12 +4,13 @@
   with a hairline and a soft shadow, the host's font, and the ONE accent the author sets (Weekboard: mint). It never shares a
   panel colour with the host page and never carries ui-tests branding. The site's own product surfaces (attempt view, report
   rows, dashboard) use the site's dark tokens; only the demo app under test is light.
+  The bar is one 40px pill, bottom right by default, draggable, hidden while a host input has focus: recording state as its
+  leading segment (dot, time, pause; no microphone during the task), the task summary, Done, and "I couldn't do this" as text.
 -->
 <style>
 *, *::before, *::after { box-sizing: border-box; }
 button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
 img { display: block; max-width: 100%; }
-.chip, .pill { white-space: nowrap; }
 :root {
   color-scheme: dark;
   --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42;
@@ -54,23 +55,28 @@ img { display: block; max-width: 100%; }
 .talk i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ch-ink); display: inline-grid; place-items: center; }
 .talk i::after { content: ""; width: 5px; height: 8px; border-radius: 3px; background: var(--ch-ink); }
 
-/* The bar: a pill at the bottom centre, the recording chip beside it */
-.bar-wrap { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; }
-.pill { height: 50px; display: flex; align-items: center; gap: 8px; padding: 0 7px 0 10px; background: var(--ch-surface); color: var(--ch-ink); border-radius: 14px; box-shadow: 0 0 0 1px var(--ch-hair), 0 10px 28px rgba(21,26,33,.3); white-space: nowrap; }
-.pill .grip { width: 10px; height: 20px; background: radial-gradient(circle, var(--ch-dim) 1px, transparent 1.3px) 0 0/5px 5px; opacity: .7; }
-.pill .task { font-size: 13px; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+/* The bar: one small pill, bottom right, the recording state as its leading segment */
+.bar-wrap { position: absolute; right: 16px; bottom: 16px; display: flex; }
+.pill { height: 40px; display: flex; align-items: center; gap: 0; padding: 0 6px 0 12px; background: var(--ch-surface); color: var(--ch-ink); border-radius: 20px; box-shadow: 0 0 0 1px var(--ch-hair), 0 8px 24px rgba(21,26,33,.28); white-space: nowrap; font-size: 13px; }
+.pill .seg { display: flex; align-items: center; gap: 8px; height: 40px; }
+.pill .seg + .seg { border-left: 1px solid var(--ch-hair); margin-left: 12px; padding-left: 12px; }
+.pill .rec { font: 500 12px/1 var(--mono); color: var(--ch-dim); }
+.pill .rec .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ch-rec); box-shadow: 0 0 0 3px rgba(245,42,101,.18); }
+.pill .rec .pause { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: var(--ch-dim); }
+.pill .rec .pause:hover { background: var(--ch-hair); color: var(--ch-ink); }
+.pill .rec .pause svg { width: 10px; height: 10px; }
+.pill .task { display: block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ch-ink); line-height: 40px; }
 .pill .task b { font-weight: 500; color: var(--ch-dim); margin-right: 8px; font-size: 12px; }
-.pill .btn { height: 36px; padding: 0 12px; }
-.chip { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--ch-surface); color: var(--ch-ink); border-radius: 12px; box-shadow: 0 0 0 1px var(--ch-hair), 0 10px 28px rgba(21,26,33,.3); font: 500 12px/1 var(--mono); }
-.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ch-rec); }
-.chip .ic { width: 14px; height: 14px; opacity: .75; }
-.chip .ic svg { width: 100%; height: 100%; display: block; }
+.pill .task::after { content: " ›"; color: var(--ch-dim); }
+.pill .done { height: 28px; padding: 0 12px; border-radius: 14px; background: var(--ch-accent); color: var(--ch-accent-ink); font: 500 13px/1 var(--sans); }
+.pill .cant { height: 28px; padding: 0 8px; border-radius: 14px; color: var(--ch-dim); font: 400 13px/1 var(--sans); }
+.pill .cant:hover { color: var(--ch-ink); background: var(--ch-hair); }
+.pill .grip { width: 8px; height: 16px; margin-right: 10px; background: radial-gradient(circle, var(--ch-dim) 1px, transparent 1.3px) 0 0/4px 4px; opacity: .6; }
+.pill .task:hover { text-decoration: underline; text-decoration-color: var(--ch-hair); text-underline-offset: 3px; }
 
 .sheet .step { font-size: 11px; color: var(--ch-dim); letter-spacing: .02em; }
-.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ch-rec); }
 .sheet .step { color: var(--ch-accent); opacity: .9; }
 .opts li.on { box-shadow: inset 0 0 0 1px var(--ch-accent); }
-.chip .dot { box-shadow: 0 0 0 3px rgba(245,42,101,.18); }
 .frame.auto { aspect-ratio: auto; padding: 62px 24px 36px; }
 .frame.auto .sheet { position: relative; left: auto; top: auto; z-index: 1; transform: none; margin: 0 auto; max-height: none; }
 .frame { position: relative; aspect-ratio: 16 / 10; width: 100%; max-width: 800px; border-radius: 8px; overflow: hidden; background: var(--host-bg); border: 1px solid var(--line); }
@@ -99,17 +105,25 @@ img { display: block; max-width: 100%; }
 .cmds-note { margin-bottom: 24px; }
 .whole-top { margin: 0 0 40px; }
 
+.stepper { display: flex; align-items: center; gap: 10px; margin-top: 10px; font: 400 13px/1 var(--mono); color: var(--muted); }
+.stepper button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); display: grid; place-items: center; font: 500 16px/1 var(--sans); color: var(--ink); }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper .where b { color: var(--moment); font-weight: 500; }
+.stepper .dots { display: inline-flex; gap: 5px; margin-left: 6px; }
+.stepper .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.stepper .dots i.on { background: var(--moment); }
+
 body { background: var(--canvas); color: var(--ink); font: 400 15px/1.55 var(--sans); margin: 0; padding: 32px; display: grid; gap: 40px; }
 h2 { font: 500 16px/1.3 var(--sans); margin: 0 0 10px; color: var(--muted); }
+.screener-step[hidden] { display: none; }
 </style>
 <figure class="frame" aria-label="The page under test with the bar"><img class="shot" src="attempt-view/board.jpg" alt="The Weekboard board"><div class="addr"><i></i><i></i><i></i><span>weekboard.app/board</span></div>
 <div class="bar-wrap ch">
-              <div class="chip" aria-label="Recording, 41 seconds"><span class="dot"></span><span>Rec 0:41</span><span class="ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5.5" y="2" width="5" height="8" rx="2.5"/><path d="M3.5 8a4.5 4.5 0 0 0 9 0M8 12.5V15"/></svg></span><span class="ic" aria-hidden="true"><svg viewBox="0 0 16 16" fill="currentColor"><rect x="3.5" y="3" width="3" height="10" rx="1"/><rect x="9.5" y="3" width="3" height="10" rx="1"/></svg></span></div>
               <div class="pill" role="region" aria-label="Weekboard study">
                 <span class="grip" aria-hidden="true"></span>
-                <span class="task"><b>Task 1 of 1</b>Invite Sam to the board</span>
-                <button class="btn pri">Done</button>
-                <button class="btn ghost">I couldn't do this</button>
+                <span class="seg rec" aria-label="Recording, 41 seconds"><span class="dot"></span><span>0:41</span><button class="pause" type="button" aria-label="Pause recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg></button></span>
+                <button class="seg task" type="button" aria-expanded="false"><b>Task 1 of 1</b>Invite Sam to the board</button>
+                <span class="seg"><button class="done" type="button">Done</button><button class="cant" type="button">I couldn't do this</button></span>
               </div>
             </div>
 </figure>
