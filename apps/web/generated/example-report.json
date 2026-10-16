@@ -1,22 +1,28 @@
 {
   "people": 5,
+  "reached": 2,
+  "wrongAndSure": 0,
   "selectedRank": 1,
   "problems": [
     {
-      "title": "Looked for Invite in the Share menu and found only link options",
-      "people": 4
+      "title": "Pressed Add, saw nothing change, pressed it again",
+      "people": 2,
+      "impact": "blocked"
     },
     {
-      "title": "Pressed Add, saw nothing change, pressed it again",
-      "people": 2
+      "title": "Stopped at a grey Add button and pressed Can't do it",
+      "people": 1,
+      "impact": "blocked"
+    },
+    {
+      "title": "Looked for Invite in the Share menu, found only links",
+      "people": 4,
+      "impact": "slowed"
     },
     {
       "title": "Typed the colleague's email into the board search",
-      "people": 2
-    },
-    {
-      "title": "Stopped at a grey Add button and gave up",
-      "people": 1
+      "people": 2,
+      "impact": "confused"
     }
   ]
 }

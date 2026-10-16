@@ -8,7 +8,7 @@ import { resetContexts, type Context, type Goal } from './index.ts'
 import { deriveScreener, inferScreen, screenSchema, screenSource } from './screener.ts'
 
 /** Human-readable derivation rules, shown beside each derived field in the compiled context and the trace. */
-export const rule = { scenario: 'template(goal, fixture names); no happy path input', timeout: 'max(180, (happy-path length or task count or 1) × 90) seconds', sample: 'ceil(log(1-confidence) / log(1-prevalence))', impression: 'purpose recognition with template distractors', fit: 'purpose-derived relevance, frequency and current approach' }
+export const rule = { scenario: 'template(goal, fixture names); no happy path input', timeBox: 'max(180, (happy-path length or task count or 1) × 90) seconds', sample: 'ceil(log(1-confidence) / log(1-prevalence))', impression: 'purpose recognition with template distractors', fit: 'purpose-derived relevance, frequency and current approach' }
 /** Deterministic scenario text from the goal and fixture names; the happy path is never an input. A model generator can replace this function later. */
 export function generateTemplate(goal: string, fixtures: string[] = []) {
   // How the task ends is the card's own line, not the scenario's (participant-overlay research, scenario card).
@@ -56,7 +56,7 @@ export function lint(contexts: Context[]): Diagnostic[] {
 }
 /** Zod schema enforced on each authored context before compilation. */
 export const contextSchema = z.object({ users: z.string().min(1), purpose: z.string().min(1), screen: screenSchema.optional(), goals: z.array(z.object({ name: z.string().min(1), options: z.object({ happyPath: z.array(z.string().startsWith('/')).optional(), minutes: z.number().positive().optional(), scenario: z.string().optional(), fixtures: z.array(z.string()).optional(), catch: z.object({ affecting: z.string(), confidence: z.number().gt(0).lt(1) }).optional() }), tasks: z.array(z.object({ name: z.string() })) })) })
-/** Validates each context and derives its id, name, impression stage, fit questions and, per goal, the shape, scenario, timeout, sample plan and result sentence, each with the rule that produced it. */
+/** Validates each context and derives its id, name, impression stage, fit questions and, per goal, the shape, scenario, time box, sample plan and result sentence, each with the rule that produced it. */
 export function compile(contexts: Context[]) {
   return contexts.map(c => {
     contextSchema.parse(c)
@@ -74,7 +74,7 @@ export function compile(contexts: Context[]) {
         const planned = sampleSize(g.options.catch?.affecting, g.options.catch?.confidence)
         return { id: `${id}-${index}`, name: g.name, shape: g.options.minutes && !g.outcomes.length ? 'exploration' : g.tasks.length ? 'steps' : g.options.happyPath ? 'happy-path' : 'outcome',
           scenario: { text: g.options.scenario ?? generateTemplate(g.name, g.options.fixtures), rule: g.options.scenario ? 'author scenario override' : rule.scenario },
-          timeout: { seconds: g.options.minutes ? g.options.minutes * 60 : Math.max(180, (g.options.happyPath?.length || g.tasks.length || 1) * 90), rule: g.options.minutes ? 'author minutes × 60 seconds' : rule.timeout },
+          timeBox: { seconds: g.options.minutes ? g.options.minutes * 60 : Math.max(180, (g.options.happyPath?.length || g.tasks.length || 1) * 90), rule: g.options.minutes ? 'author minutes × 60 seconds' : rule.timeBox },
           sample: { planned, sentence: `${planned} attempts give ${Math.round((g.options.catch?.confidence ?? 0.85) * 100)}% confidence of noticing a problem affecting ${g.options.catch?.affecting ?? '1 in 3'} people.`, rule: rule.sample },
           resultSentence: g.outcomes.length ? sentence(planned) : null,
           resultRule: 'Rehearsals are excluded from n; report 0 of sample.planned attempts. No outcome means no result sentence.',

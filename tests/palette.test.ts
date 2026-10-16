@@ -11,7 +11,7 @@ it('keeps every readable Tokyo Night token AA on both surfaces and reserves comm
   const css = await readFile('apps/web/app/globals.css', 'utf8')
   const tokens = Object.fromEntries([...css.matchAll(/--([\w-]+): (#[\da-f]{6})/g)].map(match => [match[1], match[2]]))
   for (const background of ['canvas', 'surface']) {
-    for (const text of ['ink', 'muted', 'moment', 'deviation', 'dead', 'pause', 'done', 'note']) {
+    for (const text of ['ink', 'muted', 'moment', 'path', 'dead', 'pause', 'done', 'note']) {
       expect(contrast(tokens[text], tokens[background]), `${text} on ${background}`).toBeGreaterThanOrEqual(4.5)
     }
     expect(contrast('#9ece6a', tokens[background])).toBeGreaterThanOrEqual(4.5)
@@ -26,7 +26,7 @@ it('keeps every text token AA over the strongest pixel of the background texture
   const channels = (hex: string) => hex.match(/[\da-f]{2}/gi)!.map(value => parseInt(value, 16))
   const stroke = channels(texture.stroke), canvas = channels(tokens.canvas)
   const strongest = '#' + canvas.map((value, i) => Math.round(value + (stroke[i] - value) * texture.maxAlpha).toString(16).padStart(2, '0')).join('')
-  for (const text of ['ink', 'muted', 'moment', 'deviation', 'dead', 'pause', 'done', 'note']) {
+  for (const text of ['ink', 'muted', 'moment', 'path', 'dead', 'pause', 'done', 'note']) {
     expect(contrast(tokens[text], strongest), `${text} over the texture`).toBeGreaterThanOrEqual(4.5)
   }
 })
@@ -37,7 +37,7 @@ it('keeps every light-theme text token AA on the light canvas and surface, and t
   const light = Object.fromEntries([...css.matchAll(/--light-([\w-]+): (#[\da-f]{6})/g)].map(match => [match[1], match[2]]))
   expect(light).toEqual(playerTheme)
   for (const background of ['canvas', 'surface']) {
-    for (const text of ['ink', 'muted', 'moment', 'deviation', 'dead', 'pause', 'done', 'note']) {
+    for (const text of ['ink', 'muted', 'moment', 'path', 'dead', 'pause', 'done', 'note']) {
       expect(contrast(light[text], light[background]), `light ${text} on ${background}`).toBeGreaterThanOrEqual(4.5)
     }
     // Like the dark theme, the comment role is decorative only.

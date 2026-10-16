@@ -10,19 +10,23 @@ Open source. Nothing to sign up for. Runs on your preview or your live site.
 
 Each line opens to the moment to watch, the person's words, and the smallest change that would fix it.
 
-P3 · 00:03 · looked for Invite in the Share menu
+Person 3 · 00:58 · pressed Add twice
 
-“Share is where you add people. I checked there first.”
+“I wasn’t sure the first Add did anything, so I pressed it again.”
 
 What comes back.
 
-Here is one person’s attempt as it comes back: the recording, every moment on a timeline, and their words.
+Here is one person’s attempt at one goal as it comes back: whether they reached it, the moments that got in the way, each playing in place, and how it felt.
 
 If you have written a Playwright test, you have written this.
 
 Problems found: 4 across 5 people.
 
-Problem 1 is one link. Problem 2 is the one to fix first: both people who hit it believed they were finished, and their colleague got the same email twice.
+Reached the goal: 2 of 5.
+
+After the goal, typically: Would it help them? 4 of 5 · Easy to use? 2 of 5
+
+Problem 1 is the one to fix first: both people who hit it pressed Done believing they had finished, and their colleague got the same email twice. Problem 3 is one link.
 
 A run reports the problems it found, or that it found none this time. There is no score and no pass.
 
@@ -52,13 +56,15 @@ In the pull request.
 
 Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request with a report page anyone on the team can open. Your other tests prove the code works. This one shows whether a person can use it.
 
-The report page opens on the ranked problems, each with the moments to watch and what to change, and every person's trace below.
+The report page opens on whether people reached the goal and the ranked problems, each with the moments to watch and what to change, and every person's attempt below.
 
 Three commands.
 
-Node 22 and a Next.js app.
+Node 22. Paste one line on any site, or install the package in a Next.js app.
 
-The third command runs the example task on you, so you see the card, the bar and your own trace before anyone else does. Open source, with no seats and no account. Your own link and your own visitors cost nothing. The panel is the only thing you pay for, and you set the cap before it starts.
+No Next.js app? Paste the one line from the hosted block on any site instead.
+
+The third command runs the example task on you, so you see the card, the bar and your own trace before anyone else does. Open source, with no seats and no account. Your own link and your own visitors cost nothing. The paid panel is the only thing you pay for, and you set the cap before it starts.
 
 This page runs this test.
 
@@ -100,7 +106,7 @@ sent the email in the query string, 400
 
 No repo to put it in? Paste one line.
 
-One script tag on your live site, through your tag manager if that is how you ship. Then the same test in a form instead of a file: who the users are, what they are trying to do, and how you can tell they did it, by a page they reach, an element they see or a question they answer. People come from your link, a panel or your own visitors, and the report is a page you can share.
+One script tag on your live site, through your tag manager if that is how you ship. Then the same test in a form instead of a file: who the users are, what they are trying to do, and how you can tell they did it, by a page they reach, an element they see or a question they answer. People come from your link, a paid panel or your own visitors, and the report is a page you can share.
 
 Same test, same report, no install.
 
@@ -146,7 +152,7 @@ change the plan to Team
 
 done
 
-1 problem
+Reached 5 of 5 · 1 problem
 
 great
 
@@ -158,7 +164,7 @@ export last month’s board
 
 done
 
-3 problems
+Reached 6 of 8 · 3 problems
 
 check
 
@@ -170,7 +176,7 @@ start a board from a template
 
 done
 
-none found
+Reached 5 of 5 · none found
 
 great
 
@@ -209,6 +215,34 @@ context({
 
 ## The problems
 
+Pressed Add, saw nothing change, pressed it again; two invitations went out
+
+blocked
+
+2 of 5
+
+"I wasn't sure the first one did anything."
+
+Person 3 at 00:58, Person 4 at 00:41
+
+On press, change the button to "Invited sam@acme.co" and disable it.
+
+Person 3 · 00:58 → 01:04
+
+Stopped at a grey Add button and pressed Can't do it
+
+blocked
+
+1 of 5
+
+"It looked switched off."
+
+Person 2 at 00:49
+
+Keep the button solid. Validate the address on press, with a message.
+
+Person 2 · 00:45 → 00:54
+
 Looked for Invite in the Share menu and found only link options
 
 slowed
@@ -217,53 +251,25 @@ slowed
 
 "Share is where you add people."
 
-P1 00:04, P2 00:06, P3 00:03, P5 00:09
+Person 1 at 00:04, Person 2 at 00:06, Person 3 at 00:03, Person 5 at 00:09
 
 Put "Invite a colleague" at the top of the Share menu.
 
-P3 · 00:03 → 00:12
-
-Pressed Add, saw nothing change, pressed it again; two invitations went out
-
-misled
-
-2 of 5
-
-"I wasn't sure the first one did anything."
-
-P3 00:58, P4 00:41
-
-On press, change the button to "Invited sam@acme.co" and disable it.
-
-P3 · 00:58 → 01:04
+Person 3 · 00:03 → 00:12
 
 Typed the colleague's email into the board search
 
-slowed
+confused
 
 2 of 5
 
 "I figured it would find them."
 
-P3 00:23, P1 00:30
+Person 1 at 00:30, Person 3 at 00:23
 
 When a search matches no cards, offer "Invite someone with this email".
 
-P3 · 00:23 → 00:32
-
-Stopped at a grey Add button and gave up
-
-blocked
-
-1 of 5
-
-"It looked switched off."
-
-P2 00:49
-
-Keep the button solid. Validate the address on press, with a message.
-
-P2 · 00:45 → 00:54
+Person 3 · 00:23 → 00:32
 
 ## Where the people come from
 
@@ -275,7 +281,7 @@ Free
 
 As each person finishes
 
-A panel
+A paid panel
 
 People matched to the `users` line in your file, found for you
 
@@ -329,6 +335,8 @@ Write your own
 Run it with real people
 
 Run it with an agent
+
+In a Next.js app, install the package. On any other site, paste one line instead: Without a repository.
 
 You see "ui-tests" in `devDependencies`.
 
@@ -402,11 +410,12 @@ These frames are generated by the CLI’s Ink renderer.
 
 ```text
 ● Problems found: 4 across 5 people.
+  Reached the goal: 2 of 5.
 
-▏1  4 of 5  Looked for Invite in the Share menu and found only link options
- 2  2 of 5  Pressed Add, saw nothing change, pressed it again
- 3  2 of 5  Typed the colleague's email into the board search
- 4  1 of 5  Stopped at a grey Add button and gave up
+▏1  2 of 5  blocked   Pressed Add, saw nothing change, pressed it again
+ 2  1 of 5  blocked   Stopped at a grey Add button and pressed Can't do it
+ 3  4 of 5  slowed    Looked for Invite in the Share menu, found only links
+ 4  2 of 5  confused  Typed the colleague's email into the board search
 ```
 
 ### agent
@@ -445,7 +454,7 @@ Next: npm run dev, then npx ui-tests
 ### dev
 
 ```text
-Outcome: correct
+Reached the goal: Yes
 Rehearsal: 0 of 5 planned attempts recorded.
 Trace: http://127.0.0.1:43210/00000000-0000-4000-8000-000000000000/0000000000000000000000000000000000000000000000000000000000000000
 ```
@@ -455,7 +464,7 @@ Trace: http://127.0.0.1:43210/00000000-0000-4000-8000-000000000000/0000000000000
 ```text
 Run k2m9 started
 Send this link to anyone: https://ui-tests.com/t/k2m9
-Panel: 5 people matched to "people who signed up this week and want a colleague on their board"
+Paid panel: 5 people matched to "people who signed up this week and want a colleague on their board"
 Cap: $60 · results within 48 hours
 ```
 

@@ -74,7 +74,7 @@ async function questions(page: Page, { seq = '3', confidence, validation }: { se
   if (confidence) { await expect(page.getByRole('group', { name: 'How confident are you that you completed the task?' })).toBeVisible(); await choose(page, confidence); await page.keyboard.press('Enter') }
   if (validation) { await page.getByRole('radio', { name: validation }).check(); await page.getByRole('button', { name: 'Next', exact: true }).click() }
   await expect(page.getByRole('group', { name: 'This website is easy to use.' })).toBeVisible()
-  // The UX-Lite scale has five points: keys beyond it choose nothing.
+  // The after-goal agreement scale has five points: keys beyond it choose nothing.
   await page.keyboard.press('7')
   await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled()
   await choose(page, '2'); await page.keyboard.press('Enter')
@@ -84,11 +84,11 @@ async function questions(page: Page, { seq = '3', confidence, validation }: { se
   await expect(page.getByRole('button', { name: 'Send answers' })).toBeEnabled({ timeout: 15_000 })
   await page.getByRole('button', { name: 'Send answers' }).focus(); await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
-  await expect.poll(() => output).toContain('Outcome:')
+  await expect.poll(() => output).toContain('Reached the goal:')
 }
 test.afterEach(async () => { if (child) { child.kill('SIGTERM'); await new Promise<void>(resolve => { if (child.exitCode !== null) resolve(); else { child.once('exit', () => resolve()); setTimeout(resolve, 3000) } }) } })
 
-test('keyboard rehearsal, privacy projection, dead click, deviation, separate trace and correct outcome', async ({ page, request }) => {
+test('keyboard rehearsal, privacy projection, a click that did nothing, off your path, separate trace and the goal reached', async ({ page, request }) => {
   await start(); await begin(page)
   const projection = await page.evaluate(async () => (await fetch('/api/ui-tests')).text())
   expect(projection).not.toMatch(/happyPath|expected|hooks|\/docs\/getting-started|ui-tests/)
@@ -117,24 +117,24 @@ test('keyboard rehearsal, privacy projection, dead click, deviation, separate tr
   await expect(taskbar.getByRole('group', { name: 'Finished this task?' })).toHaveCount(0)
   await finish(page)
   await questions(page)
-  await expect.poll(async () => traceText(await (await request.get(trace)).text())).toContain('"status": "correct"')
+  await expect.poll(async () => traceText(await (await request.get(trace)).text())).toContain('"reached": "yes"')
   const html = traceText(await (await request.get(trace)).text())
   expect(html).toContain('Rehearsal: 0 of 5 planned attempts recorded.')
-  expect(html).toContain('dead click'); expect(html).toContain('deviation'); expect(html).toContain('/detour'); expect(html).toContain('Final URL: http://localhost:3000/docs/getting-started')
+  expect(html).toContain('nothing happened'); expect(html).toContain('Off your path · opened /detour'); expect(html).toContain('Last page: http://localhost:3000/docs/getting-started')
   expect(html).not.toContain('DO-NOT-RECORD')
   expect(html).toContain('Their words: Share seemed like the place for people. <script>not markup</script>')
   expect(html).toContain('What made it difficult: I could not tell where people were added.')
-  expect(html).toContain('UX-Lite: ease 2 / 5, usefulness 4 / 5')
-  expect(html).toContain('Confidence: not asked')
+  expect(html).toContain('After the goal: Easy to use? 2 of 5 · Would it help them? 4 of 5')
+  expect(html).toContain("How sure they'd done it: not asked")
   expect(html).toContain('Screener')
   expect(new URL(trace).port).not.toBe('3000')
 })
-test('giving up after trying is gave up, distinct from failure, and still collects SEQ', async ({ page, request }) => {
+test('pressing I couldn\'t do this after trying ends as Can\'t do it, apart from not reaching the goal, and still asks how easy it was', async ({ page, request }) => {
   await start(); await begin(page)
   await page.getByRole('heading', { level: 1 }).click()
   await page.getByRole('complementary', { name: 'Your task' }).getByRole('button', { name: "I couldn't do this" }).click(); await questions(page)
   const html = traceText(await (await request.get(trace)).text())
-  expect(html).toContain('Terminal reason: gave up'); expect(html).toContain('"status": "incorrect"'); expect(html).toContain('Ease rating 3 of 7')
+  expect(html).toContain("How it ended: pressed Can't do it"); expect(html).toContain('"reached": "no"'); expect(html).toContain('How easy was it? 3 of 7 (7 = very easy)')
 })
 test('leaving before the first interaction confirms and records an early abandonment', async ({ page, request }) => {
   await start(); await begin(page)
@@ -147,13 +147,13 @@ test('leaving before the first interaction confirms and records an early abandon
   await confirm.getByRole('button', { name: 'Leave this task' }).click()
   await questions(page, { seq: '1' })
   const html = traceText(await (await request.get(trace)).text())
-  expect(html).toContain('Terminal reason: abandoned early'); expect(html).toContain('abandoned early')
+  expect(html).toContain('How it ended: left before trying')
 })
 test('wrong happy path has an expected/actual URL diff', async ({ page, request }) => {
   await start(`goal('start trying', {happyPath:['/','/wrong']},()=>outcome(({page})=>expect(page.url()).toContain('/docs/getting-started')))`)
   await begin(page); await page.getByRole('link', { name: 'Get started' }).first().click(); await expect(page).toHaveURL(/\/docs\/getting-started$/); await finish(page); await questions(page)
   const html = traceText(await (await request.get(trace)).text())
-  expect(html).toContain('"status": "incorrect"'); expect(html).toContain('"expected": "/wrong"'); expect(html).toContain('"actual": "http://localhost:3000/docs/getting-started"')
+  expect(html).toContain('"reached": "no"'); expect(html).toContain('"expected": "/wrong"'); expect(html).toContain('"actual": "http://localhost:3000/docs/getting-started"')
 })
 test('task steps advance individually and run checks against their own snapshots', async ({ page, request }) => {
   await start(`goal('start trying',()=>{task('Read the promise',({page})=>expect(page.url()).toContain('localhost:3000/'));task('Find the instructions',({page})=>expect(page.url()).toContain('/docs/getting-started'));outcome(({page})=>expect(page.url()).toContain('/docs/getting-started'))})`)
@@ -178,21 +178,21 @@ test('task steps advance individually and run checks against their own snapshots
   await expect(page.getByRole('button', { name: 'Send answers' })).toBeEnabled({ timeout: 15_000 })
   await page.getByRole('button', { name: 'Send answers' }).click()
   await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
-  await expect.poll(() => output).toContain('Outcome:')
-  expect(traceText(await (await request.get(trace)).text())).toContain('"status": "correct"')
+  await expect.poll(() => output).toContain('Reached the goal:')
+  expect(traceText(await (await request.get(trace)).text())).toContain('"reached": "yes"')
   await rm(authoredFile)
   const { stdout } = await promisify(execFile)(process.execPath, [path.resolve('packages/ui-tests/bin/ui-tests.mjs'), 'verify', new URL(player).pathname.split('/').at(-1)!])
-  expect(JSON.parse(stdout).status).toBe('correct')
+  expect(JSON.parse(stdout).reached).toBe('yes')
 })
 test('minutes-only exploration warns, records evidence and has no result sentence', async ({ page, request }) => {
   await start(`goal('explore possibilities',{minutes:1})`)
   expect(output).toContain('warning [outcome-required]')
   await begin(page); await finish(page); await questions(page, { confidence: '6' })
   const html = await (await request.get(trace)).text()
-  expect(traceText(html)).toContain('Confidence: 6 / 7')
+  expect(traceText(html)).toContain("How sure they'd done it: 6 of 7 (7 = completely sure)")
   expect(html).toContain('Issues-only exploration'); expect(parseHTML(html).document.querySelector('main > p > strong')).toBeNull()
 })
-test('timeout keeps questions available, records a pause and masks final input evidence', async ({ page, request }) => {
+test('running out of time keeps questions available, records a stop and masks final input evidence', async ({ page, request }) => {
   await start(`goal('explore possibilities',{minutes:0.18})`)
   await begin(page)
   await page.evaluate(() => {
@@ -202,7 +202,7 @@ test('timeout keeps questions available, records a pause and masks final input e
   })
   await questions(page, { confidence: '5' })
   const html = traceText(await (await request.get(trace)).text())
-  expect(html).toContain('Terminal reason: timed out'); expect(html).toContain('pause'); expect(html).toMatch(/Paused for \d+ seconds/); expect(html).toContain('[masked]')
+  expect(html).toContain('How it ended: ran out of time'); expect(html).toContain('stopped'); expect(html).toMatch(/Stopped \d+ s/); expect(html).toContain('[masked]')
   expect(html).not.toMatch(/PRIVATE-VALUE|PRIVATE-TEXT/)
 })
 test('non-observable outcome asks its validation question without sending the expected answer', async ({ page, request }) => {
@@ -214,7 +214,7 @@ test('non-observable outcome asks its validation question without sending the ex
   const projection = await page.evaluate(async () => (await fetch('/api/ui-tests')).text())
   expect(projection).not.toContain('expected')
   await questions(page, { validation: 'April' })
-  expect(traceText(await (await request.get(trace)).text())).toContain('"status": "correct"')
+  expect(traceText(await (await request.get(trace)).text())).toContain('"reached": "yes"')
 })
 test('Talk instead asks for the microphone once, records with a live indicator and a stop, shows the transcript as it arrives, and keeps audio and words with the attempt', async ({ page, request, context }) => {
   await context.grantPermissions(['microphone'], { origin: 'http://localhost:3000' })
@@ -269,10 +269,10 @@ test('Talk instead asks for the microphone once, records with a live indicator a
   await expect(page.getByRole('button', { name: 'Send answers' })).toBeEnabled({ timeout: 15_000 })
   await page.getByRole('button', { name: 'Send answers' }).click()
   await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
-  await expect.poll(() => output).toContain('Outcome:')
+  await expect.poll(() => output).toContain('Reached the goal:')
   const html = await (await request.get(trace)).text()
   const text = traceText(html)
-  expect(text).toContain('voice recorded, consent given when they chose to talk')
+  expect(text).toContain('voice, with consent given when they chose to talk')
   expect(text).toContain('Spoken answer (their words')
   expect(text).toContain('Transcript: Share seemed like the place for people!')
   expect(text).toContain('Their words: Share seemed like the place for people!')

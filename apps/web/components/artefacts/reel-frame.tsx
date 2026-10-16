@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Icon } from '../icon'
-import { clock } from '../../lib/sessions'
+import { clock } from '../../lib/attempts'
 
 /**
  * Reel: a 16:10 clip with a timestamp overlay and its progress, the moment label and the person's words inside its chrome

@@ -1,12 +1,12 @@
 'use client'
 import { useEffect, useRef, useState } from 'react'
 import { texture } from '../lib/texture'
-import { session, kinds, type Moment } from '../lib/sessions'
+import { attempt, signal } from '../lib/attempts'
 
-const p3 = session('p3')
-/** The moments the system detects: problems, pauses, deviations, backtracks and dead clicks, each where the cursor was. */
-const sensed = (p3.moments as Moment[]).filter(moment => moment.at && (moment.issue || ['pause', 'deviation', 'dead'].includes(kinds[moment.kind]?.signal ?? '')))
-/** The poster frame is 00:05, the pause in the Share menu: under reduced motion its sensor is the still. */
+const shown = attempt('p3')
+/** The moments the system detects: problems, stops, going off your path or back, and actions with no effect, each where the cursor was. */
+const sensed = shown.moments.filter(moment => moment.at && (moment.issue || ['stop', 'path', 'dead'].includes(signal[moment.kind] ?? '')))
+/** The poster frame is 00:05, where they stopped on the Share menu: under reduced motion its sensor is the still. */
 const still = sensed.filter(moment => moment.seconds === 5)
 const PULSE = 1.6
 /** One pulse: the ring grows from the cursor and fades. */
@@ -63,7 +63,7 @@ function drawTexture(canvas: HTMLCanvasElement, time: number, decorate: boolean)
 }
 
 /**
- * Behind the hero: the texture, and the real P3 session playing small, dim and slow, with the behaviours happening in context and
+ * Behind the hero: the texture, and Person 3's real recording playing small, dim and slow, with the behaviours happening in context and
  * unnamed. Where the system detects a moment, only a small pulse at the cursor in the moment hue appears; nothing is written.
  * Under reduced motion the session is its poster with that frame's sensor, and the texture is one still frame.
  */
@@ -93,7 +93,7 @@ export function HeroBackdrop() {
     if (reduced) { element.pause(); return }
     let frame = 0, previous = 0
     // Every sensor is always in the DOM and pulses through the Web Animations API, so the page's markup never changes on its own
-    // and a recorder comparing it before and after a visitor's click still sees a dead click as dead.
+    // and a recorder comparing it before and after a visitor's click still sees a click that did nothing as one.
     const sense = () => {
       const t = element.currentTime
       sensed.forEach((moment, index) => {
@@ -110,7 +110,7 @@ export function HeroBackdrop() {
   return <div className="hero-backdrop" aria-hidden="true" data-motion={reduced ? 'still' : 'running'}>
     <canvas ref={canvas} className="trace-texture" data-motion={reduced ? 'still' : 'running'} />
     <div className="hero-session">
-      <video ref={video} src={p3.video} poster={p3.poster} muted loop playsInline preload="none" tabIndex={-1} />
+      <video ref={video} src={shown.video} poster={shown.poster} muted loop playsInline preload="none" tabIndex={-1} />
       {sensed.map((moment, index) => <span key={moment.seconds} ref={node => { sensors.current[index] = node }} className={still.includes(moment) ? 'sensor poster' : 'sensor'} style={{ left: `${moment.at![0] * 100}%`, top: `${moment.at![1] * 100}%` }} />)}
     </div>
   </div>
