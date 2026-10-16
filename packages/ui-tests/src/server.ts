@@ -15,7 +15,7 @@ const message = z.discriminatedUnion('action', [
   z.object({ action: z.literal('begin') }),
   z.object({ action: z.literal('events'), events: z.array(event).max(100) }),
   z.object({ action: z.literal('end'), reason: z.enum(['done', 'gave up', 'timed out']), snapshot }),
-  z.object({ action: z.literal('questions'), seq: z.number().int().min(1).max(7), confidence: z.number().int().min(1).max(5), answers: z.record(z.string(), z.string()).optional() }),
+  z.object({ action: z.literal('questions'), seq: z.number().int().min(1).max(7), confidence: z.number().int().min(1).max(5), words: z.string().max(5000).optional(), answers: z.record(z.string(), z.string()).optional() }),
 ])
 /** Reads the run id and token from the `ui-tests-run` cookie. */
 function cookie(request: Request) { return /(?:^|;\s*)ui-tests-run=([^;]+)/.exec(request.headers.get('cookie') ?? '')?.[1]?.split('.') }
@@ -57,7 +57,7 @@ export function createCollector(getStorage: () => StorageAdapter = () => new SQL
           run.status = 'questions'; run.reason = Date.now() >= run.startedAt + run.context.goals[run.goalIndex].timeout.seconds * 1000 ? 'timed out' : body.reason; run.snapshot = body.snapshot; run.endedAt = Date.now()
         } else {
           if (run.status !== 'questions' && run.status !== 'finished') return new Response('Questions are not available', { status: 409 })
-          run.seq = body.seq; run.confidence = body.confidence; run.answers = body.answers; run.status = 'finished'; run.result = undefined
+          run.seq = body.seq; run.confidence = body.confidence; run.words = body.words; run.answers = body.answers; run.status = 'finished'; run.result = undefined
         }
       }
       store.update(run)

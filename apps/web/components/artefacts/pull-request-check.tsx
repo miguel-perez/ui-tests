@@ -1,0 +1,4 @@
+import { Check, CircleCheck, CircleAlert } from 'lucide-react'
+export function PullRequestCheck({ reportId = 'pr-report' }: { reportId?: string }) {
+  return <div className="window pull-request-check" data-artefact="pull-request-check"><div className="window-chrome"><h3><span className="check-pass"><Check size={14} aria-hidden="true" /></span>All checks have passed</h3><span className="example-label">Example run</span></div>{[['ui-tests', 'Problems found: 4 across 5 people'], ['preview', 'Deployment ready'], ['tests', '212 passed']].map(([name, summary], i) => <div className="check-row" key={name}>{i === 0 ? <CircleAlert className="issue-symbol" size={18} aria-hidden="true" /> : <CircleCheck size={18} aria-hidden="true" />}<span><strong>{name}</strong> <span className="check-summary">· {summary}</span></span><a href={`#${reportId}`} aria-label={`${name} details`}>Details</a></div>)}</div>
+}

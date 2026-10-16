@@ -4,6 +4,191 @@
   "goal": "invite a colleague",
   "sessions": [
     {
+      "id": "p1",
+      "person": "P1",
+      "source": "panel",
+      "device": "MacBook",
+      "browser": "Chrome",
+      "viewport": "1280×800",
+      "duration": "00:57",
+      "outcome": "correct",
+      "ease": 4,
+      "easeOf": 7,
+      "words": "I figured it would find them.",
+      "video": "/sessions/p1.webm",
+      "poster": "/sessions/p1.jpg",
+      "videoSeconds": 58,
+      "moments": [
+        {
+          "timestamp": "00:00",
+          "seconds": 0,
+          "kind": "start",
+          "detail": "scenario dismissed"
+        },
+        {
+          "timestamp": "00:04",
+          "seconds": 4,
+          "actualSeconds": 4.001,
+          "kind": "click",
+          "detail": "click \"Share\"",
+          "issue": 1
+        },
+        {
+          "timestamp": "00:13",
+          "seconds": 13,
+          "actualSeconds": 13.001,
+          "kind": "click",
+          "detail": "click \"Manage link\""
+        },
+        {
+          "timestamp": "00:22",
+          "seconds": 22,
+          "actualSeconds": 22.001,
+          "kind": "click",
+          "detail": "back"
+        },
+        {
+          "timestamp": "00:30",
+          "seconds": 30,
+          "actualSeconds": 30.001,
+          "kind": "type",
+          "detail": "type \"sam@acme.co\" into Search",
+          "issue": 3
+        },
+        {
+          "timestamp": "00:39",
+          "seconds": 39,
+          "actualSeconds": 39.001,
+          "kind": "click",
+          "detail": "click the avatar"
+        },
+        {
+          "timestamp": "00:40",
+          "seconds": 40,
+          "actualSeconds": 40.001,
+          "kind": "click",
+          "detail": "click \"Settings\""
+        },
+        {
+          "timestamp": "00:44",
+          "seconds": 44,
+          "actualSeconds": 43.999,
+          "kind": "click",
+          "detail": "click \"Members\""
+        },
+        {
+          "timestamp": "00:49",
+          "seconds": 49,
+          "actualSeconds": 49.001,
+          "kind": "type",
+          "detail": "type the email"
+        },
+        {
+          "timestamp": "00:54",
+          "seconds": 54,
+          "actualSeconds": 54.002,
+          "kind": "click",
+          "detail": "press \"Add\""
+        },
+        {
+          "timestamp": "00:57",
+          "seconds": 57,
+          "actualSeconds": 57.001,
+          "kind": "click",
+          "detail": "I'm done"
+        }
+      ]
+    },
+    {
+      "id": "p2",
+      "person": "P2",
+      "source": "panel",
+      "device": "MacBook",
+      "browser": "Chrome",
+      "viewport": "1280×800",
+      "duration": "00:54",
+      "outcome": "incorrect",
+      "ease": 2,
+      "easeOf": 7,
+      "words": "It looked switched off.",
+      "video": "/sessions/p2.webm",
+      "poster": "/sessions/p2.jpg",
+      "videoSeconds": 55,
+      "moments": [
+        {
+          "timestamp": "00:00",
+          "seconds": 0,
+          "kind": "start",
+          "detail": "scenario dismissed"
+        },
+        {
+          "timestamp": "00:06",
+          "seconds": 6,
+          "actualSeconds": 6.001,
+          "kind": "click",
+          "detail": "click \"Share\"",
+          "issue": 1
+        },
+        {
+          "timestamp": "00:17",
+          "seconds": 17,
+          "actualSeconds": 17.001,
+          "kind": "click",
+          "detail": "click \"Manage link\""
+        },
+        {
+          "timestamp": "00:25",
+          "seconds": 25,
+          "actualSeconds": 25.001,
+          "kind": "click",
+          "detail": "back"
+        },
+        {
+          "timestamp": "00:34",
+          "seconds": 34,
+          "actualSeconds": 34.002,
+          "kind": "click",
+          "detail": "click the avatar"
+        },
+        {
+          "timestamp": "00:35",
+          "seconds": 35,
+          "actualSeconds": 35.002,
+          "kind": "click",
+          "detail": "click \"Settings\""
+        },
+        {
+          "timestamp": "00:40",
+          "seconds": 40,
+          "actualSeconds": 40.002,
+          "kind": "click",
+          "detail": "click \"Members\""
+        },
+        {
+          "timestamp": "00:45",
+          "seconds": 45,
+          "actualSeconds": 45.001,
+          "kind": "type",
+          "detail": "type an incomplete email"
+        },
+        {
+          "timestamp": "00:49",
+          "seconds": 49,
+          "actualSeconds": 49.001,
+          "kind": "pause",
+          "detail": "stopped at a grey Add button",
+          "issue": 4
+        },
+        {
+          "timestamp": "00:53",
+          "seconds": 53,
+          "actualSeconds": 53.001,
+          "kind": "click",
+          "detail": "I can't do this"
+        }
+      ]
+    },
+    {
       "id": "p3",
       "person": "P3",
       "source": "panel",
@@ -117,6 +302,169 @@
           "kind": "done",
           "detail": "I'm done",
           "route": "/settings/members"
+        }
+      ]
+    },
+    {
+      "id": "p4",
+      "person": "P4",
+      "source": "panel",
+      "device": "MacBook",
+      "browser": "Chrome",
+      "viewport": "1280×800",
+      "duration": "00:47",
+      "outcome": "incorrect",
+      "ease": 4,
+      "easeOf": 7,
+      "words": "I wasn't sure the first one did anything.",
+      "video": "/sessions/p4.webm",
+      "poster": "/sessions/p4.jpg",
+      "videoSeconds": 48,
+      "moments": [
+        {
+          "timestamp": "00:00",
+          "seconds": 0,
+          "kind": "start",
+          "detail": "scenario dismissed"
+        },
+        {
+          "timestamp": "00:07",
+          "seconds": 7,
+          "actualSeconds": 7.001,
+          "kind": "click",
+          "detail": "click the avatar"
+        },
+        {
+          "timestamp": "00:09",
+          "seconds": 9,
+          "actualSeconds": 9.002,
+          "kind": "click",
+          "detail": "click \"Settings\""
+        },
+        {
+          "timestamp": "00:19",
+          "seconds": 19,
+          "actualSeconds": 19.001,
+          "kind": "click",
+          "detail": "click \"Members\""
+        },
+        {
+          "timestamp": "00:36",
+          "seconds": 36,
+          "actualSeconds": 36.001,
+          "kind": "type",
+          "detail": "type the email"
+        },
+        {
+          "timestamp": "00:41",
+          "seconds": 41,
+          "actualSeconds": 41.001,
+          "kind": "click",
+          "detail": "press \"Add\"",
+          "issue": 2
+        },
+        {
+          "timestamp": "00:44",
+          "seconds": 44,
+          "actualSeconds": 44.001,
+          "kind": "click",
+          "detail": "press \"Add\" again",
+          "issue": 2
+        },
+        {
+          "timestamp": "00:47",
+          "seconds": 47,
+          "actualSeconds": 47.001,
+          "kind": "click",
+          "detail": "I'm done"
+        }
+      ]
+    },
+    {
+      "id": "p5",
+      "person": "P5",
+      "source": "panel",
+      "device": "MacBook",
+      "browser": "Chrome",
+      "viewport": "1280×800",
+      "duration": "00:52",
+      "outcome": "correct",
+      "ease": 5,
+      "easeOf": 7,
+      "words": "Share is where you add people.",
+      "video": "/sessions/p5.webm",
+      "poster": "/sessions/p5.jpg",
+      "videoSeconds": 53,
+      "moments": [
+        {
+          "timestamp": "00:00",
+          "seconds": 0,
+          "kind": "start",
+          "detail": "scenario dismissed"
+        },
+        {
+          "timestamp": "00:09",
+          "seconds": 9,
+          "actualSeconds": 9.002,
+          "kind": "click",
+          "detail": "click \"Share\"",
+          "issue": 1
+        },
+        {
+          "timestamp": "00:20",
+          "seconds": 20,
+          "actualSeconds": 20,
+          "kind": "click",
+          "detail": "click \"Manage link\""
+        },
+        {
+          "timestamp": "00:28",
+          "seconds": 28,
+          "actualSeconds": 28.002,
+          "kind": "click",
+          "detail": "back"
+        },
+        {
+          "timestamp": "00:34",
+          "seconds": 34,
+          "actualSeconds": 34.001,
+          "kind": "click",
+          "detail": "click the avatar"
+        },
+        {
+          "timestamp": "00:35",
+          "seconds": 35,
+          "actualSeconds": 35.002,
+          "kind": "click",
+          "detail": "click \"Settings\""
+        },
+        {
+          "timestamp": "00:39",
+          "seconds": 39,
+          "actualSeconds": 39.002,
+          "kind": "click",
+          "detail": "click \"Members\""
+        },
+        {
+          "timestamp": "00:45",
+          "seconds": 45,
+          "actualSeconds": 45.001,
+          "kind": "type",
+          "detail": "type the email"
+        },
+        {
+          "timestamp": "00:49",
+          "seconds": 49,
+          "actualSeconds": 49.001,
+          "kind": "click",
+          "detail": "press \"Add\""
+        },
+        {
+          "timestamp": "00:52",
+          "seconds": 52,
+          "actualSeconds": 52.001,
+          "kind": "click",
+          "detail": "I'm done"
         }
       ]
     }

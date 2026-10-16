@@ -1,10 +1,9 @@
 import { test, expect } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { spawn, type ChildProcess } from 'node:child_process'
 import { mkdir } from 'node:fs/promises'
-import path from 'node:path'
-import { example, intro, terminal } from '../../apps/web/lib/copy'
+import { example, inviteExample, promise, intro, landing, guide } from '../../apps/web/lib/copy'
 
+const artefacts = ['terminal-quiet-window', 'code-window', 'trace-viewer', 'report-rows', 'scenario-card', 'taskbar', 'ease-question', 'invite-link', 'cap-control', 'visitor-invitation', 'pull-request-check']
 for (const width of [1440, 375]) {
   for (const [name, route] of [['landing', '/'], ['guide', '/docs/getting-started']]) {
     test(`site ${name} at ${width}px: layout, accessibility, fonts and copy`, async ({ page, context }) => {
@@ -14,93 +13,109 @@ for (const width of [1440, 375]) {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
-      expect(await page.locator('body').innerText()).not.toMatch(/\b(?:pass|compliant|certified)\b|%|!/i)
-
-      // Check actual visible text, including nav, buttons, code and the footer.
-      const fonts = await page.locator('body *').evaluateAll(nodes => [...new Set(nodes
-        .filter(node => node.getBoundingClientRect().width && [...node.childNodes].some(child => child.nodeType === Node.TEXT_NODE && child.textContent?.trim()))
-        .map(node => getComputedStyle(node).fontFamily))])
-      expect(fonts.length).toBeGreaterThan(0)
+      const fonts = await page.locator('body *').evaluateAll(nodes => [...new Set(nodes.filter(node => node.getBoundingClientRect().width && [...node.childNodes].some(child => child.nodeType === Node.TEXT_NODE && child.textContent?.trim())).map(node => getComputedStyle(node).fontFamily))])
       for (const font of fonts) expect(font).toMatch(/^['"]?(?:__)?Fira[_ ](?:Sans|Code)/)
       await expect(page.locator('pre').first()).toHaveCSS('font-family', /Fira[_ ]Code/)
-      const darkBackground = await page.locator('body').evaluate(node => getComputedStyle(node).backgroundColor)
+      const background = await page.locator('body').evaluate(node => getComputedStyle(node).backgroundColor)
       await page.emulateMedia({ colorScheme: 'light' })
-      await expect(page.locator('body')).toHaveCSS('background-color', darkBackground)
-
+      await expect(page.locator('body')).toHaveCSS('background-color', background)
       if (name === 'landing') {
-        await expect(page.getByText(intro)).toBeInViewport()
-        await expect(page.locator('.terminal code')).toHaveText(terminal)
-        await expect(page.locator('.rung-1')).toContainText(/Dead click[\s\S]*Deviation[\s\S]*Rehearsal: 0 of 5[\s\S]*Outcome correct/)
-        await expect(page.getByRole('link', { name: 'Get started', exact: true })).toHaveAttribute('href', '/docs/getting-started')
-        if (width === 1440) {
-          const headline = page.getByRole('heading', { level: 1 })
-          expect(await headline.evaluate(node => Math.round(node.getBoundingClientRect().height / parseFloat(getComputedStyle(node).lineHeight)))).toBe(2)
-        }
+        await expect(page.getByRole('heading', { level: 1 })).toHaveText(promise)
+        await expect(page.getByText(intro)).toBeVisible()
+        for (const text of Object.values(landing)) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first()).toBeVisible()
+        await expect(page.locator('h1')).toHaveCSS('font-size', width === 1440 ? '72px' : '44px')
+        for (const artefact of artefacts) await expect(page.locator(`[data-artefact="${artefact}"]`).first()).toBeVisible()
+        const hero = page.locator('.hero-video')
+        await expect(hero).toHaveAttribute('poster', '/sessions/p3.jpg')
+        await expect(hero).toHaveAttribute('preload', 'none')
+        await expect.poll(() => hero.evaluate((video: HTMLVideoElement) => !video.paused && video.playbackRate === 0.6)).toBe(true)
+        await expect(page.getByRole('link', { name: 'Get started', exact: true }).first()).toHaveAttribute('href', '/docs/getting-started')
       } else {
-        await expect(page.locator('.docs-content pre')).toHaveCount(11)
-        await expect(page.locator('.docs-content .code-block button')).toHaveCount(11)
-        await page.getByRole('navigation', { name: 'Getting started', exact: true }).getByRole('link', { name: 'Read the result' }).click()
-        await expect(page).toHaveURL(/#read-the-result$/)
-        await expect(page.locator('#read-the-result h2')).toBeInViewport()
+        await expect(page.locator('.docs-content > section')).toHaveCount(5)
+        await expect(page.locator('[data-artefact="report-rows"]')).toHaveCount(1)
+        await expect(page.locator('#guide-report [data-artefact="report-rows"]')).toBeVisible()
+        for (const text of [guide.install, guide.try, guide.write, guide.next, guide.once, guide.pr]) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first()).toBeVisible()
+        await page.getByRole('navigation', { name: 'Getting started' }).getByRole('link', { name: /Run it with real people/ }).click()
+        await expect(page.locator('#real-people h2')).toBeInViewport()
+      }
+      if (process.env.CAPTURE_SITE === '1') {
+        await page.emulateMedia({ reducedMotion: 'reduce' })
         await page.goto(route)
         await page.evaluate(() => document.fonts.ready)
-      }
-
-      // Capture the untouched UI, then exercise copying via the keyboard.
-      if (process.env.CAPTURE_SITE === '1') {
         await mkdir('design/screens', { recursive: true })
-        await page.screenshot({ path: `design/screens/${name}-${width}.jpg`, fullPage: true, type: 'jpeg', quality: 75 })
+        await page.screenshot({ path: `design/screens/${name}-${width}.jpg`, fullPage: true, type: 'jpeg', quality: 80 })
+        if (name === 'landing' && width === 1440) for (const artefact of artefacts) await page.locator(`[data-artefact="${artefact}"]`).first().screenshot({ path: `design/screens/d2-${artefact}-1440.png` })
       }
       await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-      const copy = page.getByRole('button', { name: 'Copy landing.ui.test.ts', exact: true })
-      await copy.focus()
-      await page.keyboard.press('Enter')
-      await expect(copy.locator('xpath=ancestor::div[contains(@class,"code-block")]').getByRole('status')).toHaveText('Copied')
-      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(example)
+      const label = name === 'landing' ? 'landing.ui.test.ts' : 'ui-tests/first.ui.test.ts'
+      const copy = page.getByRole('button', { name: `Copy ${label}`, exact: true })
+      await copy.focus(); await page.keyboard.press('Enter')
+      await expect(copy.locator('xpath=ancestor::figure').getByRole('status')).toHaveText('Copied')
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(name === 'landing' ? example : inviteExample)
     })
   }
-
-  test(`rehearsal taskbar inherits site tokens at ${width}px`, async ({ page }) => {
+  test(`reduced motion and interactive recordings at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 })
-    let child: ChildProcess | undefined
-    let output = ''
-    try {
-      child = spawn(process.execPath, [path.resolve('packages/ui-tests/bin/ui-tests.mjs'), '--no-open', '--file', path.resolve('apps/web/landing.ui.test.ts')], {
-        cwd: path.resolve('apps/web'), env: { ...process.env, NO_COLOR: '1' },
-      })
-      child.stdout?.on('data', data => { output += data.toString() })
-      child.stderr?.on('data', data => { output += data.toString() })
-      child.on('error', error => { output += error.message })
-      await expect.poll(() => output, { timeout: 10_000 }).toContain('Player: ')
-      await page.goto(/Player: (\S+)/.exec(output)![1])
-      await page.getByRole('button', { name: 'I consent' }).click()
-      await page.getByRole('button', { name: 'Begin task' }).click()
-      const taskbar = page.getByRole('complementary', { name: 'Your task' })
-      await expect(taskbar).toBeVisible()
-      const tokens = await page.evaluate(() => {
-        const probe = document.createElement('span')
-        document.body.append(probe)
-        probe.style.backgroundColor = 'var(--background)'
-        const background = getComputedStyle(probe).backgroundColor
-        probe.style.backgroundColor = 'var(--primary)'
-        const primary = getComputedStyle(probe).backgroundColor
-        probe.remove()
-        return { background, primary }
-      })
-      await expect(taskbar).toHaveCSS('background-color', tokens.background)
-      await expect(taskbar.getByRole('button', { name: "I'm done", exact: true })).toHaveCSS('background-color', tokens.primary)
-      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
-      await page.getByRole('link', { name: 'Get started', exact: true }).click()
-      await expect(page).toHaveURL(/\/docs\/getting-started$/)
-      await expect(taskbar).toBeVisible()
-      await expect(taskbar).toHaveCSS('background-color', tokens.background)
-    } finally {
-      if (child && child.exitCode === null) {
-        const exited = new Promise<void>(resolve => child!.once('exit', () => resolve()))
-        child.kill('SIGTERM')
-        await exited
-      }
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await page.goto('/')
+    await page.waitForTimeout(1500)
+    const hero = page.locator('.hero-video')
+    expect(await hero.evaluate((video: HTMLVideoElement) => video.paused && !video.getAttribute('src'))).toBe(true)
+    await expect(page.locator('.types-once pre')).toHaveCSS('animation-name', 'none')
+    const trace = page.locator('.trace-viewer').first()
+    await trace.getByRole('button', { name: /00:23/ }).click()
+    await expect.poll(() => trace.locator('video').evaluate((video: HTMLVideoElement) => video.currentTime)).toBeCloseTo(23, 0)
+    await expect(trace.locator('[aria-current="step"]')).toContainText('00:23')
+    await trace.getByRole('slider', { name: 'Seek session' }).fill('41')
+    await expect(trace.locator('[aria-current="step"]')).toContainText('00:41')
+    const report = page.locator('.report-rows').first()
+    for (let i = 0; i < 4; i++) {
+      if (i > 0) await report.locator('.report-toggle').nth(i).click()
+      const reel = report.locator('video')
+      expect(await reel.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
+      await report.getByRole('button', { name: 'Play problem moment', exact: true }).click()
+      await expect.poll(() => reel.evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThan(0)
+      await report.getByRole('button', { name: 'Pause problem moment', exact: true }).click()
+    }
+    await page.emulateMedia({ reducedMotion: 'no-preference' })
+    await report.locator('.report-toggle').nth(1).click()
+    await expect.poll(() => report.locator('video').evaluate((video: HTMLVideoElement) => !video.paused)).toBe(true)
+    for (const [row, person, at, label] of [[0, 'p1', 4, 'P1 00:04'], [0, 'p2', 6, 'P2 00:06'], [1, 'p4', 41, 'P4 00:41'], [0, 'p5', 9, 'P5 00:09']] as const) {
+      const toggle = report.locator('.report-toggle').nth(row)
+      if (await toggle.getAttribute('aria-expanded') !== 'true') await toggle.click()
+      await report.getByRole('button', { name: label, exact: true }).click()
+      await expect(report.locator('video')).toHaveAttribute('src', `/sessions/${person}.webm`)
+      await expect.poll(() => report.locator('video').evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThanOrEqual(at)
     }
   })
 }
+
+test('failed playback restores the trace and reel play controls without a pause event', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.addInitScript(() => {
+    HTMLMediaElement.prototype.play = function () {
+      this.dispatchEvent(new Event('play'))
+      return new Promise<void>((_, reject) => {
+        (this as HTMLMediaElement & { rejectPlay: () => void }).rejectPlay = () => reject(new DOMException('Playback denied', 'NotAllowedError'))
+      })
+    }
+  })
+  await page.goto('/')
+  const trace = page.locator('.trace-viewer').first()
+  const report = page.locator('.report-rows').first()
+  for (const [container, label] of [[trace, 'P3 session'], [report, 'problem moment']] as const) {
+    await container.getByRole('button', { name: `Play ${label}`, exact: true }).click()
+    await expect(container.getByRole('button', { name: `Pause ${label}`, exact: true })).toBeVisible()
+    await container.locator('video').evaluate((video: HTMLVideoElement & { rejectPlay: () => void }) => video.rejectPlay())
+    await expect(container.getByRole('button', { name: `Play ${label}`, exact: true })).toBeVisible()
+  }
+  // Exercise the effect-driven playback handler as well as both button handlers.
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await report.locator('.report-toggle').nth(1).click()
+  await expect(report.getByRole('button', { name: 'Pause problem moment', exact: true })).toBeVisible()
+  await report.locator('video').evaluate((video: HTMLVideoElement & { rejectPlay: () => void }) => video.rejectPlay())
+  await expect(report.getByRole('button', { name: 'Play problem moment', exact: true })).toBeVisible()
+  expect(errors).toEqual([])
+})

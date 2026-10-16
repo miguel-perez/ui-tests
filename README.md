@@ -1,65 +1,161 @@
 # ui-tests
 
-Usability testing, in your repo
+See where people get stuck on what you just shipped.
 
-## See what stopped them.
+Say who your users are, what they are trying to do, and how you would know they did it, in one small file next to your code. One command puts real people in front of your site, records every attempt, and hands back the problems they hit, ranked, with the moment to watch, the words they said, and what to change.
 
-For developers who test code, ship UI and have no researcher. Find where people get stuck, with issue signals, a sentence that says what the evidence means, and a trace to inspect.
+## The promise and the run
 
-[Get started](https://ui-tests.com/docs/getting-started) · [View on GitHub](https://github.com/miguel-perez/ui-tests)
+Open source. Nothing to sign up for. Runs on your preview or your live site.
 
-Local rehearsal · example identifiers
+Each line opens to the moment to watch, the person's words, and the smallest change that would fix it.
 
-```text
-Player: http://localhost:3000/ui-tests/00000000-0000-4000-8000-000000000000?token=0000000000000000000000000000000000000000000000000000000000000000
-Trace: http://127.0.0.1:43210/00000000-0000-4000-8000-000000000000/0000000000000000000000000000000000000000000000000000000000000000
-Run: 00000000-0000-4000-8000-000000000000
-Outcome: correct
-Rehearsal: 0 of 5 planned attempts recorded.
+P3 · 00:03 · looked for Invite in the Share menu
+
+“Share is where you add people. I checked there first.”
+
+What comes back.
+
+Here is the whole of one run: the file that asked for it, what one person did, and what to fix.
+
+If you have written a Playwright test, you have written this.
+
+Problems found: 4 across 5 people.
+
+Problem 1 is one link. Problem 2 is the one to fix first: both people who hit it believed they were finished, and their colleague got the same email twice.
+
+A run reports the problems it found, or that it found none this time. There is no score and no pass.
+
+What the person sees.
+
+Your page, with a small bar over it. Nothing else.
+
+Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished.
+
+goal('invite a colleague')
+
+outcome(...)
+
+It runs on your side after either button.
+
+the rating and the words land in their trace.
+
+They never see the path you expected or the check you wrote, so nothing you wrote can lead them.
+
+Where the people come from.
+
+Friends are kind and coworkers know too much. Three ways to reach people who are neither.
+
+In the pull request.
+
+Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request with a report page anyone on the team can open. Your other tests prove the code works. This one shows whether a person can use it.
+
+the report page opens on the ranked problems, each with the moments to watch and what to change, and every person's trace below.
+
+Three commands.
+
+Node 22 and a Next.js app.
+
+The third command runs the example task on you, so you see the card, the bar and your own trace before anyone else does. Open source, with no seats and no account. Your own link and your own visitors cost nothing. The panel is the only thing you pay for, and you set the cap before it starts.
+
+This page runs this test.
+
+The outcome checks that you reached the guide. If you get stuck on the way there, this page may ask you to say so. That is the third way to find people, running here.
+
+## The file
+
+```ts
+import { context, goal, outcome, expect } from 'ui-tests'
+
+context({
+  users: 'people who signed up this week and want a colleague on their board',
+  purpose: 'plan the week together without emailing screenshots around',
+}, () => {
+  goal('invite a colleague', { happyPath: ['/board', '/settings/members'] }, () => {
+    outcome(async ({ page }) => {
+      expect(await page.textContent('main')).toContain('1 invitation pending')
+    })
+  })
+})
 ```
 
-Your tests say the code works. Watching someone use it tells you whether the experience makes sense. Start with a local rehearsal of the task you want to observe.
+## The problems
 
-## From working to making sense.
+Looked for Invite in the Share menu and found only link options
 
-Friends can like the idea and still get stuck using it. Look at what happens when someone tries.
+4 of 5
 
-### Functional and reliable
+"Share is where you add people."
 
-Your code tests tell you whether it works and keeps working. Keep those tests. This is the next question.
+P1 00:04, P2 00:06, P3 00:03, P5 00:09
 
-### Usable
+Put "Invite a colleague" at the top of the Share menu.
 
-Effectiveness, efficiency and satisfaction in a specified context of use (ISO 9241-11). Watch where the task breaks down, not just where it ends.
+P3 · 00:03 → 00:12
 
-Example issue signals
+Pressed Add, saw nothing change, pressed it again; two invitations went out
 
-- Dead click · 00:12 · “Install” did not respond.
-- Deviation · 00:28 · A visit to /pricing interrupted the path.
+2 of 5
 
-Rehearsal: 0 of 5 planned attempts recorded.
+"I wasn't sure the first one did anything."
 
-Five people can uncover problems. They cannot establish a rate. A problem-catching run reports problems found, or none found at this n.
+P3 00:58, P4 00:41
 
-Outcome correct · Final URL: /docs/getting-started.
+On press, change the button to "Invited sam@acme.co" and disable it.
 
-### Desirable
+P3 · 00:58 → 01:04
 
-Does this help the people you built it for do something they need to do?
+Typed the colleague's email into the board search
 
-Derived now; questions are not asked at run time yet.
+2 of 5
 
-### Pleasurable
+"I figured it would find them."
 
-How does it feel to use? A finished task can still leave someone frustrated.
+P3 00:23, P1 00:30
 
-Derived now; questions are not asked at run time yet.
+When a search matches no cards, offer "Invite someone with this email".
 
-## Write the goal. Leave room to get lost.
+P3 · 00:23 → 00:32
 
-This is the test for this page. The happy path stays with the outcome check; the person doing the task only sees the scenario.
+Stopped at a grey Add button and gave up
 
-landing.ui.test.ts
+1 of 5
+
+"It looked switched off."
+
+P2 00:49
+
+Keep the button solid. Validate the address on press, with a message.
+
+P2 · 00:45 → 00:54
+
+## Where the people come from
+
+Your link
+
+Anyone you send it to: a customer, a community, the person at the next desk
+
+Free
+
+As each person finishes
+
+A panel
+
+People matched to the `users` line in your file, found for you
+
+About $54 for a short task, under a cap you set
+
+Within 48 hours
+
+Your visitors
+
+On the hosted version: people already on your live site, invited the moment they are visibly struggling
+
+Free
+
+As each person finishes
+
+## This page runs this test
 
 ```ts
 import { context, goal, outcome, expect } from 'ui-tests'
@@ -76,143 +172,132 @@ context({
 })
 ```
 
-## Part of the build loop.
+## Getting started
 
-Name the people and what they came to do. Rehearse the task. Inspect what got in the way.
+Getting started
 
-### What you write
+Install
 
-Who the people are, what they need to do, and what you can observe when they finish. A goal, not a set of directions.
+Set up
 
-### What is derived
+Try it on yourself
 
-A scenario from the goal, timing and a sample plan. Impression and fit questions are derived too, ready for a later stage.
+Write your own
 
-### What you get back
+Run it with real people
 
-Issue signals to investigate, a sentence that puts the sample in context, and a trace. The snapshot outcome says where the attempt ended.
+You see "ui-tests" in `devDependencies`.
 
-Work in progress. Today: local self-rehearsals, snapshot outcomes, issue signals and a trace. Recruitment, multi-person runs, impression and fit questions at run time, aggregated findings and the pull-request check do not work yet.
+You see a link in the terminal, then in your browser the scenario card, your own page with the bar over it, and the ease question. Press "I'm done". The terminal prints:
 
-Open source. Nothing to sign up for. Local rehearsals are free. The plan: free with your own participants, pay only for a panel, no seats.
+You type, in `ui-tests/first.ui.test.ts`:
 
-The record is evidence for the people clauses of ISO 9241-210.
+You see, on the next `npx ui-tests`, the card now reads: "Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished."
 
-## Your first local rehearsal
+Read what came back
 
-Try the task yourself before asking anyone else. A rehearsal checks the setup and shows you the evidence you will be able to inspect.
+You type, once the attempts are in:
 
-### Before you start
+Then, for the pull request, put `npx ui-tests run` in the job that deploys your preview. On the next pull request you see the check:
 
-Use Node 22 or newer and a Next.js App Router application. Run this locally in development mode.
+## Commands
 
-### 1. Install
-
-Add ui-tests as a development dependency in your application. It keeps the task definition beside the code you are building.
-
-```sh
 npm install -D ui-tests
-```
 
-### 2. Init and mount
-
-```sh
 npx ui-tests init
-```
 
-Init writes the config, example test and Vitest exclusion, preserving existing author files. Mount the integration in your root layout so the taskbar stays with the person as they navigate.
-
-```tsx
-import { UiTests } from 'ui-tests/next'
-
-export default function Layout({ children }: { children: React.ReactNode }) {
-  return <html lang="en"><body>{children}<UiTests /></body></html>
-}
-```
-
-Mount the player at app/ui-tests/[run]/page.tsx. It asks for consent and presents the scenario before the task begins.
-
-```tsx
-import { Player } from 'ui-tests/next'
-export default async function Page({ params, searchParams }: {
-  params: Promise<{ run: string }>
-  searchParams: Promise<{ token?: string }>
-}) {
-  return <Player runId={(await params).run} token={(await searchParams).token} />
-}
-```
-
-Mount the development collector at app/api/ui-tests/route.ts. It records the local attempt so you can inspect what happened.
-
-```ts
-import { createCollector } from 'ui-tests/server'
-export const runtime = 'nodejs'
-export const GET = createCollector()
-export const POST = GET
-```
-
-### 3. Write the test
-
-Save this as landing.ui.test.ts. Name the people and their goal in words they would use.
-
-Use the context above, unchanged.
-
-The scenario comes from the goal, not the happy path, so it does not give away the route. The lint rejects interface words in a goal because telling someone which button to click hides whether they could find it.
-
-Set the local target in ui-tests.config.ts so the player knows which application to open.
-
-```ts
-import { defineConfig } from 'ui-tests'
-export default defineConfig({ target: { url: process.env.PREVIEW_URL ?? 'http://localhost:3000' } })
-```
-
-### 4. Run dev mode
-
-Start your app, then run the rehearsal in another terminal from the application directory. The CLI opens the player and a separate local trace viewer.
-
-```sh
-npm run dev
-# In another terminal
 npx ui-tests
-```
 
-Give consent, read the scenario and begin the task. Use “I’m done” or “I can’t do this”, then answer the ease and confidence questions even if you stopped.
+npx ui-tests run
 
-To rehearse this repository from a clean clone:
+npx ui-tests report k2m9
 
-```sh
-npm ci
-npm run dev
-# In another terminal
-cd apps/web
-npx ui-tests
-```
+## Site navigation and controls
 
-### 5. Read the result
+ui-tests
 
-Look at the issue moments first. The trace shows what happened, when it happened, and the expected and actual evidence. A signal is a place to investigate, not a verdict about a person.
+Guide
 
-The outcome runs in the CLI against the saved URL and DOM, not in your app. This keeps the expected answer and the checking code out of the participant’s experience.
+GitHub
+
+Get started
+
+Skip to content
+
+Main navigation
+
+Getting started
+
+Copy
+
+Copied
+
+Could not copy. Select and copy the code.
+
+TypeScript
+
+Shell
+
+Output
+
+Example run
+
+## Rehearsal
+
+Rehearsal: 0 of 5 planned attempts recorded.
+
+## Terminal output
+
+These frames are generated by the CLI’s Ink renderer.
+
+### report
 
 ```text
+● Problems found: 4 across 5 people.
+
+▏1  Looked for Invite in the Share menu and found only link options  4 of 5
+ 2  Pressed Add, saw nothing change, pressed it again                2 of 5
+ 3  Typed the colleague's email into the board search                2 of 5
+ 4  Stopped at a grey Add button and gave up                         1 of 5
+```
+
+### commands
+
+```text
+npm install -D ui-tests
+npx ui-tests init
+npx ui-tests
+```
+
+### init
+
+```text
+Created ui-tests.config.ts
+Created landing.ui.test.ts
+Created vitest.config.ts
+Mount instructions:
+1. Import { UiTests } from 'ui-tests/next' and mount <UiTests /> in your root layout body.
+2. In app/ui-tests/[run]/page.tsx render <Player runId={run} token={token} /> from 'ui-tests/next'.
+3. In app/api/ui-tests/route.ts export GET and POST = createCollector() from 'ui-tests/server'; export const runtime = 'nodejs'.
+4. Run npm run dev, then npx ui-tests.
+```
+
+### dev
+
+```text
+Outcome: correct
 Rehearsal: 0 of 5 planned attempts recorded.
+Trace: http://127.0.0.1:43210/00000000-0000-4000-8000-000000000000/0000000000000000000000000000000000000000000000000000000000000000
 ```
 
-The sentence says “0 of 5 planned attempts” because a self-rehearsal does not count as evidence from other people. Five is a plan for finding problems, not a measured rate.
+### run
 
-A minutes-only goal produces issues without a result sentence. Stop the viewer with Ctrl+C. Local records stay in .ui-tests/.
-
-```sh
-npx ui-tests lint
-# Replace RUN_ID with the run ID printed by the CLI.
-npx ui-tests verify RUN_ID
+```text
+Run k2m9 started
+Send this link to anyone: https://ui-tests.com/t/k2m9
+Panel: 5 people matched to "people who signed up this week and want a colleague on their board"
+Cap: $60 · results within 48 hours
 ```
-
-### Site navigation and controls
-
-Main navigation: ui-tests · Guide · GitHub. Skip to content.
-
-Getting started and On this page link to the five steps. Code labels: TypeScript, Shell, Output. Copy controls announce Copied, or Could not copy. Select and copy the code.
 
 ## Contributing and automation
 

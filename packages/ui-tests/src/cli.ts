@@ -10,6 +10,8 @@ import { SQLiteAdapter, dataDirectory } from './storage.ts'
 import { verify } from './verify.ts'
 import { renderTrace } from './trace.tsx'
 import type { Context } from './index.ts'
+import { printTerminal, type Report } from './report.tsx'
+const print = (text: string) => printTerminal({ lines: text.split('\n') })
 
 const args = process.argv.slice(2)
 const command = args[0]?.startsWith('-') ? 'dev' : args[0] ?? 'dev'
@@ -54,15 +56,34 @@ async function init() {
     }
   } else files['vitest.config.ts'] = `import { defineConfig, configDefaults } from 'vitest/config'\nexport default defineConfig({ test: { exclude: [...configDefaults.exclude, '**/*.ui.test.ts'] } })\n`
   for (const [file, contents] of Object.entries(files)) {
-    if (file === existingConfig) { await writeFile(file, contents); console.log(`Updated ${file}`) }
-    else if (await exists(file)) console.log(`Preserved ${file}`)
-    else { await writeFile(file, contents, { flag: 'wx' }); console.log(`Created ${file}`) }
+    if (file === existingConfig) { await writeFile(file, contents); print(`Updated ${file}`) }
+    else if (await exists(file)) print(`Preserved ${file}`)
+    else { await writeFile(file, contents, { flag: 'wx' }); print(`Created ${file}`) }
   }
-  console.log(`Mount instructions:\n1. Import { UiTests } from 'ui-tests/next' and mount <UiTests /> in your root layout body.\n2. In app/ui-tests/[run]/page.tsx render <Player runId={run} token={token} /> from 'ui-tests/next'.\n3. In app/api/ui-tests/route.ts export GET and POST = createCollector() from 'ui-tests/server'; export const runtime = 'nodejs'.\n4. Run npm run dev, then npx ui-tests.`)
+  print(`Mount instructions:\n1. Import { UiTests } from 'ui-tests/next' and mount <UiTests /> in your root layout body.\n2. In app/ui-tests/[run]/page.tsx render <Player runId={run} token={token} /> from 'ui-tests/next'.\n3. In app/api/ui-tests/route.ts export GET and POST = createCollector() from 'ui-tests/server'; export const runtime = 'nodejs'.\n4. Run npm run dev, then npx ui-tests.`)
 }
 /** Entry point: `init`, `verify <run-id>`, `lint`, or dev mode, which compiles and lints the test file, starts the trace viewer, opens the player and verifies each attempt when it finishes. */
 async function main() {
   if (command === 'init') return init()
+  if (command === 'report') {
+    const id = args[1]
+    if (!id) throw new Error('Usage: ui-tests report <run-id or report.json> [--json]')
+    if (await exists(id)) {
+      const report = JSON.parse(await readFile(id, 'utf8')) as Report
+      if (!report || typeof report !== 'object' || Array.isArray(report) || !Number.isInteger(report.people) || report.people < 1 || !Array.isArray(report.problems) || report.problems.some(p => !p || typeof p !== 'object' || Array.isArray(p) || typeof p.title !== 'string' || !Number.isInteger(p.people) || p.people < 1 || p.people > report.people)) throw new Error('Invalid report')
+      if (args.includes('--json')) console.log(JSON.stringify(report, null, 2))
+      else printTerminal({ report })
+    } else {
+      const store = new SQLiteAdapter()
+      try {
+        const run = store.get(id)
+        if (!run) throw new Error('Run not found')
+        if (args.includes('--json')) console.log(JSON.stringify(run.result, null, 2))
+        else printTerminal({ lines: [`Outcome: ${(run.result as { status?: string })?.status ?? 'pending'}`, run.context.goals[run.goalIndex].resultSentence ?? 'Issues-only exploration; no result sentence.'] })
+      } finally { store.close() }
+    }
+    return
+  }
   if (command === 'verify') {
     const id = args[1]
     if (!id) throw new Error('Usage: ui-tests verify <run-id> [--file test.ui.test.ts]')
@@ -123,7 +144,7 @@ async function main() {
   /** Prints the player and trace URLs and opens the player. */
   function launch() {
     const player = new URL(`/ui-tests/${run.id}`, target); player.searchParams.set('token', run.token)
-    console.log(`Player: ${player}\nTrace: ${traceUrl()}\nRun: ${run.id}`)
+    print(`Player: ${player}\nTrace: ${traceUrl()}\nRun: ${run.id}`)
     open(player.href)
   }
   launch()
@@ -138,7 +159,7 @@ async function main() {
       current.result = await verify(current, result.authored[active.contextIndex].goals[active.goalIndex], store.events(current.id))
       if (!store.update(current, previous)) return
       if (current.status === 'finished' && !(current.result as { question?: unknown }).question) {
-        console.log(`Outcome: ${(current.result as { status: string }).status}\n${active.compiled.goals[active.goalIndex].resultSentence ?? 'Issues-only exploration; no result sentence.'}\nTrace: ${traceUrl()}`)
+        print(`Outcome: ${(current.result as { status: string }).status}\n${active.compiled.goals[active.goalIndex].resultSentence ?? 'Issues-only exploration; no result sentence.'}\nTrace: ${traceUrl()}`)
         open(traceUrl())
         if (pending.length) {
           active = pending.shift()!

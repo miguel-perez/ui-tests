@@ -89,17 +89,26 @@ export function UiTests() {
     <strong>{run.author}</strong> <button style={{ ...buttonStyle, fontSize: 12, padding: '4px 8px' }} aria-expanded={!minimized} onClick={() => setMinimized(!minimized)}>{minimized ? 'Show task' : 'Hide task details'}</button>
     <div hidden={minimized}><p>{run.tasks.length ? run.tasks[step] : run.scenario}</p>
     {error && <p role="alert">{error}</p>}
-    <button style={buttonStyle} disabled={busy} onClick={async () => {
+    <TaskControls busy={busy} doneLabel={run.tasks.length && step + 1 < run.tasks.length ? 'Done with this step' : "I'm done"} onDone={async () => {
       if (run.tasks.length) {
         try { await queue.current; await send({ action: 'events', events: [{ type: 'step', at: Date.now(), url: location.origin + location.pathname, step, snapshot: snapshot() }] }) }
         catch (err) { setError(String(err)); return }
       }
       if (step + 1 < run.tasks.length) setStep(step + 1)
       else await finish('done')
-    }}>{run.tasks.length && step + 1 < run.tasks.length ? 'Done with this step' : "I'm done"}</button>
-    <button style={buttonStyle} disabled={busy} onClick={() => void finish('gave up')}>I can't do this</button>
+    }} onStop={() => void finish('gave up')} />
     </div>
   </aside>, document.body)
+}
+
+export function ScenarioCard({ scenario, onStart, label = 'Start' }: { scenario: string; onStart: () => void; label?: string }) {
+  return <div className="scenario-card"><p>{scenario}</p><button style={buttonStyle} onClick={onStart}>{label}</button></div>
+}
+export function TaskControls({ onDone, onStop, busy = false, doneLabel = "I'm done" }: { onDone: () => void; onStop: () => void; busy?: boolean; doneLabel?: string }) {
+  return <div className="task-controls"><button style={buttonStyle} disabled={busy} onClick={onDone}>{doneLabel}</button><span aria-hidden="true" className="task-divider" /><button className="stop-task" style={buttonStyle} disabled={busy} onClick={onStop}>I can't do this</button></div>
+}
+export function EaseQuestion({ seq, onSeq, words, onWords }: { seq: string; onSeq: (value: string) => void; words: string; onWords: (value: string) => void }) {
+  return <div className="ease-question"><fieldset><legend>How easy was that?</legend><div className="rating-row">{[1,2,3,4,5,6,7].map(n => <label key={n}><input type="radio" name="seq" value={n} checked={seq === String(n)} onChange={() => onSeq(String(n))} /><span>{n}</span></label>)}</div><div className="rating-labels"><span>1 very hard</span><span>7 very easy</span></div></fieldset><label className="words-label">Anything you want to tell us? (optional)<textarea name="words" maxLength={5000} value={words} onChange={e => onWords(e.target.value)} rows={3} /></label></div>
 }
 
 /** The participant player at `/ui-tests/[run]`: consent, the scenario card, then the SEQ and confidence questions. It never shows the happy path, the hooks or the trace. */
@@ -108,6 +117,7 @@ export function Player({ runId, token }: { runId: string; token?: string }) {
   const [stage, setStage] = useState(token ? 'consent' : 'questions')
   const [error, setError] = useState('')
   const [seq, setSeq] = useState('4'), [confidence, setConfidence] = useState('3'), [answer, setAnswer] = useState('')
+  const [words, setWords] = useState('')
   useEffect(() => {
     if (token) history.replaceState(null, '', `/ui-tests/${runId}`)
     fetch(endpoint, token ? { headers: { Authorization: `Bearer ${runId}.${token}` } } : undefined).then(r => r.ok ? r.json() : Promise.reject(new Error('Start this rehearsal from the command line.'))).then(setRun).catch(err => setError(String(err)))
@@ -125,9 +135,9 @@ export function Player({ runId, token }: { runId: string; token?: string }) {
   }, [stage])
   return <main className="player" style={{ maxWidth: 640, margin: '64px auto', padding: 24 }}>
     {stage === 'consent' && <><h1>A rehearsal with {run?.author ?? 'the author'}</h1><p>Purpose: {run?.purpose ?? 'Loading…'}</p><p>With your permission, we will record clicks, navigation, scroll, masked input events, pauses and a final page snapshot to learn whether you can complete the task. No input values are recorded. This rehearsal is stored locally on this computer.</p><p>You may stop at any time.</p><button style={buttonStyle} disabled={!run} onClick={async () => { try { const value = await send({ action: 'consent', id: runId, token }); setRun(value); setStage('scenario') } catch (err) { setError(String(err)) } }}>I consent</button></>}
-    {stage === 'scenario' && run && <><h1>Your scenario</h1><p>From {run.author}</p><p>Purpose: {run.purpose}</p><p>{run.scenario}</p><p>Use the floating task card to finish or stop.</p><button style={buttonStyle} onClick={async () => { try { await send({ action: 'begin' }); location.assign('/') } catch (err) { setError(String(err)) } }}>Begin task</button></>}
-    {stage === 'questions' && <><h1>A few final questions</h1><form onSubmit={async event => { event.preventDefault(); try { await send({ action: 'questions', seq: Number(seq), confidence: Number(confidence), answers: run?.validation ? { [run.validation.question]: answer } : undefined }); setStage('checking') } catch (err) { setError(String(err)) } }}>
-      <label htmlFor="seq">Overall, how easy or difficult was this task? (1 very difficult, 7 very easy)</label><select id="seq" value={seq} onChange={e => setSeq(e.target.value)}>{[1,2,3,4,5,6,7].map(n => <option key={n}>{n}</option>)}</select>
+    {stage === 'scenario' && run && <><h1>Your scenario</h1><p>From {run.author}</p><p>Purpose: {run.purpose}</p><ScenarioCard scenario={run.scenario} label="Begin task" onStart={async () => { try { await send({ action: 'begin' }); location.assign('/') } catch (err) { setError(String(err)) } }} /></>}
+    {stage === 'questions' && <><h1>A few final questions</h1><form onSubmit={async event => { event.preventDefault(); try { await send({ action: 'questions', seq: Number(seq), confidence: Number(confidence), words, answers: run?.validation ? { [run.validation.question]: answer } : undefined }); setStage('checking') } catch (err) { setError(String(err)) } }}>
+      <EaseQuestion seq={seq} onSeq={setSeq} words={words} onWords={setWords} />
       <label htmlFor="confidence">How confident are you that you completed it? (1 not at all, 5 very)</label><select id="confidence" value={confidence} onChange={e => setConfidence(e.target.value)}>{[1,2,3,4,5].map(n => <option key={n}>{n}</option>)}</select>
       {run?.validation && <><label htmlFor="validation">{run.validation.question}</label><select id="validation" required value={answer} onChange={e => setAnswer(e.target.value)}><option value="">Choose an answer</option>{run.validation.choices.map(choice => <option key={choice}>{choice}</option>)}</select></>}
       <button style={buttonStyle} disabled={!run?.verificationReady} type="submit">Send answers</button></form></>}

@@ -1,0 +1,22 @@
+{
+  "people": 5,
+  "selectedRank": 1,
+  "problems": [
+    {
+      "title": "Looked for Invite in the Share menu and found only link options",
+      "people": 4
+    },
+    {
+      "title": "Pressed Add, saw nothing change, pressed it again",
+      "people": 2
+    },
+    {
+      "title": "Typed the colleague's email into the board search",
+      "people": 2
+    },
+    {
+      "title": "Stopped at a grey Add button and gave up",
+      "people": 1
+    }
+  ]
+}

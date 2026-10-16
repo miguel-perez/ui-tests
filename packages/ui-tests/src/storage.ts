@@ -8,7 +8,7 @@ import type { Snapshot } from './index.ts'
 /** A recorder event: clicks with whether anything changed, URL changes, scroll, masked input, pauses and task-step snapshots. */
 export type Event = { type: 'click' | 'url' | 'scroll' | 'input' | 'pause' | 'step'; at: number; url: string; target?: string; changed?: boolean; duration?: number; step?: number; snapshot?: Snapshot }
 /** A run and its single rehearsal attempt: status, timings, terminal reason, answers, end-state snapshot and hook result. */
-export type Run = { id: string; token: string; context: CompiledContext; goalIndex: number; hooksBundle?: string; authoredContextIndex?: number; status: 'created' | 'consented' | 'active' | 'questions' | 'finished'; startedAt: number; endedAt?: number; reason?: 'done' | 'gave up' | 'timed out'; seq?: number; confidence?: number; snapshot?: Snapshot; result?: unknown; answers?: Record<string, string> }
+export type Run = { id: string; token: string; context: CompiledContext; goalIndex: number; hooksBundle?: string; authoredContextIndex?: number; status: 'created' | 'consented' | 'active' | 'questions' | 'finished'; startedAt: number; endedAt?: number; reason?: 'done' | 'gave up' | 'timed out'; seq?: number; confidence?: number; words?: string; snapshot?: Snapshot; result?: unknown; answers?: Record<string, string> }
 /** Storage behind the collector and the CLI. The SQLite adapter is the development implementation. */
 export interface StorageAdapter {
   create(context: CompiledContext, goalIndex?: number): Run
