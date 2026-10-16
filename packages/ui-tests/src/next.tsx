@@ -2,17 +2,19 @@
 
 import { useEffect, useId, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { playerCss } from './player-styles.ts'
+import { chromeTheme, chromeVars, parseColour, playerCss, type ChromeInput } from './player-styles.ts'
+export { weekboardChrome, type ChromeInput } from './player-styles.ts'
 
 /**
- * The participant's surfaces, built to the specification in docs/discovery/participant-overlay-research.md.
+ * The participant's surfaces, built to the specification in docs/discovery/participant-overlay-research.md, in the chrome of
+ * docs/discovery/participant-chrome-research.md and design/artefacts/player-chrome.html.
  * Each choice carries its source in a short note beside the code that makes it.
  */
 
 /** What is captured for the attempt. Interactions always; screen, voice and webcam each only with consent. */
 export type RecordingState = { events: true; screen: boolean; voice: boolean; webcam: boolean }
 /** The participant view served by the collector; see `participantView` for the allowlist. */
-type Participant = { id: string; author: string; purpose: string; status: string; scenario: string; tasks: string[]; timeBox: number; extended: boolean; startedAt: number; sequence: { index: number; total: number }; askConfidence: boolean; recording: RecordingState; verificationReady: boolean; validation?: { question: string; choices: string[] } }
+type Participant = { id: string; author: string; purpose: string; status: string; scenario: string; tasks: string[]; timeBox: number; extended: boolean; startedAt: number; sequence: { index: number; total: number }; askConfidence: boolean; recording: RecordingState; verificationReady: boolean; validation?: { question: string; choices: string[] }; accent?: string }
 const endpoint = '/api/ui-tests'
 /** Posts a collector message and returns the updated participant view. */
 async function send(body: unknown) {
@@ -48,91 +50,148 @@ export function PlayerStyles() { return <style href="ui-tests-player" precedence
 const icon = { width: 18, height: 18, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round' as const, strokeLinejoin: 'round' as const, 'aria-hidden': true }
 const Mic = () => <svg {...icon}><rect x="9" y="3" width="6" height="11" rx="3" /><path d="M5 11a7 7 0 0 0 14 0M12 18v3" /></svg>
 const Grip = () => <svg {...icon}><circle cx="9" cy="6" r="1" /><circle cx="15" cy="6" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="9" cy="18" r="1" /><circle cx="15" cy="18" r="1" /></svg>
-
-/** The words that tell the participant how a task ends. NN/g, unmoderated testing: nobody will move them on, so say it. */
-export function endingLine(last: boolean) { return `When you think you've finished, press ${last ? 'Finish' : 'Done'}. If you can't find it, press I couldn't do this.` }
+const PauseIcon = () => <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1" /><rect x="9.5" y="2" width="3.5" height="12" rx="1" /></svg>
+const ResumeIcon = () => <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11l9-5.5z" /></svg>
 
 /**
- * The scenario card, full screen before each task.
+ * The chrome's colours (participant-chrome research, white-labelling rules): an embedded example names its host page; on a real
+ * page they are read from the host once mounted, its text and background turned over, its font, and the author's accent.
+ */
+export function useChrome(host?: ChromeInput, accent?: string) {
+  const [theme, setTheme] = useState(() => host ? chromeTheme({ ...host, accent: accent ?? host.accent }) : undefined)
+  useEffect(() => {
+    if (host) { setTheme(chromeTheme({ ...host, accent: accent ?? host.accent })); return }
+    const body = getComputedStyle(document.body), root = getComputedStyle(document.documentElement)
+    const background = [body.backgroundColor, root.backgroundColor].find(value => parseColour(value))
+    setTheme(chromeTheme({ hostInk: body.color, hostBackground: background, accent, font: body.fontFamily }))
+  }, [host?.hostInk, host?.hostBackground, host?.accent, host?.font, accent])
+  return theme && chromeVars(theme) as CSSProperties
+}
+
+/** The words that tell the participant how a task ends, quoting the bar's two labels. NN/g, unmoderated testing: nobody will move them on, so say it. */
+export const endingLine = "When you think you've finished, press Done. If you get stuck, press I couldn't do this."
+function Ending() { return <p className="uit-ends">When you think you&apos;ve finished, press <b>Done</b>. If you get stuck, press <b>I couldn&apos;t do this</b>.</p> }
+
+/**
+ * The scenario card, before each task, on the chrome's surface.
  * - "Task n of N": the only firm progress pattern in the audit (UserTesting's next/done switch; Userbrain).
  * - The scenario is the generator's or the author's pinned text: context, one action and every datum, no interface labels, no steps (NN/g task scenarios).
- * - One line on how the task ends (NN/g, unmoderated) and one primary "Start task" (Maze "Get started", Qualtrics "Begin").
+ * - One line on how the task ends, quoting the bar (NN/g, unmoderated) and one primary "Start task" (Maze "Get started", Qualtrics "Begin").
  */
-export function ScenarioCard({ scenario, onStart, index = 1, total = 1, level = 2, busy = false }: { scenario: string; onStart: () => void; index?: number; total?: number; level?: 1 | 2 | 3; busy?: boolean }) {
+export function ScenarioCard({ scenario, onStart, index = 1, total = 1, level = 2, busy = false, chrome, accent }: { scenario: string; onStart: () => void; index?: number; total?: number; level?: 1 | 2 | 3; busy?: boolean; chrome?: ChromeInput; accent?: string }) {
   const Heading = (['h1', 'h2', 'h3'] as const)[level - 1]
-  return <section className="uit uit-card" data-research-taskbar aria-label={`Task ${index} of ${total}`}>
+  return <section className="uit uit-sheet uit-card" style={useChrome(chrome, accent)} data-research-taskbar aria-label={`Task ${index} of ${total}`}>
     <PlayerStyles />
     <Heading className="uit-progress">Task {index} of {total}</Heading>
     <p className="uit-scenario">{scenario}</p>
-    <p className="uit-ends">{endingLine(index === total)}</p>
+    <Ending />
     <button className="uit-primary" disabled={busy} onClick={onStart}>Start task</button>
   </section>
 }
 
+/** The elapsed time of the attempt, ticking once a second unless it is a still. */
+function useElapsed(startedAt?: number, still = false) {
+  const [now, setNow] = useState(() => startedAt ?? 0)
+  useEffect(() => { if (!startedAt || still) return; setNow(Date.now()); const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer) }, [startedAt, still])
+  return startedAt ? Math.max(0, (now - startedAt) / 1000) : 0
+}
+const states = (recording: RecordingState, live = false) => `Screen ${recording.screen ? 'recorded' : 'not recorded'} · Voice ${live ? 'recording now' : recording.voice ? 'recorded' : 'off'} · Webcam ${recording.webcam ? 'recorded' : 'off'}`
+
+/** What the bar shows of the recording: the attempt's start, what is captured, and the pause. */
+export type BarRecording = { startedAt?: number; state: RecordingState; paused?: boolean; onPause?: () => void }
 /**
- * The task bar: a fixed compact strip at the bottom, movable to the top, never removable.
- * - Position: bottom by default and movable (UXtweak lets the researcher put it top or bottom; Maze's modal drags).
- * - "Show task" expands the full card inline: participants must be able to reread the task (NN/g; UXtweak).
- * - Exactly two task controls. Done confirms "Finished this task?" because stressed or fast participants end tasks by accident (UXtweak, 2020).
- * - "I couldn't do this" is always available (O'Brien: always let participants give up). Before the first interaction it confirms and
- *   records an early abandonment; after one it records "can't do it"; both are distinct from not reaching the goal (Maze; UXtweak outcomes; Loop11 abandon).
- * - Its wording describes the situation, not the person (MeasuringU on social-desirability bias).
- * - "Finish" replaces Done on the last task (UserTesting's next/done switch). No back, and no timer by default: limits shift ratings (Sauro).
- *   Only near the end of the time box does "Need more time?" appear, once (PRD 01: the participant may ask for more time once).
+ * The recording state as the bar's leading segment: a red dot, the elapsed time and a pause, no microphone during the task
+ * (participant-chrome research, revision: voice is only captured when the person chooses "Talk instead" afterwards).
+ * "Paused" replaces the time so colour is never the only signal (SC 1.4.1); what is captured is in the group's text for screen readers.
  */
-export function TaskBar({ scenario, steps = [], index = 1, total = 1, interacted, onDone, onGiveUp, onStep, canExtend = false, onExtend, busy = false, contained = false, error }: { scenario: string; steps?: string[]; index?: number; total?: number; interacted: boolean; onDone: () => void; onGiveUp: (reason: "can't do it" | 'abandoned early') => void; onStep?: (step: number) => void; canExtend?: boolean; onExtend?: () => void; busy?: boolean; contained?: boolean; error?: string }) {
+function RecordingSegment({ startedAt, state, paused = false, onPause }: BarRecording) {
+  const elapsed = useElapsed(startedAt)
+  return <span className="uit-seg uit-recseg" role="group" aria-label="Recording">
+    <span className={`uit-dot${paused ? ' uit-paused' : ''}`} aria-hidden="true" />
+    {paused ? <span>Paused</span> : <time>{clock(elapsed)}</time>}
+    <span className="uit-sr">{paused ? 'Recording paused. ' : 'Recording. '}{states(state)}</span>
+    {onPause && <button className="uit-pause" aria-pressed={paused} aria-label={paused ? 'Resume recording' : 'Pause recording'} onClick={onPause}>{paused ? <ResumeIcon /> : <PauseIcon />}</button>}
+  </span>
+}
+
+/**
+ * The task bar: one small pill, bottom right, movable to the top, never removable (participant-chrome research, revision).
+ * - The recording state leads; then the task summary, which expands the full card in place: participants must be able to reread the task (NN/g; UXtweak).
+ * - Exactly two task controls, "Done" and "I couldn't do this", the labels the card's last line quotes. Done morphs the pill to
+ *   "Finished this task?" in place, no dialog, because stressed or fast participants end tasks by accident (UXtweak, 2020; Cooper, single view).
+ * - "I couldn't do this" is always available (O'Brien: always let participants give up; Tidwell, Escape Hatch). Before the first interaction it
+ *   confirms and records an early abandonment; after one it records "couldn't do this"; both are distinct from not reaching the goal.
+ * - No back, and no timer by default: limits shift ratings (Sauro). Only near the end of the time box does "Need more time?" appear, once.
+ * - On a touch screen it hides while the person types in the host page, and the host page keeps focus clear of it (WCAG 2.4.11).
+ */
+export function TaskBar({ scenario, steps = [], index = 1, total = 1, interacted, onDone, onGiveUp, onStep, canExtend = false, onExtend, busy = false, contained = false, error, recording, chrome, accent }: { scenario: string; steps?: string[]; index?: number; total?: number; interacted: boolean; onDone: () => void; onGiveUp: (reason: "couldn't do this" | 'abandoned early') => void; onStep?: (step: number) => void; canExtend?: boolean; onExtend?: () => void; busy?: boolean; contained?: boolean; error?: string; recording?: BarRecording; chrome?: ChromeInput; accent?: string }) {
   const id = useId()
   const [expanded, setExpanded] = useState(false)
   const [confirm, setConfirm] = useState<'done' | 'leave' | null>(null)
   const [position, setPosition] = useState<'bottom' | 'top'>('bottom')
+  const [typing, setTyping] = useState(false)
   const [step, setStep] = useState(0)
   const drag = useRef<{ y: number; moved: boolean } | null>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
+  const style = useChrome(chrome, accent)
   useEffect(() => { if (!contained) { const saved = sessionStorage.getItem('ui-tests-bar'); if (saved === 'top') setPosition('top') } }, [contained])
   useEffect(() => { if (confirm) confirmRef.current?.focus() }, [confirm])
+  useEffect(() => {
+    if (contained) return
+    // Focus is never hidden behind the bar (WCAG 2.4.11): the host page scrolls focused controls clear of it while it is shown.
+    const root = document.documentElement, previous = root.style.scrollPaddingBottom
+    root.style.scrollPaddingBottom = '72px'
+    // A phone keyboard can leave a fixed bar over the field: on touch, the bar steps aside while a host input has focus.
+    const touch = matchMedia('(pointer: coarse)')
+    const field = (target: EventTarget | null) => target instanceof Element && !target.closest('[data-research-taskbar]') && target.matches('input:not([type=button]):not([type=submit]):not([type=checkbox]):not([type=radio]), textarea, select, [contenteditable]')
+    const focusin = (event: FocusEvent) => setTyping(touch.matches && field(event.target))
+    const focusout = () => setTyping(false)
+    document.addEventListener('focusin', focusin); document.addEventListener('focusout', focusout)
+    return () => { root.style.scrollPaddingBottom = previous; document.removeEventListener('focusin', focusin); document.removeEventListener('focusout', focusout) }
+  }, [contained])
   function move(next: 'bottom' | 'top') { setPosition(next); if (!contained) sessionStorage.setItem('ui-tests-bar', next) }
-  const last = index === total && step + 1 >= Math.max(1, steps.length)
   const onLastStep = step + 1 >= steps.length
-  const doneLabel = steps.length && !onLastStep ? 'Done with this step' : last ? 'Finish' : 'Done'
+  const doneLabel = steps.length && !onLastStep ? 'Done with this step' : 'Done'
   const summary = steps.length ? steps[step] : scenario
-  return <aside data-research-taskbar aria-label={contained ? 'Example task bar' : 'Your task'} className={`uit uit-bar uit-${position}${contained ? ' uit-contained' : ''}`}>
+  return <aside data-research-taskbar aria-label={contained ? 'Example task bar' : 'Your task'} style={style} className={`uit uit-bar uit-${position}${contained ? ' uit-contained' : ''}${typing ? ' uit-hidden' : ''}`}>
     <PlayerStyles />
-    <div className="uit-bar-row">
+    {expanded && <div className="uit-sheet uit-task" id={`${id}-task`}><p>{scenario}</p>{steps.length > 0 && <p className="uit-hint">Step {step + 1}: {steps[step]}</p>}<Ending /></div>}
+    <div className="uit-pill">
       <button className="uit-handle" aria-label={position === 'bottom' ? 'Move the task bar to the top' : 'Move the task bar to the bottom'}
         onPointerDown={event => { drag.current = { y: event.clientY, moved: false }; event.currentTarget.setPointerCapture(event.pointerId) }}
         onPointerMove={event => { if (drag.current && Math.abs(event.clientY - drag.current.y) > 16) drag.current.moved = true }}
         onPointerUp={event => { if (drag.current?.moved) move(event.clientY < innerHeight / 2 ? 'top' : 'bottom') }}
         onClick={() => { if (drag.current?.moved) { drag.current = null; return } drag.current = null; move(position === 'bottom' ? 'top' : 'bottom') }}><Grip /></button>
-      <p className="uit-progress">Task {index} of {total}{steps.length > 1 ? ` · step ${step + 1} of ${steps.length}` : ''}</p>
-      <p className="uit-summary">{summary}</p>
-      <button className="uit-quiet" aria-expanded={expanded} aria-controls={`${id}-task`} onClick={() => setExpanded(!expanded)}>{expanded ? 'Hide task' : 'Show task'}</button>
-      {canExtend && onExtend && <button onClick={onExtend} disabled={busy}>Need more time?</button>}
-      <button className="uit-primary" disabled={busy} onClick={() => {
-        if (steps.length && !onLastStep) { onStep?.(step); setStep(step + 1); return }
-        setConfirm('done')
-      }}>{doneLabel}</button>
-      <button className="uit-quiet" disabled={busy} onClick={() => interacted ? onGiveUp("can't do it") : setConfirm('leave')}>I couldn't do this</button>
+      {recording && <RecordingSegment {...recording} />}
+      <button className="uit-seg uit-summary" aria-expanded={expanded} aria-controls={`${id}-task`} onClick={() => setExpanded(!expanded)}>
+        <span className="uit-sr">{expanded ? 'Hide task: ' : 'Show task: '}</span><b className="uit-progress">Task {index} of {total}{steps.length > 1 ? ` · step ${step + 1} of ${steps.length}` : ''}</b><span className="uit-summary-text">{summary}</span>
+      </button>
+      {confirm === 'done' ? <span className="uit-seg uit-confirm" role="group" aria-label="Finished this task?"><p>Finished this task?</p><button ref={confirmRef} className="uit-primary" disabled={busy} onClick={() => { setConfirm(null); onDone() }}>Yes, I&apos;ve finished</button><button onClick={() => setConfirm(null)}>Not yet</button></span>
+        : confirm === 'leave' ? <span className="uit-seg uit-confirm" role="group" aria-label="Leave this task before trying it?"><p>Leave this task before trying it?</p><button ref={confirmRef} disabled={busy} onClick={() => { setConfirm(null); onGiveUp('abandoned early') }}>Leave this task</button><button className="uit-primary" onClick={() => setConfirm(null)}>Stay and try</button></span>
+        : <span className="uit-seg">
+          {canExtend && onExtend && <button className="uit-quiet" onClick={onExtend} disabled={busy}>Need more time?</button>}
+          <button className="uit-primary uit-done" disabled={busy} onClick={() => {
+            if (steps.length && !onLastStep) { onStep?.(step); setStep(step + 1); return }
+            setConfirm('done')
+          }}>{doneLabel}</button>
+          <button className="uit-quiet uit-cant" disabled={busy} onClick={() => interacted ? onGiveUp("couldn't do this") : setConfirm('leave')}>I couldn&apos;t do this</button>
+        </span>}
     </div>
-    {expanded && <div className="uit-task" id={`${id}-task`}><p>{scenario}</p>{steps.length > 0 && <p className="uit-hint">Step {step + 1}: {steps[step]}</p>}<p className="uit-ends">{endingLine(last)}</p></div>}
-    {confirm === 'done' && <div className="uit-confirm" role="group" aria-label="Finished this task?"><p>Finished this task?</p><button ref={confirmRef} className="uit-primary" disabled={busy} onClick={() => { setConfirm(null); onDone() }}>Yes, I've finished</button><button onClick={() => setConfirm(null)}>Not yet</button></div>}
-    {confirm === 'leave' && <div className="uit-confirm" role="group" aria-label="Leave this task before trying it?"><p>Leave this task before trying it?</p><button ref={confirmRef} disabled={busy} onClick={() => { setConfirm(null); onGiveUp('abandoned early') }}>Leave this task</button><button className="uit-primary" onClick={() => setConfirm(null)}>Stay and try</button></div>}
-    {error && <p className="uit-error" role="alert" style={{ padding: '0 16px 12px 48px' }}>{error}</p>}
+    {error && <p className="uit-error" role="alert">{error}</p>}
   </aside>
 }
 
 /**
- * The recording surface, small and apart from the task bar: a recording dot with elapsed time and a pause
- * (Optimal Workshop's red icon; Userbrain's elapsed timer; Maze's mute and pause). It states, for screen, voice and webcam,
+ * The recording chip on its own, where the bar is not shown (the questions after the task): a recording dot with elapsed time and a
+ * pause (Optimal Workshop's red icon; Userbrain's elapsed timer; Maze's mute and pause). It states, for screen, voice and webcam,
  * whether each is recorded: honest about what this attempt captures, which is the recording indicator the trace shows later.
  */
-export function RecordingIndicator({ startedAt, recording, paused = false, onPause, live = false, contained = false, still = false }: { startedAt?: number; recording: RecordingState; paused?: boolean; onPause?: () => void; live?: boolean; contained?: boolean; still?: boolean }) {
-  const [now, setNow] = useState(() => startedAt ?? 0)
-  useEffect(() => { if (!startedAt || still) return; setNow(Date.now()); const timer = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(timer) }, [startedAt, still])
-  const elapsed = startedAt ? Math.max(0, (now - startedAt) / 1000) : 0
-  return <div className={`uit uit-rec${contained ? ' uit-contained' : ''}${still ? ' uit-static' : ''}`} data-research-taskbar role="group" aria-label={contained ? 'Example recording' : 'Recording'}>
+export function RecordingIndicator({ startedAt, recording, paused = false, onPause, live = false, contained = false, still = false, chrome, accent }: { startedAt?: number; recording: RecordingState; paused?: boolean; onPause?: () => void; live?: boolean; contained?: boolean; still?: boolean; chrome?: ChromeInput; accent?: string }) {
+  const elapsed = useElapsed(startedAt, still)
+  return <div className={`uit uit-rec${contained ? ' uit-contained' : ''}`} style={useChrome(chrome, accent)} data-research-taskbar role="group" aria-label={contained ? 'Example recording' : 'Recording'}>
     <PlayerStyles />
     <div className="uit-rec-row"><span className={`uit-dot${paused ? ' uit-paused' : ''}`} aria-hidden="true" /><span>{paused ? 'Paused' : 'Recording'}</span>{startedAt !== undefined && <time>{clock(elapsed)}</time>}{onPause && <button aria-pressed={paused} onClick={onPause}>{paused ? 'Resume' : 'Pause'}</button>}</div>
-    <p className="uit-states">Screen {recording.screen ? 'recorded' : 'not recorded'} · Voice {live ? 'recording now' : recording.voice ? 'recorded' : 'off'} · Webcam {recording.webcam ? 'recorded' : 'off'}</p>
+    <p className="uit-states">{states(recording, live)}</p>
   </div>
 }
 
@@ -226,7 +285,7 @@ const scales: Partial<Record<Screen, { question: string; points: number; low: st
  * "What made it difficult?" follows an ease rating of 4 or below (MeasuringU seq10). Optional questions show "Skip" (Maze). Every question that
  * takes words takes voice.
  */
-export function Questions({ askConfidence = false, validation, ready = true, onSubmit, onVoiceState, submitLabel = 'Send answers', busy = false, autoFocus = false }: { askConfidence?: boolean; validation?: { question: string; choices: string[] }; ready?: boolean; onSubmit: (answers: Answers) => void | Promise<void>; onVoiceState?: (state: { live: boolean; recorded: boolean }) => void; submitLabel?: string; busy?: boolean; autoFocus?: boolean }) {
+export function Questions({ askConfidence = false, validation, ready = true, onSubmit, onVoiceState, submitLabel = 'Send answers', busy = false, autoFocus = false, chrome, accent }: { askConfidence?: boolean; validation?: { question: string; choices: string[] }; ready?: boolean; onSubmit: (answers: Answers) => void | Promise<void>; onVoiceState?: (state: { live: boolean; recorded: boolean }) => void; submitLabel?: string; busy?: boolean; autoFocus?: boolean; chrome?: ChromeInput; accent?: string }) {
   const id = useId()
   const [position, setPosition] = useState(0)
   const [values, setValues] = useState<Partial<Record<Screen, string>>>({})
@@ -258,7 +317,8 @@ export function Questions({ askConfidence = false, validation, ready = true, onS
   }
   const set = (value: string) => setValues(current => ({ ...current, [screen]: value }))
   const words = screen === 'difficulty' || screen === 'words'
-  return <form className="uit uit-questions" data-research-taskbar onKeyDown={key} onSubmit={event => { event.preventDefault(); void next() }}>
+  const style = useChrome(chrome, accent)
+  return <form className="uit uit-sheet uit-questions" style={style} data-research-taskbar onKeyDown={key} onSubmit={event => { event.preventDefault(); void next() }}>
     <PlayerStyles />
     <p className="uit-progress" aria-live="polite">Question {position + 1} of {screens.length}</p>
     <div className="uit-q" key={screen}>
@@ -343,7 +403,7 @@ export function UiTests() {
     return () => { cancelled = true; clearInterval(interval); timers.forEach(clearTimeout); document.removeEventListener('click', click, true); document.removeEventListener('input', input, true); window.removeEventListener('scroll', scroll); document.removeEventListener('keydown', activity) }
   }, [run])
   /** Ends the attempt with the given reason, sends the end-state snapshot and moves to the questions. */
-  async function finish(reason: 'done' | "can't do it" | 'abandoned early' | 'ran out of time') {
+  async function finish(reason: 'done' | "couldn't do this" | 'abandoned early' | 'ran out of time') {
     if (!run || busy) return
     setBusy(true)
     try { await queue.current; await send({ action: 'end', reason, snapshot: snapshot() }); location.assign(`/ui-tests/${run.id}?stage=questions`) }
@@ -357,7 +417,8 @@ export function UiTests() {
   if (!run || typeof document === 'undefined' || location.pathname.startsWith('/ui-tests/')) return null
   const remaining = run.startedAt + run.timeBox * 1000 - now
   return createPortal(<>
-    <TaskBar scenario={run.scenario} steps={run.tasks} index={run.sequence.index} total={run.sequence.total} interacted={interacted} busy={busy} error={error}
+    <TaskBar scenario={run.scenario} steps={run.tasks} index={run.sequence.index} total={run.sequence.total} interacted={interacted} busy={busy} error={error} accent={run.accent}
+      recording={{ startedAt: run.startedAt, state: run.recording, paused, onPause: () => setPaused(!paused) }}
       canExtend={!run.extended && now > 0 && remaining <= 60_000}
       onExtend={async () => { try { setRun(await send({ action: 'extend' })) } catch (err) { setError(String(err)) } }}
       onStep={async step => { try { await queue.current; await send({ action: 'events', events: [{ type: 'step', at: Date.now(), url: location.origin + location.pathname, step, snapshot: snapshot() }] }) } catch (err) { setError(String(err)) } }}
@@ -369,7 +430,6 @@ export function UiTests() {
         await finish('done')
       }}
       onGiveUp={reason => void finish(reason)} />
-    <RecordingIndicator startedAt={run.startedAt} recording={run.recording} paused={paused} onPause={() => setPaused(!paused)} />
   </>, document.body)
 }
 
@@ -398,9 +458,10 @@ export function Player({ runId, token }: { runId: string; token?: string }) {
     }, 250)
     return () => clearInterval(timer)
   }, [stage])
+  const chrome = useChrome(undefined, run?.accent)
   const recording = run ? { ...run.recording, voice: run.recording.voice || voice.recorded } : { events: true as const, screen: false, voice: false, webcam: false }
   let body: ReactNode = null
-  if (stage === 'consent') body = <section className="uit-consent" aria-labelledby="uit-consent-title">
+  if (stage === 'consent') body = <section className="uit-sheet uit-consent" aria-labelledby="uit-consent-title">
     {/* Consent and recording: a list of what is recorded, each required or optional (Maze); "the website is being tested, not you" and
         "you can stop at any time" (Loop11's deployment; Optimal Workshop's guide); recording starts at the first task (Optimal Workshop).
         No camera preview is shown because this study never turns the camera on; webcam stays opt-in and off. */}
@@ -416,11 +477,11 @@ export function Player({ runId, token }: { runId: string; token?: string }) {
     <p className="uit-hint">This rehearsal is stored on this computer.</p>
     <span><button className="uit-primary" disabled={!run} onClick={async () => { try { const value = await send({ action: 'consent', id: runId, token }); setRun(value); setStage('scenario') } catch (err) { setError(String(err)) } }}>I consent</button></span>
   </section>
-  else if (stage === 'scenario' && run) body = <ScenarioCard level={1} scenario={run.scenario} index={run.sequence.index} total={run.sequence.total} busy={busy} onStart={async () => { setBusy(true); try { await send({ action: 'begin' }); location.assign('/') } catch (err) { setError(String(err)); setBusy(false) } }} />
+  else if (stage === 'scenario' && run) body = <ScenarioCard level={1} accent={run.accent} scenario={run.scenario} index={run.sequence.index} total={run.sequence.total} busy={busy} onStart={async () => { setBusy(true); try { await send({ action: 'begin' }); location.assign('/') } catch (err) { setError(String(err)); setBusy(false) } }} />
   else if (stage === 'questions') body = <div className="uit-stack">
     <h1 className="uit-sr">A few final questions</h1>
-    {run && <RecordingIndicator recording={recording} live={voice.live} still />}
-    <Questions autoFocus askConfidence={run?.askConfidence} validation={run?.validation} ready={!!run?.verificationReady} busy={busy} onVoiceState={setVoice} onSubmit={async answers => {
+    {run && <RecordingIndicator recording={recording} live={voice.live} accent={run.accent} still />}
+    <Questions autoFocus accent={run?.accent} askConfidence={run?.askConfidence} validation={run?.validation} ready={!!run?.verificationReady} busy={busy} onVoiceState={setVoice} onSubmit={async answers => {
       setBusy(true)
       try {
         for (const { question, clip } of answers.voice) await send({ action: 'voice', question, mime: clip.mime, audio: await base64(clip.blob), transcript: clip.transcript, seconds: clip.seconds })
@@ -430,7 +491,7 @@ export function Player({ runId, token }: { runId: string; token?: string }) {
     }} />
   </div>
   // The upload wait asks the participant to keep the tab open (Optimal Workshop).
-  else if (stage === 'checking') body = <section className="uit-wait"><h1>Saving your answers</h1><p role="status">Please keep this tab open until this finishes.</p></section>
-  else if (stage === 'thanks') body = <section className="uit-wait"><h1>Thank you</h1><p>Your rehearsal is saved. You can close this tab and return to your terminal.</p></section>
-  return <main className="uit uit-page"><PlayerStyles />{body}{error && <p className="uit-error" role="alert">{error}</p>}</main>
+  else if (stage === 'checking') body = <section className="uit-sheet uit-wait"><h1>Saving your answers</h1><p role="status">Please keep this tab open until this finishes.</p></section>
+  else if (stage === 'thanks') body = <section className="uit-sheet uit-wait"><h1>Thank you</h1><p>Your rehearsal is saved. You can close this tab and return to your terminal.</p></section>
+  return <main className="uit uit-page" style={chrome}><PlayerStyles />{body}{error && <p className="uit-error" role="alert">{error}</p>}</main>
 }

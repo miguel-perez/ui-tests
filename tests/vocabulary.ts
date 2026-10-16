@@ -16,6 +16,9 @@ export const was: [string, RegExp][] = [
   ['dead click', /dead[ -]click/i],
   ['outcome incorrect', /\bincorrect\b|\boutcome:? (correct|unknown)\b/i],
   ['confidence n of 7', /\bconfidence:? \d (of|\/) 7/i],
+  // Issue #25, item 2: the bar says "Done" and "I couldn't do this".
+  ["Can't do it / I can't do this", /can(?:['’]|&#39;|&apos;|\\u2019)?t do (?:it|this)/i],
+  ["I'm done", /\bI(?:['’]|&#39;|&apos;)m done\b/i],
 ]
 /** On a rendered surface every word of the table is out, including the ones code may still use for something else. */
 export const shown: [string, RegExp][] = [

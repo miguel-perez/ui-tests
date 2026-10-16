@@ -278,19 +278,19 @@ describe('storage, verification and participant boundary', () => {
       assert(view).not.toMatch(/happyPath|expected|outcomes|\/docs\/getting-started|ui-tests/)
     } finally { store.close() }
   })
-  it('produces expected/actual URL diffs, Can\'t do it as not reached, and missing evidence as couldn\'t tell', async () => {
+  it('produces expected/actual URL diffs, I couldn\'t do this as not reached, and missing evidence as couldn\'t tell', async () => {
     const store = new SQLiteAdapter(':memory:')
     try {
       const run = store.create(compile(authored({ happyPath: ['/', '/wrong'] }))[0]); const g = getContexts()[0].goals[0]
       assert(await verify(run, g)).toMatchObject({ reached: "couldn't tell" })
       run.snapshot = { url: 'http://localhost/docs/getting-started', dom: '<main />' }; run.reason = 'done'
       assert(await verify(run, g)).toMatchObject({ reached: 'no', diff: { expected: '/wrong', actual: run.snapshot.url } })
-      run.reason = "can't do it"
-      assert(await verify(run, g)).toMatchObject({ reached: 'no', reason: "How it ended: pressed Can't do it" })
+      run.reason = "couldn't do this"
+      assert(await verify(run, g)).toMatchObject({ reached: 'no', reason: "How it ended: pressed I couldn't do this" })
       run.seq = 2
       const found = issues(run, [{ type: 'click', at: 123, url: run.snapshot.url, target: 'div#inert', changed: false }, { type: 'url', at: 124, url: 'http://localhost/elsewhere' }, { type: 'pause', at: 125, url: run.snapshot.url, stoppedMs: 5100 }])
       assert(found.map(i => i.kind)).toEqual(['how it ended', 'nothing happened', 'off your path', 'stopped', 'not easy'])
-      assert(found.map(i => i.detail)).toEqual(["How it ended: pressed Can't do it", 'Clicked div#inert, nothing happened', 'Off your path · opened /elsewhere', 'Stopped 5 s', 'How easy was it? 2 of 7 (7 = very easy)'])
+      assert(found.map(i => i.detail)).toEqual(["How it ended: pressed I couldn't do this", 'Clicked div#inert, nothing happened', 'Off your path · opened /elsewhere', 'Stopped 5 s', 'How easy was it? 2 of 7 (7 = very easy)'])
       assert(found[1]).toMatchObject({ at: 123, detail: assert.stringContaining('div#inert') })
     } finally { store.close() }
   })

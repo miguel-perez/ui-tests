@@ -31,21 +31,39 @@ it('keeps every text token AA over the strongest pixel of the background texture
   }
 })
 
-it('keeps every light-theme text token AA on the light canvas and surface, and the player on the same tokens as the site', async () => {
-  const { playerTheme } = await import('../packages/ui-tests/src/player-styles')
+it('draws the participant chrome as the inverse of its host, with every rendered pair at its floor', async () => {
+  const { chromeTheme, weekboardChrome, parseColour, contrast } = await import('../packages/ui-tests/src/player-styles')
   const css = await readFile('apps/web/app/globals.css', 'utf8')
-  const light = Object.fromEntries([...css.matchAll(/--light-([\w-]+): (#[\da-f]{6})/g)].map(match => [match[1], match[2]]))
-  expect(light).toEqual(playerTheme)
-  for (const background of ['canvas', 'surface']) {
-    for (const text of ['ink', 'muted', 'moment', 'path', 'dead', 'pause', 'done', 'note']) {
-      expect(contrast(light[text], light[background]), `light ${text} on ${background}`).toBeGreaterThanOrEqual(4.5)
-    }
-    // Like the dark theme, the comment role is decorative only.
-    expect(contrast(light.comment, light[background])).toBeLessThan(4.5)
+  // There is no light product theme on the site any more.
+  expect(css).not.toMatch(/theme-light|--light-/)
+  const solid = (value: string, under: string) => {
+    const m = /rgba\((\d+), (\d+), (\d+), ([\d.]+)\)/.exec(value)
+    if (!m) return parseColour(value)!
+    const base = parseColour(under)!
+    return [1, 2, 3].map(i => Math.round(base[i - 1] + (Number(m[i]) - base[i - 1]) * Number(m[4]))) as [number, number, number]
   }
-  // White text on the moment hue: the primary button and the rank chips.
-  expect(contrast('#ffffff', light.moment)).toBeGreaterThanOrEqual(4.5)
-  // The inverse theme turns the ink hierarchy over: the darkest ink on the lightest ground.
-  expect(luminance(light.ink)).toBeLessThan(luminance(light.muted))
-  expect(luminance(light.canvas)).toBeLessThan(luminance(light.surface))
+  const pairs = (theme: ReturnType<typeof chromeTheme>) => ({
+    text: contrast(parseColour(theme.ink)!, parseColour(theme.surface)!),
+    dim: contrast(solid(theme.dim, theme.surface), parseColour(theme.surface)!),
+    onAccent: contrast(parseColour(theme.accentInk)!, parseColour(theme.accent)!),
+    accent: contrast(parseColour(theme.accent)!, parseColour(theme.surface)!),
+  })
+  // Weekboard: dark chrome on the light app, the mint accent its author sets, never the app's orange.
+  const weekboard = chromeTheme(weekboardChrome)
+  expect(weekboard).toMatchObject({ surface: '#2c3353', ink: '#e1e2e7', accent: '#5fe3c0', step: '#5fe3c0' })
+  // The site itself, as a host: light chrome on the dark page; without an accent, the chrome's own text colour.
+  const site = chromeTheme({ hostInk: 'rgb(192, 202, 245)', hostBackground: 'rgb(26, 27, 38)' })
+  expect(site).toMatchObject({ surface: '#c0caf5', ink: '#1a1b26', accent: '#1a1b26' })
+  // A white page with black text, an accent too faint to see, and a host whose own pair fails: each falls back, never below a floor.
+  const faint = chromeTheme({ hostInk: '#000000', hostBackground: '#ffffff', accent: '#2a2a2a' })
+  expect(faint.accent).toBe('#ffffff')
+  const unreadable = chromeTheme({ hostInk: '#777777', hostBackground: '#888888', accent: '#5fe3c0' })
+  expect(unreadable.surface).toBe('#2c3353')
+  for (const theme of [weekboard, site, faint, unreadable, chromeTheme(), chromeTheme({ hostBackground: 'rgba(0, 0, 0, 0)' })]) {
+    const measured = pairs(theme)
+    expect(measured.text, JSON.stringify(theme)).toBeGreaterThanOrEqual(4.5)
+    expect(measured.dim, JSON.stringify(theme)).toBeGreaterThanOrEqual(4.5)
+    expect(measured.onAccent, JSON.stringify(theme)).toBeGreaterThanOrEqual(4.5)
+    expect(measured.accent, JSON.stringify(theme)).toBeGreaterThanOrEqual(3)
+  }
 })

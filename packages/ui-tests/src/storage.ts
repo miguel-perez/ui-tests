@@ -7,8 +7,8 @@ import type { Snapshot } from './index.ts'
 
 /** A recorder event: clicks with whether anything changed, URL changes, scroll, masked input, pauses and task-step snapshots. */
 export type Event = { type: 'click' | 'url' | 'scroll' | 'input' | 'pause' | 'step'; at: number; url: string; target?: string; changed?: boolean; stoppedMs?: number; step?: number; snapshot?: Snapshot }
-/** How an attempt ended. `abandoned early` is leaving before the first interaction; `can't do it` is pressing Can't do it after trying. Both are distinct from not reaching the goal. */
-export type Reason = 'done' | "can't do it" | 'abandoned early' | 'ran out of time'
+/** How an attempt ended. `abandoned early` is leaving before the first interaction; `couldn't do this` is pressing I couldn't do this after trying. Both are distinct from not reaching the goal. */
+export type Reason = 'done' | "couldn't do this" | 'abandoned early' | 'ran out of time'
 /** A spoken answer: the transcript as the person saw it and the stored audio it came from. */
 export type VoiceAnswer = { question: 'difficulty' | 'words'; transcript: string; recording: string; mime: string; seconds: number }
 /** What is captured for an attempt, each with the consent behind it. Interaction events are always recorded; voice only once the person chooses to talk. */

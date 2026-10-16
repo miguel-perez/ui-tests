@@ -107,7 +107,7 @@ async function main() {
   if (command !== 'dev') throw new Error(`Unknown command: ${command}`)
   const store = new SQLiteAdapter()
   const configFile = path.resolve('ui-tests.config.ts')
-  let config: { target: { url: string }; author?: string } = { target: { url: 'http://localhost:3000' } }
+  let config: { target: { url: string }; author?: string; chrome?: { accent?: string } } = { target: { url: 'http://localhost:3000' } }
   if (await exists(configFile)) {
     // Compile config to ESM too: host apps need not set package.json type=module.
     const configBundle = result.bundle.replace('hooks-', 'config-')
@@ -123,6 +123,7 @@ async function main() {
   /** Creates the next rehearsal run for the active context and goal and records its hooks bundle. */
   function createRun() {
     active.compiled.author = config.author ?? result.authored[active.contextIndex].author ?? userInfo().username
+    active.compiled.accent = config.chrome?.accent
     const created = store.create(active.compiled, active.goalIndex)
     created.hooksBundle = result.bundle; created.authoredContextIndex = active.contextIndex
     // "Task n of N" on the card and the bar counts the tasks of this session (participant-overlay research, progress).

@@ -6,7 +6,7 @@ export type Impact = 'wrong end state' | 'blocked' | 'slowed' | 'confused'
 /** A moment that got in the way of this attempt: its clip's seconds, the sentence about the design, where, the words tied to it and the smallest change. */
 export type Blocker = { n: number; problem: number; impact: Impact; from: number; to: number; poster: string; title: string; where: string; said: { when: string; text: string } | null; change: string }
 export type Reached = 'yes' | 'no' | "couldn't tell"
-export type Ended = 'done' | "can't do it" | 'ran out of time' | 'withdrew' | 'left'
+export type Ended = 'done' | "couldn't do this" | 'ran out of time' | 'withdrew' | 'left'
 /** One person trying one goal (docs/discovery/reporting-schema-research.md, the Attempt table). */
 export type Attempt = {
   id: string; number: number; person: string; source: string; today: string; device: string; browser: string; window: string
@@ -20,7 +20,7 @@ export const run = metadata as Run
 export const attempt = (id: string) => run.attempts.find(entry => entry.id === id)!
 
 export const reachedLabel: Record<Reached, string> = { yes: 'Yes', no: 'No', "couldn't tell": "Couldn't tell" }
-export const endedLabel: Record<Ended, string> = { done: 'Pressed Done', "can't do it": "Pressed Can't do it", 'ran out of time': 'Ran out of time', withdrew: 'Withdrew', left: 'Left' }
+export const endedLabel: Record<Ended, string> = { done: 'Pressed Done', "couldn't do this": "Pressed I couldn't do this", 'ran out of time': 'Ran out of time', withdrew: 'Withdrew', left: 'Left' }
 /** Wrong, and sure: did not reach the goal yet rated themselves 7 of 7 sure (MeasuringU, UI disasters). Nothing at 6 or below. */
 export const wrongAndSure = (entry: Attempt) => entry.reached === 'no' && entry.sure === 7
 /** The run-level lines: how many reached the goal, and how many were wrong and sure. */

@@ -9,7 +9,7 @@ export function HostedForm() {
   const [started, setStarted] = useState(false)
   const [method, setMethod] = useState('Page reached')
   const [evidence, setEvidence] = useState<Record<string, string>>({ 'Page reached': '/settings/members' })
-  return <div className="window theme-light hosted-form" data-artefact="hosted-form">
+  return <div className="window hosted-form" data-artefact="hosted-form">
     <div className="window-chrome"><span className="window-title">ui-tests.com/new</span><span className="example-label">Example run</span></div>
     <form onSubmit={event => { event.preventDefault(); setStarted(true) }}>
       <div className="hosted-field wide"><label htmlFor={`${id}-users`}>Users</label><textarea id={`${id}-users`} required defaultValue={hosted.users} rows={2} /></div>

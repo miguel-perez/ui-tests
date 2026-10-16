@@ -11,7 +11,9 @@
 <style>
 /*
   Weekboard demo app. A static board for the ui-tests example run.
-  Tokyo Night Day tokens (the light inverse) and Fira type; the player over it keeps the dark site surface.
+  Tokyo Night Day tokens (the light inverse) and Fira type. The ui-tests chrome over it is the inverse of this page
+  (design/artefacts/player-chrome.html): dark, opaque, a hairline and a soft shadow, this page's font and the mint accent
+  Weekboard's author sets, never the app's orange.
   Design size 1280 x 800.
 
 */
@@ -23,8 +25,9 @@
   --wb-bg: var(--canvas); --wb-pane: var(--surface); --wb-card: var(--surface);
   --wb-line: var(--line); --wb-text: var(--ink); --wb-dim: var(--muted);
   --wb-mint: var(--moment); --wb-mint-ink: #ffffff;
-  /* The player is ours: dark chrome over the light app, so the person's page and the overlay read as two things. */
-  --player-surface: #1f2335; --player-ink: #c0caf5; --player-accent: #ff9e64; --player-accent-ink: #1a1b26;
+  /* The participant chrome: this page's ink as its surface and its canvas as its text, with the author's mint. */
+  --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225,226,231,.68); --ch-hair: rgba(225,226,231,.16);
+  --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
@@ -165,30 +168,43 @@ select { height: 36px; border-radius: 8px; background: var(--wb-card); border: 1
 .pending { margin: 10px 0 0; min-height: 20px; font-size: 13px; color: var(--wb-dim); }
 .pending:empty { display: none; }
 
-/* ui-tests player surfaces, shown only with ?scenario */
+/* ui-tests player surfaces, shown only with ?scenario: the chrome of design/artefacts/player-chrome.html */
 .player { display: none; }
 body.scenario .player { display: contents; }
-.scrim { position: fixed; inset: 0; z-index: 50; background: rgba(44,51,83,.28); display: flex; align-items: center; justify-content: center; }
+.ch { font-family: "Fira Sans", sans-serif; color: var(--ch-ink); }
+.ch button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; }
+.ch :focus-visible { outline: 2px solid var(--ch-ink); outline-offset: 2px; }
+.scrim { position: fixed; inset: 0; z-index: 50; background: rgba(44,51,83,.4); display: flex; align-items: center; justify-content: center; }
 .scrim[hidden] { display: none; }
-.scenario-card {
-  width: 480px; padding: 28px 28px 24px; border-radius: 14px; background: var(--player-surface); color: var(--player-ink);
-  border: 1px solid rgba(238,241,245,.14); box-shadow: 0 8px 24px rgba(21,26,33,.28);
-  font-family: "Fira Sans", sans-serif;
+.sheet {
+  width: 480px; padding: 22px 26px 20px; display: grid; gap: 12px; background: var(--ch-surface);
+  border-radius: calc(var(--ch-radius) + 4px); box-shadow: 0 0 0 1px var(--ch-hair), 0 18px 40px rgba(21,26,33,.35);
 }
-.scenario-card p { margin: 0 0 22px; font-size: 17px; line-height: 1.5; }
-.scenario-card button, .bar button {
-  height: 40px; padding: 0 18px; border-radius: 8px; border: 1px solid rgba(238,241,245,.18);
-  background: var(--player-accent); color: var(--player-accent-ink); font-weight: 500; font-family: inherit;
-}
-.bar {
-  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 50;
-  display: flex; gap: 8px; padding: 8px; border-radius: 12px; background: var(--player-surface); color: var(--player-ink);
-  border: 1px solid rgba(238,241,245,.14); box-shadow: 0 8px 24px rgba(21,26,33,.28);
-  font-family: "Fira Sans", sans-serif;
-}
+.sheet .step { font-size: 12px; color: var(--ch-accent); letter-spacing: .02em; }
+.sheet p { margin: 0; font-size: 17px; line-height: 1.5; }
+.sheet p.small { font-size: 14px; color: var(--ch-dim); }
+.sheet p.small b { font-weight: 500; color: var(--ch-ink); }
+.sheet .actions { display: flex; justify-content: flex-end; margin-top: 4px; }
+.sheet .pri { height: 36px; padding: 0 16px; border-radius: var(--ch-radius); background: var(--ch-accent); color: var(--ch-accent-ink); font-weight: 500; font-size: 14px; }
+/* The bar: one 40px pill, bottom right, the recording state as its leading segment. */
+.bar { position: fixed; right: 16px; bottom: 16px; z-index: 50; }
 .bar[hidden] { display: none; }
-.bar button { height: 36px; }
-.bar button.quiet { background: none; color: var(--player-ink); }
+.pill { height: 40px; display: flex; align-items: center; padding: 0 6px 0 12px; background: var(--ch-surface); border-radius: 20px; box-shadow: 0 0 0 1px var(--ch-hair), 0 8px 24px rgba(21,26,33,.28); white-space: nowrap; font-size: 13px; }
+.pill .seg { display: flex; align-items: center; gap: 8px; height: 40px; }
+.pill .seg + .seg { border-left: 1px solid var(--ch-hair); margin-left: 12px; padding-left: 12px; }
+.pill .grip { width: 8px; height: 16px; margin-right: 10px; background: radial-gradient(circle, var(--ch-dim) 1px, transparent 1.3px) 0 0/4px 4px; opacity: .6; }
+.pill .rec { font: 500 12px/1 "Fira Code", monospace; color: var(--ch-dim); font-variant-numeric: tabular-nums; }
+.pill .rec .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ch-rec); box-shadow: 0 0 0 3px rgba(245,42,101,.18); }
+.pill .rec .pause { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: var(--ch-dim); }
+.pill .rec .pause svg { width: 10px; height: 10px; }
+.pill .task { display: block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; line-height: 40px; color: var(--ch-ink); }
+.pill .task b { font-weight: 500; color: var(--ch-accent); margin-right: 8px; font-size: 12px; }
+.pill .task::after { content: " \203A"; color: var(--ch-dim); }
+.pill .done { height: 28px; padding: 0 12px; border-radius: 14px; background: var(--ch-accent); color: var(--ch-accent-ink); font-weight: 500; }
+.pill .cant { height: 28px; padding: 0 8px; border-radius: 14px; color: var(--ch-dim); }
+.pill .cant:hover, .pill .rec .pause:hover { color: var(--ch-ink); background: var(--ch-hair); }
+.task-sheet { position: absolute; right: 0; bottom: 52px; width: 400px; }
+.task-sheet[hidden] { display: none; }
 </style>
 </head>
 <body>
@@ -329,14 +345,24 @@ body.scenario .player { display: contents; }
 <!-- ui-tests player surfaces, only in scenario mode -->
 <div class="player">
   <div class="scrim" id="scenario">
-    <div class="scenario-card" role="dialog" aria-labelledby="scenarioText">
-      <p id="scenarioText">Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished.</p>
-      <button id="scenarioStart">Start</button>
+    <div class="sheet ch" role="dialog" aria-labelledby="scenarioStep" aria-describedby="scenarioText">
+      <span class="step" id="scenarioStep">Task 1 of 1</span>
+      <p id="scenarioText">You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.</p>
+      <p class="small">When you think you've finished, press <b>Done</b>. If you get stuck, press <b>I couldn't do this</b>.</p>
+      <div class="actions"><button class="pri" id="scenarioStart">Start task</button></div>
     </div>
   </div>
-  <div class="bar" id="bar" hidden>
-    <button id="done">Done</button>
-    <button class="quiet" id="cant">Can't do it</button>
+  <div class="bar ch" id="bar" role="region" aria-label="Weekboard study" hidden>
+    <div class="sheet task-sheet" id="taskSheet" hidden>
+      <p>You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.</p>
+      <p class="small">When you think you've finished, press <b>Done</b>. If you get stuck, press <b>I couldn't do this</b>.</p>
+    </div>
+    <div class="pill">
+      <span class="grip" aria-hidden="true"></span>
+      <span class="seg rec" role="group" aria-label="Recording"><span class="dot" aria-hidden="true"></span><time id="recTime">0:00</time><button class="pause" type="button" aria-label="Pause recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg></button></span>
+      <button class="seg task" id="taskToggle" type="button" aria-expanded="false" aria-controls="taskSheet"><b>Task 1 of 1</b>Invite Sam to the board</button>
+      <span class="seg"><button class="done" id="done" type="button">Done</button><button class="cant" id="cant" type="button">I couldn't do this</button></span>
+    </div>
   </div>
 </div>
 
@@ -434,14 +460,27 @@ body.scenario .player { display: contents; }
     behind.forEach(el => { el.inert = true; });
     $('#scenario').setAttribute('aria-modal', 'true');
     $('#scenarioStart').focus();
+    let timer = 0;
     $('#scenarioStart').addEventListener('click', () => {
       $('#scenario').hidden = true;
       behind.forEach(el => { el.inert = false; });
       $('#bar').hidden = false;
       $('#done').focus();
+      // The recording segment shows the time since Start, once a second.
+      const started = Date.now();
+      timer = setInterval(() => {
+        const s = Math.floor((Date.now() - started) / 1000);
+        $('#recTime').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+      }, 1000);
     });
-    $('#done').addEventListener('click', () => { $('#bar').hidden = true; });
-    $('#cant').addEventListener('click', () => { $('#bar').hidden = true; });
+    $('#taskToggle').addEventListener('click', () => {
+      const open = $('#taskSheet').hidden;
+      $('#taskSheet').hidden = !open;
+      $('#taskToggle').setAttribute('aria-expanded', String(open));
+    });
+    const end = () => { clearInterval(timer); $('#bar').hidden = true; };
+    $('#done').addEventListener('click', end);
+    $('#cant').addEventListener('click', end);
   }
 })();
 </script>

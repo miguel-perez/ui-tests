@@ -10,7 +10,7 @@ import metadata from '../public/sessions/sessions.json' with { type: 'json' }
 
 // The run's report: who reached the goal and who was wrong and sure come from the attempts; the problems, in the run's rank, from the copy.
 // Two titles are shortened to fit 80 columns beside the rank, count and impact.
-const short = ['Pressed Add, saw nothing change, pressed it again', null, 'Looked for Invite in the Share menu, found only links']
+const short = ['Pressed Add, saw nothing change, pressed it again', "Stopped at a grey Add, pressed I couldn't do this", 'Looked for Invite in the Share menu, found only links']
 export const exampleReport = {
   people: metadata.attempts.length,
   reached: metadata.attempts.filter(a => a.reached === 'yes').length,

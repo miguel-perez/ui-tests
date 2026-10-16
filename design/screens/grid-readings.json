@@ -36,7 +36,7 @@
       "emptyWithinRule": true,
       "harness": {
         "grid_quality": 0.5,
-        "ngo_balance": 0.2864,
+        "ngo_balance": 0.2858,
         "ngo_density": 0.4094,
         "white_space": 0.5906,
         "ngo_regularity": 0,
@@ -58,16 +58,16 @@
       "emptyArea": 942112,
       "emptyWithinRule": true,
       "harness": {
-        "grid_quality": 0.5094,
-        "ngo_balance": 0.1048,
-        "ngo_density": 0.4576,
-        "white_space": 0.5424,
+        "grid_quality": 0.463,
+        "ngo_balance": 0.1278,
+        "ngo_density": 0.461,
+        "white_space": 0.539,
         "ngo_regularity": 0,
         "reading": {
-          "grid_quality": "27 of 53 boxes sit on the eight commonest left edges (x=0 (5), x=128 (5), x=112 (4), x=16 (3)); off-grid: p 643×29 at (530,13), button 156×44 at (534,1060), button 108×44 at (333,1060)",
-          "ngo_balance": "95% of leaf area sits left of the midline; heaviest element there: iframe 718×449 at (1,136)",
+          "grid_quality": "25 of 54 boxes sit on the eight commonest left edges (x=152 (7), x=0 (5), x=16 (3), x=628 (3)); off-grid: span 803×15 at (338,1085), button 240×40 at (256,1073), button 98×36 at (467,430)",
+          "ngo_balance": "94% of leaf area sits left of the midline; heaviest element there: iframe 718×449 at (1,136)",
           "white_space": "46% of the fold is covered; fullest region top-left, emptiest middle-right; largest boxes: iframe 718×449 at (1,136), iframe 718×449 at (1,677), iframe 718×449 at (1,1219)",
-          "ngo_regularity": "text leaves are spaced 60 px apart on average (sd 61) over 28 gaps; 1 unusually large gap(s), e.g. 211 px after y=430"
+          "ngo_regularity": "text leaves are spaced 60 px apart on average (sd 68) over 28 gaps; 3 unusually large gap(s), e.g. 211 px after y=430"
         }
       }
     },
@@ -105,7 +105,7 @@
       "emptyWithinRule": true,
       "harness": {
         "grid_quality": 0.5104,
-        "ngo_balance": 0.8547,
+        "ngo_balance": 0.8532,
         "ngo_density": 0.3628,
         "white_space": 0.6372,
         "ngo_regularity": 0,
@@ -284,20 +284,20 @@
       "width": 1440,
       "capture": "design/screens/blocks/guide-G4-1440.png",
       "height": 590,
-      "contentArea": 466848,
-      "emptyArea": 271968,
+      "contentArea": 510912,
+      "emptyArea": 227904,
       "emptyWithinRule": true,
       "harness": {
         "grid_quality": 0.4146,
-        "ngo_balance": 0.5306,
-        "ngo_density": 0.3019,
-        "white_space": 0.6981,
-        "ngo_regularity": 0.1664,
+        "ngo_balance": 0.3183,
+        "ngo_density": 0.2768,
+        "white_space": 0.7232,
+        "ngo_regularity": 0.0074,
         "reading": {
-          "grid_quality": "68 of 164 boxes sit on the eight commonest left edges (x=16 (19), x=66 (17), x=130 (9), x=122 (5)); off-grid: h2 1215×36 at (33,0), code 586×46 at (636,147), p 612×24 at (636,218)",
-          "ngo_balance": "73% of leaf area sits left of the midline; heaviest element there: h2 1215×36 at (33,0)",
-          "white_space": "30% of the fold is covered; fullest region middle-left, emptiest bottom-right; largest boxes: h2 1215×36 at (33,0), code 586×46 at (636,147), p 612×24 at (636,218)",
-          "ngo_regularity": "text leaves are spaced 13 px apart on average (sd 11) over 43 gaps; 1 unusually large gap(s), e.g. 49 px after y=45"
+          "grid_quality": "68 of 164 boxes sit on the eight commonest left edges (x=16 (19), x=66 (17), x=130 (9), x=122 (5)); off-grid: h2 1215×36 at (33,0), p 612×24 at (636,290), p 612×16 at (0,94)",
+          "ngo_balance": "84% of leaf area sits left of the midline; heaviest element there: h2 1215×36 at (33,0)",
+          "white_space": "28% of the fold is covered; fullest region middle-left, emptiest bottom-right; largest boxes: h2 1215×36 at (33,0), p 612×24 at (636,290), p 612×16 at (0,94)",
+          "ngo_regularity": "text leaves are spaced 13 px apart on average (sd 13) over 43 gaps; 2 unusually large gap(s), e.g. 49 px after y=45"
         }
       }
     },
@@ -306,21 +306,21 @@
       "block": "G5",
       "width": 1440,
       "capture": "design/screens/blocks/guide-G5-1440.png",
-      "height": 652,
-      "contentArea": 510048,
-      "emptyArea": 303648,
+      "height": 631,
+      "contentArea": 497808,
+      "emptyArea": 290928,
       "emptyWithinRule": true,
       "harness": {
         "grid_quality": 0.55,
-        "ngo_balance": 0.9199,
-        "ngo_density": 0.2747,
-        "white_space": 0.7253,
-        "ngo_regularity": 0.3298,
+        "ngo_balance": 0.9552,
+        "ngo_density": 0.2774,
+        "white_space": 0.7226,
+        "ngo_regularity": 0.3085,
         "reading": {
           "grid_quality": "33 of 60 boxes sit on the eight commonest left edges (x=656 (7), x=672 (5), x=664 (4), x=828 (4)); off-grid: p 612×16 at (636,60), span 519×17 at (76,100), span 519×17 at (76,267)",
-          "ngo_balance": "54% of leaf area sits right of the midline; heaviest element there: span 382×38 at (829,410)",
-          "white_space": "27% of the fold is covered; fullest region top-centre, emptiest bottom-left; largest boxes: h2 1215×36 at (33,0), p 612×24 at (0,207), span 382×38 at (829,410)",
-          "ngo_regularity": "text leaves are spaced 30 px apart on average (sd 20) over 21 gaps; 1 unusually large gap(s), e.g. 72 px after y=557"
+          "ngo_balance": "52% of leaf area sits right of the midline; heaviest element there: span 367×38 at (829,431)",
+          "white_space": "28% of the fold is covered; fullest region top-centre, emptiest bottom-left; largest boxes: h2 1215×36 at (33,0), p 612×24 at (0,207), span 367×38 at (829,431)",
+          "ngo_regularity": "text leaves are spaced 29 px apart on average (sd 20) over 21 gaps; 1 unusually large gap(s), e.g. 72 px after y=537"
         }
       }
     },
@@ -398,21 +398,21 @@
       "block": "L1",
       "width": 375,
       "capture": "design/screens/blocks/landing-L1-375.png",
-      "height": 1273,
-      "contentArea": 369984,
-      "emptyArea": 109792,
+      "height": 1253,
+      "contentArea": 364736,
+      "emptyArea": 107520,
       "emptyWithinRule": true,
       "harness": {
         "grid_quality": 0.8966,
-        "ngo_balance": 0.1654,
-        "ngo_density": 0.5234,
-        "white_space": 0.4766,
-        "ngo_regularity": 0.0699,
+        "ngo_balance": 0.1671,
+        "ngo_density": 0.5263,
+        "white_space": 0.4737,
+        "ngo_regularity": 0.0455,
         "reading": {
           "grid_quality": "26 of 29 boxes sit on the eight commonest left edges (x=54 (5), x=24 (4), x=40 (4), x=48 (4)); off-grid: span 73×15 at (261,741), span 43×16 at (185,806), span 7×16 at (228,806)",
           "ngo_balance": "92% of leaf area sits right of the midline; heaviest element there: p 327×259 at (24,259)",
-          "white_space": "52% of the fold is covered; fullest region top-centre, emptiest bottom-left; largest boxes: p 327×259 at (24,259), h1 327×187 at (24,48), p 327×72 at (24,1153)",
-          "ngo_regularity": "text leaves are spaced 110 px apart on average (sd 103) over 10 gaps; 1 unusually large gap(s), e.g. 377 px after y=259"
+          "white_space": "53% of the fold is covered; fullest region top-centre, emptiest bottom-left; largest boxes: p 327×259 at (24,259), h1 327×187 at (24,48), p 327×72 at (24,1133)",
+          "ngo_regularity": "text leaves are spaced 108 px apart on average (sd 104) over 10 gaps; 1 unusually large gap(s), e.g. 377 px after y=259"
         }
       }
     },
@@ -426,16 +426,16 @@
       "emptyArea": 27552,
       "emptyWithinRule": true,
       "harness": {
-        "grid_quality": 0.7059,
-        "ngo_balance": 0.3029,
+        "grid_quality": 0.7279,
+        "ngo_balance": 0.3015,
         "ngo_density": 0.4311,
         "white_space": 0.5689,
         "ngo_regularity": 0,
         "reading": {
-          "grid_quality": "96 of 136 boxes sit on the eight commonest left edges (x=40 (24), x=16 (23), x=96 (11), x=44 (9)); off-grid: p 327×144 at (0,67), p 225×128 at (85,3447), p 327×72 at (0,4006)",
+          "grid_quality": "99 of 136 boxes sit on the eight commonest left edges (x=40 (24), x=16 (23), x=96 (11), x=44 (9)); off-grid: p 327×144 at (0,67), p 225×128 at (85,3447), p 327×72 at (0,4006)",
           "ngo_balance": "85% of leaf area sits left of the midline; heaviest element there: video 291×182 at (18,900)",
           "white_space": "43% of the fold is covered; fullest region middle-centre, emptiest middle-right; largest boxes: video 291×182 at (18,900), button 291×182 at (18,900), video 291×182 at (18,1584)",
-          "ngo_regularity": "text leaves are spaced 43 px apart on average (sd 47) over 93 gaps; 4 unusually large gap(s), e.g. 201 px after y=67"
+          "ngo_regularity": "text leaves are spaced 43 px apart on average (sd 46) over 93 gaps; 4 unusually large gap(s), e.g. 201 px after y=67"
         }
       }
     },
@@ -444,21 +444,21 @@
       "block": "L3",
       "width": 375,
       "capture": "design/screens/blocks/landing-L3-375.png",
-      "height": 1800,
-      "contentArea": 512992,
-      "emptyArea": 77408,
+      "height": 1763,
+      "contentArea": 498560,
+      "emptyArea": 80032,
       "emptyWithinRule": true,
       "harness": {
-        "grid_quality": 0.6226,
-        "ngo_balance": 0.0699,
-        "ngo_density": 0.5853,
-        "white_space": 0.4147,
-        "ngo_regularity": 0.3664,
+        "grid_quality": 0.64,
+        "ngo_balance": 0.081,
+        "ngo_density": 0.5774,
+        "white_space": 0.4226,
+        "ngo_regularity": 0.1364,
         "reading": {
-          "grid_quality": "33 of 53 boxes sit on the eight commonest left edges (x=0 (9), x=34 (9), x=16 (3), x=236 (3)); off-grid: p 164×21 at (141,966), button 77×44 at (138,1007), button 67×44 at (226,1553)",
-          "ngo_balance": "97% of leaf area sits left of the midline; heaviest element there: iframe 326×204 at (1,261)",
-          "white_space": "59% of the fold is covered; fullest region top-left, emptiest middle-right; largest boxes: iframe 326×204 at (1,261), iframe 326×204 at (1,824), iframe 326×204 at (1,1296)",
-          "ngo_regularity": "text leaves are spaced 60 px apart on average (sd 38) over 29 gaps; 1 unusually large gap(s), e.g. 143 px after y=325"
+          "grid_quality": "32 of 50 boxes sit on the eight commonest left edges (x=0 (9), x=30 (9), x=16 (3), x=236 (3)); off-grid: button 107×28 at (205,1055), span 139×17 at (53,628), button 57×36 at (239,1527)",
+          "ngo_balance": "96% of leaf area sits left of the midline; heaviest element there: iframe 326×204 at (1,261)",
+          "white_space": "58% of the fold is covered; fullest region top-centre, emptiest middle-right; largest boxes: iframe 326×204 at (1,261), iframe 326×204 at (1,797), iframe 326×204 at (1,1270)",
+          "ngo_regularity": "text leaves are spaced 68 px apart on average (sd 58) over 25 gaps; 1 unusually large gap(s), e.g. 287 px after y=768"
         }
       }
     },
@@ -674,21 +674,21 @@
       "block": "G4",
       "width": 375,
       "capture": "design/screens/blocks/guide-G4-375.png",
-      "height": 939,
-      "contentArea": 275520,
+      "height": 1035,
+      "contentArea": 307008,
       "emptyArea": 32800,
       "emptyWithinRule": true,
       "harness": {
-        "grid_quality": 0.4268,
+        "grid_quality": 0.4329,
         "ngo_balance": 0.8445,
-        "ngo_density": 0.4361,
-        "white_space": 0.5639,
+        "ngo_density": 0.3957,
+        "white_space": 0.6043,
         "ngo_regularity": 0,
         "reading": {
-          "grid_quality": "70 of 164 boxes sit on the eight commonest left edges (x=16 (20), x=66 (17), x=130 (9), x=0 (5)); off-grid: h2 294×31 at (33,0), span 470×17 at (163,330), span 162×17 at (520,546)",
-          "ngo_balance": "58% of leaf area sits left of the midline; heaviest element there: p 327×48 at (0,891)",
-          "white_space": "44% of the fold is covered; fullest region top-left, emptiest bottom-left; largest boxes: p 327×48 at (0,891), span 293×44 at (17,143), code 208×50 at (0,40)",
-          "ngo_regularity": "text leaves are spaced 19 px apart on average (sd 21) over 46 gaps; 3 unusually large gap(s), e.g. 74 px after y=40"
+          "grid_quality": "71 of 164 boxes sit on the eight commonest left edges (x=16 (20), x=66 (17), x=130 (9), x=146 (6)); off-grid: h2 294×31 at (33,0), span 470×17 at (163,330), span 162×17 at (520,546)",
+          "ngo_balance": "58% of leaf area sits left of the midline; heaviest element there: p 327×48 at (0,987)",
+          "white_space": "40% of the fold is covered; fullest region top-left, emptiest bottom-right; largest boxes: p 327×48 at (0,987), span 293×44 at (17,143), code 208×50 at (0,40)",
+          "ngo_regularity": "text leaves are spaced 21 px apart on average (sd 27) over 46 gaps; 3 unusually large gap(s), e.g. 99 px after y=143"
         }
       }
     },
@@ -703,14 +703,14 @@
       "emptyWithinRule": true,
       "harness": {
         "grid_quality": 0.8125,
-        "ngo_balance": 0.8044,
-        "ngo_density": 0.3348,
-        "white_space": 0.6652,
+        "ngo_balance": 0.7988,
+        "ngo_density": 0.3331,
+        "white_space": 0.6669,
         "ngo_regularity": 0.4242,
         "reading": {
           "grid_quality": "39 of 48 boxes sit on the eight commonest left edges (x=20 (9), x=36 (7), x=0 (5), x=192 (5)); off-grid: h2 294×31 at (33,0), span 211×17 at (224,500), span 66×18 at (248,1161)",
           "ngo_balance": "60% of leaf area sits left of the midline; heaviest element there: a 281×45 at (0,1257)",
-          "white_space": "33% of the fold is covered; fullest region middle-centre, emptiest top-right; largest boxes: span 780×17 at (21,520), a 281×45 at (0,1257), span 101×100 at (193,826)",
+          "white_space": "33% of the fold is covered; fullest region middle-centre, emptiest top-right; largest boxes: span 780×17 at (21,520), a 281×45 at (0,1257), span 101×100 at (193,930)",
           "ngo_regularity": "text leaves are spaced 55 px apart on average (sd 31) over 23 gaps; 1 unusually large gap(s), e.g. 127 px after y=1034"
         }
       }

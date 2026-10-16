@@ -26,7 +26,7 @@ export function FindingsList() {
     const at = evidence[row][person]
     setOpen(row); setActivated(row); setWatch({ row, person, at, label: `Person ${person} at ${clock(at)}` })
   }
-  return <section className="window theme-light findings-list" data-artefact="findings-list" aria-label="Problems found">
+  return <section className="window findings-list" data-artefact="findings-list" aria-label="Problems found">
     <div className="window-chrome"><span className="window-title">ui-tests.com/r/k2m9 · {run.goal}</span><span className="example-label">Example run</span></div>
     <div className="findings-head" aria-hidden="true"><span className="num">#</span><span className="num">People</span><span>Impact</span><span className="cells" data-label="Person">{people.map(person => <span key={person}>{person}</span>)}</span><span>Problem</span></div>
     <ol className="findings-rows">{problems.map((problem, row) => {

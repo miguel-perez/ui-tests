@@ -16,7 +16,7 @@ export const landing = {
   closing: 'A run reports the problems it found, or that it found none this time. There is no score and no pass.',
   person: 'What the person sees.',
   personLead: 'Your page, with a small bar over it. Nothing else.',
-  scenario: 'You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam’s email is sam@acme.co.',
+  scenario: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.",
   scenarioLine: "goal('invite a colleague')",
   scenarioCaption: 'The card is written from the goal, never from the path you expect.',
   barLine: 'outcome(...)',
@@ -74,7 +74,7 @@ context({
 /** The run's problems, ranked by impact (blocked, slowed, confused), then by how many people hit them. */
 export const problems = [
   { title: 'Pressed Add, saw nothing change, pressed it again; two invitations went out', impact: 'blocked', count: '2 of 5', quote: '"I wasn\'t sure the first one did anything."', watch: 'Person 3 at 00:58, Person 4 at 00:41', change: 'On press, change the button to "Invited sam@acme.co" and disable it.', moment: 'Person 3 · 00:58 → 01:04' },
-  { title: "Stopped at a grey Add button and pressed Can't do it", impact: 'blocked', count: '1 of 5', quote: '"It looked switched off."', watch: 'Person 2 at 00:49', change: 'Keep the button solid. Validate the address on press, with a message.', moment: 'Person 2 · 00:45 → 00:54' },
+  { title: "Stopped at a grey Add button and pressed I couldn't do this", impact: 'blocked', count: '1 of 5', quote: '"It looked switched off."', watch: 'Person 2 at 00:49', change: 'Keep the button solid. Validate the address on press, with a message.', moment: 'Person 2 · 00:45 → 00:54' },
   { title: 'Looked for Invite in the Share menu and found only link options', impact: 'slowed', count: '4 of 5', quote: '"Share is where you add people."', watch: 'Person 1 at 00:04, Person 2 at 00:06, Person 3 at 00:03, Person 5 at 00:09', change: 'Put "Invite a colleague" at the top of the Share menu.', moment: 'Person 3 · 00:03 → 00:12' },
   { title: "Typed the colleague's email into the board search", impact: 'confused', count: '2 of 5', quote: '"I figured it would find them."', watch: 'Person 1 at 00:30, Person 3 at 00:23', change: 'When a search matches no cards, offer "Invite someone with this email".', moment: 'Person 3 · 00:23 → 00:32' },
 ] as const
@@ -90,9 +90,9 @@ export const guide = {
   titles: ['Install', 'Set up', 'Try it on yourself', 'Write your own', 'Run it with real people', 'Run it with an agent'],
   installIntro: 'In a Next.js app, install the package. On any other site, paste one line instead: Without a repository.',
   install: 'You see "ui-tests" in `devDependencies`.',
-  try: 'You see a link in the terminal, then in your browser the scenario card, your own page with the bar over it, and the questions one at a time. Press "Finish". The terminal prints:',
+  try: 'You see a link in the terminal, then in your browser the scenario card, your own page with the bar over it, and the questions one at a time. Press "Done". The terminal prints:',
   write: 'You type, in `ui-tests/first.ui.test.ts`:',
-  next: 'You see, on the next `npx ui-tests`, the card now reads: "Imagine you want to invite a colleague." Pin richer wording with `scenario` once you have read it, and `ui-tests lint` prints the screener it drafted from `users` until you write a `screen` block.',
+  next: 'You see, on the next `npx ui-tests`, the card now reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam\'s email is sam@acme.co. When you think you\'ve finished, press Done. If you get stuck, press I couldn\'t do this." Pin other wording with `scenario` once you have read it, and `ui-tests lint` prints the screener it drafted from `users` until you write a `screen` block.',
   agent: 'You type, in the same file or a new one:',
   agentSee: 'You see a separate agent report:',
   read: 'Read what came back',

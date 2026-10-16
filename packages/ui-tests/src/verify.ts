@@ -39,7 +39,7 @@ export async function verify(run: Run, goal: Goal, events: Event[] = []) {
   return { ...result, tasks }
 }
 /** How an attempt ended, in the report's words. */
-export const ended: Record<Reason, string> = { done: 'pressed Done', "can't do it": "pressed Can't do it", 'abandoned early': 'left before trying', 'ran out of time': 'ran out of time' }
+export const ended: Record<Reason, string> = { done: 'pressed Done', "couldn't do this": "pressed I couldn't do this", 'abandoned early': 'left before trying', 'ran out of time': 'ran out of time' }
 /** Derives the first problem signals from one attempt, in the attempt view's words: how it ended when not by Done, actions with no effect, stops over five seconds, pages off your path and an ease rating of 3 or below. */
 export function issues(run: Run, events: Event[]) {
   const happyPath = run.context.goals[run.goalIndex].happyPath
