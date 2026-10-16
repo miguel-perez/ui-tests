@@ -99,6 +99,10 @@ Token key. Themeable: A accent, S surface, T text, R radius, F font. Fixed: focu
 4. **Floors the author cannot override.** Focus ring, 44px touch targets, reduced motion, 16px inputs and the recording red. If the accent fails 3:1 on the surface or the button text fails 4.5:1 on the accent, `npm run validate` warns; at runtime the text on the accent flips between black and white.
 5. **Where "ui-tests" appears.** One "Powered by ui-tests" line in the consent screen's footer, only when `poweredBy: true`. Never in the bar, card, questions or recording chip.
 
+### Revision after the author's review
+
+The first build of this spec read as two heavy boxes, and a separate recording chip wrapped and looked bolted on. Amended: the bar is **one** pill, 40px tall and fully rounded, opaque on the inverse surface, bottom **right** by default (the corner least likely to cover primary content), draggable and remembered, hidden while a host input has focus. The recording state is the pill's leading segment behind a hairline: red dot, elapsed time, a pause control, and **no microphone control**, because voice is only captured when the person chooses "Talk instead" on the questions after the task. Then the task summary (one line, truncated, press to reread the card), Done as a small filled pill in the accent, and "I couldn't do this" as plain text. Cooper's "single window and view" and the Vercel idiom both argue for the one surface; the separate chip in the table above is withdrawn.
+
 ### Idiom: a compact floating pill, docked as a bottom bar on phones
 
 It beats the full-width strip (Loop11), which collides with the host's sticky headers and footers, reads as a browser infobar and costs a row on every page; and the side panel (Trymata), which narrows the host's layout and can push the site across a breakpoint, so the participant tests a different layout from the one visitors see. The pill is the corner idiom Maze, Userlytics and UserTesting converged on, compacted in the Vercel manner, and what Cooper prescribes for a transient surface: small, movable, bold labels, a single view. It stays opaque rather than glass.
