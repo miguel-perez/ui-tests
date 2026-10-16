@@ -41,6 +41,7 @@ export function renderTrace(run: Run, events: Event[], recordings?: Pick<Storage
     <h2>Outcome</h2><pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(run.result, null, 2)}</pre>
     <p>Terminal reason: {run.reason ?? 'In progress'}. Final URL: {run.snapshot?.url ?? 'Not yet recorded'}.</p>
     <p>Recorded: interactions · screen {recording.screen ? 'recorded' : 'not recorded'} · voice {recording.voice ? 'recorded, consent given when they chose to talk' : 'not recorded'} · webcam {recording.webcam ? 'recorded' : 'off'}.</p>
+    {run.withdrawnAt && <p><strong>Withdrawn {new Date(run.withdrawnAt).toISOString()}: their recordings were deleted, so this attempt can no longer be fully reproduced.</strong></p>}
     <h2>First issue signals</h2>
     {/* Fixed-width fields first, the free text last: time, kind, detail. */}
     <table style={{ borderCollapse: 'collapse' }}><thead><tr><th style={fixed}>Time</th><th style={fixed}>Kind</th><th style={cell}>Detail</th></tr></thead><tbody>{found.map((issue, i) => <tr key={i}><td style={{ ...fixed, textAlign: 'right' }}>{seconds(issue.at).padStart(timeWidth)}</td><td style={fixed}>{issue.kind}</td><td style={cell}>{issue.detail}</td></tr>)}</tbody></table>

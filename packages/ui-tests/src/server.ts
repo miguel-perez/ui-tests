@@ -1,5 +1,5 @@
 import { z } from 'zod'
-import { SQLiteAdapter, type Run, type StorageAdapter } from './storage.ts'
+import { SQLiteAdapter, recordingRetentionMs, type Run, type StorageAdapter } from './storage.ts'
 
 /** Projects a run onto what the participant may see. An explicit allowlist: no compiler data, answers, hooks, trace or happy paths cross this boundary. */
 export function participantView(run: Run) {
@@ -22,12 +22,13 @@ const message = z.discriminatedUnion('action', [
   z.object({ action: z.literal('events'), events: z.array(event).max(100) }),
   z.object({ action: z.literal('end'), reason: z.enum(['done', 'gave up', 'abandoned early', 'timed out']), snapshot }),
   z.object({ action: z.literal('extend') }),
+  z.object({ action: z.literal('withdraw') }),
   z.object({ action: z.literal('voice'), question: z.enum(['difficulty', 'words']), mime: z.string().regex(/^audio\/[\w.+-]+(;[\w=.,+ -]*)?$/).max(100), audio: z.base64().max(Math.ceil(maxAudioBytes / 3) * 4), transcript: z.string().max(5000), seconds: z.number().nonnegative().max(900) }),
   z.object({ action: z.literal('questions'), seq: z.number().int().min(1).max(7), difficulty: z.string().max(5000).optional(), confidence: z.number().int().min(1).max(7).optional(), uxLite: z.object({ ease: z.number().int().min(1).max(5), usefulness: z.number().int().min(1).max(5) }).optional(), words: z.string().max(5000).optional(), answers: z.record(z.string(), z.string()).optional() }),
 ])
 /** Reads the run id and token from the `ui-tests-run` cookie. */
 function cookie(request: Request) { return /(?:^|;\s*)ui-tests-run=([^;]+)/.exec(request.headers.get('cookie') ?? '')?.[1]?.split('.') }
-/** Builds the `/api/ui-tests` route handler. GET returns the participant view; POST handles consent, begin, events, end, extend, voice and questions, validated with Zod and bound to the run's token. */
+/** Builds the `/api/ui-tests` route handler. GET returns the participant view; POST handles consent, begin, events, end, extend, withdraw, voice and questions, validated with Zod and bound to the run's token. */
 export function createCollector(getStorage: () => StorageAdapter = () => new SQLiteAdapter()) {
   /** Handles one collector request; storage is opened and closed per request. */
   return async function handler(request: Request) {
@@ -35,6 +36,8 @@ export function createCollector(getStorage: () => StorageAdapter = () => new SQL
     if (process.env.NODE_ENV === 'production') return new Response('Rehearsals require dev mode', { status: 404 })
     const store = getStorage()
     try {
+      // Recordings past the retention default go before anything is read or served.
+      store.purgeRecordings(Date.now() - recordingRetentionMs)
       const [id, token] = request.headers.get('authorization')?.replace(/^Bearer /, '').split('.') ?? cookie(request) ?? []
       if (request.method === 'GET') {
         const run = id && token ? store.authorize(id, token) : undefined
@@ -67,14 +70,23 @@ export function createCollector(getStorage: () => StorageAdapter = () => new SQL
           if (run.status !== 'active') return new Response('Attempt is not active', { status: 409 })
           if (run.extendedSeconds) return new Response('More time was already given', { status: 409 })
           run.extendedSeconds = extension(run)
+        } else if (body.action === 'withdraw') {
+          // Withdrawal removes every recording for the run and marks the attempt withdrawn; it is final.
+          return Response.json(participantView(store.withdraw(run.id)!), { headers })
         } else if (body.action === 'voice') {
+          if (run.withdrawnAt) return new Response('Attempt was withdrawn', { status: 409 })
           if (run.status !== 'questions') return new Response('Questions are not available', { status: 409 })
           const audio = Buffer.from(body.audio, 'base64')
           if (!audio.length || audio.length > maxAudioBytes) return new Response('Recording too large', { status: 413 })
           // Choosing to talk is the consent: the player asks for it once before the microphone opens.
           const recording = store.saveRecording(run.id, body.mime, audio)
+          const replaced = run.voice?.filter(answer => answer.question === body.question) ?? []
           run.voice = [...(run.voice ?? []).filter(answer => answer.question !== body.question), { question: body.question, transcript: body.transcript, recording, mime: body.mime, seconds: body.seconds }]
           run.recording = { ...(run.recording ?? { events: true, screen: false, webcam: false }), voice: true }
+          store.update(run)
+          // Recording again replaces the earlier clip: its audio is deleted, not kept unreferenced.
+          for (const answer of replaced) store.deleteRecording(answer.recording)
+          return Response.json(participantView(run), { headers })
         } else {
           if (run.status !== 'questions' && run.status !== 'finished') return new Response('Questions are not available', { status: 409 })
           run.seq = body.seq; run.difficulty = body.difficulty; run.confidence = body.confidence; run.uxLite = body.uxLite; run.words = body.words; run.answers = body.answers; run.status = 'finished'; run.result = undefined

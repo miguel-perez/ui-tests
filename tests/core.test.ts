@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 import { context, goal, task, outcome, expect, getContexts, resetContexts } from '../packages/ui-tests/src/index'
 import { compile, compileFile, lint, generateTemplate, sentence, sampleSize } from '../packages/ui-tests/src/compiler'
 import { deriveScreener, inferScreen, recencyBands } from '../packages/ui-tests/src/screener'
-import { SQLiteAdapter } from '../packages/ui-tests/src/storage'
+import { SQLiteAdapter, recordingRetentionMs } from '../packages/ui-tests/src/storage'
 import { verify, issues } from '../packages/ui-tests/src/verify'
 import { participantView, createCollector, maxAudioBytes } from '../packages/ui-tests/src/server'
 import * as siteCopy from '../apps/web/lib/copy'
@@ -159,8 +159,11 @@ describe('storage, verification and participant boundary', () => {
       const response = await post(voice)
       assert(response.status).toBe(200)
       assert((await response.json()).recording).toEqual({ events: true, screen: false, voice: true, webcam: false })
-      // Recording again replaces the earlier answer for the same question.
+      const first = store.get(run.id)!.voice![0].recording
+      // Recording again replaces the earlier answer for the same question and deletes its audio.
       assert((await post({ ...voice, transcript: 'Share seemed like the place for people. <b>really</b>' })).status).toBe(200)
+      assert(store.recording(first)).toBeUndefined()
+      assert(store.db.prepare('SELECT COUNT(*) AS n FROM recordings').get()).toEqual({ n: 1 })
       assert((await post({ action: 'questions', seq: 3, uxLite: { ease: 2, usefulness: 4 }, words: 'Share seemed like the place for people.' })).status).toBe(200)
       const saved = store.get(run.id)!
       assert(saved.voice).toHaveLength(1)
@@ -175,6 +178,30 @@ describe('storage, verification and participant boundary', () => {
       assert(trace).toContain('Confidence: not asked')
       // Voice is only taken while the questions are open: never after the answers are sent.
       assert((await post(voice)).status).toBe(409)
+      // Withdrawal deletes every recording for the run and marks the attempt withdrawn; voice is refused afterwards.
+      const kept = saved.voice![0].recording
+      assert((await post({ action: 'withdraw' })).status).toBe(200)
+      assert(store.recording(kept)).toBeUndefined()
+      assert(store.db.prepare('SELECT COUNT(*) AS n FROM recordings').get()).toEqual({ n: 0 })
+      const withdrawn = store.get(run.id)!
+      assert(withdrawn.withdrawnAt).toEqual(assert.any(Number))
+      assert(withdrawn.voice).toBeUndefined()
+      assert(withdrawn.recording?.voice).toBe(false)
+      assert(store.db.prepare('SELECT data FROM attempts').get()).toEqual({ data: assert.stringContaining('"withdrawnAt"') })
+      assert(renderTrace(withdrawn, [], store)).toContain('their recordings were deleted')
+    } finally { close.mockRestore(); store.close() }
+  })
+  it('deletes recordings past the 90-day retention default', async () => {
+    const store = new SQLiteAdapter(':memory:')
+    const close = vi.spyOn(store, 'close').mockImplementation(() => {})
+    try {
+      const run = store.create(compile(authored())[0])
+      const old = store.saveRecording(run.id, 'audio/webm', Buffer.from('old'))
+      const recent = store.saveRecording(run.id, 'audio/webm', Buffer.from('recent'))
+      store.db.prepare('UPDATE recordings SET created_at=? WHERE id=?').run(Date.now() - recordingRetentionMs - 1000, old)
+      await createCollector(() => store)(new Request('http://localhost/api/ui-tests', { headers: { cookie: `ui-tests-run=${run.id}.${run.token}` } }))
+      assert(store.recording(old)).toBeUndefined()
+      assert(store.recording(recent)!.audio.toString()).toBe('recent')
     } finally { close.mockRestore(); store.close() }
   })
   it('gives more time once, records an early abandonment apart from giving up, and asks confidence only when unverifiable', async () => {
