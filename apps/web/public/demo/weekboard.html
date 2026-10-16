@@ -275,7 +275,7 @@ body.scenario .player { display: contents; }
       <h1>Link settings</h1>
       <p class="lead">Control what people can do with the board link.</p>
       <div class="row"><div class="l"><b>Board link</b><span>Anyone with the link can open the board.</span></div><div class="field ro" style="max-width:340px">weekboard.app/b/acme/product-week</div></div>
-      <div class="row"><div class="l"><b>Link is active</b><span>Turn off to stop the link working.</span></div><button class="toggle on" aria-pressed="true" onclick="this.classList.toggle('on')"></button></div>
+      <div class="row"><div class="l"><b>Link is active</b><span>Turn off to stop the link working.</span></div><button class="toggle on" aria-pressed="true" aria-label="Link is active" onclick="this.classList.toggle('on'); this.setAttribute('aria-pressed', this.classList.contains('on'))"></button></div>
       <div class="row"><div class="l"><b>People with the link can</b><span>Applies to everyone who is not a member.</span></div><select><option>View</option><option>Comment</option><option>Edit</option></select></div>
       <div class="row"><div class="l"><b>Expires</b><span>The link stops working after this date.</span></div><select><option>Never</option><option>In 7 days</option><option>In 30 days</option></select></div>
       <div class="row"><div class="l"><b>Reset link</b><span>Old links stop working.</span></div><button class="btn">Reset</button></div>
@@ -297,7 +297,7 @@ body.scenario .player { display: contents; }
           <p class="lead">The board's name and how the week is shown.</p>
           <div class="row"><div class="l"><b>Board name</b></div><div class="field" style="max-width:320px"><input value="Product week"></div></div>
           <div class="row"><div class="l"><b>Week starts on</b></div><select><option>Monday</option><option>Sunday</option></select></div>
-          <div class="row"><div class="l"><b>Show weekends</b><span>Adds Saturday and Sunday columns.</span></div><button class="toggle" aria-pressed="false" onclick="this.classList.toggle('on')"></button></div>
+          <div class="row"><div class="l"><b>Show weekends</b><span>Adds Saturday and Sunday columns.</span></div><button class="toggle" aria-pressed="false" aria-label="Show weekends" onclick="this.classList.toggle('on'); this.setAttribute('aria-pressed', this.classList.contains('on'))"></button></div>
         </div>
         <div class="pane" data-pane="members">
           <h1>Members</h1>
@@ -319,8 +319,8 @@ body.scenario .player { display: contents; }
         <div class="pane" data-pane="notifications">
           <h1>Notifications</h1>
           <p class="lead">What Weekboard sends you by email.</p>
-          <div class="row"><div class="l"><b>Daily summary</b><span>Every morning at 8:00.</span></div><button class="toggle on" aria-pressed="true" onclick="this.classList.toggle('on')"></button></div>
-          <div class="row"><div class="l"><b>Mentions</b></div><button class="toggle on" aria-pressed="true" onclick="this.classList.toggle('on')"></button></div>
+          <div class="row"><div class="l"><b>Daily summary</b><span>Every morning at 8:00.</span></div><button class="toggle on" aria-pressed="true" aria-label="Daily summary" onclick="this.classList.toggle('on'); this.setAttribute('aria-pressed', this.classList.contains('on'))"></button></div>
+          <div class="row"><div class="l"><b>Mentions</b></div><button class="toggle on" aria-pressed="true" aria-label="Mentions" onclick="this.classList.toggle('on'); this.setAttribute('aria-pressed', this.classList.contains('on'))"></button></div>
         </div>
         <div class="pane" data-pane="billing">
           <h1>Billing</h1>
@@ -410,7 +410,7 @@ body.scenario .player { display: contents; }
   window.addEventListener('hashchange', route);
   route();
   $('#linkBack').addEventListener('click', () => {
-    if (history.length > 1) history.back(); else location.hash = '';
+    location.hash = '';
   });
 
   /* members: invite */
@@ -435,9 +435,16 @@ body.scenario .player { display: contents; }
   /* player surfaces (demo only) */
   if (/[?&]scenario/.test(location.search)) {
     document.body.classList.add('scenario');
+    // The dialog owns focus until Start: the page behind it is inert and Start is focused.
+    const behind = [document.querySelector('header.top'), document.querySelector('main')].filter(Boolean);
+    behind.forEach(el => { el.inert = true; });
+    $('#scenario').setAttribute('aria-modal', 'true');
+    $('#scenarioStart').focus();
     $('#scenarioStart').addEventListener('click', () => {
       $('#scenario').hidden = true;
+      behind.forEach(el => { el.inert = false; });
       $('#bar').hidden = false;
+      $('#done').focus();
     });
     $('#done').addEventListener('click', () => { $('#bar').hidden = true; });
     $('#cant').addEventListener('click', () => { $('#bar').hidden = true; });

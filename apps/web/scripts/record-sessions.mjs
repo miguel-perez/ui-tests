@@ -239,8 +239,8 @@ const enc = spawnSync(ffmpeg, [
 ], { encoding: 'utf8' });
 if (enc.status !== 0) {
   console.error(enc.stderr);
-  console.error('Encoding failed; keeping the untrimmed recording.');
-  copyFileSync(rawPath, finalPath);
+  rmSync(tmpDir, { recursive: true, force: true });
+  throw new Error('Encoding failed; the recording was not published because its metadata assumes the trimmed time origin.');
 }
 rmSync(tmpDir, { recursive: true, force: true });
 
