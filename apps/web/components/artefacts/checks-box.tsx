@@ -2,7 +2,7 @@ import { Icon } from '../icon'
 
 type Check = { name: string; summary: string; state: 'issue' | 'pass'; link: string }
 const checks: Check[] = [
-  { name: 'ui-tests', summary: 'Problems found: 4 across 5 people', state: 'issue', link: '#findings' },
+  { name: 'ui-tests', summary: 'Reached the goal: 2 of 5 · 4 problems found', state: 'issue', link: '#findings' },
   { name: 'preview', summary: 'Deployment ready', state: 'pass', link: '#findings' },
   { name: 'tests', summary: '212 passed', state: 'pass', link: '#findings' },
 ]

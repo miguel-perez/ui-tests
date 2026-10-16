@@ -1,6 +1,6 @@
 # The site schema: content types, components and layout rules
 
-16 October 2026. The build plan for the landing page and the guide from round three on.
+16 October 2026. The build plan for the landing page and the guide from round three on. Round four (issue #22) replaces `Session` with `Attempt` and `SessionView` with `AttemptView`, from [`../discovery/reporting-schema-research.md`](../discovery/reporting-schema-research.md) and [`../../design/artefacts/attempt-view.html`](../../design/artefacts/attempt-view.html), and puts every surface on the research's words.
 
 The pages are built from content types, each rendered by one component with one layout rule. A block is a sequence of typed content, not a hand-drawn layout. The grid is 12 columns on a 1248px container with 24px gutters; at 375 everything stacks in source order.
 
@@ -13,10 +13,10 @@ The pages are built from content types, each rendered by one component with one 
 | TerminalOutput | title (the command), fragment (from the Ink renderer), marked rank | `TerminalWindow` | The only component with terminal chrome. Width is its content's: 8 columns alone, 5 beside a Claim, 12 in the commands block. |
 | CodeFile | filename, language, lines, marked line | `CodeWindow` | Filename tab, copy control, highlighted lines. 8 columns alone, 12 when it is the block's only artefact. |
 | InlineCode | fragment | `Code` | Highlighted inline; appears only inside Caption text. |
-| Session | person, metadata (source, device, viewport, duration, outcome, ease, confidence, UX-Lite), recording state (screen, voice, webcam with consent), video, poster, moments[], words, audio | `SessionView` | 12 columns. Video 7 columns left, timeline 5 columns right, metadata strip above, words and audio below. Light theme. No terminal chrome. |
+| Attempt | headline: reached (Yes / No / Couldn't tell), ended (how it ended), sure (n of 7, "Wrong, and sure" only when No and 7), blockers[] (up to three moments, worst first: impact, what happened, where, time); body: time on this goal, ease (n of 7, typical 5.5), video (plays in place), moments[] (the flow; ends where "How it ended" says), words; folded: path (theirs and yours), check (the assertion diff); footer: person (Person n of N, source, what they use today), setup (device, browser, window, date), consent (screen, voice, camera) | `AttemptView` | 12 columns; the flow runs down the page; a moment card is 7 columns clip, 5 columns text; nothing sticky. The result sentence takes 7 columns and its four facts 5; "How it felt" takes 5 and "What they said" 7. Light theme. No terminal chrome. |
 | Reel | session, from, to, moment label, words | `ReelFrame` | 16:10 frame with timestamp overlay and progress, the moment label and words as its caption inside the frame's chrome (this placement supersedes the earlier artefact plan, which put them under the frame). 5 columns in the hero, 4 as a report thumbnail. |
-| Finding | rank, problem, count, quote, moments[], change | `FindingRow` | A row in `FindingsList`; expanded shows the reel thumbnail 4 columns and the quote, moments and change 8 columns. |
-| FindingsList | findings[], result line | `FindingsList` | 12 columns, rows separated by hairlines, result line as the footer. Lives in the pull-request example, not on its own. |
+| Finding | rank, problem, impact (blocked, slowed, confused), count, quote, moments[], change | `FindingRow` | A row in `FindingsList`; expanded shows the reel thumbnail 4 columns and the quote, moments and change 8 columns. |
+| FindingsList | findings[] (ranked by impact, then by how many people hit them), result lines ("Reached the goal: x of n"; "Wrong, and sure: x of n" only when at least one; "Would it help them? · Easy to use?" once) | `FindingsList` | 12 columns, rows separated by hairlines, result lines as the footer. Lives in the pull-request example, not on its own. |
 | Check | name, summary, state, link | `CheckRow` in `ChecksBox` | 12 columns in the pull-request example; the box draws GitHub's chrome. |
 | Run | name, date, participants, status, headline result | `RunRow` in `Dashboard` | 12 columns in the hosted block: a list of runs, each row carrying its fields in fixed columns (name 4, date 2, participants 2, status 2, result 2). Light theme. |
 | Snippet | the one line | `CodeWindow` | 12 columns above the Dashboard. |
@@ -29,12 +29,16 @@ The pages are built from content types, each rendered by one component with one 
 
 ### Page composition
 
-Landing: Claim; Section + Session (what comes back); Section + three PlayerSurface rows (what the person sees); Section + OptionsRow (where the people come from); Section + ChecksBox + FindingsList (in the pull request); Section + AgentRun (the agent); Section + Snippet + Dashboard (the hosted track); Section + TerminalOutput (commands) + CodeFile (this page's test) + Terms. Guide: Step × 6, then the "Without a repository" track as Step × 2.
+Landing: Claim; Section + Attempt (what comes back); Section + three PlayerSurface rows (what the person sees); Section + OptionsRow (where the people come from); Section + ChecksBox + FindingsList (in the pull request); Section + AgentRun (the agent); Section + Snippet + Dashboard (the hosted track); Section + TerminalOutput (commands) + CodeFile (this page's test) + Terms. Guide: Step × 6, then the "Without a repository" track as Step × 2.
 
 ### Rules that apply to every component
 
 - One component per content type; no block invents its own layout.
-- Product surfaces (Session, Reel contents, Dashboard, PlayerSurface, FindingsList, OptionCard mini UIs) are in the inverse light theme; terminals and code windows are dark; the page is dark.
+- Product surfaces (Attempt, Reel contents, Dashboard, PlayerSurface, FindingsList, OptionCard mini UIs) are in the inverse light theme; terminals and code windows are dark; the page is dark.
 - Empty area in a block never exceeds the area of its artefacts; a side caption never has a column to itself wider than its text needs.
 - Hover and focus change paint only.
-- Every component that owns chrome (`TerminalWindow`, `CodeWindow`, `SessionView`, `ReelFrame`, `FindingsList`, `ChecksBox`, `Dashboard`, `PlayerFrame`, `OptionCard`) renders the label "Example run" once in that chrome whenever its content is from the example run; the label is a property of the chrome component, set by the page, not a field on the content types, so it is never omitted or duplicated.
+- Every component that owns chrome (`TerminalWindow`, `CodeWindow`, `AttemptView`, `ReelFrame`, `FindingsList`, `ChecksBox`, `Dashboard`, `PlayerFrame`, `OptionCard`) renders the label "Example run" once in that chrome whenever its content is from the example run; the label is a property of the chrome component, set by the page, not a field on the content types, so it is never omitted or duplicated.
+
+### Words
+
+Every surface that shows an attempt's data (the trace data, the Ink renderer, the HTML fragment, the report rows, the pull-request check, the dashboard and the landing copy) uses the words of issue #22: Person 3 (of 5), paid panel, Reached the goal (Yes / No / Couldn't tell), How it ended (pressed Done / pressed Can't do it / ran out of time / withdrew / left), "Wrong, and sure" only at 7 of 7 and not reached, How easy was it? (7 = very easy), How sure they'd done it (7 = completely sure), Time on this goal, Off your path, Went back, Stopped n s, "<action>, nothing happened", and "Pressed Done" as the last row of the flow. Impact is blocked, slowed or confused; on an attempt that did not reach the goal, the moment that produced the end state is "wrong end state". The run's after-goal answers appear once, on the run: "Would it help them? 4 of 5 · Easy to use? 2 of 5". `tests/vocabulary.test.ts` holds the list.

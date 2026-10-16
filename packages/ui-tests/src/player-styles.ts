@@ -11,7 +11,7 @@ export const playerTheme = {
   muted: '#4c5374',
   comment: '#9aa1c2',
   moment: '#a64d00',
-  deviation: '#2f5bcc',
+  path: '#2f5bcc',
   dead: '#c0244b',
   pause: '#7d5600',
   done: '#00726a',
@@ -28,11 +28,11 @@ export const playerCss = `
 .uit button, .uit input, .uit textarea, .uit select { font: inherit; color: inherit; }
 .uit button { cursor: pointer; border: 1px solid var(--uit-line); background: var(--uit-surface); border-radius: 6px; padding: 0 16px; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 500; }
 .uit button:disabled { cursor: default; color: var(--uit-muted); background: var(--uit-canvas); }
-.uit :focus-visible { outline: 2px solid var(--uit-deviation); outline-offset: 2px; }
+.uit :focus-visible { outline: 2px solid var(--uit-path); outline-offset: 2px; }
 .uit .uit-primary { background: var(--uit-moment); border-color: var(--uit-moment); color: #ffffff; }
 .uit .uit-primary:disabled { background: var(--uit-line); border-color: var(--uit-line); color: var(--uit-muted); }
 .uit .uit-quiet { background: transparent; border-color: transparent; }
-.uit .uit-link { border: 0; min-height: 32px; padding: 0 4px; background: transparent; color: var(--uit-deviation); text-decoration: underline; text-underline-offset: 3px; }
+.uit .uit-link { border: 0; min-height: 32px; padding: 0 4px; background: transparent; color: var(--uit-path); text-decoration: underline; text-underline-offset: 3px; }
 .uit .uit-progress { font-size: 13px; font-weight: 500; color: var(--uit-muted); font-variant-numeric: tabular-nums; }
 .uit .uit-ends, .uit .uit-hint { font-size: 14px; color: var(--uit-muted); }
 .uit .uit-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
@@ -81,7 +81,7 @@ export const playerCss = `
 .uit-scale input, .uit-choices input { position: absolute; inset: 0; opacity: 0; margin: 0; width: 100%; height: 100%; cursor: pointer; }
 .uit-scale span { display: grid; place-items: center; height: 56px; border: 1px solid var(--uit-line); border-radius: 8px; font-size: 18px; font-weight: 500; font-variant-numeric: tabular-nums; background: var(--uit-surface); }
 .uit-scale input:checked + span, .uit-choices input:checked + span { background: var(--uit-moment); border-color: var(--uit-moment); color: #ffffff; }
-.uit-scale input:focus-visible + span, .uit-choices input:focus-visible + span { outline: 2px solid var(--uit-deviation); outline-offset: 2px; }
+.uit-scale input:focus-visible + span, .uit-choices input:focus-visible + span { outline: 2px solid var(--uit-path); outline-offset: 2px; }
 .uit-anchors { display: flex; justify-content: space-between; gap: 16px; font-size: 14px; color: var(--uit-muted); }
 .uit-choices { display: grid; gap: 8px; }
 .uit-choices label { position: relative; display: block; }

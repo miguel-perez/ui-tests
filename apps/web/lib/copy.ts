@@ -4,13 +4,15 @@ export const intro = 'Say who your users are, what they are trying to do, and ho
 export const landing = {
   access: 'Open source. Nothing to sign up for. Runs on your preview or your live site.',
   caption: "Each line opens to the moment to watch, the person's words, and the smallest change that would fix it.",
-  moment: 'P3 · 00:03 · looked for Invite in the Share menu',
-  words: '“Share is where you add people. I checked there first.”',
+  moment: 'Person 3 · 00:58 · pressed Add twice',
+  words: '“I wasn’t sure the first Add did anything, so I pressed it again.”',
   comesBack: 'What comes back.',
-  comesBackLead: 'Here is one person’s attempt as it comes back: the recording, every moment on a timeline, and their words.',
+  comesBackLead: 'Here is one person’s attempt at one goal as it comes back: whether they reached it, the moments that got in the way, each playing in place, and how it felt.',
   fileCaption: 'If you have written a Playwright test, you have written this.',
   result: 'Problems found: 4 across 5 people.',
-  priority: 'Problem 1 is one link. Problem 2 is the one to fix first: both people who hit it believed they were finished, and their colleague got the same email twice.',
+  reached: 'Reached the goal: 2 of 5.',
+  afterGoal: 'After the goal, typically: Would it help them? 4 of 5 · Easy to use? 2 of 5',
+  priority: 'Problem 1 is the one to fix first: both people who hit it pressed Done believing they had finished, and their colleague got the same email twice. Problem 3 is one link.',
   closing: 'A run reports the problems it found, or that it found none this time. There is no score and no pass.',
   person: 'What the person sees.',
   personLead: 'Your page, with a small bar over it. Nothing else.',
@@ -25,10 +27,11 @@ export const landing = {
   peopleLead: 'Friends are kind and coworkers know too much. Three ways to reach people who are neither.',
   pr: 'In the pull request.',
   prLead: 'Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request with a report page anyone on the team can open. Your other tests prove the code works. This one shows whether a person can use it.',
-  prCaption: "The report page opens on the ranked problems, each with the moments to watch and what to change, and every person's trace below.",
+  prCaption: "The report page opens on whether people reached the goal and the ranked problems, each with the moments to watch and what to change, and every person's attempt below.",
   commands: 'Three commands.',
-  requirement: 'Node 22 and a Next.js app.',
-  commandsClosing: 'The third command runs the example task on you, so you see the card, the bar and your own trace before anyone else does. Open source, with no seats and no account. Your own link and your own visitors cost nothing. The panel is the only thing you pay for, and you set the cap before it starts.',
+  requirement: 'Node 22. Paste one line on any site, or install the package in a Next.js app.',
+  anySite: 'No Next.js app? Paste the one line from the hosted block on any site instead.',
+  commandsClosing: 'The third command runs the example task on you, so you see the card, the bar and your own trace before anyone else does. Open source, with no seats and no account. Your own link and your own visitors cost nothing. The paid panel is the only thing you pay for, and you set the cap before it starts.',
   ownTest: 'This page runs this test.',
   ownCaption: 'The outcome checks that you reached the guide. If you get stuck on the way there, this page may ask you to say so. That is the third way to find people, running here.',
 }
@@ -68,15 +71,16 @@ context({
     })
   })
 })`
+/** The run's problems, ranked by impact (blocked, slowed, confused), then by how many people hit them. */
 export const problems = [
-  { title: 'Looked for Invite in the Share menu and found only link options', severity: 'slowed', count: '4 of 5', quote: '"Share is where you add people."', watch: 'P1 00:04, P2 00:06, P3 00:03, P5 00:09', change: 'Put "Invite a colleague" at the top of the Share menu.', moment: 'P3 · 00:03 → 00:12' },
-  { title: 'Pressed Add, saw nothing change, pressed it again; two invitations went out', severity: 'misled', count: '2 of 5', quote: '"I wasn\'t sure the first one did anything."', watch: 'P3 00:58, P4 00:41', change: 'On press, change the button to "Invited sam@acme.co" and disable it.', moment: 'P3 · 00:58 → 01:04' },
-  { title: "Typed the colleague's email into the board search", severity: 'slowed', count: '2 of 5', quote: '"I figured it would find them."', watch: 'P3 00:23, P1 00:30', change: 'When a search matches no cards, offer "Invite someone with this email".', moment: 'P3 · 00:23 → 00:32' },
-  { title: 'Stopped at a grey Add button and gave up', severity: 'blocked', count: '1 of 5', quote: '"It looked switched off."', watch: 'P2 00:49', change: 'Keep the button solid. Validate the address on press, with a message.', moment: 'P2 · 00:45 → 00:54' },
+  { title: 'Pressed Add, saw nothing change, pressed it again; two invitations went out', impact: 'blocked', count: '2 of 5', quote: '"I wasn\'t sure the first one did anything."', watch: 'Person 3 at 00:58, Person 4 at 00:41', change: 'On press, change the button to "Invited sam@acme.co" and disable it.', moment: 'Person 3 · 00:58 → 01:04' },
+  { title: "Stopped at a grey Add button and pressed Can't do it", impact: 'blocked', count: '1 of 5', quote: '"It looked switched off."', watch: 'Person 2 at 00:49', change: 'Keep the button solid. Validate the address on press, with a message.', moment: 'Person 2 · 00:45 → 00:54' },
+  { title: 'Looked for Invite in the Share menu and found only link options', impact: 'slowed', count: '4 of 5', quote: '"Share is where you add people."', watch: 'Person 1 at 00:04, Person 2 at 00:06, Person 3 at 00:03, Person 5 at 00:09', change: 'Put "Invite a colleague" at the top of the Share menu.', moment: 'Person 3 · 00:03 → 00:12' },
+  { title: "Typed the colleague's email into the board search", impact: 'confused', count: '2 of 5', quote: '"I figured it would find them."', watch: 'Person 1 at 00:30, Person 3 at 00:23', change: 'When a search matches no cards, offer "Invite someone with this email".', moment: 'Person 3 · 00:23 → 00:32' },
 ] as const
 export const sources = [
   ['Your link', 'Anyone you send it to: a customer, a community, the person at the next desk', 'Free', 'As each person finishes'],
-  ['A panel', 'People matched to the `users` line in your file, found for you', 'About $54 for a short task, under a cap you set', 'Within 48 hours'],
+  ['A paid panel', 'People matched to the `users` line in your file, found for you', 'About $54 for a short task, under a cap you set', 'Within 48 hours'],
   ['Your visitors', 'On the hosted version: people already on your live site, invited the moment they are visibly struggling', 'Free', 'As each person finishes'],
 ] as const
 export const commands = { install: 'npm install -D ui-tests', init: 'npx ui-tests init', run: 'npx ui-tests', people: 'npx ui-tests run', report: 'npx ui-tests report k2m9' }
@@ -84,6 +88,7 @@ export const rehearsal = 'Rehearsal: 0 of 5 planned attempts recorded.'
 export const guide = {
   title: 'Getting started',
   titles: ['Install', 'Set up', 'Try it on yourself', 'Write your own', 'Run it with real people', 'Run it with an agent'],
+  installIntro: 'In a Next.js app, install the package. On any other site, paste one line instead: Without a repository.',
   install: 'You see "ui-tests" in `devDependencies`.',
   try: 'You see a link in the terminal, then in your browser the scenario card, your own page with the bar over it, and the questions one at a time. Press "Finish". The terminal prints:',
   write: 'You type, in `ui-tests/first.ui.test.ts`:',
@@ -110,7 +115,7 @@ export const agent = {
 }
 export const hosted = {
   heading: 'No repo to put it in? Paste one line.',
-  lead: 'One script tag on your live site, through your tag manager if that is how you ship. Then the same test in a form instead of a file: who the users are, what they are trying to do, and how you can tell they did it, by a page they reach, an element they see or a question they answer. People come from your link, a panel or your own visitors, and the report is a page you can share.',
+  lead: 'One script tag on your live site, through your tag manager if that is how you ship. Then the same test in a form instead of a file: who the users are, what they are trying to do, and how you can tell they did it, by a page they reach, an element they see or a question they answer. People come from your link, a paid panel or your own visitors, and the report is a page you can share.',
   closing: 'Same test, same report, no install.',
   snippet: '<script src="https://ui-tests.com/s.js" data-site="weekboard" async></script>',
   users: 'people who signed up this week and want a colleague on their board',
@@ -125,9 +130,9 @@ export const hosted = {
 /** The hosted dashboard: other runs on the same site, none of them the example run shown above it. Fixed fields first, the name last. */
 export const runs = [
   { date: '16 Oct', participants: '3 of 5', status: 'running', progress: 0.6, result: '', band: '', name: 'change the plan to Team' },
-  { date: '15 Oct', participants: '5 of 5', status: 'done', progress: 1, result: '1 problem', band: 'great', name: 'export last month’s board' },
-  { date: '12 Oct', participants: '8 of 8', status: 'done', progress: 1, result: '3 problems', band: 'check', name: 'start a board from a template' },
-  { date: '9 Oct', participants: '5 of 5', status: 'done', progress: 1, result: 'none found', band: 'great', name: 'find a card from last week' },
+  { date: '15 Oct', participants: '5 of 5', status: 'done', progress: 1, result: 'Reached 5 of 5 · 1 problem', band: 'great', name: 'export last month’s board' },
+  { date: '12 Oct', participants: '8 of 8', status: 'done', progress: 1, result: 'Reached 6 of 8 · 3 problems', band: 'check', name: 'start a board from a template' },
+  { date: '9 Oct', participants: '5 of 5', status: 'done', progress: 1, result: 'Reached 5 of 5 · none found', band: 'great', name: 'find a card from last week' },
   { date: '—', participants: '0 of 5', status: 'draft', progress: 0, result: '', band: '', name: 'archive a finished board' },
 ] as const
 export const ui = { wordmark: 'ui-tests', guide: 'Guide', github: 'GitHub', getStarted: 'Get started', skip: 'Skip to content', navigation: 'Main navigation', steps: 'Getting started', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy. Select and copy the code.', typescript: 'TypeScript', shell: 'Shell', output: 'Output', example: 'Example run' }

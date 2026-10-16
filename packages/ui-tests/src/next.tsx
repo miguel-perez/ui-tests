@@ -12,7 +12,7 @@ import { playerCss } from './player-styles.ts'
 /** What is captured for the attempt. Interactions always; screen, voice and webcam each only with consent. */
 export type RecordingState = { events: true; screen: boolean; voice: boolean; webcam: boolean }
 /** The participant view served by the collector; see `participantView` for the allowlist. */
-type Participant = { id: string; author: string; purpose: string; status: string; scenario: string; tasks: string[]; timeout: number; extended: boolean; startedAt: number; sequence: { index: number; total: number }; askConfidence: boolean; recording: RecordingState; verificationReady: boolean; validation?: { question: string; choices: string[] } }
+type Participant = { id: string; author: string; purpose: string; status: string; scenario: string; tasks: string[]; timeBox: number; extended: boolean; startedAt: number; sequence: { index: number; total: number }; askConfidence: boolean; recording: RecordingState; verificationReady: boolean; validation?: { question: string; choices: string[] } }
 const endpoint = '/api/ui-tests'
 /** Posts a collector message and returns the updated participant view. */
 async function send(body: unknown) {
@@ -29,6 +29,12 @@ function snapshot() {
   })
   root.querySelectorAll('*').forEach(node => { for (const attribute of Array.from(node.attributes)) if (/^on|token|secret|password/i.test(attribute.name)) node.removeAttribute(attribute.name) })
   return { url: location.origin + location.pathname, dom: root.outerHTML }
+}
+/** The page body without the player's own surfaces, whose clock re-renders every second. */
+function pageMarkup() {
+  const body = document.body.cloneNode(true) as HTMLElement
+  body.querySelectorAll('[data-research-taskbar]').forEach(node => node.remove())
+  return body.innerHTML
 }
 /** A short, stable label for an element: tag, id and aria-label. */
 function targetLabel(element: Element) {
@@ -69,12 +75,12 @@ export function ScenarioCard({ scenario, onStart, index = 1, total = 1, level = 
  * - "Show task" expands the full card inline: participants must be able to reread the task (NN/g; UXtweak).
  * - Exactly two task controls. Done confirms "Finished this task?" because stressed or fast participants end tasks by accident (UXtweak, 2020).
  * - "I couldn't do this" is always available (O'Brien: always let participants give up). Before the first interaction it confirms and
- *   records an early abandonment; after one it records "gave up"; both are distinct from failure (Maze; UXtweak outcomes; Loop11 abandon).
+ *   records an early abandonment; after one it records "can't do it"; both are distinct from not reaching the goal (Maze; UXtweak outcomes; Loop11 abandon).
  * - Its wording describes the situation, not the person (MeasuringU on social-desirability bias).
  * - "Finish" replaces Done on the last task (UserTesting's next/done switch). No back, and no timer by default: limits shift ratings (Sauro).
  *   Only near the end of the time box does "Need more time?" appear, once (PRD 01: the participant may ask for more time once).
  */
-export function TaskBar({ scenario, steps = [], index = 1, total = 1, interacted, onDone, onGiveUp, onStep, canExtend = false, onExtend, busy = false, contained = false, error }: { scenario: string; steps?: string[]; index?: number; total?: number; interacted: boolean; onDone: () => void; onGiveUp: (reason: 'gave up' | 'abandoned early') => void; onStep?: (step: number) => void; canExtend?: boolean; onExtend?: () => void; busy?: boolean; contained?: boolean; error?: string }) {
+export function TaskBar({ scenario, steps = [], index = 1, total = 1, interacted, onDone, onGiveUp, onStep, canExtend = false, onExtend, busy = false, contained = false, error }: { scenario: string; steps?: string[]; index?: number; total?: number; interacted: boolean; onDone: () => void; onGiveUp: (reason: "can't do it" | 'abandoned early') => void; onStep?: (step: number) => void; canExtend?: boolean; onExtend?: () => void; busy?: boolean; contained?: boolean; error?: string }) {
   const id = useId()
   const [expanded, setExpanded] = useState(false)
   const [confirm, setConfirm] = useState<'done' | 'leave' | null>(null)
@@ -105,7 +111,7 @@ export function TaskBar({ scenario, steps = [], index = 1, total = 1, interacted
         if (steps.length && !onLastStep) { onStep?.(step); setStep(step + 1); return }
         setConfirm('done')
       }}>{doneLabel}</button>
-      <button className="uit-quiet" disabled={busy} onClick={() => interacted ? onGiveUp('gave up') : setConfirm('leave')}>I couldn't do this</button>
+      <button className="uit-quiet" disabled={busy} onClick={() => interacted ? onGiveUp("can't do it") : setConfirm('leave')}>I couldn't do this</button>
     </div>
     {expanded && <div className="uit-task" id={`${id}-task`}><p>{scenario}</p>{steps.length > 0 && <p className="uit-hint">Step {step + 1}: {steps[step]}</p>}<p className="uit-ends">{endingLine(last)}</p></div>}
     {confirm === 'done' && <div className="uit-confirm" role="group" aria-label="Finished this task?"><p>Finished this task?</p><button ref={confirmRef} className="uit-primary" disabled={busy} onClick={() => { setConfirm(null); onDone() }}>Yes, I've finished</button><button onClick={() => setConfirm(null)}>Not yet</button></div>}
@@ -202,14 +208,14 @@ export function TalkInstead({ consent, onConsent, clip, onClip, onTranscript, on
 }
 
 /** One post-task answer set, as the collector stores it. */
-export type Answers = { seq: number; difficulty?: string; confidence?: number; uxLite: { ease: number; usefulness: number }; words?: string; validation?: string; voice: { question: 'difficulty' | 'words'; clip: Clip }[] }
+export type Answers = { seq: number; difficulty?: string; confidence?: number; afterGoal: { ease: number; usefulness: number }; words?: string; validation?: string; voice: { question: 'difficulty' | 'words'; clip: Clip }[] }
 type Screen = 'seq' | 'difficulty' | 'confidence' | 'validation' | 'uxEase' | 'uxUse' | 'words'
 const scales: Partial<Record<Screen, { question: string; points: number; low: string; high: string; hint?: string }>> = {
-  // MeasuringU: the current SEQ stem, seven numbered points, difficult on the left; asked after every attempt, including give-ups.
+  // MeasuringU: the current Single Ease Question stem, seven numbered points, difficult on the left; asked after every attempt, including give-ups.
   seq: { question: 'Overall, how difficult or easy did you find this task?', points: 7, low: '1 Very difficult', high: '7 Very easy' },
   // MeasuringU: confidence 1 to 7, asked only when the outcome cannot be verified; never read as a completion rate.
   confidence: { question: 'How confident are you that you completed the task?', points: 7, low: '1 Not at all confident', high: '7 Very confident' },
-  // PRD 02: UX-Lite at the end of the run, two items on a 5-point agreement scale.
+  // PRD 02: after the goal, "Easy to use?" and "Would it help them?", two items on a 5-point agreement scale.
   uxEase: { question: 'This website is easy to use.', points: 5, low: '1 Strongly disagree', high: '5 Strongly agree', hint: 'How much do you agree?' },
   uxUse: { question: 'This website’s capabilities meet my requirements.', points: 5, low: '1 Strongly disagree', high: '5 Strongly agree', hint: 'How much do you agree?' },
 }
@@ -217,7 +223,7 @@ const scales: Partial<Record<Screen, { question: string; points: number; low: st
 /**
  * The questions after a task, one per screen in the Typeform register (issue #18, item 8; Lyssna, UXtweak and Maze show one question per step):
  * large targets, the scale selectable by keys 1 to 7 as well as by pointer, "Question n of N", a calm transition, the open question last.
- * "What made it difficult?" follows an SEQ of 4 or below (MeasuringU seq10). Optional questions show "Skip" (Maze). Every question that
+ * "What made it difficult?" follows an ease rating of 4 or below (MeasuringU seq10). Optional questions show "Skip" (Maze). Every question that
  * takes words takes voice.
  */
 export function Questions({ askConfidence = false, validation, ready = true, onSubmit, onVoiceState, submitLabel = 'Send answers', busy = false, autoFocus = false }: { askConfidence?: boolean; validation?: { question: string; choices: string[] }; ready?: boolean; onSubmit: (answers: Answers) => void | Promise<void>; onVoiceState?: (state: { live: boolean; recorded: boolean }) => void; submitLabel?: string; busy?: boolean; autoFocus?: boolean }) {
@@ -248,7 +254,7 @@ export function Questions({ askConfidence = false, validation, ready = true, onS
     if (!answered || busy) return
     if (!lastScreen) { setPosition(position + 1); return }
     const voice = (['difficulty', 'words'] as const).flatMap(question => clips[question] && screens.includes(question) ? [{ question, clip: { ...clips[question]!, transcript: values[question] ?? clips[question]!.transcript } }] : [])
-    await onSubmit({ seq, difficulty: screens.includes('difficulty') ? values.difficulty || undefined : undefined, confidence: askConfidence ? Number(values.confidence) : undefined, uxLite: { ease: Number(values.uxEase), usefulness: Number(values.uxUse) }, words: values.words || undefined, validation: values.validation, voice })
+    await onSubmit({ seq, difficulty: screens.includes('difficulty') ? values.difficulty || undefined : undefined, confidence: askConfidence ? Number(values.confidence) : undefined, afterGoal: { ease: Number(values.uxEase), usefulness: Number(values.uxUse) }, words: values.words || undefined, validation: values.validation, voice })
   }
   const set = (value: string) => setValues(current => ({ ...current, [screen]: value }))
   const words = screen === 'difficulty' || screen === 'words'
@@ -320,8 +326,8 @@ export function UiTests() {
       const element = event.target instanceof Element ? event.target.closest('button,a,input,[role=button]') ?? event.target : null
       if (!element || element.closest('[data-research-taskbar]')) return
       activity(); setInteracted(true)
-      const before = document.body.innerHTML, url = location.href, target = targetLabel(element)
-      const timer = setTimeout(() => { record({ type: 'click', target, changed: before !== document.body.innerHTML || url !== location.href }); timers.delete(timer) }, 300)
+      const before = pageMarkup(), url = location.href, target = targetLabel(element)
+      const timer = setTimeout(() => { record({ type: 'click', target, changed: before !== pageMarkup() || url !== location.href }); timers.delete(timer) }, 300)
       timers.add(timer)
     }
     /** Records that an input changed, without its value. */
@@ -331,13 +337,13 @@ export function UiTests() {
     function scroll() { activity(); if (Date.now() - lastScroll > 500) { lastScroll = Date.now(); record({ type: 'scroll', target: `y=${Math.round(window.scrollY)}` }) } }
     const interval = setInterval(() => {
       if (location.pathname !== lastUrl) { lastUrl = location.pathname; record({ type: 'url' }) }
-      if (!idle && Date.now() - lastActivity > 5000) { idle = true; record({ type: 'pause', duration: Date.now() - lastActivity }) }
+      if (!idle && Date.now() - lastActivity > 5000) { idle = true; record({ type: 'pause', stoppedMs: Date.now() - lastActivity }) }
     }, 250)
     document.addEventListener('click', click, true); document.addEventListener('input', input, true); window.addEventListener('scroll', scroll); document.addEventListener('keydown', activity)
     return () => { cancelled = true; clearInterval(interval); timers.forEach(clearTimeout); document.removeEventListener('click', click, true); document.removeEventListener('input', input, true); window.removeEventListener('scroll', scroll); document.removeEventListener('keydown', activity) }
   }, [run])
   /** Ends the attempt with the given reason, sends the end-state snapshot and moves to the questions. */
-  async function finish(reason: 'done' | 'gave up' | 'abandoned early' | 'timed out') {
+  async function finish(reason: 'done' | "can't do it" | 'abandoned early' | 'ran out of time') {
     if (!run || busy) return
     setBusy(true)
     try { await queue.current; await send({ action: 'end', reason, snapshot: snapshot() }); location.assign(`/ui-tests/${run.id}?stage=questions`) }
@@ -345,11 +351,11 @@ export function UiTests() {
   }
   useEffect(() => {
     if (!run) return
-    const timer = setTimeout(() => { void finish('timed out') }, Math.max(0, run.startedAt + run.timeout * 1000 - Date.now()))
+    const timer = setTimeout(() => { void finish('ran out of time') }, Math.max(0, run.startedAt + run.timeBox * 1000 - Date.now()))
     return () => clearTimeout(timer)
   }, [run, busy]) // attempt deadline persists through navigation
   if (!run || typeof document === 'undefined' || location.pathname.startsWith('/ui-tests/')) return null
-  const remaining = run.startedAt + run.timeout * 1000 - now
+  const remaining = run.startedAt + run.timeBox * 1000 - now
   return createPortal(<>
     <TaskBar scenario={run.scenario} steps={run.tasks} index={run.sequence.index} total={run.sequence.total} interacted={interacted} busy={busy} error={error}
       canExtend={!run.extended && now > 0 && remaining <= 60_000}
@@ -418,7 +424,7 @@ export function Player({ runId, token }: { runId: string; token?: string }) {
       setBusy(true)
       try {
         for (const { question, clip } of answers.voice) await send({ action: 'voice', question, mime: clip.mime, audio: await base64(clip.blob), transcript: clip.transcript, seconds: clip.seconds })
-        await send({ action: 'questions', seq: answers.seq, difficulty: answers.difficulty, confidence: answers.confidence, uxLite: answers.uxLite, words: answers.words, answers: run?.validation ? { [run.validation.question]: answers.validation ?? '' } : undefined })
+        await send({ action: 'questions', seq: answers.seq, difficulty: answers.difficulty, confidence: answers.confidence, afterGoal: answers.afterGoal, words: answers.words, answers: run?.validation ? { [run.validation.question]: answers.validation ?? '' } : undefined })
         setStage('checking')
       } catch (err) { setError(String(err)) } finally { setBusy(false) }
     }} />

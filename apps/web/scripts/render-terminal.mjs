@@ -6,8 +6,18 @@ import { fileURLToPath } from 'node:url'
 import { stripVTControlCharacters } from 'node:util'
 import { TerminalOutput } from '../../../packages/ui-tests/src/report.tsx'
 import { agent, commands, problems, rehearsal } from '../lib/copy.ts'
+import metadata from '../public/sessions/sessions.json' with { type: 'json' }
 
-export const exampleReport = { people: 5, selectedRank: 1, problems: problems.map((p, i) => ({ title: i === 1 ? 'Pressed Add, saw nothing change, pressed it again' : p.title, people: Number(p.count[0]) })) }
+// The run's report: who reached the goal and who was wrong and sure come from the attempts; the problems, in the run's rank, from the copy.
+// Two titles are shortened to fit 80 columns beside the rank, count and impact.
+const short = ['Pressed Add, saw nothing change, pressed it again', null, 'Looked for Invite in the Share menu, found only links']
+export const exampleReport = {
+  people: metadata.attempts.length,
+  reached: metadata.attempts.filter(a => a.reached === 'yes').length,
+  wrongAndSure: metadata.attempts.filter(a => a.reached === 'no' && a.sure === 7).length,
+  selectedRank: 1,
+  problems: problems.map((p, i) => ({ title: short[i] ?? p.title, people: Number(p.count[0]), impact: p.impact })),
+}
 const prompt = command => `$ ${command}`
 export const surfaces = {
   agent: { actor: 'agent', agentReport: agent.report },
@@ -22,8 +32,8 @@ export const surfaces = {
   agentCommand: { lines: [prompt(agent.command)] },
   // The lines of `ui-tests init` a reader needs: the created files and the next command. The mount steps live in the guide.
   init: { lines: ['Created ui-tests.config.ts', 'Created landing.ui.test.ts', 'Created vitest.config.ts', 'Next: npm run dev, then npx ui-tests'] },
-  dev: { lines: ['Outcome: correct', rehearsal, 'Trace: http://127.0.0.1:43210/00000000-0000-4000-8000-000000000000/' + '0'.repeat(64)] },
-  run: { lines: ['Run k2m9 started', 'Send this link to anyone: https://ui-tests.com/t/k2m9', 'Panel: 5 people matched to "people who signed up this week and want a colleague on their board"', 'Cap: $60 · results within 48 hours'] },
+  dev: { lines: ['Reached the goal: Yes', rehearsal, 'Trace: http://127.0.0.1:43210/00000000-0000-4000-8000-000000000000/' + '0'.repeat(64)] },
+  run: { lines: ['Run k2m9 started', 'Send this link to anyone: https://ui-tests.com/t/k2m9', 'Paid panel: 5 people matched to "people who signed up this week and want a colleague on their board"', 'Cap: $60 · results within 48 hours'] },
 }
 
 const escape = text => text.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character])
@@ -67,10 +77,10 @@ export async function capture(props) {
   instance.unmount()
   instance.cleanup()
   if (!frame) throw new Error('Ink produced no terminal frame')
-  // Annotate the already-rendered report columns for responsive reflow: rank and count stay fixed, the problem wraps.
+  // Annotate the already-rendered report columns for responsive reflow: rank, count and impact stay fixed, the problem wraps.
   // Text content, including column padding and colour, remains identical to the Ink frame.
   const fragment = props.report ? frame.split('\n').map(line => {
-    const columns = /^([▏ ] *\d+)(  +\d+ of \d+  )(.+)$/.exec(stripVTControlCharacters(line))
+    const columns = /^([▏ ] *\d+)(  +\d+ of \d+  (?:\w+ +)?)(.+)$/.exec(stripVTControlCharacters(line))
     if (!columns) return ansiToHtml(line)
     const [rank, count] = [[...columns[1]].length, [...columns[1]].length + columns[2].length]
     const cut = (from, to) => html(slice(runs(line), from, to))

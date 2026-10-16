@@ -7,10 +7,10 @@ import { userInfo } from 'node:os'
 import { build } from 'esbuild'
 import { compileFile } from './compiler.ts'
 import { SQLiteAdapter, dataDirectory, recordingRetentionMs } from './storage.ts'
-import { verify } from './verify.ts'
+import { verify, reachedLine, type HookResult } from './verify.ts'
 import { renderTrace } from './trace.tsx'
 import type { Context } from './index.ts'
-import { printTerminal, type Report } from './report.tsx'
+import { printTerminal, impacts, type Report } from './report.tsx'
 const print = (text: string) => printTerminal({ lines: text.split('\n') })
 
 const args = process.argv.slice(2)
@@ -71,7 +71,7 @@ async function main() {
     if (!id) throw new Error('Usage: ui-tests report <run-id or report.json> [--json]')
     if (await exists(id)) {
       const report = JSON.parse(await readFile(id, 'utf8')) as Report
-      if (!report || typeof report !== 'object' || Array.isArray(report) || !Number.isInteger(report.people) || report.people < 1 || !Array.isArray(report.problems) || report.problems.some(p => !p || typeof p !== 'object' || Array.isArray(p) || typeof p.title !== 'string' || !Number.isInteger(p.people) || p.people < 1 || p.people > report.people)) throw new Error('Invalid report')
+      if (!report || typeof report !== 'object' || Array.isArray(report) || !Number.isInteger(report.people) || report.people < 1 || !Array.isArray(report.problems) || report.problems.some(p => !p || typeof p !== 'object' || Array.isArray(p) || typeof p.title !== 'string' || !Number.isInteger(p.people) || p.people < 1 || p.people > report.people || (p.impact !== undefined && !impacts.includes(p.impact))) || [report.reached, report.wrongAndSure].some(count => count !== undefined && (!Number.isInteger(count) || count < 0 || count > report.people)) || (report.reached !== undefined && report.wrongAndSure !== undefined && report.reached + report.wrongAndSure > report.people)) throw new Error('Invalid report')
       if (args.includes('--json')) console.log(JSON.stringify(report, null, 2))
       else printTerminal({ report })
     } else {
@@ -80,7 +80,7 @@ async function main() {
         const run = store.get(id)
         if (!run) throw new Error('Run not found')
         if (args.includes('--json')) console.log(JSON.stringify(run.result, null, 2))
-        else printTerminal({ lines: [`Outcome: ${(run.result as { status?: string })?.status ?? 'pending'}`, run.context.goals[run.goalIndex].resultSentence ?? 'Issues-only exploration; no result sentence.'] })
+        else printTerminal({ lines: [reachedLine(run.result as HookResult | undefined), run.context.goals[run.goalIndex].resultSentence ?? 'Issues-only exploration; no result sentence.'] })
       } finally { store.close() }
     }
     return
@@ -164,7 +164,7 @@ async function main() {
       current.result = await verify(current, result.authored[active.contextIndex].goals[active.goalIndex], store.events(current.id))
       if (!store.update(current, previous)) return
       if (current.status === 'finished' && !(current.result as { question?: unknown }).question) {
-        print(`Outcome: ${(current.result as { status: string }).status}\n${active.compiled.goals[active.goalIndex].resultSentence ?? 'Issues-only exploration; no result sentence.'}\nTrace: ${traceUrl()}`)
+        print(`${reachedLine(current.result as HookResult)}\n${active.compiled.goals[active.goalIndex].resultSentence ?? 'Issues-only exploration; no result sentence.'}\nTrace: ${traceUrl()}`)
         open(traceUrl())
         if (pending.length) {
           active = pending.shift()!

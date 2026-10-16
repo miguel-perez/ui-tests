@@ -6,15 +6,15 @@ import type { CompiledContext } from './compiler.ts'
 import type { Snapshot } from './index.ts'
 
 /** A recorder event: clicks with whether anything changed, URL changes, scroll, masked input, pauses and task-step snapshots. */
-export type Event = { type: 'click' | 'url' | 'scroll' | 'input' | 'pause' | 'step'; at: number; url: string; target?: string; changed?: boolean; duration?: number; step?: number; snapshot?: Snapshot }
-/** How an attempt ended. `abandoned early` is leaving before the first interaction; `gave up` is after trying. Both are distinct from failure. */
-export type Reason = 'done' | 'gave up' | 'abandoned early' | 'timed out'
+export type Event = { type: 'click' | 'url' | 'scroll' | 'input' | 'pause' | 'step'; at: number; url: string; target?: string; changed?: boolean; stoppedMs?: number; step?: number; snapshot?: Snapshot }
+/** How an attempt ended. `abandoned early` is leaving before the first interaction; `can't do it` is pressing Can't do it after trying. Both are distinct from not reaching the goal. */
+export type Reason = 'done' | "can't do it" | 'abandoned early' | 'ran out of time'
 /** A spoken answer: the transcript as the person saw it and the stored audio it came from. */
 export type VoiceAnswer = { question: 'difficulty' | 'words'; transcript: string; recording: string; mime: string; seconds: number }
 /** What is captured for an attempt, each with the consent behind it. Interaction events are always recorded; voice only once the person chooses to talk. */
 export type Recording = { events: true; screen: boolean; voice: boolean; webcam: boolean }
 /** A run and its single rehearsal attempt: status, timings, terminal reason, answers, end-state snapshot and hook result. */
-export type Run = { id: string; token: string; context: CompiledContext; goalIndex: number; sequence?: { index: number; total: number }; hooksBundle?: string; authoredContextIndex?: number; status: 'created' | 'consented' | 'active' | 'questions' | 'finished'; startedAt: number; endedAt?: number; extendedSeconds?: number; withdrawnAt?: number; reason?: Reason; seq?: number; difficulty?: string; confidence?: number; uxLite?: { ease: number; usefulness: number }; words?: string; voice?: VoiceAnswer[]; recording?: Recording; snapshot?: Snapshot; result?: unknown; answers?: Record<string, string> }
+export type Run = { id: string; token: string; context: CompiledContext; goalIndex: number; sequence?: { index: number; total: number }; hooksBundle?: string; authoredContextIndex?: number; status: 'created' | 'consented' | 'active' | 'questions' | 'finished'; startedAt: number; endedAt?: number; extendedSeconds?: number; withdrawnAt?: number; reason?: Reason; seq?: number; difficulty?: string; confidence?: number; afterGoal?: { ease: number; usefulness: number }; words?: string; voice?: VoiceAnswer[]; recording?: Recording; snapshot?: Snapshot; result?: unknown; answers?: Record<string, string> }
 /** Storage behind the collector and the CLI. The SQLite adapter is the development implementation. */
 export interface StorageAdapter {
   create(context: CompiledContext, goalIndex?: number): Run
@@ -90,7 +90,7 @@ export class SQLiteAdapter implements StorageAdapter {
         ? this.db.prepare('UPDATE runs SET data=? WHERE id=? AND data=?').run(JSON.stringify(run), run.id, JSON.stringify(previous))
         : this.db.prepare('UPDATE runs SET data=? WHERE id=?').run(JSON.stringify(run), run.id)
       if (!updated.changes) return false
-      this.db.prepare('UPDATE attempts SET data=? WHERE run_id=?').run(JSON.stringify({ reason: run.reason, seq: run.seq, confidence: run.confidence, uxLite: run.uxLite, voice: run.voice?.map(answer => answer.recording), withdrawnAt: run.withdrawnAt, startedAt: run.startedAt, endedAt: run.endedAt, rehearsal: true }), run.id)
+      this.db.prepare('UPDATE attempts SET data=? WHERE run_id=?').run(JSON.stringify({ reason: run.reason, seq: run.seq, confidence: run.confidence, afterGoal: run.afterGoal, voice: run.voice?.map(answer => answer.recording), withdrawnAt: run.withdrawnAt, startedAt: run.startedAt, endedAt: run.endedAt, rehearsal: true }), run.id)
       if (run.snapshot) this.db.prepare('INSERT OR REPLACE INTO snapshots VALUES (?,?,?)').run(run.id, run.snapshot.url, run.snapshot.dom)
       return true
     })()

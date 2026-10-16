@@ -6,7 +6,7 @@ import { Caption } from '../components/site/caption'
 import { Terms } from '../components/site/terms'
 import { TerminalWindow } from '../components/artefacts/terminal-window'
 import { CodeWindow } from '../components/artefacts/code-window'
-import { SessionView } from '../components/artefacts/session-view'
+import { AttemptView } from '../components/artefacts/attempt-view'
 import { PlayerFrame } from '../components/artefacts/player-frame'
 import { OptionsRow } from '../components/artefacts/options-row'
 import { ChecksBox } from '../components/artefacts/checks-box'
@@ -24,7 +24,7 @@ export default function Home() {
     <div className="site-width">
       <section className="block" aria-labelledby="comes-back">
         <SectionHead id="comes-back" heading={landing.comesBack} lead={landing.comesBackLead} />
-        <SessionView />
+        <AttemptView />
         <Caption text={landing.closing} />
       </section>
       <section className="block" aria-labelledby="person">
@@ -58,7 +58,7 @@ export default function Home() {
         <SectionHead id="commands" heading={landing.commands} lead={landing.requirement} />
         <TerminalWindow name="commands" title="~/my-app" />
         <div className="row-8-4"><CodeWindow code={example} title="landing.ui.test.ts" /><Caption side title={landing.ownTest} text={landing.ownCaption} /></div>
-        <Terms lines={[landing.commandsClosing]} />
+        <Terms lines={[landing.commandsClosing, landing.anySite]} />
         <Actions />
       </section>
     </div>

@@ -24,7 +24,7 @@ describe('authoring and derivation', () => {
   it('derives stable identifiers, rules, five attempts and an exact rehearsal sentence', () => {
     const [c] = compile(authored())
     assert(c.id).toBe(compile(getContexts())[0].id)
-    assert(c.goals[0]).toMatchObject({ shape: 'happy-path', timeout: { seconds: 180 }, sample: { planned: 5 }, resultSentence: 'Rehearsal: 0 of 5 planned attempts recorded.' })
+    assert(c.goals[0]).toMatchObject({ shape: 'happy-path', timeBox: { seconds: 180 }, sample: { planned: 5 }, resultSentence: 'Rehearsal: 0 of 5 planned attempts recorded.' })
     assert(c.impression).toMatchObject({ answer: c.purpose, rule: expectString() })
     assert(c.fitQuestions).toHaveLength(3)
     assert(c.fitQuestions.every(q => q.rule && q.question.includes(c.purpose))).toBe(true)
@@ -167,18 +167,18 @@ describe('storage, verification and participant boundary', () => {
       assert((await post({ ...voice, transcript: 'Share seemed like the place for people. <b>really</b>' })).status).toBe(200)
       assert(store.recording(first)).toBeUndefined()
       assert(store.db.prepare('SELECT COUNT(*) AS n FROM recordings').get()).toEqual({ n: 1 })
-      assert((await post({ action: 'questions', seq: 3, uxLite: { ease: 2, usefulness: 4 }, words: 'Share seemed like the place for people.' })).status).toBe(200)
+      assert((await post({ action: 'questions', seq: 3, afterGoal: { ease: 2, usefulness: 4 }, words: 'Share seemed like the place for people.' })).status).toBe(200)
       const saved = store.get(run.id)!
       assert(saved.voice).toHaveLength(1)
       assert(saved.voice![0]).toMatchObject({ question: 'words', transcript: 'Share seemed like the place for people. <b>really</b>', mime: 'audio/webm', seconds: 4.2 })
       assert(store.recording(saved.voice![0].recording)!.audio.toString()).toBe('fake opus audio')
-      assert(saved).toMatchObject({ seq: 3, uxLite: { ease: 2, usefulness: 4 }, status: 'finished' })
+      assert(saved).toMatchObject({ seq: 3, afterGoal: { ease: 2, usefulness: 4 }, status: 'finished' })
       assert(saved.confidence).toBeUndefined()
       const trace = renderTrace(saved, [], store)
-      assert(trace).toContain('voice recorded, consent given when they chose to talk')
+      assert(trace).toContain('voice, with consent given when they chose to talk')
       assert(trace).toContain('&lt;b&gt;really&lt;/b&gt;')
       assert(trace).toContain(`src="data:audio/webm;base64,${audio}"`)
-      assert(trace).toContain('Confidence: not asked')
+      assert(trace).toContain('done it: not asked')
       // Voice is only taken while the questions are open: never after the answers are sent.
       assert((await post(voice)).status).toBe(409)
       // Withdrawal deletes every recording for the run and marks the attempt withdrawn; voice is refused afterwards.
@@ -240,13 +240,13 @@ describe('storage, verification and participant boundary', () => {
       assert(before).toMatchObject({ extended: false, askConfidence: false, sequence: { index: 1, total: 1 } })
       const extended = await post({ action: 'extend' })
       assert(extended.status).toBe(200)
-      assert((await extended.json()).timeout).toBe(before.timeout + 90)
+      assert((await extended.json()).timeBox).toBe(before.timeBox + 90)
       assert((await post({ action: 'extend' })).status).toBe(409)
       assert((await post({ action: 'end', reason: 'abandoned early', snapshot: { url: 'http://localhost/', dom: '<main />' } })).status).toBe(200)
       const ended = store.get(run.id)!
       assert(ended.reason).toBe('abandoned early')
-      assert(await verify(ended, getContexts()[0].goals[0])).toMatchObject({ status: 'incorrect', reason: 'Terminal reason: abandoned early' })
-      assert(issues(ended, []).map(i => i.kind)).toEqual(['abandoned early'])
+      assert(await verify(ended, getContexts()[0].goals[0])).toMatchObject({ reached: 'no', reason: 'How it ended: left before trying' })
+      assert(issues(ended, []).map(i => i.detail)).toEqual(['How it ended: left before trying'])
       resetContexts()
       context({ users: 'people', purpose: 'finish my work' }, () => goal('explore', { minutes: 2 }))
       assert(participantView(store.create(compile(getContexts())[0])).askConfidence).toBe(true)
@@ -273,23 +273,24 @@ describe('storage, verification and participant boundary', () => {
       assert(store.events(run.id)).toHaveLength(1)
       assert(store.db.prepare('SELECT rehearsal FROM attempts').get()).toEqual({ rehearsal: 1 })
       assert(store.db.prepare('SELECT url FROM snapshots').get()).toEqual({ url: run.snapshot.url })
-      assert(await verify(store.get(run.id)!, getContexts()[0].goals[0])).toMatchObject({ status: 'correct' })
+      assert(await verify(store.get(run.id)!, getContexts()[0].goals[0])).toMatchObject({ reached: 'yes' })
       const view = JSON.stringify(participantView(run))
       assert(view).not.toMatch(/happyPath|expected|outcomes|\/docs\/getting-started|ui-tests/)
     } finally { store.close() }
   })
-  it('produces expected/actual URL diffs, gave-up failures, and missing-evidence unknown', async () => {
+  it('produces expected/actual URL diffs, Can\'t do it as not reached, and missing evidence as couldn\'t tell', async () => {
     const store = new SQLiteAdapter(':memory:')
     try {
       const run = store.create(compile(authored({ happyPath: ['/', '/wrong'] }))[0]); const g = getContexts()[0].goals[0]
-      assert(await verify(run, g)).toMatchObject({ status: 'unknown' })
+      assert(await verify(run, g)).toMatchObject({ reached: "couldn't tell" })
       run.snapshot = { url: 'http://localhost/docs/getting-started', dom: '<main />' }; run.reason = 'done'
-      assert(await verify(run, g)).toMatchObject({ status: 'incorrect', diff: { expected: '/wrong', actual: run.snapshot.url } })
-      run.reason = 'gave up'
-      assert(await verify(run, g)).toMatchObject({ status: 'incorrect', reason: 'Terminal reason: gave up' })
+      assert(await verify(run, g)).toMatchObject({ reached: 'no', diff: { expected: '/wrong', actual: run.snapshot.url } })
+      run.reason = "can't do it"
+      assert(await verify(run, g)).toMatchObject({ reached: 'no', reason: "How it ended: pressed Can't do it" })
       run.seq = 2
-      const found = issues(run, [{ type: 'click', at: 123, url: run.snapshot.url, target: 'div#inert', changed: false }, { type: 'url', at: 124, url: 'http://localhost/elsewhere' }, { type: 'pause', at: 125, url: run.snapshot.url, duration: 5100 }])
-      assert(found.map(i => i.kind)).toEqual(['gave up', 'dead click', 'deviation', 'pause', 'low SEQ'])
+      const found = issues(run, [{ type: 'click', at: 123, url: run.snapshot.url, target: 'div#inert', changed: false }, { type: 'url', at: 124, url: 'http://localhost/elsewhere' }, { type: 'pause', at: 125, url: run.snapshot.url, stoppedMs: 5100 }])
+      assert(found.map(i => i.kind)).toEqual(['how it ended', 'nothing happened', 'off your path', 'stopped', 'not easy'])
+      assert(found.map(i => i.detail)).toEqual(["How it ended: pressed Can't do it", 'Clicked div#inert, nothing happened', 'Off your path · opened /elsewhere', 'Stopped 5 s', 'How easy was it? 2 of 7 (7 = very easy)'])
       assert(found[1]).toMatchObject({ at: 123, detail: assert.stringContaining('div#inert') })
     } finally { store.close() }
   })
@@ -298,7 +299,7 @@ describe('storage, verification and participant boundary', () => {
     try {
       const run = store.create(compile(authored())[0]); run.status = 'questions'; store.update(run)
       const previous = store.get(run.id)!
-      const verifying = structuredClone(previous); verifying.result = { status: 'correct' }
+      const verifying = structuredClone(previous); verifying.result = { reached: 'yes' }
       run.status = 'finished'; run.answers = { 'Which plan?': 'April' }; run.seq = 3
       run.snapshot = { url: 'http://localhost/docs/getting-started', dom: '<main>Ready</main>' }
       store.update(run)
@@ -307,8 +308,8 @@ describe('storage, verification and participant boundary', () => {
       assert(store.db.prepare('SELECT data FROM attempts').get()).toEqual({ data: assert.stringContaining('"seq":3') })
       assert(store.db.prepare('SELECT dom FROM snapshots').get()).toEqual({ dom: run.snapshot.dom })
       const latest = store.get(run.id)!
-      assert(store.update({ ...latest, result: { status: 'correct' } }, latest)).toBe(true)
-      assert(store.get(run.id)?.result).toEqual({ status: 'correct' })
+      assert(store.update({ ...latest, result: { reached: 'yes' } }, latest)).toBe(true)
+      assert(store.get(run.id)?.result).toEqual({ reached: 'yes' })
     } finally { store.close() }
   })
   it('queries the stored DOM and asks a validation question without leaking its answer', async () => {
@@ -320,10 +321,10 @@ describe('storage, verification and participant boundary', () => {
     try {
       const run = store.create(compile(getContexts())[0]); run.snapshot = { url: 'http://localhost/', dom: '<h1>Ready</h1>' }
       run.result = await verify(run, getContexts()[0].goals[0])
-      assert(run.result).toMatchObject({ status: 'unknown', question: { expected: 'April' } })
+      assert(run.result).toMatchObject({ reached: "couldn't tell", question: { expected: 'April' } })
       assert(participantView(run).validation).toEqual({ question: 'Which plan?', choices: ['April', 'May'] })
       run.answers = { 'Which plan?': 'April' }
-      assert(await verify(run, getContexts()[0].goals[0])).toMatchObject({ status: 'correct' })
+      assert(await verify(run, getContexts()[0].goals[0])).toMatchObject({ reached: 'yes' })
     } finally { store.close() }
   })
   it('rejects unauthorized and cross-origin collector writes', async () => {

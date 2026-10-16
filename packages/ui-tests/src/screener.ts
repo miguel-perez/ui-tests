@@ -17,7 +17,7 @@ export type Screen = {
   uses?: string[]
   /** Exclusions; the standing exclusion of people who work in UX, marketing or research is always added. */
   not?: string[]
-  /** ISO country codes, a language and an age range: panel filters, never asked. */
+  /** ISO country codes, a language and an age range: paid panel filters, never asked. */
   where?: string[]
   language?: string
   age?: { min?: number; max?: number }
@@ -49,8 +49,8 @@ export const screenRule = {
   role: 'role narrowed second: listed roles accept among neutral roles, "None of these" rejects (UserTesting; User Interviews)',
   uses: 'tools as a multi-select with one decoy and "None of the above" (NN/g; Lyssna; Great Question)',
   not: 'exclusions mixed among neutral options, plus the standing exclusion of people who work in UX, marketing or research (NN/g; EphMRA)',
-  filter: 'panel filter, never asked (UserTesting; Prolific and Connect hold it)',
-  previous: 'prior participation excluded by the panel, never asked (Lyssna; Prolific)',
+  filter: 'paid panel filter, never asked (UserTesting; Prolific and Connect hold it)',
+  previous: 'prior participation excluded by the paid panel, never asked (Lyssna; Prolific)',
 }
 
 const days = { day: 1, week: 7, month: 30, year: 365 } as const
@@ -80,7 +80,7 @@ const neutralFacts = ['I share a calendar with someone', 'I have taken part in a
 const standingExclusion = 'I work in UX, design, marketing or market research'
 const decoy = 'Plandrift'
 
-/** Derives the screener from a `screen`: questions in funnel order with their labels, field and rule, then the panel filters. */
+/** Derives the screener from a `screen`: questions in funnel order with their labels, field and rule, then the paid panel filters. */
 export function deriveScreener(screen: Screen, source: Screener['source'] = 'authored', inferred: Field[] = []): Screener {
   const questions: ScreenerQuestion[] = []
   if (screen.did) questions.push({ field: 'did', kind: 'single', question: `When was the last time you ${screen.did}?`, options: recencyBands(screen.within), rule: screenRule.did })

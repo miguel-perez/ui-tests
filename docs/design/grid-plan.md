@@ -25,7 +25,7 @@ Each map shows the 12 columns at 1440 with a ruler; a bracket spans the columns 
 
 ### L1 · Claim
 
-**Rule.** Headline and standfirst take columns 1-7; the hero artefact (the Ink report in its terminal) takes columns 8-12. The artefact is 5 columns, so its caption could sit beside it, but no columns remain; it goes under the terminal, left-aligned to its edge, in two lines. The faded P3 session and the texture sit behind the whole hero and occupy no columns. Empty area: the copy column is full height; under the terminal the caption fills the second row, so the empty area is the band below the caption (about 506 × 120), far smaller than the terminal (506 × 300).
+**Rule.** Headline and standfirst take columns 1-7; the hero artefact (the Ink report in its terminal) takes columns 8-12. The artefact is 5 columns, so its caption could sit beside it, but no columns remain; it goes under the terminal, left-aligned to its edge, in two lines. The faded recording of Person 3 and the texture sit behind the whole hero and occupy no columns. Empty area: the copy column is full height; under the terminal the caption fills the second row, so the empty area is the band below the caption (about 506 × 120), far smaller than the terminal (506 × 300).
 
 At 1440:
 
@@ -45,20 +45,32 @@ At 375:
 | Caption                                            |
 ```
 
-### L2 · Section + Session
+### L2 · Section + Attempt
 
-**Rule.** Section: heading 5, lead 7, one row, 96 above and 48 below; it never takes a side caption. Session spans 12, so its caption goes underneath. Inside: metadata strip over all 12, video 7 left, timeline 5 right at the same height (the timeline scrolls inside), words and audio across 12. Empty area inside the block is the caption line only.
+**Rule.** Section: heading 5, lead 7, one row, 96 above and 48 below; it never takes a side caption. `AttemptView` spans 12, so its caption goes underneath. Inside (issue #22, item 4): 12 columns; the flow runs down the page; a moment card is 7 columns clip, 5 columns text; nothing sticky. The result sentence takes 7 and its four facts 5. The flow is one vertical line 60 px in from the window's content edge: routine moments are one row each (time, what happened, the page right-aligned), and each moment card is set into the line at its own time with its numbered mark on the line, the card inset 84 px so its own 7 / 5 split sits right of the line. "How it felt" takes 5 and "What they said" 7. The two folds and the footer span 12. Empty area: the result row's facts column is as tall as the sentence; nothing else leaves a column empty.
 
 At 1440:
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
 [Section heading                      ] [lead                                                 ]  head · 96 above, 48 below
-[SessionView · metadata strip: person, task, date, device, outcome, ratings, recording        ]  strip · 88
-[video 16:10 + scrubber + coloured bands              ] [timeline: time · kind · detail       ]  body · 540
-[words feed and audio state (P3 talked the final answer)                                      ]  words · 96
+[chrome: Run k2m9 / Goal invite a colleague / Person 3 of 5                       Example run ]  crumb · 40
+[headline sentence, check line                        ] [facts: reached, ended, sure, time    ]  result · 140
+[What got in the way · index: 1 Wrong end state · 2 Slowed 16 s · 3 Confused 13 s             ]  index · 40
+[|  00:00 Started · scenario card dismissed                                            /board ]  row · 36
+[|  [2] [clip 16:10, plays in place, scrub line       ] [impact, problem, where, steps, said ]  card · 420
+[|  [3] [clip                                         ] [text, smallest change              ]  card · 420
+[|  00:41, 00:46 rows                                                       /settings/members ]  2 × 36
+[|  [1] [clip                                         ] [text                               ]  card · 400
+[|  01:03 Pressed Done · the check ran and failed                           /settings/members ]  row · 36
+[How it felt: easy, sure, time        ] [What they said: the full quote, where it was given   ]  felt · 170
+[+ Their path and yours (closed)                                                              ]  fold · 48
+[+ What the check saw (closed)                                                                ]  fold · 48
+[footer: Person 3 of 5 · paid panel · uses · device, browser, window · date · recorded       ]  foot · 40
 [Caption under, left-aligned                                                                  ]  caption · 32
 ```
+
+Inside a card, the clip is 7 of 12 of the card and the text 5 of 12; the rail and its 24 px gap sit to the left of the card, so the card's two parts are 7 and 5 of what remains.
 
 At 375:
 
@@ -66,10 +78,20 @@ At 375:
 |----------------------------------------------------| 327 px, one column
 | Section heading                                    |
 | lead                                               |
-| metadata strip (2 × 4 fields)                      |
-| video + scrubber + bands                           |
-| timeline (scrolls, 320 max)                        |
-| words feed                                         |
+| chrome: Run / Goal / Person 3 of 5 (wraps)         |
+| headline sentence, check line                      |
+| facts, 2 × 2                                       |
+| What got in the way, index (wraps)                 |
+| rows: time · what happened · page, the line at 20px|
+| card: clip, scrub line                             |
+| card: impact, problem, where, steps, said, change  |
+| (three cards in time order, rows between them)     |
+| last row: Pressed Done                             |
+| How it felt                                        |
+| What they said                                     |
+| + Their path and yours                             |
+| + What the check saw                               |
+| footer (wraps)                                     |
 | Caption                                            |
 ```
 
@@ -126,7 +148,7 @@ At 375:
 
 ### L5 · Section + ChecksBox + FindingsList
 
-**Rule.** Both 12 columns, so any caption goes underneath. The findings list follows rule 12: rank, count (right-aligned), the P1-P5 evidence cells, then the problem as the one free-text field. The expanded row splits 4 (reel thumbnail) and 8 (quote, moments, change). The result line is the footer.
+**Rule.** Both 12 columns, so any caption goes underneath. The findings list follows rule 12: rank, count (right-aligned), the impact, the Person 1-5 evidence cells, then the problem as the one free-text field; rows are ranked by impact, then by count. The expanded row splits 4 (reel thumbnail) and 8 (quote, moments, change). The result line is the footer.
 
 At 1440:
 
@@ -134,7 +156,7 @@ At 1440:
    1       2       3       4       5       6       7       8       9      10      11      12   
 [Section heading                      ] [lead                                                 ]  head
 [ChecksBox: three CheckRows in GitHub chrome                                                  ]  checks · 176
-[FindingsList head: rank · count · P1-P5 · problem                                            ]  32
+[FindingsList head: rank · count · impact · Person 1-5 · problem                              ]  32
 [ReelFrame (expanded row)     ] [quote, evidence moments, what to change                      ]  expanded · 300
 [FindingRow × 3 collapsed, result line footer                                                 ]  3 × 56 + 48
 [Caption under                                                                                ]  32
