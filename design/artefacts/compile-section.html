@@ -617,4 +617,18 @@ img { display: block; max-width: 100%; }
     show(0);
   });
 })();
+
+(function () {
+  document.querySelectorAll(".scale[role=radiogroup]").forEach(function (g) {
+    var items = Array.prototype.slice.call(g.querySelectorAll("[role=radio]"));
+    function pick(n) { items.forEach(function (li, k) { var on = k === n; li.classList.toggle("on", on); li.setAttribute("aria-checked", on ? "true" : "false"); li.tabIndex = on ? 0 : -1; }); items[n].focus(); }
+    items.forEach(function (li, k) { li.addEventListener("click", function () { pick(k); }); });
+    g.addEventListener("keydown", function (e) {
+      var i = items.findIndex(function (li) { return li.getAttribute("aria-checked") === "true"; });
+      if (/^[1-7]$/.test(e.key)) { pick(+e.key - 1); e.preventDefault(); }
+      else if (e.key === "ArrowRight" || e.key === "ArrowDown") { pick(Math.min(items.length - 1, i + 1)); e.preventDefault(); }
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { pick(Math.max(0, i - 1)); e.preventDefault(); }
+    });
+  });
+})();
 </script>
