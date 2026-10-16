@@ -22,7 +22,9 @@ const prompts = JSON.parse(readFileSync(promptsFile, 'utf8'))
 const max = Number(maxArg ?? prompts.length)
 mkdirSync(outDir, { recursive: true })
 let calls = 0
-for (const { name, prompt } of prompts) {
+for (const { name, prompt, image } of prompts) {
+  // Optional reference image, a path relative to the prompts file, sent as a data URL.
+  const reference = image ? `data:image/png;base64,${readFileSync(join(dirname(promptsFile), image)).toString('base64')}` : null
   if (calls >= max) break
   // Skip when any saved output exists, whatever format the model returned, so a rerun never pays twice.
   if (['svg', 'png', 'jpg'].some(ext => existsSync(join(outDir, `${name}.${ext}`)))) { console.log('skip', name); continue }
@@ -31,7 +33,9 @@ for (const { name, prompt } of prompts) {
   const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: { Authorization: `Bearer ${key()}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], modalities: ['image'] }),
+    body: JSON.stringify({ model, messages: [{ role: 'user', content: reference
+      ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: reference } }]
+      : prompt }], modalities: ['image'] }),
   })
   const body = await res.json()
   if (!res.ok) { console.error(name, 'HTTP', res.status, JSON.stringify(body).slice(0, 300)); continue }

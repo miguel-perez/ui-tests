@@ -14,7 +14,7 @@ Metadata per session, shown wherever a session is: pseudonym (P3), source (panel
 
 ## The reels
 
-A reel is a 6 to 10 second clip cut from a session at a moment, with the moment's label and the person's words. Cut by the same script (ffmpeg `-ss` and `-t`): one reel per ranked problem, from the person named first in its Watch column. Autoplay muted, loop, with a play control for reduced motion and a visible timestamp overlay (00:03 → 00:12).
+A reel is a 6 to 10 second clip cut from a session at a moment, with the moment's label and the person's words. Cut by the same script (ffmpeg `-ss` and `-t`): one reel per ranked problem, from the person whose moment the copy quotes for it (P3 for problem 1, whose words appear in the hero; otherwise the first person in the problem's Watch column). Autoplay muted, loop, with a play control for reduced motion and a visible timestamp overlay (00:03 → 00:12).
 
 ## Block by block
 
@@ -22,7 +22,7 @@ A reel is a 6 to 10 second clip cut from a session at a moment, with the moment'
 
 **2. What comes back.** Artefact A: the test file in a code window with syntax highlighting (Shiki, a dark theme matched to the tokens), line numbers, a copy control. Artefact B: the trace viewer, a real component: the P3 session video on the left, the timeline on the right with every moment as a row, the issue moments marked, the current moment following playback, the metadata strip above, the person's words below. Artefact C: the report component: the four problems as rows, each expandable to its moments, each moment a thumbnail that plays the reel, the quote, what to change. Artefact D: the report's last line rendered as the report renders it.
 
-**3. What the person sees.** Three real player surfaces rendered over the demo app in a browser frame: the scenario card, the bar, the ease question. Use the actual components from `packages/ui-tests` where they exist (the card, the bar and the questions exist) so that the screens are the product and not a mock of it, with the file line beside each.
+**3. What the person sees.** Three real player surfaces rendered over the demo app in a browser frame: the scenario card, the bar, the ease question. Use the actual components from `packages/ui-tests` where they exist (the card, the bar and the questions exist) so that the screens are the product and not a mock of it, with the file line beside each. The real flow has a consent screen before the card and asks a confidence question after the ease question; neither is shown on the page, because the visitor's question is whether they must write a script, not what the full flow is. The optional free-text box does not exist in the component yet; D2 adds it to the player (one textarea after the ease question, stored with the attempt), so the page shows a real surface and not a mock.
 
 **4. Where the people come from.** The table as a real table. The link row shows a real-looking invite link; the panel row shows the cap control as it would appear in the config; the visitors row shows the invitation as the visitor would see it on their site (a small, polite prompt), which is the one UI nobody else on the market shows.
 

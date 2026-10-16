@@ -161,6 +161,8 @@ Under it: Problem 1 is one link. Problem 2 is the one to fix first: both people 
 
    Beside it: the rating and the words land in their trace.
 
+*Designer's note, not page copy: the player also shows a consent screen before the card and a confidence question after the ease question; the page shows only the three surfaces above. The optional box is added to the player in D2.*
+
 **Closing line.** They never see the path you expected or the check you wrote, so nothing you wrote can lead them.
 
 ---
