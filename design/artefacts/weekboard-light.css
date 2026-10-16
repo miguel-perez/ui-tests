@@ -8,7 +8,8 @@
   --wb-mint: var(--moment); --wb-mint-ink: #ffffff;
 }
 .scrim { background: rgba(44,51,83,.28); }
-/* The player is ours: dark chrome over the light app */
-.scenario-card, .bar { background: #1f2335; color: #c0caf5; box-shadow: 0 8px 24px rgba(21,26,33,.28); }
-.scenario-card button, .bar button { background: #ff9e64; color: #1a1b26; }
-.bar button.quiet { background: none; color: #c0caf5; }
+/* The player chrome is specified in player-chrome.html: the inverse of this page (dark on this light app), with the
+   author's accent (Weekboard mint #5fe3c0), never the app's orange. These overrides match it. */
+.scenario-card, .bar { background: #2c3353; color: #e1e2e7; box-shadow: 0 0 0 1px rgba(225,226,231,.16), 0 10px 28px rgba(21,26,33,.3); border-radius: 14px; }
+.scenario-card button, .bar button { background: #5fe3c0; color: #14251f; border-radius: 10px; }
+.bar button.quiet { background: none; color: #e1e2e7; box-shadow: inset 0 0 0 1px rgba(225,226,231,.16); }
