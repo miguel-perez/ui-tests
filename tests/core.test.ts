@@ -162,6 +162,12 @@ describe('users, video, start and the first impression', () => {
     resetContexts()
     context({ users: invite, purpose, impression: { page: 'board' } }, () => goal('invite a colleague', { start: 'board' }, () => outcome(({ page }) => expect(page.url()).toContain('/members'))))
     assert(lint(getContexts()).map(d => d.rule)).toEqual(assert.arrayContaining(['impression-page', 'start-path']))
+    // Anything else under impression is a lint error with a fix, never a crash in the compiler.
+    for (const impression of [true, { page: '/', flash: 300 }]) {
+      resetContexts()
+      context({ users: invite, purpose, impression: impression as never }, () => goal('invite a colleague', () => outcome(({ page }) => expect(page.url()).toContain('/members'))))
+      assert(lint(getContexts()).filter(d => d.severity === 'error').map(d => d.rule)).toEqual(['impression-valid'])
+    }
   })
   it('codes an open impression answer against the purpose, with the words that matched and how the code was made', () => {
     assert(codeImpression('A board to plan the week with your team', purpose)).toMatchObject({ code: 'named the purpose', matched: ['plan', 'week'], proposedBy: expectString() })
