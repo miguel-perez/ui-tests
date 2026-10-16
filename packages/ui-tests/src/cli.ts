@@ -36,7 +36,7 @@ function open(url: string) {
   const child = process.platform === 'darwin' ? spawn('open', [url]) : process.platform === 'win32' ? spawn('cmd', ['/c', 'start', '', url]) : spawn('xdg-open', [url])
   child.on('error', () => console.log(`Open this URL in your browser: ${url}`)); child.unref()
 }
-/** Writes `ui-tests.config.ts`, the example test and the Vitest exclusion, preserving existing files, then prints the mount instructions. */
+/** Writes `ui-tests.config.ts`, the example test and the Vitest exclusion, preserving existing files, then prints the mount instructions and the next command. */
 async function init() {
   const files: Record<string, string> = {
     'ui-tests.config.ts': `import { defineConfig } from 'ui-tests'\nexport default defineConfig({ target: { url: process.env.PREVIEW_URL ?? 'http://localhost:3000' } })\n`,
@@ -60,7 +60,8 @@ async function init() {
     else if (await exists(file)) print(`Preserved ${file}`)
     else { await writeFile(file, contents, { flag: 'wx' }); print(`Created ${file}`) }
   }
-  print(`Mount instructions:\n1. Import { UiTests } from 'ui-tests/next' and mount <UiTests /> in your root layout body.\n2. In app/ui-tests/[run]/page.tsx render <Player runId={run} token={token} /> from 'ui-tests/next'.\n3. In app/api/ui-tests/route.ts export GET and POST = createCollector() from 'ui-tests/server'; export const runtime = 'nodejs'.\n4. Run npm run dev, then npx ui-tests.`)
+  print(`Mount instructions:\n1. Import { UiTests } from 'ui-tests/next' and mount <UiTests /> in your root layout body.\n2. In app/ui-tests/[run]/page.tsx render <Player runId={run} token={token} /> from 'ui-tests/next'.\n3. In app/api/ui-tests/route.ts export GET and POST = createCollector() from 'ui-tests/server'; export const runtime = 'nodejs'.`)
+  print('Next: npm run dev, then npx ui-tests')
 }
 /** Entry point: `init`, `verify <run-id>`, `lint`, or dev mode, which compiles and lints the test file, starts the trace viewer, opens the player and verifies each attempt when it finishes. */
 async function main() {

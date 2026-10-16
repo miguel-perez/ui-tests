@@ -1,19 +1,20 @@
+import Link from 'next/link'
 import { SiteShell } from '../../../components/site-shell'
 import { TerminalWindow } from '../../../components/artefacts/terminal-quiet-window'
 import { CodeWindow } from '../../../components/artefacts/code-window'
-import { PlayerSurface } from '../../../components/artefacts/player-surfaces'
-import { TraceViewer } from '../../../components/artefacts/trace-viewer'
-import { ReportRows } from '../../../components/artefacts/report-rows'
-import { PullRequestCheck } from '../../../components/artefacts/pull-request-check'
-import { guide, landing, inviteExample } from '../../../lib/copy'
+import { HostedForm } from '../../../components/artefacts/hosted-form'
+import { guide, landing, inviteExample, agent, hosted } from '../../../lib/copy'
 import { InlineCopy } from '../../../components/inline-copy'
-const anchors = ['install', 'set-up', 'try-it', 'write-your-own', 'real-people']
+import { Icon } from '../../../components/icon'
+const anchors = ['install', 'set-up', 'try-it', 'write-your-own', 'real-people', 'agent']
 export default function GettingStarted() {
-  return <SiteShell><div className="docs-layout site-width"><nav className="docs-sidebar" aria-label="Getting started"><ol>{guide.titles.map((title, i) => <li key={title}><a href={`#${anchors[i]}`}><span>0{i + 1}</span>{title}</a></li>)}</ol></nav><main id="content" className="docs-content"><header><h1>{guide.title}</h1><p>{landing.requirement}</p></header>
-    <section id={anchors[0]}><h2>1. {guide.titles[0]}</h2><p>You type:</p><TerminalWindow name="install" title="npm install -D ui-tests" /><p><InlineCopy text={guide.install} /></p></section>
-    <section id={anchors[1]}><h2>2. {guide.titles[1]}</h2><p>You type:</p><TerminalWindow name="initCommand" title="npx ui-tests init" /><p>You see:</p><TerminalWindow name="init" title="npx ui-tests init" /></section>
-    <section id={anchors[2]}><h2>3. {guide.titles[2]}</h2><p>You type:</p><TerminalWindow name="devCommand" title="npx ui-tests" /><p>{guide.try}</p><PlayerSurface surface="scenario-card" /><PlayerSurface surface="taskbar" /><PlayerSurface surface="ease-question" /><TerminalWindow name="dev" title="npx ui-tests" /><TraceViewer /></section>
-    <section id={anchors[3]}><h2>4. {guide.titles[3]}</h2><p><InlineCopy text={guide.write} /></p><CodeWindow code={inviteExample} title="ui-tests/first.ui.test.ts" /><p><InlineCopy text={guide.next} /></p><PlayerSurface surface="scenario-card" /></section>
-    <section id={anchors[4]}><h2>5. {guide.titles[4]}</h2><p>You type:</p><TerminalWindow name="runCommand" title="npx ui-tests run" /><p>You see:</p><TerminalWindow name="run" title="npx ui-tests run" /><h3>{guide.read}</h3><p>{guide.once}</p><TerminalWindow name="reportCommand" /><p>You see:</p><TerminalWindow /><p><InlineCopy text={guide.pr} /></p><PullRequestCheck reportId="guide-report" /><div id="guide-report"><ReportRows /></div></section>
+  return <SiteShell><div className="docs-layout site-width"><nav className="docs-sidebar" aria-label="Getting started"><ol>{guide.titles.map((title, i) => <li key={title}><a href={`#${anchors[i]}`}><Icon name="arrow" /><span>0{i + 1}</span>{title}</a></li>)}<li><a href="#without-repository"><Icon name="link" />Without a repository</a></li></ol></nav><main id="content" className="docs-content"><header><h1>{guide.title}</h1><p>{landing.requirement}</p></header>
+    <section id="install"><h2>1. {guide.titles[0]}</h2><p>You type:</p><TerminalWindow name="install" title="npm install -D ui-tests" /><p><InlineCopy text={guide.install} /></p></section>
+    <section id="set-up"><h2>2. {guide.titles[1]}</h2><p>You type:</p><TerminalWindow name="initCommand" title="npx ui-tests init" /><p>It creates <code>ui-tests.config.ts</code>, an example test and the Vitest exclusion, then prints the three places to mount the runner:</p><ol className="mount-steps"><li>Import <code>{'{ UiTests }'}</code> from <code>ui-tests/next</code> and mount <code>{'<UiTests />'}</code> in your root layout body.</li><li>In <code>app/ui-tests/[run]/page.tsx</code>, render <code>{'<Player runId={run} token={token} />'}</code> from <code>ui-tests/next</code>.</li><li>In <code>app/api/ui-tests/route.ts</code>, export <code>GET</code> and <code>POST = createCollector()</code> from <code>ui-tests/server</code>; export <code>runtime = 'nodejs'</code>.</li></ol><p>Then start your app with <code>npm run dev</code> and go on to step 3.</p></section>
+    <section id="try-it"><h2>3. {guide.titles[2]}</h2><p>You type:</p><TerminalWindow name="devCommand" title="npx ui-tests" /><p>{guide.try}</p><TerminalWindow name="dev" title="npx ui-tests" /><p>Your rehearsal is never counted with people. <Link className="text-link" href="/#person">Preview the card and questions.</Link></p></section>
+    <section id="write-your-own"><h2>4. {guide.titles[3]}</h2><p><InlineCopy text={guide.write} /></p><CodeWindow code={inviteExample} title="ui-tests/first.ui.test.ts" /><p>{landing.fileCaption}</p><p><InlineCopy text={guide.next} /></p></section>
+    <section id="real-people"><h2>5. {guide.titles[4]}</h2><p>You type:</p><TerminalWindow name="runCommand" title="npx ui-tests run" /><p>You see:</p><TerminalWindow name="run" title="npx ui-tests run" /><h3>{guide.read}</h3><p>{guide.once}</p><TerminalWindow name="reportCommand" /><p><Link className="text-link" href="/#comes-back">Open the example report and trace.</Link> Each ranked problem opens the moment to watch.</p><p><InlineCopy text={guide.pr} /></p><Link className="text-link" href="/#pull-request">See the pull-request check.</Link></section>
+    <section id="agent"><h2>6. {guide.titles[5]}</h2><p>You type <code>{agent.command}</code>. You see a separate agent report:</p><TerminalWindow name="agent" title={agent.command} /><p>{agent.closing}</p></section>
+    <section id="without-repository"><h2>Without a repository</h2><h3>1. Paste the line</h3><CodeWindow code={hosted.snippet} title="index.html" language="html" /><p>You see the script in your live site's markup, or in the tag manager that publishes it.</p><h3>2. Fill the form</h3><HostedForm /><p>You see a shareable report page with the ranked problems. <Link className="text-link" href="/#hosted">Explore the example report.</Link></p><p>{hosted.closing}</p></section>
   </main></div></SiteShell>
 }

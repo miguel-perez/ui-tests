@@ -254,12 +254,16 @@ async function publishP3() {
         person: 'P3',
         source: 'panel',
         device: 'MacBook',
-        browser: 'Chrome',
+        browser: 'Chromium',
         viewport: '1280×800',
         duration: '1:03',
         outcome: 'incorrect',
         ease: 3,
         easeOf: 7,
+        confidence: 6,
+        confidenceOf: 7,
+        uxLite: { ease: 2, usefulness: 4, of: 5, version: 'UX-Lite two-item, 5-point agreement' },
+        consent: { screen: true, voice: false, webcam: false },
         words: "Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.",
         video: '/sessions/p3.webm',
         poster: '/sessions/p3.jpg',
@@ -331,7 +335,7 @@ async function recordAttempt(script) {
     const duration = videoDuration(ffmpeg, raw) ?? (closed - created) / 1000;
     const lag = Math.max(0, (closed - created) / 1000 - duration);
     encode(raw, join(outDir, `${script.id}.webm`), Math.max(0, (t0 - created) / 1000 - lag), script.end);
-    return { id: script.id, person: script.id.toUpperCase(), source: 'panel', device: 'MacBook', browser: 'Chrome', viewport: '1280×800', duration: mmss(script.end - 1), outcome: script.outcome, ease: script.ease, easeOf: 7, words: script.words, video: `/sessions/${script.id}.webm`, poster: `/sessions/${script.id}.jpg`, videoSeconds: videoDuration(ffmpeg, join(outDir, `${script.id}.webm`)), moments };
+    return { id: script.id, person: script.id.toUpperCase(), source: 'panel', device: 'MacBook', browser: 'Chromium', viewport: '1280×800', duration: mmss(script.end - 1), outcome: script.outcome, ease: script.ease, easeOf: 7, confidence: script.outcome === 'correct' ? 6 : 4, confidenceOf: 7, uxLite: { ease: script.outcome === 'correct' ? 4 : 2, usefulness: 4, of: 5, version: 'UX-Lite two-item, 5-point agreement' }, consent: { screen: true, voice: false, webcam: false }, words: script.words, video: `/sessions/${script.id}.webm`, poster: `/sessions/${script.id}.jpg`, videoSeconds: videoDuration(ffmpeg, join(outDir, `${script.id}.webm`)), moments };
   } finally { await context.close(); await browser.close(); }
 }
 if (!process.argv.includes('--p3')) {

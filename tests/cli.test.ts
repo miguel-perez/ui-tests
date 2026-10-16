@@ -36,6 +36,7 @@ it('init preserves author files and existing Vitest settings, adds the exclusion
   await writeFile(path.join(cwd, 'ui-tests.config.ts'), '// my existing configuration\n')
   const { stdout } = await exec(process.execPath, [cli, 'init'], { cwd, timeout: 10000 })
   expect(stdout).toContain('Mount instructions:')
+  expect(stdout.trim().split('\n').at(-1)).toBe('Next: npm run dev, then npx ui-tests')
   expect(await readFile(path.join(cwd, 'ui-tests.config.ts'), 'utf8')).toBe('// my existing configuration\n')
   const updated = await readFile(path.join(cwd, 'vitest.config.ts'), 'utf8')
   expect(updated).toContain("exclude: ['**/*.ui.test.ts', 'custom/**']")

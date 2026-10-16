@@ -176,6 +176,7 @@ it('keeps README, landing context and rendered copy word-for-word aligned', asyn
   }
   for (const text of strings(siteCopy)) assert(readme).toContain(text)
   assert((await readFile('apps/web/landing.ui.test.ts', 'utf8')).trim()).toBe(siteCopy.example)
-  assert(readme).not.toMatch(/\b(?:compliant|certified)\b|synthetic users|AI participants|agent runs/i)
+  assert(readme).not.toMatch(/\b(?:compliant|certified)\b|synthetic users|AI participants/i)
+  assert(readme).toContain('Agent runs are never counted with people and never described as people.')
   assert(strings(siteCopy).join('\n')).toContain('There is no score and no pass.')
 })

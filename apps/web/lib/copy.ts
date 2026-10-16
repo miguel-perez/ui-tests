@@ -7,7 +7,7 @@ export const landing = {
   moment: 'P3 · 00:03 · looked for Invite in the Share menu',
   words: '“Share is where you add people. I checked there first.”',
   comesBack: 'What comes back.',
-  comesBackLead: 'Here is the whole of one run: the file that asked for it, what one person did, and what to fix.',
+  comesBackLead: 'Here is the whole of one run: what one person did, and what to fix.',
   fileCaption: 'If you have written a Playwright test, you have written this.',
   result: 'Problems found: 4 across 5 people.',
   priority: 'Problem 1 is one link. Problem 2 is the one to fix first: both people who hit it believed they were finished, and their colleague got the same email twice.',
@@ -70,7 +70,7 @@ export const commands = { install: 'npm install -D ui-tests', init: 'npx ui-test
 export const rehearsal = 'Rehearsal: 0 of 5 planned attempts recorded.'
 export const guide = {
   title: 'Getting started',
-  titles: ['Install', 'Set up', 'Try it on yourself', 'Write your own', 'Run it with real people'],
+  titles: ['Install', 'Set up', 'Try it on yourself', 'Write your own', 'Run it with real people', 'Run it with an agent'],
   install: 'You see "ui-tests" in `devDependencies`.',
   try: 'You see a link in the terminal, then in your browser the scenario card, your own page with the bar over it, and the ease question. Press "I\'m done". The terminal prints:',
   write: 'You type, in `ui-tests/first.ui.test.ts`:',
@@ -78,5 +78,21 @@ export const guide = {
   read: 'Read what came back',
   once: 'You type, once the attempts are in:',
   pr: 'Then, for the pull request, put `npx ui-tests run` in the job that deploys your preview. On the next pull request you see the check:',
+}
+export const agent = {
+  heading: 'The same test, run by an agent.',
+  lead: 'Point the same file at your CLI, your MCP server or your API and run it with an agent instead of a person. Five trials, a trace for each, a report of its own. Agent runs are never counted with people and never described as people.',
+  closing: 'One file, two actors, two reports that never mix.',
+  command: 'npx ui-tests run --actor agent',
+  check: 'ui-tests (agent) · 3 of 5 trials · Report',
+}
+export const hosted = {
+  heading: 'No repo to put it in? Paste one line.',
+  lead: 'One script tag on your live site, through your tag manager if that is how you ship. Then the same test in a form instead of a file: who the users are, what they are trying to do, and how you can tell they did it, by a page they reach, an element they see or a question they answer. People come from your link, a panel or your own visitors, and the report is a page you can share.',
+  closing: 'Same test, same report, no install.',
+  snippet: '<script src="https://ui-tests.com/s.js" data-site="weekboard" async></script>',
+  users: 'people who signed up this week and want a colleague on their board',
+  purpose: 'plan the week together without emailing screenshots around',
+  goal: 'invite a colleague',
 }
 export const ui = { wordmark: 'ui-tests', guide: 'Guide', github: 'GitHub', getStarted: 'Get started', skip: 'Skip to content', navigation: 'Main navigation', steps: 'Getting started', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy. Select and copy the code.', typescript: 'TypeScript', shell: 'Shell', output: 'Output', example: 'Example run' }
