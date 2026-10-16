@@ -52,11 +52,12 @@ export function createCollector(getStorage: () => StorageAdapter = () => new SQL
       if (body.action === 'consent') {
         run = store.authorize(body.id, body.token)
         if (!run || run.status !== 'created') return new Response('Invalid participant token', { status: 401 })
+        if (run.withdrawnAt) return new Response('Attempt was withdrawn', { status: 409 })
         run.status = 'consented'
         headers['Set-Cookie'] = `ui-tests-run=${run.id}.${run.token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=7200${new URL(request.url).protocol === 'https:' ? '; Secure' : ''}`
       } else {
         if (!run) return new Response('Unauthorized', { status: 401 })
-        // Withdrawal is final: nothing else may write to the attempt afterwards.
+        // Withdrawal is final: nothing else may write to the attempt afterwards, consent included.
         if (run.withdrawnAt && body.action !== 'withdraw') return new Response('Attempt was withdrawn', { status: 409 })
         if (body.action === 'begin') {
           if (run.status !== 'consented') return new Response('Consent is required before beginning', { status: 409 })

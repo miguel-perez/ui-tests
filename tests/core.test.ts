@@ -196,6 +196,14 @@ describe('storage, verification and participant boundary', () => {
       for (const action of [{ action: 'begin' }, { action: 'events', events: [] }, { action: 'extend' }, { action: 'end', reason: 'done', snapshot: { url: 'http://localhost/', dom: '' } }, { action: 'questions', seq: 5 }, voice]) assert((await post(action)).status).toBe(409)
       assert(store.get(run.id)!).toEqual(withdrawn)
       assert(store.db.prepare('SELECT COUNT(*) AS n FROM recordings').get()).toEqual({ n: 0 })
+      // Withdrawing before consent leaves the run created, and consent is still refused without a cookie.
+      const early = store.create(compile(authored())[0])
+      const send = (body: unknown, cookie?: string) => handler(new Request('http://localhost/api/ui-tests', { method: 'POST', headers: { origin: 'http://localhost', ...(cookie ? { cookie } : {}) }, body: JSON.stringify(body) }))
+      assert((await send({ action: 'withdraw' }, `ui-tests-run=${early.id}.${early.token}`)).status).toBe(200)
+      const refused = await send({ action: 'consent', id: early.id, token: early.token })
+      assert(refused.status).toBe(409)
+      assert(refused.headers.get('set-cookie')).toBeNull()
+      assert(store.get(early.id)!.status).toBe('created')
     } finally { close.mockRestore(); store.close() }
   })
   it('deletes recordings past the 90-day retention default', async () => {
