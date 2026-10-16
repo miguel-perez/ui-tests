@@ -42,6 +42,9 @@ function cookie(request: Request) { return /(?:^|;\s*)ui-tests-run=([^;]+)/.exec
 export function createCollector(getStorage: () => StorageAdapter = () => new SQLiteAdapter()) {
   /** Handles one collector request; storage is opened and closed per request. */
   return async function handler(request: Request) {
+    // The bar mounted on every page asks once whether a rehearsal is running; with no credentials at all the answer is "none", not an
+    // error, in production too, so a page that mounts the bar logs nothing, and no storage is opened for it.
+    if (request.method === 'GET' && !request.headers.get('authorization') && !cookie(request)) return Response.json(null, { headers: { 'Cache-Control': 'no-store' } })
     // Collector is deliberately development-only in this slice.
     if (process.env.NODE_ENV === 'production') return new Response('Rehearsals require dev mode', { status: 404 })
     const store = getStorage()
@@ -50,8 +53,6 @@ export function createCollector(getStorage: () => StorageAdapter = () => new SQL
       store.purgeRecordings(Date.now() - recordingRetentionMs)
       const [id, token] = request.headers.get('authorization')?.replace(/^Bearer /, '').split('.') ?? cookie(request) ?? []
       if (request.method === 'GET') {
-        // The bar mounted on every page asks once whether a rehearsal is running; with no credentials at all the answer is "none", not an error.
-        if (!request.headers.get('authorization') && !cookie(request)) return Response.json(null, { headers: { 'Cache-Control': 'no-store' } })
         const run = id && token ? store.authorize(id, token) : undefined
         return run ? Response.json(participantView(run), { headers: { 'Cache-Control': 'no-store' } }) : new Response('Unauthorized', { status: 401 })
       }

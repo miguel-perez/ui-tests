@@ -451,6 +451,13 @@ describe('storage, verification and participant boundary', () => {
     assert(probe.status).toBe(200); assert(await probe.json()).toBeNull()
     assert((await handler(new Request('http://localhost/api/ui-tests', { headers: { cookie: 'ui-tests-run=a.b' } }))).status).toBe(401)
     assert((await handler(new Request('http://localhost/api/ui-tests', { method: 'POST', headers: { origin: 'http://evil.test' }, body: '{}' }))).status).toBe(403)
+    // In production the collector is off, but the probe from every page still hears "no rehearsal", so the landing logs no 404.
+    vi.stubEnv('NODE_ENV', 'production')
+    try {
+      const quiet = await handler(new Request('http://localhost/api/ui-tests'))
+      assert(quiet.status).toBe(200); assert(await quiet.json()).toBeNull()
+      assert((await handler(new Request('http://localhost/api/ui-tests', { headers: { cookie: 'ui-tests-run=a.b' } }))).status).toBe(404)
+    } finally { vi.unstubAllEnvs() }
   })
   it('does not let an overlapping recorder request restore an ended attempt to active', async () => {
     const store = new SQLiteAdapter(':memory:')
