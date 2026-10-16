@@ -1,62 +1,112 @@
-<!DOCTYPE html><html lang="en"><head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&amp;family=Fira+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
-  <style>
-    :root {
-      --moment-hue: #e0a458;
-      --canvas-bg: #101211;
-      --surface-lift: #1c1f1e;
-      --text-primary: #f2f2f2;
-      --text-muted: #a4ada5;
-      --hairline: rgba(255, 255, 255, 0.08);
-    }
-    body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Fira Sans', sans-serif;
-      background-color: var(--canvas-bg);
-    }
-    .font-fira-code {
-      font-family: 'Fira Code', monospace;
-    }
-    .moment-bg {
-      background-color: var(--moment-hue);
-    }
-    .border-hairline {
-      border: 1px solid var(--hairline);
-    }
-    .text-muted {
-      color: var(--text-muted);
-    }
-    .text-primary {
-      color: var(--text-primary);
-    }
-  </style>
-</head>
-<body>
-  <div class="w-[560px] h-[360px] flex items-center justify-center" data-sd-id="1">
-    <div class="relative w-[480px] bg-[#1c1f1e] rounded-[8px] border-hairline p-10 flex flex-col items-start gap-8" data-sd-id="2">
-      
-      <!-- Example run marker -->
-      <div class="absolute top-4 right-4" data-sd-id="3">
-        <span class="font-fira-code text-[11px] text-muted tracking-tight" data-sd-id="4">Example run</span>
-      </div>
+<!--
+  Participant chrome (D2 round five). Spec: docs/discovery/participant-chrome-research.md and participant-overlay-research.md.
+  Theme rule: the chrome is the INVERSE of the host page (dark pill and sheets on a light site, light on a dark site), opaque,
+  with a hairline and a soft shadow, the host's font, and the ONE accent the author sets (Weekboard: mint). It never shares a
+  panel colour with the host page and never carries ui-tests branding. The site's own product surfaces (attempt view, report
+  rows, dashboard) use the site's dark tokens; only the demo app under test is light.
+-->
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+img { display: block; max-width: 100%; }
+.chip, .pill { white-space: nowrap; }
+:root {
+  color-scheme: dark;
+  --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42;
+  --ink: #c0caf5; --muted: #a9b1d6; --comment: #8089b3;
+  --moment: #ff9e64; --blue: #7aa2f7; --green: #9ece6a; --teal: #73daca; --purple: #bb9af7; --cyan: #89ddff; --red: #f7768e; --yellow: #e0af68;
+  --chip-ink: #1a1b26; --focus: #c0caf5;
+  /* the host page under test (Weekboard, light) and the chrome's inverse surface derived from it */
+  --host-bg: #e1e2e7; --host-panel: #eef0f5; --host-line: #c4c8da; --host-ink: #2c3353; --host-dim: #4b5a94;
+  --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225,226,231,.68); --ch-hair: rgba(225,226,231,.16); --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px;
+  --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
+}
+/* The chrome, drawn at real size with the inverse surface */
+.ch { font-family: var(--sans); color: var(--ch-ink); }
+.sheet { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, 88%); max-height: calc(100% - 56px); overflow: hidden; background: var(--ch-surface); border-radius: calc(var(--ch-radius) + 4px); box-shadow: 0 0 0 1px var(--ch-hair), 0 18px 40px rgba(21,26,33,.35); padding: 16px 20px 16px; display: grid; gap: 9px; align-content: start; }
+.sheet .step { font-size: 11px; color: var(--ch-dim); letter-spacing: .02em; }
+.sheet h4 { font: 500 15px/1.35 var(--sans); text-wrap: balance; }
+.sheet p { font-size: 14px; line-height: 1.45; }
+.sheet p b { font-weight: 500; }
+.sheet .small { font-size: 12px; color: var(--ch-dim); line-height: 1.4; }
+.sheet ul.list { display: grid; gap: 4px; font-size: 13px; }
+.sheet ul.list li { display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; align-items: baseline; }
+.sheet ul.list li i { width: 8px; height: 8px; border-radius: 50%; background: var(--ch-accent); display: inline-block; justify-self: center; }
+.sheet ul.list li i.off { background: none; box-shadow: inset 0 0 0 1px var(--ch-dim); }
+.sheet ul.list li em { font-style: normal; font-size: 12px; color: var(--ch-dim); }
+.sheet .actions { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-top: 2px; }
+.btn { height: 36px; padding: 0 14px; border-radius: var(--ch-radius); font: 500 13px/1 var(--sans); display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.btn.pri { background: var(--ch-accent); color: var(--ch-accent-ink); }
+.btn.ghost { box-shadow: inset 0 0 0 1px var(--ch-hair); color: var(--ch-ink); }
+.btn.quiet { color: var(--ch-dim); padding: 0 6px; }
+.opts { display: grid; gap: 4px; }
+.opts li { display: flex; gap: 10px; align-items: center; padding: 7px 11px; border-radius: var(--ch-radius); box-shadow: inset 0 0 0 1px var(--ch-hair); font-size: 13px; }
+.opts li i { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ch-dim); flex: none; }
+.opts li.on i { box-shadow: inset 0 0 0 4px var(--ch-accent); }
+.opts li.sq i { border-radius: 3px; }
+.opts.two { grid-template-columns: 1fr 1fr; }
+.scale { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.scale li { height: 40px; display: grid; place-items: center; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--ch-hair); font: 500 15px/1 var(--mono); }
+.scale li.on { background: var(--ch-accent); color: var(--ch-accent-ink); }
+.anchors { display: flex; justify-content: space-between; font-size: 12px; color: var(--ch-dim); margin-top: -4px; }
+.box { border-radius: var(--ch-radius); box-shadow: inset 0 0 0 1px var(--ch-hair); padding: 10px 12px; min-height: 56px; font-size: 13px; color: var(--ch-dim); }
+.talk { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ch-ink); }
+.talk i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ch-ink); display: inline-grid; place-items: center; }
+.talk i::after { content: ""; width: 5px; height: 8px; border-radius: 3px; background: var(--ch-ink); }
 
-      <!-- Scenario Text -->
-      <p class="text-[17px] leading-[1.6] text-primary" data-sd-id="5">
-        Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished.
-      </p>
+/* The bar: a pill at the bottom centre, the recording chip beside it */
+.bar-wrap { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); display: flex; gap: 6px; align-items: center; }
+.pill { height: 50px; display: flex; align-items: center; gap: 8px; padding: 0 7px 0 10px; background: var(--ch-surface); color: var(--ch-ink); border-radius: 14px; box-shadow: 0 0 0 1px var(--ch-hair), 0 10px 28px rgba(21,26,33,.3); white-space: nowrap; }
+.pill .grip { width: 10px; height: 20px; background: radial-gradient(circle, var(--ch-dim) 1px, transparent 1.3px) 0 0/5px 5px; opacity: .7; }
+.pill .task { font-size: 13px; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+.pill .task b { font-weight: 500; color: var(--ch-dim); margin-right: 8px; font-size: 12px; }
+.pill .btn { height: 36px; padding: 0 12px; }
+.chip { height: 36px; display: flex; align-items: center; gap: 8px; padding: 0 10px; background: var(--ch-surface); color: var(--ch-ink); border-radius: 12px; box-shadow: 0 0 0 1px var(--ch-hair), 0 10px 28px rgba(21,26,33,.3); font: 500 12px/1 var(--mono); }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ch-rec); }
+.chip .ic { width: 14px; height: 14px; opacity: .75; }
+.chip .ic svg { width: 100%; height: 100%; display: block; }
 
-      <!-- Action Button -->
-      <button id="start-task-btn" class="moment-bg text-[#101211] font-sans font-semibold text-[15px] px-8 py-3 rounded-[4px] hover:brightness-110 active:brightness-90 transition-all" data-sd-id="6">
-        Start
-      </button>
+.sheet .step { font-size: 11px; color: var(--ch-dim); letter-spacing: .02em; }
+.chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ch-rec); }
+.sheet .step { color: var(--ch-accent); opacity: .9; }
+.opts li.on { box-shadow: inset 0 0 0 1px var(--ch-accent); }
+.chip .dot { box-shadow: 0 0 0 3px rgba(245,42,101,.18); }
+.frame.auto { aspect-ratio: auto; padding: 62px 24px 36px; }
+.frame.auto .sheet { position: relative; left: auto; top: auto; z-index: 1; transform: none; margin: 0 auto; max-height: none; }
+.frame { position: relative; aspect-ratio: 16 / 10; width: 100%; max-width: 800px; border-radius: 8px; overflow: hidden; background: var(--host-bg); border: 1px solid var(--line); }
+.frame .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.frame .dim { position: absolute; inset: 0; background: rgba(44,51,83,.4); }
+.frame .blank { position: absolute; inset: 0; background: var(--host-bg); }
+.frame .addr { position: absolute; top: 0; left: 0; right: 0; height: 26px; background: var(--host-panel); border-bottom: 1px solid var(--host-line); display: flex; align-items: center; gap: 8px; padding: 0 10px; font: 400 11px/1 var(--mono); color: var(--host-dim); }
+.frame .addr i { width: 8px; height: 8px; border-radius: 50%; background: var(--host-line); display: inline-block; }
+.frame .addr span { margin-left: 6px; }
+.frame .label { position: absolute; right: 10px; top: 34px; font: 500 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--host-dim); background: var(--host-panel); border: 1px solid var(--host-line); border-radius: 3px; padding: 4px 6px; }
 
-    </div>
-  </div>
 
-</body></html>
+.frame.auto { aspect-ratio: auto; padding: 62px 24px 36px; }
+.frame.auto .sheet { position: relative; left: auto; top: auto; z-index: 1; transform: none; margin: 0 auto; max-height: none; }
+.cmds-note { margin-bottom: 48px; }
+.whole-top { margin-top: 0; }
+.pair .intro { margin-bottom: 20px; }
+.pair .side { margin-bottom: 16px; }
+.after { margin-top: 56px; padding-top: 24px; }
+@media (max-width: 900px) {
+  .whole-top .code li, .pair .excerpt li { white-space: pre-wrap; overflow-wrap: anywhere; align-items: start; }
+  .whole-top .code li .src, .pair .excerpt li .src { padding-left: 4px; text-indent: 0; }
+  .frame.auto { padding: 50px 12px 24px; }
+}
+
+.cmds-note { margin-bottom: 24px; }
+.whole-top { margin: 0 0 40px; }
+
+body { background: var(--canvas); color: var(--ink); font: 400 15px/1.55 var(--sans); margin: 0; padding: 32px; display: grid; gap: 40px; }
+h2 { font: 500 16px/1.3 var(--sans); margin: 0 0 10px; color: var(--muted); }
+</style>
+<figure class="frame" aria-label="Scenario card over the dimmed page"><img class="shot" src="attempt-view/board.jpg" alt="The Weekboard board"><div class="dim"></div><div class="addr"><i></i><i></i><i></i><span>weekboard.app/board</span></div>
+<div class="sheet ch">
+              <span class="step">Task 1 of 1</span>
+              <p>You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.</p>
+              <p class="small">When you think you've finished, press <b>Done</b>. If you get stuck, press <b>I couldn't do this</b>.</p>
+              <div class="actions"><span></span><button class="btn pri">Start task</button></div>
+            </div>
+</figure>
