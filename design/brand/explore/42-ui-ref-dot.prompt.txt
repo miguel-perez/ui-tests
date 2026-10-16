@@ -1,0 +1,1 @@
+Recreate this exact ui monogram logomark as clean flat vector: keep the letterforms, weights and proportions exactly as in the reference, but replace the arrow with a plain round dot above the i, the usual dot of an i. Single solid black on plain white, no gradients, no shading, centered.

@@ -1,0 +1,1 @@
+Recreate this exact ui monogram logomark as clean flat vector with monoline strokes of one consistent width, keeping the same u and i shapes and proportions as the reference, with a small solid pointer arrow as the dot of the i. Single solid black on plain white, no gradients, no shading, centered.
