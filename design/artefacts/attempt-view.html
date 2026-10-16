@@ -16,7 +16,7 @@
 :root {
   color-scheme: dark;
   --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42;
-  --ink: #c0caf5; --muted: #a9b1d6; --comment: #565f89;
+  --ink: #c0caf5; --muted: #a9b1d6; --comment: #8089b3;
   --moment: #ff9e64; --deviation: #7aa2f7; --dead: #f7768e; --pause: #e0af68; --done: #73daca; --note: #bb9af7;
   --no: #f7768e; --yes: #73daca;
   --chip-ink: #1a1b26; --focus: #c0caf5;
@@ -26,7 +26,7 @@
   :root:not([data-theme="dark"]) {
     color-scheme: light;
     --canvas: #f6f7fb; --surface: #ffffff; --raised: #eef0f7; --line: #d5d9e6;
-    --ink: #1f2335; --muted: #4c5374; --comment: #9aa1c2;
+    --ink: #1f2335; --muted: #4c5374; --comment: #5c6487;
     --moment: #a64d00; --deviation: #2f5bcc; --dead: #c0244b; --pause: #7d5600; --done: #00726a; --note: #7536c4;
     --no: #c0244b; --yes: #00726a; --chip-ink: #ffffff; --focus: #2f5bcc;
   }
@@ -34,7 +34,7 @@
 :root[data-theme="light"] {
   color-scheme: light;
   --canvas: #f6f7fb; --surface: #ffffff; --raised: #eef0f7; --line: #d5d9e6;
-  --ink: #1f2335; --muted: #4c5374; --comment: #9aa1c2;
+  --ink: #1f2335; --muted: #4c5374; --comment: #5c6487;
   --moment: #a64d00; --deviation: #2f5bcc; --dead: #c0244b; --pause: #7d5600; --done: #00726a; --note: #7536c4;
   --no: #c0244b; --yes: #00726a; --chip-ink: #ffffff; --focus: #2f5bcc;
 }
@@ -210,7 +210,8 @@ pre .c { color: var(--comment); }
   .flow { --rail: 20px; }
   .flow > li.moment { padding-left: 0; padding-block: 16px; }
   .flow > li.moment::after { display: none; }
-  .flow .row { grid-template-columns: 46px 1fr auto; }
+  .flow .row { grid-template-columns: 46px 1fr auto; padding-left: 28px; }
+  .flow .row > span:not(.what):not(.url) { display: none; }
   .flow .row .what { grid-column: 2; }
   .result h1 { font-size: 28px; }
 }
@@ -391,12 +392,13 @@ pre .c { color: var(--comment); }
     });
     card.dataset.now = t;
   }
-  function stop() { if (timer) { clearInterval(timer); timer = null; } if (playing) { playing.classList.remove('is-playing'); playing = null; } }
+  function label(card, verb) { var b = card.querySelector('.clip'); b.setAttribute('aria-label', b.getAttribute('aria-label').replace(/^(Play|Pause)/, verb)); }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } if (playing) { playing.classList.remove('is-playing'); label(playing, 'Play'); playing = null; } }
   function play(card) {
     var again = playing === card; stop(); if (again) return;
     var t = +card.dataset.now || +card.dataset.start, end = +card.dataset.end;
     if (t >= end) t = +card.dataset.start;
-    playing = card; card.classList.add('is-playing'); setTime(card, t);
+    playing = card; card.classList.add('is-playing'); label(card, 'Pause'); setTime(card, t);
     timer = setInterval(function () { t += 1; setTime(card, t); if (t >= end) stop(); }, 1000);
   }
   cards.forEach(function (card) {

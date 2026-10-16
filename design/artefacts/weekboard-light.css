@@ -1,7 +1,7 @@
 /* Weekboard demo, light palette (Tokyo Night Day). The app is light; the ui-tests player chrome over it stays dark. */
 :root {
   --canvas: #e1e2e7; --surface: #eef0f5; --line: #c4c8da;
-  --ink: #2c3353; --muted: #6172b0; --moment: #b15c00;
+  --ink: #2c3353; --muted: #4b5a94; --moment: #b15c00;
   --deviation: #2e7de9; --dead: #f52a65; --pause: #8c6c3e; --done: #118c74; --note: #7847bd;
   --wb-bg: var(--canvas); --wb-panel: var(--surface); --wb-card: var(--surface);
   --wb-line: var(--line); --wb-text: var(--ink); --wb-dim: var(--muted);
