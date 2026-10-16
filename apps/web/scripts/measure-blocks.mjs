@@ -12,7 +12,7 @@ import path from 'node:path'
 const base = process.env.SITE_BASE_URL ?? 'http://localhost:3000'
 const harness = process.env.UI_HARNESS_ROOT
 const pages = [
-  { name: 'landing', route: '/', blocks: [['L1', 'main > section.hero'], ...['comes-back', 'person', 'people', 'pull-request', 'agents', 'hosted', 'commands'].map((id, i) => [`L${i + 2}`, `section.block[aria-labelledby="${id}"]`])] },
+  { name: 'landing', route: '/', blocks: [['L1', 'main > section.hero'], ...['comes-back', 'what-you-write', 'people', 'pull-request', 'agents', 'hosted'].map((id, i) => [`L${i + 2}`, `section.block[aria-labelledby="${id}"]`])] },
   { name: 'guide', route: '/docs/getting-started', blocks: [['G0', '.guide-head'], ...['install', 'set-up', 'try-it', 'write-your-own', 'real-people', 'agent', 'paste', 'fill'].map((id, i) => [`G${i + 1}`, `#${id}`])] },
 ]
 /** The typed content of a block: what the grid plan places. Everything else inside a block is either part of these or empty. */

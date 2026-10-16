@@ -129,41 +129,176 @@ Under it: Problem 1 is one link. Problem 2 is the one to fix first: both people 
 
 ---
 
-## 3. What the person sees
+## 3. What you write, what they see
 
 *Do I have to write a script, and will I lead them.*
 
-**Heading.** What the person sees.
+**Heading.** What you write, what they see.
 
-**Lead.** Your page, with a small bar over it. Nothing else.
+**Lead.** Every screen a person meets, in the order they meet it, beside the lines of your test that produce it, and what comes back from each. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.
 
-**Artefact.** Three screens as real UI, each beside the line in the file it came from. Frame label: Example run.
+**Commands.** Three cards in one row, each a command and what it does.
 
-1. **The scenario card**, before your page loads:
+| Command | Does |
+| --- | --- |
+| `npm install -D ui-tests` | Adds the package. |
+| `npx ui-tests init` | Creates **the file** below, with the example filled in. |
+| `npx ui-tests run` | Turns it into **these screens** and puts people in front of them. |
 
-   > Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished.
-   >
-   > [ Start ]
+**Under the commands.** `npx ui-tests` on its own runs every screen on you first, so you see the card, the bar and your own trace before anyone else does.
 
-   Beside it: `goal('invite a colleague')`.
+**The file.** `ui-tests/invite.ui.test.ts`, 23 lines, exactly what `npx ui-tests init` writes. Frame label: Example run.
 
-2. **The bar**, the only two controls on the page:
+```ts
+import { context, beforeEach, goal, outcome, expect } from 'ui-tests'
 
-   > [ I'm done ]  [ I can't do this ]
+context({
+  users: {
+    are: 'people who signed up this week and want a colleague on their board',
+    did: 'signed up for a tool to plan work with a team',
+    within: '7 days',
+    uses: ['Trello', 'Asana', 'Notion', 'Linear'],
+    not: ['has used Weekboard'],
+  },
+  purpose: 'plan the week together without emailing screenshots around',
+  video: true,
+}, () => {
+  beforeEach(async () => ({ colleague: 'Sam', email: 'sam@acme.co' }))
+  goal('invite a colleague', {
+    happyPath: ['/board', '/settings/members'],
+    catch: { affecting: '1 in 3', confidence: 0.85 },
+  }, () => {
+    outcome(async ({ page }) => {
+      expect(await page.textContent('main')).toContain('1 invitation pending')
+    })
+  })
+})
+```
 
-   Beside it: `outcome(...)`. It runs on your side after either button.
+**The pieces.** Six, in the order a person meets them. Each shows its name, the note, only the lines that produce it (original line numbers kept, skipped lines as a dots row), the screen in a light frame with the chrome at real size, and what comes back.
 
-3. **One question and a box**, after the bar:
+### 1. Consent
 
-   > How easy was that? 1 very hard … 7 very easy
-   >
-   > Anything you want to tell us? (optional)
+**Subtitle.** before anything loads
 
-   Beside it: the rating and the words land in their trace.
+**Note.** What the person does on the page is always recorded, and the consent says so in plain words. `video: true` adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.
 
-*Designer's note, not page copy: the player also shows a consent screen before the card and a confidence question after the ease question; the page shows only the three surfaces above. The optional box is added to the player in D2.*
+**Lines.** `video`
 
-**Closing line.** They never see the path you expected or the check you wrote, so nothing you wrote can lead them.
+```text
+12   video: true,
+```
+
+**Screen.** "Weekboard · before you start". "Weekboard would like to watch you try something on their site." What you do on their page: where you click, what you type, which pages you open (always) · Your screen, as a video, while you try it (needed) · Your voice, only if you choose to talk later (optional) · Your camera (off). "The website is being tested, not you. You can stop at any time and still be paid $9." [ What is recorded? ] [ Continue ]
+
+**Comes back.** recorded: actions, screen, voice · camera: declined
+
+### 2. Who gets in, and how many
+
+**Subtitle.** the sample
+
+**Note.** Six questions, one per screen; press Next to see them all. The first three come from `users`: `did` and `within` become a recency question with bands, `uses` a multi-select with one decoy, `not` an item among neutral ones, so nobody can tell what disqualifies. The last three come from `purpose`: when they last needed it, how they do it today, how much it matters. Write `users` as the sentence alone and the first three are drafted from it.
+
+The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $54, under a cap you set before it starts; your own link and your own visitors cost nothing.
+
+**Lines.** `users · purpose · catch`
+
+```text
+ 4   users: {
+ 5     are: 'people who signed up this week and want a colleague on their board',
+ 6     did: 'signed up for a tool to plan work with a team',
+ 7     within: '7 days',
+ 8     uses: ['Trello', 'Asana', 'Notion', 'Linear'],
+ 9     not: ['has used Weekboard'],
+10   },
+11   purpose: 'plan the week together without emailing screenshots around',
+   ⋯
+17     catch: { affecting: '1 in 3', confidence: 0.85 },
+```
+
+**Screens.** Six, one per screen, each with Next. "A few questions first · n of 6". (1) When did you last sign up for a tool to plan work with a team? In the past week · In the past month · Earlier this year · I haven't. (2) Which of these do you use to plan work? Pick all that apply. Trello · Asana · Notion · Linear · Basecamp · None of these. (3) Which of these have you done? Pick all that apply. Managed a team of more than five · Used Weekboard · Taken a course on planning or project management · None of these. (4) When did you last need to plan a week with other people? This week · This month · Earlier this year · I don't. (5) How do you do it today? A shared document or spreadsheet · A planning tool · Chat and email · In my head. (6) How much does it matter to you to get this right? A lot: it costs me time every week · Some · Not much.
+
+**Worked out on your side.** People: 5 from the panel, matched to `users` · Chance of seeing a 1-in-3 problem: 87% · Cost: about $54 · cap $60 · results within 48 hours.
+
+**Comes back.** screened 20 · matched 5 · fit: 3 of 5 had the need this month · how they do it today, in their words
+
+### 3. First impression
+
+**Subtitle.** on by default
+
+**Note.** The page the task starts on is flashed for 500 ms, then one open question. The start is the first page of the `happyPath` unless the goal names a `start`; name another page for the flash with `impression: { page }` when the task begins behind a login and the purpose lives on the public page. The answers are read against the `purpose`, which the person never sees, and you can re-read any of them. Then the page comes back for one click.
+
+**Lines.** `purpose · happyPath`
+
+```text
+11   purpose: 'plan the week together without emailing screenshots around',
+   ⋯
+16     happyPath: ['/board', '/settings/members'],
+```
+
+**Screen.** Over the flashed page: "You saw a page for half a second". "What was that page for?" [ In your own words. There is no right answer. ] Talk instead · [ Next ]
+
+**Comes back.** named the purpose: 4 of 5, with their words · first click on your path: 3 of 5
+
+### 4. Scenario card
+
+**Subtitle.** from the goal, never the path
+
+**Note.** The situation from `users.are` and `purpose`, the action from the goal's name, the name and email from `beforeEach`. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with `scenario`.
+
+**Lines.** `users · purpose · beforeEach · goal`
+
+```text
+ 5     are: 'people who signed up this week and want a colleague on their board',
+   ⋯
+11   purpose: 'plan the week together without emailing screenshots around',
+   ⋯
+14   beforeEach(async () => ({ colleague: 'Sam', email: 'sam@acme.co' }))
+15   goal('invite a colleague', {
+```
+
+**Screen.** Over the dimmed page: "Task 1 of 1". "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co." "When you think you've finished, press **Done**. If you get stuck, press **I couldn't do this**." [ Start task ]
+
+**Comes back.** the exact card text, kept with the run
+
+### 5. Your page, with the bar, then the check
+
+**Subtitle.** two controls, one check
+
+**Note.** One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from `video`, with a pause; there is no microphone during the task. The summary is the goal's name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: the two pages of the `happyPath` set a silent three-minute limit, and the person may ask for more time once. The pill takes your font, inverts your page's colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.
+
+When they press Done, the `outcome` runs against the page as they left it. What they said does not count; what the page says does. A check that cannot decide returns "couldn't tell" and is never rounded either way.
+
+**Lines.** `goal · happyPath · video · outcome`
+
+```text
+12   video: true,
+   ⋯
+15   goal('invite a colleague', {
+16     happyPath: ['/board', '/settings/members'],
+   ⋯
+19     outcome(async ({ page }) => {
+20       expect(await page.textContent('main')).toContain('1 invitation pending')
+21     })
+```
+
+**Screen.** The board with the bar: ● 0:41 ‖ · Task 1 of 1 Invite Sam to the board · Done · I couldn't do this.
+
+**After Done · runs on your side.** `expect(await page.textContent('main')).toContain('1 invitation pending')` · Person 3, after Done: Not reached · main contained "2 invitations pending" · Person 5, after Done: Reached · 1:12.
+
+**Comes back.** time on this goal · every moment · their path against yours · how it ended · reached the goal: yes / no / couldn't tell, with the diff
+
+### 6. After the task
+
+**Subtitle.** not from your file
+
+**Note.** Five screens, one question each; press Next to see them all. The first two come after every attempt, including the ones that gave up: how easy it was, with nothing preselected, and, at 4 or below, what made it difficult. The last three come once, after all goals: would it help them, is it easy to use, and anything they want to say, typed or spoken. Confidence is asked only when a goal has no check, so Weekboard's people never see it.
+
+**Lines.** None: not from your file.
+
+**Screens.** Five, one per screen, each with Next, the last with Finish. "After the task · 1 of 2": Overall, how difficult or easy did you find this task? 1 Very difficult … 7 Very easy. "After the task · 2 of 2": What made it difficult? (typed, or Talk instead). "After all goals · 1 of 3": Would Weekboard be useful to you? Strongly disagree · Disagree · Neither · Agree · Strongly agree. "After all goals · 2 of 3": Weekboard is easy to use. (the same five). "After all goals · 3 of 3": Anything you want to tell Weekboard? Type here, or talk.
+
+**Comes back.** ease 3 of 7 · what made it difficult, in their words · would it help them 4 of 5 · easy to use 2 of 5 · words and audio
 
 ---
 
@@ -203,40 +338,7 @@ Under it: the report page opens on the ranked problems, each with the moments to
 
 ## 6. Three commands
 
-*How long until I see something, and what does it cost.*
-
-**Heading.** Three commands.
-
-**Lead.** Node 22 and a Next.js app.
-
-```sh
-npm install -D ui-tests
-npx ui-tests init
-npx ui-tests
-```
-
-**Closing copy.** The third command runs the example task on you, so you see the card, the bar and your own trace before anyone else does. Open source, with no seats and no account. Your own link and your own visitors cost nothing. The panel is the only thing you pay for, and you set the cap before it starts.
-
-**Buttons.** Get started. GitHub.
-
-**Artefact.** This page runs this test.
-
-```ts
-import { context, goal, outcome, expect } from 'ui-tests'
-
-context({
-  users: 'developers who ship UI and have no researcher',
-  purpose: 'find out whether people can use what I built, without a researcher',
-}, () => {
-  goal('start trying ui-tests', { happyPath: ['/', '/docs/getting-started'] }, () => {
-    outcome(async ({ page }) => {
-      expect(page.url()).toContain('/docs/getting-started')
-    })
-  })
-})
-```
-
-**Caption.** The outcome checks that you reached the guide. If you get stuck on the way there, this page may ask you to say so. That is the third way to find people, running here.
+Folded into block 3 in round six (issue #28). The commands are the section's three cards; the closing copy moves into the screener piece's note (the panel's cost and cap, and that your own link and your own visitors cost nothing) and into the note under the commands (the bare `npx ui-tests` runs every screen on you first). The page no longer shows its own test file.
 
 ---
 
@@ -266,9 +368,9 @@ You see:
 
 ```text
 Created ui-tests.config.ts
-Created ui-tests/first.ui.test.ts
-Player available at /ui-tests
-Try it on yourself: npx ui-tests
+Created ui-tests/invite.ui.test.ts
+Created vitest.config.ts
+Next: npm run dev, then npx ui-tests
 ```
 
 **3. Try it on yourself**
@@ -279,25 +381,37 @@ You type:
 npx ui-tests
 ```
 
-You see a link in the terminal, then in your browser the scenario card, your own page with the bar over it, and the ease question. Press "I'm done". The terminal prints:
+You see a link in the terminal, then in your browser the consent, a few questions, the first impression, the scenario card, your own page with the bar over it, and the questions after the task, one at a time. Press "Done". The terminal prints:
 
 ```text
-Outcome: correct · ease 6 of 7
-You, not counted. Trace: http://localhost:3000/ui-tests/trace/you
+Reached the goal: Yes
+Rehearsal: 0 of 5 planned attempts recorded.
+Trace: http://127.0.0.1:43210/…
 ```
 
 **4. Write your own**
 
-You type, in `ui-tests/first.ui.test.ts`:
+You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in (round six: the same file the landing section and the README show), and change it to your own site:
 
 ```ts
-import { context, goal, outcome, expect } from 'ui-tests'
+import { context, beforeEach, goal, outcome, expect } from 'ui-tests'
 
 context({
-  users: 'people who signed up this week and want a colleague on their board',
+  users: {
+    are: 'people who signed up this week and want a colleague on their board',
+    did: 'signed up for a tool to plan work with a team',
+    within: '7 days',
+    uses: ['Trello', 'Asana', 'Notion', 'Linear'],
+    not: ['has used Weekboard'],
+  },
   purpose: 'plan the week together without emailing screenshots around',
+  video: true,
 }, () => {
-  goal('invite a colleague', { happyPath: ['/board', '/settings/members'] }, () => {
+  beforeEach(async () => ({ colleague: 'Sam', email: 'sam@acme.co' }))
+  goal('invite a colleague', {
+    happyPath: ['/board', '/settings/members'],
+    catch: { affecting: '1 in 3', confidence: 0.85 },
+  }, () => {
     outcome(async ({ page }) => {
       expect(await page.textContent('main')).toContain('1 invitation pending')
     })
@@ -305,7 +419,7 @@ context({
 })
 ```
 
-You see, on the next `npx ui-tests`, the card now reads: "Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished."
+You see, on the next `npx ui-tests`, the card reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co. When you think you've finished, press Done. If you get stuck, press I couldn't do this." It is written from `users`, `purpose`, the goal and `beforeEach`, never from the path; pin your own wording with `scenario`.
 
 **5. Run it with real people**
 

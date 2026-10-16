@@ -1,19 +1,25 @@
 import { isDeepStrictEqual } from 'node:util'
-import type { Screen } from './screener.ts'
-export type { Screen } from './screener.ts'
+import type { Users } from './screener.ts'
+export type { Users, UserFacts } from './screener.ts'
 
 /** The end state of an attempt: the final URL and the serialised DOM. */
 export type Snapshot = { url: string; dom: string }
 /** What a hook can inspect: the stored snapshot through `page`, and one validation question through `participant.answer()`. */
-export type Evidence = { page: { url(): string; query(selector: string): { textContent: string | null } | null }; participant: { answer(question: string, options: { choices: string[]; expected: string }): Promise<string> } }
+export type Evidence = { page: { url(): string; query(selector: string): { textContent: string | null } | null; textContent(selector: string): Promise<string | undefined> }; participant: { answer(question: string, options: { choices: string[]; expected: string }): Promise<string> } }
 /** An outcome or task check executed by the CLI against stored evidence, never in the app. */
 export type Hook = (evidence: Evidence) => void | Promise<void>
-/** Goal options: the happy path, a time box, a pinned scenario, fixture names and the `catch` intent. */
-export type Options = { happyPath?: string[]; minutes?: number; scenario?: string; fixtures?: string[]; catch?: { affecting: string; confidence: number } }
+/** Goal options: where the person lands, the happy path, a time box, a pinned scenario, fixture names and the `catch` intent. */
+export type Options = { start?: string; happyPath?: string[]; minutes?: number; scenario?: string; fixtures?: string[]; catch?: { affecting: string; confidence: number } }
 /** An authored goal with its options, task steps, outcome hooks and source location. */
 export type Goal = { name: string; options: Options; tasks: { name: string; check?: Hook }[]; outcomes: Hook[]; source: string }
-/** An authored context: the people, their purpose, the optional `screen` facts the screener is derived from, and the goals declared in its body. */
-export type Context = { users: string; purpose: string; screen?: Screen; author?: string; goals: Goal[]; source: string }
+/** Fixture values for one attempt, returned by `beforeEach`: names and data the scenario card may use. */
+export type Fixtures = Record<string, string | number | boolean>
+/** The impression stage: on by default; `false` turns it off; `{ page }` flashes another page than the first goal's start. */
+export type Impression = false | { page?: string }
+/** What the author writes in `context()`: who the people are (a sentence, or the sentence under `are` with how to check it), their purpose, whether to add screen video, and the impression stage. */
+export type ContextInput = { users: Users; purpose: string; video?: boolean; impression?: Impression; author?: string }
+/** An authored context: its input, the fixture setup and the goals declared in its body. */
+export type Context = ContextInput & { goals: Goal[]; setup?: () => Fixtures | Promise<Fixtures>; fixtures?: Fixtures; source: string }
 let contexts: Context[] = []
 let activeContext: Context | undefined
 let activeGoal: Goal | undefined
@@ -23,16 +29,26 @@ function source() { return new Error().stack?.split('\n').find(line => /\.ui\.te
 export function resetContexts() { contexts = []; activeContext = undefined; activeGoal = undefined }
 /** Returns every context authored since the last reset. */
 export function getContexts() { return contexts }
-/** The participant chrome the author sets: the one accent for Done, the selected answers and the task label (a `#rrggbb` colour). */
-export type ChromeConfig = { accent?: string }
+/** The participant chrome the author sets: the one accent for Done, the selected answers and the task label (a `#rrggbb` colour), and the name the consent and questions use (default: the author). */
+export type ChromeConfig = { accent?: string; name?: string }
 /** Identity helper that types `ui-tests.config.ts`: the target URL, an optional author name and the chrome's accent. */
 export function defineConfig<T extends { target: { url: string }; author?: string; chrome?: ChromeConfig }>(config: T): T { return config }
 /** Declares a context. The body runs immediately and registers goals against this context. */
-export function context(input: { users: string; purpose: string; screen?: Screen; author?: string }, body: () => void) {
+export function context(input: ContextInput, body: () => void) {
   const previous = activeContext
   const entry: Context = { ...input, goals: [], source: source() }
   contexts.push(entry); activeContext = entry
   try { body() } finally { activeContext = previous }
+}
+/** Provisions each attempt's fixture and returns the names and data the scenario card may use, such as `{ colleague: 'Sam', email: 'sam@acme.co' }`. */
+export function beforeEach(setup: () => Fixtures | Promise<Fixtures>) {
+  if (!activeContext) throw new Error('beforeEach must be inside context')
+  activeContext.setup = setup
+}
+/** Runs each context's `beforeEach` once so the compiler can write the card from its values; a rehearsal uses the same values. */
+export async function resolveFixtures(list: Context[] = contexts) {
+  for (const c of list) if (c.setup && !c.fixtures) c.fixtures = await c.setup()
+  return list
 }
 /** Declares a goal inside the current context. Accepts options and a body, or only a body; the body registers tasks and the outcome. */
 export function goal(name: string, optionsOrBody: Options | (() => void) = {}, body?: () => void) {

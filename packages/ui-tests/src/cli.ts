@@ -1,11 +1,12 @@
 import { createServer } from 'node:http'
 import { spawn } from 'node:child_process'
-import { readFile, writeFile, readdir, access } from 'node:fs/promises'
+import { readFile, writeFile, readdir, access, mkdir } from 'node:fs/promises'
 import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { userInfo } from 'node:os'
 import { build } from 'esbuild'
-import { compileFile } from './compiler.ts'
+import { compileFile, plan } from './compiler.ts'
+import { configFile, exampleFile, exampleFileName } from './example.ts'
 import { SQLiteAdapter, dataDirectory, recordingRetentionMs } from './storage.ts'
 import { verify, reachedLine, type HookResult } from './verify.ts'
 import { renderTrace } from './trace.tsx'
@@ -36,12 +37,9 @@ function open(url: string) {
   const child = process.platform === 'darwin' ? spawn('open', [url]) : process.platform === 'win32' ? spawn('cmd', ['/c', 'start', '', url]) : spawn('xdg-open', [url])
   child.on('error', () => console.log(`Open this URL in your browser: ${url}`)); child.unref()
 }
-/** Writes `ui-tests.config.ts`, the example test and the Vitest exclusion, preserving existing files, then prints the mount instructions and the next command. */
+/** Writes `ui-tests.config.ts` (with the recording hint as a comment), the example test with Weekboard filled in and the Vitest exclusion, preserving existing files, then prints the mount instructions and the next command. */
 async function init() {
-  const files: Record<string, string> = {
-    'ui-tests.config.ts': `import { defineConfig } from 'ui-tests'\nexport default defineConfig({ target: { url: process.env.PREVIEW_URL ?? 'http://localhost:3000' } })\n`,
-    'landing.ui.test.ts': `import { context, goal, outcome, expect } from 'ui-tests'\ncontext({ users: 'developers who ship UI and have no researcher', purpose: 'find out whether people can use what I built, without a researcher' }, () => {\n  goal('start trying ui-tests', { happyPath: ['/', '/docs/getting-started'] }, () => {\n    outcome(async ({ page }) => { expect(page.url()).toContain('/docs/getting-started') })\n  })\n})\n`,
-  }
+  const files: Record<string, string> = { 'ui-tests.config.ts': configFile, [exampleFileName]: `${exampleFile}\n` }
   // Preserve an existing Vitest setup; add the exclusion without replacing its settings.
   const existingConfig = (await Promise.all(['vitest.config.ts', 'vitest.config.mts', 'vitest.config.js', 'vite.config.ts'].map(async file => await exists(file) ? file : null))).find(Boolean)
   if (existingConfig) {
@@ -58,7 +56,7 @@ async function init() {
   for (const [file, contents] of Object.entries(files)) {
     if (file === existingConfig) { await writeFile(file, contents); print(`Updated ${file}`) }
     else if (await exists(file)) print(`Preserved ${file}`)
-    else { await writeFile(file, contents, { flag: 'wx' }); print(`Created ${file}`) }
+    else { await mkdir(path.dirname(file), { recursive: true }); await writeFile(file, contents, { flag: 'wx' }); print(`Created ${file}`) }
   }
   print(`Mount instructions:\n1. Import { UiTests } from 'ui-tests/next' and mount <UiTests /> in your root layout body.\n2. In app/ui-tests/[run]/page.tsx render <Player runId={run} token={token} /> from 'ui-tests/next'.\n3. In app/api/ui-tests/route.ts export GET and POST = createCollector() from 'ui-tests/server'; export const runtime = 'nodejs'.`)
   print('Next: npm run dev, then npx ui-tests')
@@ -103,11 +101,14 @@ async function main() {
   const result = await compileFile(file, path.join(dataDirectory(), 'compiled'))
   for (const d of result.diagnostics) console.log(`${d.severity} [${d.rule}] ${d.source}\n  ${d.reason} Fix: ${d.fix}${d.draft ? `\n\n${d.draft.replace(/^/gm, '  ')}\n` : ''}`)
   if (result.diagnostics.some(d => d.severity === 'error')) throw new Error('Lint failed; fix the rules above before starting dev mode.')
+  // The plan: who, what is recorded and where each goal starts, before anything runs.
+  console.log(plan(result.compiled))
   if (command === 'lint') { console.log(`Compiled ${file}: ${result.bundle.replace(/hooks-.*$/, 'context.json')}`); return }
+  if (command === 'run') throw new Error('Runs with people are not part of this slice yet. npx ui-tests rehearses the plan above on you.')
   if (command !== 'dev') throw new Error(`Unknown command: ${command}`)
   const store = new SQLiteAdapter()
   const configFile = path.resolve('ui-tests.config.ts')
-  let config: { target: { url: string }; author?: string; chrome?: { accent?: string } } = { target: { url: 'http://localhost:3000' } }
+  let config: { target: { url: string }; author?: string; chrome?: { accent?: string; name?: string } } = { target: { url: 'http://localhost:3000' } }
   if (await exists(configFile)) {
     // Compile config to ESM too: host apps need not set package.json type=module.
     const configBundle = result.bundle.replace('hooks-', 'config-')
@@ -124,6 +125,7 @@ async function main() {
   function createRun() {
     active.compiled.author = config.author ?? result.authored[active.contextIndex].author ?? userInfo().username
     active.compiled.accent = config.chrome?.accent
+    active.compiled.siteName = config.chrome?.name
     const created = store.create(active.compiled, active.goalIndex)
     created.hooksBundle = result.bundle; created.authoredContextIndex = active.contextIndex
     // "Task n of N" on the card and the bar counts the tasks of this session (participant-overlay research, progress).

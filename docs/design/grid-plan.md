@@ -97,34 +97,47 @@ At 375:
 | Caption                                            |
 ```
 
-### L3 · Section + three PlayerSurface rows
+### L3 · Compilation: what you write, what they see
 
-**Rule.** Each frame is 7 columns (≤ 8), so its caption sits beside it in the remaining 5 columns, starting one gutter after the frame, vertically centred, max-width 42ch so the column is never wider than the text needs. The caption column carries text and is 5 ≥ 3 columns wide. Empty area per row: about 506 × 380 beside the caption against a 718 × 490 frame, so empty < artefact. Three rows stack.
+**Rule.** One 800 px reading column on the grid: columns 3-10 at 1440 are 8 columns, 824 px, and the reading column is 800 px centred inside them (12 px each side), so it sits on the page's centre line. Everything in the block is in that one column; nothing sits beside anything, so there are no side captions and no empty columns inside the block. In order: the heading and lead (the lead under the heading, not beside it, inside 800); the three commands as three cards in one row, equal height; the note under them; the whole file as a code window with the site's highlighter; then six pieces in participant order (Consent; Who gets in, and how many; First impression; Scenario card; Your page, with the bar, then the check; After the task). Each piece: the order number and name, the note (max 64ch), a code window with only its lines (original line numbers kept, skipped lines as a dots row; After the task has no lines and no window), the screen in a constant light 16:10 frame with the chrome drawn at real size, the stepper under the frame for the screener (6 screens) and after-the-task (5 screens) pieces, the dashed on-your-side box for the sample (piece 2) and the check (piece 5), and the "Comes back" line. A stepped frame keeps one height: every step sits in the same grid cell and hidden steps are invisible, not removed. Planned heights of the lines windows: Consent 1 line (80), screener 9 lines and a dots row (296), impression 2 lines and a dots row (128), card 4 lines and two dots rows (200), bar 6 lines and two dots rows (248). Columns 1-2 and 11-12 are page margin for this block; the empty area is the two side bands, each 2 columns, against an 8-column artefact column, so empty < artefact.
 
 At 1440:
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
-[Section heading                      ] [lead                                                 ]  head
-[PlayerFrame: scenario card                           ] [Caption: file line + sentence        ]  row · 490
-[PlayerFrame: task bar                                ] [Caption: file line + sentence        ]  row · 490
-[PlayerFrame: questions                               ] [Caption: sentence                    ]  row · 490
-[Caption under (closing line)                                                                 ]  32
+                [SectionHead: heading, then lead under it                      ]                 head · 96 above, 120
+                [cmd: npm install   ] [cmd: npx … init   ] [cmd: npx … run     ]                 cards · 84, equal height
+                [note under the commands (one line)                            ]                 note · 24, then 36
+                [CodeWindow: ui-tests/invite.ui.test.ts, 23 lines              ]                 file · 600
+                [piece n: number and name, the note (one or two paragraphs)    ]                 intro · 120-260
+                [CodeWindow: only its lines, numbers kept, ⋯ for skipped       ]                 lines · 80-300
+                [frame 16:10, constant light, chrome at real size              ]                 frame · 500
+                [(stepper: ‹ n of N › and dots; pieces 2 and 6)                ]                 stepper · 32
+                [(on-your-side box, dashed; pieces 2 and 5)                    ]                 box · 120-150
+                [Comes back: one line                                          ]                 back · 24, then 56 to the next piece
 ```
 
 At 375:
 
 ```text
 |----------------------------------------------------| 327 px, one column
-| Section heading, lead                              |
-| PlayerFrame: card                                  |
-| Caption                                            |
-| PlayerFrame: bar                                   |
-| Caption                                            |
-| PlayerFrame: questions                             |
-| Caption                                            |
-| closing Caption                                    |
+| Section heading                                    |
+| lead                                               |
+| cmd: npm install -D ui-tests                       |
+| cmd: npx ui-tests init                             |
+| cmd: npx ui-tests run                              |
+| note under the commands                            |
+| CodeWindow: the whole file (the code wraps)        |
+| per piece, six times in participant order:         |
+|   number and name, the note                        |
+|   CodeWindow: its lines (the code wraps)           |
+|   frame 16:10, chrome at real size                 |
+|   (stepper)                                        |
+|   (on-your-side box)                               |
+|   Comes back                                       |
 ```
+
+The code windows wrap at 375 rather than scroll sideways; the line numbers stay in their gutter.
 
 ### L4 · Section + OptionsRow
 
@@ -223,32 +236,7 @@ At 375:
 | Caption                                            |
 ```
 
-### L8 · Section + TerminalOutput + CodeFile + Terms
-
-**Rule.** The command terminal is 12 (the commands block, per the schema). The code file is not the block's only artefact, so it is 8 columns with its caption beside it in 4. Terms are 8 columns of prose with no artefact. The actions follow the terms.
-
-At 1440:
-
-```text
-   1       2       3       4       5       6       7       8       9      10      11      12   
-[Section heading                      ] [lead                                                 ]  head
-[TerminalWindow: the three commands and what init prints                                      ]  terminal · 230
-[CodeWindow: landing.ui.test.ts with screen                   ] [Caption: this page runs this ]  row · 420
-[Terms: closing prose                                         ]                                  terms · 110
-[actions                                                      ]                                  48
-```
-
-At 375:
-
-```text
-|----------------------------------------------------| 327 px, one column
-| Section heading, lead                              |
-| TerminalWindow                                     |
-| CodeWindow                                         |
-| Caption                                            |
-| Terms                                              |
-| actions                                            |
-```
+L8 (Section + TerminalOutput + CodeFile + Terms, the commands block) was folded into L3 in round six (issue #28): the commands are the Compilation's cards, and the landing no longer shows this page's own test file.
 
 ## Getting-started page
 
@@ -282,12 +270,12 @@ At 1440:
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
 [number and title, one sentence of context                                                    ]  head · 72
-[what you type: TerminalWindow / CodeWindow   ] [what you see: TerminalWindow / PlayerFrame / ]  pair · 120-420
+[what you type: TerminalWindow / CodeWindow   ] [what you see: TerminalWindow / Caption      ]  pair · 120-420
 ```
 
 ### G7-G8 · Without a repository: Step × 2
 
-**Rule.** Same StepPair rule. Step 1: the snippet (type) and the markup sentence (see). Step 2: the hosted form with the `screen` fields (type) and the dashboard row of the run it starts (see).
+**Rule.** Same StepPair rule. Step 1: the snippet (type) and the markup sentence (see). Step 2: the hosted form with the screener fields (type) and the dashboard row of the run it starts (see).
 
 At 1440:
 

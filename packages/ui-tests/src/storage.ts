@@ -4,17 +4,20 @@ import { mkdirSync, existsSync } from 'node:fs'
 import path from 'node:path'
 import type { CompiledContext } from './compiler.ts'
 import type { Snapshot } from './index.ts'
+import type { ImpressionCode } from './impression.ts'
 
 /** A recorder event: clicks with whether anything changed, URL changes, scroll, masked input, pauses and task-step snapshots. */
 export type Event = { type: 'click' | 'url' | 'scroll' | 'input' | 'pause' | 'step'; at: number; url: string; target?: string; changed?: boolean; stoppedMs?: number; step?: number; snapshot?: Snapshot }
 /** How an attempt ended. `abandoned early` is leaving before the first interaction; `couldn't do this` is pressing I couldn't do this after trying. Both are distinct from not reaching the goal. */
 export type Reason = 'done' | "couldn't do this" | 'abandoned early' | 'ran out of time'
 /** A spoken answer: the transcript as the person saw it and the stored audio it came from. */
-export type VoiceAnswer = { question: 'difficulty' | 'words'; transcript: string; recording: string; mime: string; seconds: number }
+export type VoiceAnswer = { question: 'impression' | 'difficulty' | 'words'; transcript: string; recording: string; mime: string; seconds: number }
 /** What is captured for an attempt, each with the consent behind it. Interaction events are always recorded; voice only once the person chooses to talk. */
 export type Recording = { events: true; screen: boolean; voice: boolean; webcam: boolean }
+/** The open impression answer: the words, how it was given, and the code proposed against the purpose (set by the CLI, changeable in the trace). */
+export type ImpressionAnswer = { answer: string; spoken: boolean; code: ImpressionCode }
 /** A run and its single rehearsal attempt: status, timings, terminal reason, answers, end-state snapshot and hook result. */
-export type Run = { id: string; token: string; context: CompiledContext; goalIndex: number; sequence?: { index: number; total: number }; hooksBundle?: string; authoredContextIndex?: number; status: 'created' | 'consented' | 'active' | 'questions' | 'finished'; startedAt: number; endedAt?: number; extendedSeconds?: number; withdrawnAt?: number; reason?: Reason; seq?: number; difficulty?: string; confidence?: number; afterGoal?: { ease: number; usefulness: number }; words?: string; voice?: VoiceAnswer[]; recording?: Recording; snapshot?: Snapshot; result?: unknown; answers?: Record<string, string> }
+export type Run = { id: string; token: string; context: CompiledContext; goalIndex: number; sequence?: { index: number; total: number }; hooksBundle?: string; authoredContextIndex?: number; status: 'created' | 'consented' | 'active' | 'questions' | 'finished'; startedAt: number; endedAt?: number; extendedSeconds?: number; withdrawnAt?: number; reason?: Reason; seq?: number; difficulty?: string; confidence?: number; afterGoal?: { ease: number; usefulness: number }; words?: string; voice?: VoiceAnswer[]; recording?: Recording; snapshot?: Snapshot; result?: unknown; answers?: Record<string, string>; screener?: string[][]; impression?: ImpressionAnswer }
 /** Storage behind the collector and the CLI. The SQLite adapter is the development implementation. */
 export interface StorageAdapter {
   create(context: CompiledContext, goalIndex?: number): Run

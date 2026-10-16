@@ -30,23 +30,7 @@ Problem 1 is the one to fix first: both people who hit it pressed Done believing
 
 A run reports the problems it found, or that it found none this time. There is no score and no pass.
 
-What the person sees.
-
-Your page, with a small bar over it. Nothing else.
-
 You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.
-
-goal('invite a colleague')
-
-The card is written from the goal, never from the path you expect.
-
-outcome(...)
-
-It runs on your side after either button.
-
-The rating and the words, typed or spoken, land in their trace.
-
-They never see the path you expected or the check you wrote, so nothing you wrote can lead them.
 
 Where the people come from.
 
@@ -57,18 +41,6 @@ In the pull request.
 Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request with a report page anyone on the team can open. Your other tests prove the code works. This one shows whether a person can use it.
 
 The report page opens on whether people reached the goal and the ranked problems, each with the moments to watch and what to change, and every person's attempt below.
-
-Three commands.
-
-Node 22. Paste one line on any site, or install the package in a Next.js app.
-
-No Next.js app? Paste the one line from the hosted block on any site instead.
-
-The third command runs the example task on you, so you see the card, the bar and your own trace before anyone else does. Open source, with no seats and no account. Your own link and your own visitors cost nothing. The paid panel is the only thing you pay for, and you set the cap before it starts.
-
-This page runs this test.
-
-The outcome checks that you reached the guide. If you get stuck on the way there, this page may ask you to say so. That is the third way to find people, running here.
 
 ## Agent runs
 
@@ -190,24 +162,150 @@ draft
 
 archive a finished board
 
+## What you write, what they see
+
+What you write, what they see.
+
+Every screen a person meets, in the order they meet it, beside the lines of your test that produce it, and what comes back from each. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.
+
+npm install -D ui-tests
+
+Adds the package.
+
+npx ui-tests init
+
+Creates the file below, with the example filled in.
+
+the file
+
+npx ui-tests run
+
+Turns it into these screens and puts people in front of them.
+
+these screens
+
+`npx ui-tests` on its own runs every screen on you first, so you see the card, the bar and your own trace before anyone else does.
+
+consent
+
+Consent
+
+before anything loads
+
+video
+
+What the person does on the page is always recorded, and the consent says so in plain words. `video: true` adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.
+
+recorded: actions, screen, voice · camera: declined
+
+screener
+
+Who gets in, and how many
+
+the sample
+
+users · purpose · catch
+
+Six questions, one per screen; press Next to see them all. The first three come from `users`: `did` and `within` become a recency question with bands, `uses` a multi-select with one decoy, `not` an item among neutral ones, so nobody can tell what disqualifies. The last three come from `purpose`: when they last needed it, how they do it today, how much it matters. Write `users` as the sentence alone and the first three are drafted from it.
+
+The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $54, under a cap you set before it starts; your own link and your own visitors cost nothing.
+
+screened 20 · matched 5 · fit: 3 of 5 had the need this month · how they do it today, in their words
+
+impression
+
+First impression
+
+on by default
+
+purpose · happyPath
+
+The page the task starts on is flashed for 500 ms, then one open question. The start is the first page of the `happyPath` unless the goal names a `start`; name another page for the flash with `impression: { page }` when the task begins behind a login and the purpose lives on the public page. The answers are read against the `purpose`, which the person never sees, and you can re-read any of them. Then the page comes back for one click.
+
+named the purpose: 4 of 5, with their words · first click on your path: 3 of 5
+
+card
+
+Scenario card
+
+from the goal, never the path
+
+users · purpose · beforeEach · goal
+
+The situation from `users.are` and `purpose`, the action from the goal's name, the name and email from `beforeEach`. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with `scenario`.
+
+the exact card text, kept with the run
+
+bar
+
+Your page, with the bar, then the check
+
+two controls, one check
+
+goal · happyPath · video · outcome
+
+One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from `video`, with a pause; there is no microphone during the task. The summary is the goal's name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: the two pages of the `happyPath` set a silent three-minute limit, and the person may ask for more time once. The pill takes your font, inverts your page's colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.
+
+When they press Done, the `outcome` runs against the page as they left it. What they said does not count; what the page says does. A check that cannot decide returns "couldn't tell" and is never rounded either way.
+
+time on this goal · every moment · their path against yours · how it ended · reached the goal: yes / no / couldn't tell, with the diff
+
+after
+
+After the task
+
+not from your file
+
+Five screens, one question each; press Next to see them all. The first two come after every attempt, including the ones that ended with I couldn't do this: how easy it was, with nothing preselected, and, at 4 or below, what made it difficult. The last three come once, after all goals: would it help them, is it easy to use, and anything they want to say, typed or spoken. Confidence is asked only when a goal has no check, so Weekboard's people never see it.
+
+ease 3 of 7 · what made it difficult, in their words · would it help them 4 of 5 · easy to use 2 of 5 · words and audio
+
+People
+
+5 from the paid panel, matched to `users`
+
+Chance of seeing a 1-in-3 problem
+
+87%
+
+Cost
+
+about $54 · cap $60 · results within 48 hours
+
+Person 3, after Done
+
+Not reached
+
+main contained "2 invitations pending"
+
+Person 5, after Done
+
+Reached
+
+1:12
+
 ## The file
 
+ui-tests/invite.ui.test.ts
+
 ```ts
-import { context, goal, outcome, expect } from 'ui-tests'
+import { context, beforeEach, goal, outcome, expect } from 'ui-tests'
 
 context({
-  users: 'people who signed up this week and want a colleague on their board',
-  purpose: 'plan the week together without emailing screenshots around',
-  screen: {
+  users: {
+    are: 'people who signed up this week and want a colleague on their board',
     did: 'signed up for a tool to plan work with a team',
     within: '7 days',
     uses: ['Trello', 'Asana', 'Notion', 'Linear'],
     not: ['has used Weekboard'],
   },
+  purpose: 'plan the week together without emailing screenshots around',
+  video: true,
 }, () => {
+  beforeEach(async () => ({ colleague: 'Sam', email: 'sam@acme.co' }))
   goal('invite a colleague', {
     happyPath: ['/board', '/settings/members'],
-    scenario: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.",
+    catch: { affecting: '1 in 3', confidence: 0.85 },
   }, () => {
     outcome(async ({ page }) => {
       expect(await page.textContent('main')).toContain('1 invitation pending')
@@ -306,14 +404,14 @@ As each person finishes
 import { context, goal, outcome, expect } from 'ui-tests'
 
 context({
-  users: 'developers who ship UI and have no researcher',
-  purpose: 'find out whether people can use what I built, without a researcher',
-  screen: {
+  users: {
+    are: 'developers who ship UI and have no researcher',
     did: 'shipped a user interface you built yourself',
     within: '3 months',
     role: ['developer', 'designer', 'founder'],
     not: ['works in UX research'],
   },
+  purpose: 'find out whether people can use what I built, without a researcher',
 }, () => {
   goal('start trying ui-tests', { happyPath: ['/', '/docs/getting-started'] }, () => {
     outcome(async ({ page }) => {
@@ -339,15 +437,17 @@ Run it with real people
 
 Run it with an agent
 
+Node 22. Paste one line on any site, or install the package in a Next.js app.
+
 In a Next.js app, install the package. On any other site, paste one line instead: Without a repository.
 
 You see "ui-tests" in `devDependencies`.
 
-You see a link in the terminal, then in your browser the scenario card, your own page with the bar over it, and the questions one at a time. Press "Done". The terminal prints:
+You see a link in the terminal, then in your browser the consent, a few questions, the first impression, the scenario card, your own page with the bar over it, and the questions after the task, one at a time. Press "Done". The terminal prints:
 
-You type, in `ui-tests/first.ui.test.ts`:
+You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in, and change it to your own site:
 
-You see, on the next `npx ui-tests`, the card reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co. When you think you've finished, press Done. If you get stuck, press I couldn't do this." Without a `scenario` line the card is drafted from the goal's name, so read that draft and pin your own wording, and `ui-tests lint` prints the screener it drafted from `users` until you write a `screen` block.
+You see, on the next `npx ui-tests`, the card reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co. When you think you've finished, press Done. If you get stuck, press I couldn't do this." It is written from `users`, `purpose`, the goal and `beforeEach`, never from the path; pin your own wording with `scenario`. Write `users` as the sentence alone and `ui-tests lint` prints the screener it drafted from it, and the plan names the recording level: event replay, or screen video with `video: true`.
 
 You type, in the same file or a new one:
 
@@ -439,7 +539,7 @@ Agent run · add a member through the API · 5 trials
 $ npm install -D ui-tests
 $ npx ui-tests init
 Created ui-tests.config.ts
-Created landing.ui.test.ts
+Created ui-tests/invite.ui.test.ts
 Created vitest.config.ts
 Next: npm run dev, then npx ui-tests
 $ npx ui-tests
@@ -449,7 +549,7 @@ $ npx ui-tests
 
 ```text
 Created ui-tests.config.ts
-Created landing.ui.test.ts
+Created ui-tests/invite.ui.test.ts
 Created vitest.config.ts
 Next: npm run dev, then npx ui-tests
 ```

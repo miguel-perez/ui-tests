@@ -3,17 +3,16 @@ import { SiteShell, repository } from '../components/site-shell'
 import { Hero } from '../components/hero'
 import { SectionHead } from '../components/site/section-head'
 import { Caption } from '../components/site/caption'
-import { Terms } from '../components/site/terms'
 import { TerminalWindow } from '../components/artefacts/terminal-window'
 import { CodeWindow } from '../components/artefacts/code-window'
 import { AttemptView } from '../components/artefacts/attempt-view'
-import { PlayerFrame } from '../components/artefacts/player-frame'
+import { Compilation } from '../components/artefacts/compilation'
 import { OptionsRow } from '../components/artefacts/options-row'
 import { ChecksBox } from '../components/artefacts/checks-box'
 import { FindingsList } from '../components/artefacts/findings-list'
 import { Dashboard } from '../components/artefacts/dashboard'
 import { Icon } from '../components/icon'
-import { promise, intro, landing, example, agent, hosted } from '../lib/copy'
+import { promise, intro, landing, agent, hosted } from '../lib/copy'
 
 function Actions() { return <div className="actions"><Link className="button primary" href="/docs/getting-started">Get started<Icon name="arrow" /></Link><a className="button quiet" href={repository}><Icon name="github" />GitHub</a></div> }
 
@@ -27,13 +26,7 @@ export default function Home() {
         <AttemptView />
         <Caption text={landing.closing} />
       </section>
-      <section className="block" aria-labelledby="person">
-        <SectionHead id="person" heading={landing.person} lead={landing.personLead} />
-        <div className="row-7-5"><PlayerFrame kind="card" /><Caption side code={landing.scenarioLine} text={landing.scenarioCaption} /></div>
-        <div className="row-7-5"><PlayerFrame kind="bar" /><Caption side code={landing.barLine} text={landing.barCaption} /></div>
-        <div className="row-7-5"><PlayerFrame kind="questions" /><Caption side text={landing.easeCaption} /></div>
-        <Caption text={landing.personClosing} />
-      </section>
+      <Compilation />
       <section className="block" aria-labelledby="people">
         <SectionHead id="people" heading={landing.people} lead={landing.peopleLead} />
         <OptionsRow />
@@ -53,13 +46,6 @@ export default function Home() {
         <CodeWindow code={hosted.snippet} title="index.html" language="html" />
         <Dashboard />
         <Caption text={hosted.closing} />
-      </section>
-      <section className="block" aria-labelledby="commands">
-        <SectionHead id="commands" heading={landing.commands} lead={landing.requirement} />
-        <TerminalWindow name="commands" title="~/my-app" />
-        <div className="row-8-4"><CodeWindow code={example} title="landing.ui.test.ts" /><Caption side title={landing.ownTest} text={landing.ownCaption} /></div>
-        <Terms lines={[landing.commandsClosing, landing.anySite]} />
-        <Actions />
       </section>
     </div>
   </main></SiteShell>

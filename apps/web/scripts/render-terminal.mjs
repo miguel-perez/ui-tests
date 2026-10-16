@@ -23,7 +23,7 @@ export const surfaces = {
   agent: { actor: 'agent', agentReport: agent.report },
   report: { report: exampleReport },
   // One terminal session for the commands block: each command, then what init prints that a reader needs.
-  commands: { lines: [prompt(commands.install), prompt(commands.init), 'Created ui-tests.config.ts', 'Created landing.ui.test.ts', 'Created vitest.config.ts', 'Next: npm run dev, then npx ui-tests', prompt(commands.run)] },
+  commands: { lines: [prompt(commands.install), prompt(commands.init), 'Created ui-tests.config.ts', 'Created ui-tests/invite.ui.test.ts', 'Created vitest.config.ts', 'Next: npm run dev, then npx ui-tests', prompt(commands.run)] },
   install: { lines: [prompt(commands.install)] },
   initCommand: { lines: [prompt(commands.init)] },
   devCommand: { lines: [prompt(commands.run)] },
@@ -31,7 +31,7 @@ export const surfaces = {
   reportCommand: { lines: [prompt(commands.report)] },
   agentCommand: { lines: [prompt(agent.command)] },
   // The lines of `ui-tests init` a reader needs: the created files and the next command. The mount steps live in the guide.
-  init: { lines: ['Created ui-tests.config.ts', 'Created landing.ui.test.ts', 'Created vitest.config.ts', 'Next: npm run dev, then npx ui-tests'] },
+  init: { lines: ['Created ui-tests.config.ts', 'Created ui-tests/invite.ui.test.ts', 'Created vitest.config.ts', 'Next: npm run dev, then npx ui-tests'] },
   dev: { lines: ['Reached the goal: Yes', rehearsal, 'Trace: http://127.0.0.1:43210/00000000-0000-4000-8000-000000000000/' + '0'.repeat(64)] },
   run: { lines: ['Run k2m9 started', 'Send this link to anyone: https://ui-tests.com/t/k2m9', 'Paid panel: 5 people matched to "people who signed up this week and want a colleague on their board"', 'Cap: $60 · results within 48 hours'] },
 }

@@ -249,6 +249,8 @@ async function recordP3() {
 
   // 01:03 pressed Done: how it ended
   await clickAt(63, '#done', { lead: 1.0 });
+  // Done asks "Finished this task?" in place; the person confirms.
+  await page.locator('#doneYes').click();
   moment(63, 'ended', 'Pressed Done', ' · the check ran and failed: 2 invitations pending', { route: '/settings/members' });
 
   await sleep(1200);
@@ -402,6 +404,7 @@ async function recordAttempt(script) {
       if (Math.abs(actualSeconds - at) > 0.1) throw new Error(`Timing drift: ${script.id} ${at} / ${actualSeconds}`);
       if (!hover) { await page.evaluate(() => window.__cursor.flash()); await page.mouse.click(x, y); }
       if (text) await page.keyboard.type(text, { delay: 65 });
+      if (target === '#done') await page.locator('#doneYes').click();
       moments.push({ timestamp: mmss(at), seconds: at, actualSeconds, kind, what, ...(rest ? { rest } : {}), route, ...(issue ? { issue } : {}) });
       // The poster is the moment the person first met a problem: Share for most, the first Add for Person 4.
       if (issue === 3 || (script.id === 'p4' && issue === 1)) await page.screenshot({ path: join(outDir, `${script.id}.jpg`), type: 'jpeg', quality: 82 });

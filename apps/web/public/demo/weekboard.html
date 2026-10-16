@@ -189,6 +189,15 @@ body.scenario .player { display: contents; }
 /* The bar: one 40px pill, bottom right, the recording state as its leading segment. */
 .bar { position: fixed; right: 16px; bottom: 16px; z-index: 50; }
 .bar[hidden] { display: none; }
+/* The bar steps aside while the person types in the page, and moves where they drag its grip. */
+.bar.typing { visibility: hidden; }
+.bar { translate: var(--dx, 0px) var(--dy, 0px); }
+.pill .grip { cursor: grab; touch-action: none; }
+.pill .confirm { display: flex; align-items: center; gap: 8px; }
+.pill .confirm[hidden], .pill .controls[hidden] { display: none; }
+.pill .confirm p { margin: 0; font-weight: 500; padding-right: 4px; }
+.pill .confirm .yes { height: 28px; padding: 0 12px; border-radius: 14px; background: var(--ch-accent); color: var(--ch-accent-ink); font-weight: 500; }
+.pill .confirm .no { height: 28px; padding: 0 10px; border-radius: 14px; color: var(--ch-ink); box-shadow: inset 0 0 0 1px var(--ch-hair); }
 .pill { height: 40px; display: flex; align-items: center; padding: 0 6px 0 12px; background: var(--ch-surface); border-radius: 20px; box-shadow: 0 0 0 1px var(--ch-hair), 0 8px 24px rgba(21,26,33,.28); white-space: nowrap; font-size: 13px; }
 .pill .seg { display: flex; align-items: center; gap: 8px; height: 40px; }
 .pill .seg + .seg { border-left: 1px solid var(--ch-hair); margin-left: 12px; padding-left: 12px; }
@@ -367,7 +376,8 @@ body.scenario .player { display: contents; }
       <span class="grip" aria-hidden="true"></span>
       <span class="seg rec" role="group" aria-label="Recording"><span class="dot" aria-hidden="true"></span><time id="recTime">0:00</time><button class="pause" id="recPause" type="button" aria-pressed="false" aria-label="Pause recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg></button></span>
       <button class="seg task" id="taskToggle" type="button" aria-expanded="false" aria-controls="taskSheet"><b>Task 1 of 1</b>Invite Sam to the board</button>
-      <span class="seg"><button class="done" id="done" type="button">Done</button><button class="cant" id="cant" type="button">I couldn't do this</button></span>
+      <span class="seg controls" id="controls"><button class="done" id="done" type="button">Done</button><button class="cant" id="cant" type="button">I couldn't do this</button></span>
+      <span class="seg confirm" id="confirm" role="group" aria-label="Finished this task?" hidden><p>Finished this task?</p><button class="yes" id="doneYes" type="button">Yes, I've finished</button><button class="no" id="doneNo" type="button">Not yet</button></span>
     </div>
   </div>
 </div>
@@ -494,8 +504,22 @@ body.scenario .player { display: contents; }
       $('#taskToggle').setAttribute('aria-expanded', String(open));
     });
     const end = () => { clearInterval(timer); $('#bar').hidden = true; };
-    $('#done').addEventListener('click', end);
+    // Done asks in place, no dialog; the person ends the task, never the page (no completion screen, no auto-advance).
+    const confirming = on => { $('#controls').hidden = on; $('#confirm').hidden = !on; (on ? $('#doneYes') : $('#done')).focus(); };
+    $('#done').addEventListener('click', () => confirming(true));
+    $('#doneNo').addEventListener('click', () => confirming(false));
+    $('#doneYes').addEventListener('click', end);
     $('#cant').addEventListener('click', end);
+    // While a field on the page has focus the bar steps aside, so it never covers what the person types.
+    const field = el => el instanceof Element && !el.closest('.player') && el.matches('input:not([type=checkbox]):not([type=radio]):not([type=submit]), textarea, select, [contenteditable]');
+    document.addEventListener('focusin', e => $('#bar').classList.toggle('typing', field(e.target)));
+    document.addEventListener('focusout', () => $('#bar').classList.remove('typing'));
+    // The grip drags the pill anywhere on the page.
+    let drag = null;
+    const grip = $('.pill .grip');
+    grip.addEventListener('pointerdown', e => { const bar = $('#bar'); drag = { x: e.clientX, y: e.clientY, dx: parseFloat(bar.style.getPropertyValue('--dx')) || 0, dy: parseFloat(bar.style.getPropertyValue('--dy')) || 0 }; grip.setPointerCapture(e.pointerId); });
+    grip.addEventListener('pointermove', e => { if (!drag) return; $('#bar').style.setProperty('--dx', (drag.dx + e.clientX - drag.x) + 'px'); $('#bar').style.setProperty('--dy', (drag.dy + e.clientY - drag.y) + 'px'); });
+    grip.addEventListener('pointerup', () => { drag = null; });
   }
 })();
 </script>

@@ -2,29 +2,30 @@ import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import type { Run, Event, StorageAdapter } from './storage.ts'
 import { issues, ended, reachedLine, type HookResult } from './verify.ts'
-import { screenSource, type Screener } from './screener.ts'
+import { usersSource, type Field, type Screener } from './screener.ts'
 
 const cell: React.CSSProperties = { textAlign: 'left', verticalAlign: 'top', padding: '6px 12px 6px 0', borderBottom: '1px solid #d8dce8' }
 const fixed: React.CSSProperties = { ...cell, whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }
 const input: React.CSSProperties = { font: 'inherit', width: '100%', minWidth: 200, padding: 4, border: '1px solid #d8dce8', borderRadius: 4 }
 
-/** The screener as an editable table: question, options with their labels, the `screen` field each came from and the rule. Edits here are a draft; the block under the table pins them in the file. */
-function ScreenerTable({ screener }: { screener: Screener }) {
+/** The screener as an editable table: question, options with their labels, the `users` field (or `purpose`) each came from, the rule and the person's answer. Edits here are a draft; the object under the table pins them in the file. */
+function ScreenerTable({ screener, users, answers }: { screener: Screener; users: string; answers?: string[][] }) {
   return <>
     <h2>Screener</h2>
-    <p>{screener.source === 'inferred' ? `Drafted from the users sentence. Inferred: ${screener.inferred.join(', ')}. Edit it here, then paste the screen block into your file.` : 'Derived from the screen block in your file. Edit a row here, then update the screen block to pin it.'}</p>
+    <p>{screener.source === 'inferred' ? `Drafted from the users sentence. Inferred: ${screener.inferred.join(', ')}. Edit it here, then paste the users object into your file.` : 'Derived from users in your file; the last three from purpose. Edit a row here, then update users to pin it.'}</p>
     <table style={{ borderCollapse: 'collapse', width: '100%' }}>
-      <thead><tr><th style={fixed}>Field</th><th style={cell}>Question</th><th style={cell}>Options and labels</th><th style={cell}>Rule</th></tr></thead>
+      <thead><tr><th style={fixed}>Field</th><th style={cell}>Question</th><th style={cell}>Options and labels</th><th style={cell}>Rule</th><th style={cell}>Their answer</th></tr></thead>
       <tbody>{screener.questions.map((question, index) => <tr key={index}>
-        <td style={fixed}><code>{question.field}</code>{screener.inferred.includes(question.field) ? ' (inferred)' : ''}</td>
+        <td style={fixed}><code>{question.field === 'purpose' ? 'purpose' : `users.${question.field}`}</code>{question.field !== 'purpose' && screener.inferred.includes(question.field as Field) ? ' (inferred)' : ''}</td>
         <td style={cell}><input style={input} aria-label={`Question ${index + 1}`} defaultValue={question.question} /></td>
         <td style={cell}><ul style={{ margin: 0, paddingLeft: 16 }}>{question.options.map((option, choice) => <li key={choice}><input style={{ ...input, minWidth: 160, width: 'auto' }} aria-label={`Question ${index + 1} option ${choice + 1}`} defaultValue={option.text} /> <select aria-label={`Question ${index + 1} option ${choice + 1} label`} defaultValue={option.label}><option>accept</option><option>reject</option><option>may-select</option></select></li>)}</ul></td>
         <td style={cell}>{question.rule}</td>
+        <td style={cell}>{answers ? answers[index]?.join(', ') || 'none chosen' : 'not asked yet'}</td>
       </tr>)}</tbody>
     </table>
     <h3>Paid panel filters, never asked</h3>
     <ul>{screener.filters.map((filter, index) => <li key={index}><code>{filter.filter}</code> {filter.value} · {filter.rule}</li>)}</ul>
-    <pre style={{ whiteSpace: 'pre-wrap' }}>{screenSource(screener.screen, screener.inferred)}</pre>
+    <pre style={{ whiteSpace: 'pre-wrap' }}>{usersSource(users, screener.facts, screener.inferred)}</pre>
   </>
 }
 
@@ -40,7 +41,7 @@ export function renderTrace(run: Run, events: Event[], recordings?: Pick<Storage
     {goal.resultSentence && <p><strong>{goal.resultSentence}</strong></p>}
     <h2>{reachedLine(run.result as HookResult | undefined)}</h2><pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(run.result, null, 2)}</pre>
     <p>How it ended: {run.reason ? ended[run.reason] : 'in progress'}. Last page: {run.snapshot?.url ?? 'Not yet recorded'}.</p>
-    <p>Recorded: {['interactions', recording.screen && 'screen', recording.voice && 'voice, with consent given when they chose to talk'].filter(Boolean).join(', ')}. Camera: {recording.webcam ? 'recorded' : 'off'}.</p>
+    <p>Recording level: {run.context.recording?.level ?? 'event replay'}{run.context.recording?.video ? ' (video: true)' : ''}. Recorded: {['interactions', recording.screen && 'screen', recording.voice && 'voice, with consent given when they chose to talk'].filter(Boolean).join(', ')}. Camera: {recording.webcam ? 'recorded' : 'off'}.{run.context.recording?.video && !recording.screen ? ' A rehearsal keeps the final page in place of the screen video.' : ''}</p>
     {run.withdrawnAt && <p><strong>Withdrawn {new Date(run.withdrawnAt).toISOString()}: their recordings were deleted, so this attempt can no longer be fully reproduced.</strong></p>}
     <h2>First problem signals</h2>
     {/* Fixed-width fields first, the free text last: time, kind, detail. */}
@@ -50,12 +51,21 @@ export function renderTrace(run: Run, events: Event[], recordings?: Pick<Storage
     {run.words && <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>Their words: {run.words}</p>}
     {run.voice?.map(answer => {
       const audio = recordings?.recording(answer.recording)
-      return <figure key={answer.recording} style={{ margin: '16px 0' }}><figcaption>Spoken answer ({answer.question === 'words' ? 'their words' : 'what made it difficult'}, {answer.seconds.toFixed(1)} s). Transcript: {answer.transcript || 'none'}</figcaption>{audio && <audio controls preload="none" src={`data:${audio.mime};base64,${audio.audio.toString('base64')}`} />}</figure>
+      return <figure key={answer.recording} style={{ margin: '16px 0' }}><figcaption>Spoken answer ({answer.question === 'words' ? 'their words' : answer.question === 'impression' ? 'what the page was for' : 'what made it difficult'}, {answer.seconds.toFixed(1)} s). Transcript: {answer.transcript || 'none'}</figcaption>{audio && <audio controls preload="none" src={`data:${audio.mime};base64,${audio.audio.toString('base64')}`} />}</figure>
     })}
+    {run.context.impression && <>
+      <h2>First impression</h2>
+      <p>{run.context.impression.page} was flashed for {run.context.impression.flashMs} ms, then: “{run.context.impression.question}”</p>
+      {run.impression ? <>
+        <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>Their words{run.impression.spoken ? ', spoken' : ''}: {run.impression.answer || 'none'}</p>
+        <p>Read against the purpose, “{run.context.purpose}”: <select aria-label="How the answer reads against the purpose" defaultValue={run.impression.code.code}><option>named the purpose</option><option>did not name it</option><option>no answer</option></select> · words in common: {run.impression.code.matched.join(', ') || 'none'} · proposed by {run.impression.code.proposedBy}; change it here if it reads wrong.</p>
+        <p>Rule: {run.impression.code.rule}</p>
+      </> : <p>Not answered yet.</p>}
+    </>}
     <h2>Their path and yours</h2><pre>{JSON.stringify({ theirs: events.filter(e => e.type === 'url').map(e => e.url), yours: goal.happyPath }, null, 2)}</pre>
     <h2>Events</h2><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(events, null, 2)}</pre>
     <h2>End-state snapshot</h2><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{run.snapshot?.dom ?? 'Not yet recorded'}</pre>
-    {run.context.screener && <ScreenerTable screener={run.context.screener} />}
-    <h2>Compiled context and derivation rules</h2><p>The impression stage, fit questions and screener are compiled evidence; they are not run in this rehearsal.</p><pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(run.context, null, 2)}</pre>
+    {run.context.screener && <ScreenerTable screener={run.context.screener} users={run.context.users} answers={run.screener} />}
+    <h2>Compiled context and derivation rules</h2><p>Every derived field with the rule that produced it.</p><pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(run.context, null, 2)}</pre>
   </main></body></html>)
 }

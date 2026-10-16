@@ -13,7 +13,8 @@
     ".": "./src/index.ts",
     "./next": "./src/next.tsx",
     "./server": "./src/server.ts",
-    "./colours": "./src/colours.ts"
+    "./colours": "./src/colours.ts",
+    "./example": "./src/example.ts"
   },
   "dependencies": {
     "@inkjs/ui": "2.0.0",
