@@ -15,6 +15,7 @@ Approved markup exported from the design artifacts. Each file is the spec for th
 | --- | --- |
 | `attempt-view.html` (+ `attempt-view/`) | One person, one goal: the result, the minute as a flow, clips in place. Dark. |
 | `player-chrome.html` | Every participant surface in order: consent, the screener's six screens, first impression (open question), scenario card, the bar, the five screens after the task. |
+| `sources-section.html` | The landing section "Where the people come from": the sources table, its wells and the three pictures. Supersedes `invite-link.html`, `cap-control.html` and `visitor-invitation.html`. |
 | `compile-section.html` | The landing section "What you write, what they see": commands, the whole file, six pieces with their lines, screens and what comes back. |
 | `scenario-card.html`, `taskbar.html`, `ease-question.html` | The same three surfaces on their own, for the components that render them. |
 | `weekboard-light.css` | The demo app's light palette, with player overrides that match `player-chrome.html`. |
