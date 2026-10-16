@@ -8,12 +8,29 @@ import { parseHTML } from 'linkedom'
 
 const exec = promisify(execFile)
 
+it('renders agent trials separately even when a people report is supplied', async () => {
+  const { stdout } = await exec(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', `
+    import React from 'react';
+    import { renderToString } from 'ink';
+    import { TerminalOutput } from './packages/ui-tests/src/report.tsx';
+    import { surfaces } from './apps/web/scripts/render-terminal.mjs';
+    console.log(renderToString(React.createElement(TerminalOutput, {...surfaces.agent, report: surfaces.report.report}), {columns: 80}));
+  `], { env: { ...process.env, FORCE_COLOR: '0' }, timeout: 10000 })
+  expect(stdout).toContain('Agent run · invite a colleague · 5 trials')
+  expect(stdout).toContain('3 of 5 trials reached the outcome.')
+  expect(stdout).toContain('stopped: pressed Add twice, two invitations')
+  expect(stdout).not.toMatch(/people|Problems found/)
+  const html = await readFile('apps/web/generated/terminal-agent.html', 'utf8')
+  expect(html).toContain('color:#f7768e')
+  expect(parseHTML(`<pre>${html}</pre>`).document.querySelector('pre')!.textContent?.trim()).toBe(stdout.trim())
+}, 15000)
+
 // Three cold Node/tsx subprocesses exceed the default five seconds on CI.
 // Bound each child as well as the whole integration test, without blocking Vitest.
 it('regenerates every committed HTML frame from Ink and keeps CLI/report/README parity at 80 columns', async () => {
-  const names = ['report', 'commands', 'install', 'initCommand', 'devCommand', 'runCommand', 'reportCommand', 'init', 'dev', 'run']
+  const names = ['report', 'agent', 'commands', 'install', 'initCommand', 'devCommand', 'runCommand', 'reportCommand', 'init', 'dev', 'run']
   const before = await Promise.all(names.map(name => readFile(`apps/web/generated/terminal-${name}.html`, 'utf8')))
-  await exec(process.execPath, ['--import', 'tsx', 'apps/web/scripts/render-terminal.mjs', '--check'], { env: { ...process.env, FORCE_COLOR: '1' }, timeout: 10000 })
+  await exec(process.execPath, ['--import', 'tsx', 'apps/web/scripts/render-terminal.mjs', '--check'], { env: { ...process.env, FORCE_COLOR: '3' }, timeout: 10000 })
   const after = await Promise.all(names.map(name => readFile(`apps/web/generated/terminal-${name}.html`, 'utf8')))
   expect(after).toEqual(before)
   const { stdout: cli } = await exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'report', 'apps/web/generated/example-report.json'], { env: { ...process.env, NO_COLOR: '1', FORCE_COLOR: '0' }, encoding: 'utf8', timeout: 10000 })

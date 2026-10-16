@@ -7,37 +7,28 @@
 <title>Weekboard</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
 <style>
 /*
   Weekboard demo app. A static board for the ui-tests example run.
-  Its own identity, not ours: warm charcoal with a mint accent, Manrope.
+  Tokyo Night tokens and Fira type, shared with the site.
   Design size 1280 x 800.
 
-  --wb-bg      #221f1d  warm charcoal canvas
-  --wb-panel   #2c2825  columns, menus, settings panel
-  --wb-card    #37322e  cards and fields
-  --wb-line    #4a433e  hairlines
-  --wb-text    #f1ebe3  text
-  --wb-dim     #a79e94  secondary text
-  --wb-mint    #5fd3b1  the one accent
 */
 :root {
-  --wb-bg: #221f1d;
-  --wb-panel: #2c2825;
-  --wb-card: #37322e;
-  --wb-line: #4a433e;
-  --wb-text: #f1ebe3;
-  --wb-dim: #a79e94;
-  --wb-mint: #5fd3b1;
-  --wb-mint-ink: #10211b;
+  --canvas: #1a1b26; --surface: #1f2335; --line: #292e42;
+  --ink: #c0caf5; --muted: #a9b1d6; --moment: #ff9e64;
+  --deviation: #7aa2f7; --dead: #f7768e; --pause: #e0af68; --done: #73daca; --note: #bb9af7;
+  --wb-bg: var(--canvas); --wb-panel: var(--surface); --wb-card: var(--surface);
+  --wb-line: var(--line); --wb-text: var(--ink); --wb-dim: var(--muted);
+  --wb-mint: var(--moment); --wb-mint-ink: var(--canvas);
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body {
   width: 1280px; min-height: 800px; overflow: hidden;
   background: var(--wb-bg); color: var(--wb-text);
-  font: 14px/1.45 Manrope, "Helvetica Neue", Arial, sans-serif;
+  font: 14px/1.6 "Fira Sans", sans-serif;
   -webkit-font-smoothing: antialiased;
 }
 button, input { font: inherit; color: inherit; }
@@ -66,13 +57,13 @@ a { color: inherit; text-decoration: none; }
   height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--wb-line);
   background: var(--wb-card); font-weight: 600; display: inline-flex; align-items: center; gap: 8px;
 }
-.btn:hover { border-color: #5c544d; }
+.btn:hover { border-color: var(--muted); }
 .btn.primary { background: var(--wb-mint); color: var(--wb-mint-ink); border-color: var(--wb-mint); }
-.btn.primary:hover { background: #74dcbd; }
+.btn.primary:hover { filter: brightness(1.08); }
 .btn.primary.grey { background: var(--wb-card); color: var(--wb-dim); border-color: var(--wb-line); }
 .btn svg { width: 16px; height: 16px; }
 .avatar {
-  width: 34px; height: 34px; border-radius: 50%; border: 0; background: #c98a5a; color: #2a1a0f;
+  width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--note); color: var(--canvas);
   font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center;
 }
 .avatar:hover { box-shadow: 0 0 0 3px var(--wb-line); }
@@ -110,14 +101,14 @@ a { color: inherit; text-decoration: none; }
   background: var(--wb-card); border-radius: 8px; padding: 12px 12px 10px; margin-bottom: 8px;
   border: 1px solid transparent;
 }
-.card:hover { border-color: #5c544d; }
+.card:hover { border-color: var(--muted); }
 .card .t { font-weight: 500; }
 .card .m { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--wb-dim); }
-.tag { padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #4a433e; color: #e4dcd2; }
-.tag.design { background: #3a4a44; color: var(--wb-mint); }
-.tag.eng { background: #3f3b52; color: #c4b8f2; }
-.tag.ops { background: #52443a; color: #f0c6a2; }
-.m .who { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; background: #6c8ea4; color: #0f1b22; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.tag { padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 500; background: var(--canvas); color: var(--muted); }
+.tag.design { color: var(--done); }
+.tag.eng { color: var(--deviation); }
+.tag.ops { color: var(--pause); }
+.m .who { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; background: var(--deviation); color: var(--canvas); font-size: 10px; font-weight: 500; display: inline-flex; align-items: center; justify-content: center; }
 .add { width: 100%; text-align: left; border: 0; background: none; color: var(--wb-dim); padding: 10px 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
 .add:hover { background: var(--wb-card); color: var(--wb-text); }
 .add svg { width: 14px; height: 14px; }
@@ -177,24 +168,24 @@ body.scenario .player { display: contents; }
 .scrim { position: fixed; inset: 0; z-index: 50; background: rgba(21,26,33,.72); display: flex; align-items: center; justify-content: center; }
 .scrim[hidden] { display: none; }
 .scenario-card {
-  width: 480px; padding: 28px 28px 24px; border-radius: 14px; background: #151a21; color: #eef1f5;
+  width: 480px; padding: 28px 28px 24px; border-radius: 14px; background: var(--surface); color: var(--ink);
   border: 1px solid rgba(238,241,245,.14); box-shadow: 0 30px 80px rgba(0,0,0,.5);
-  font-family: "Fira Sans", Manrope, sans-serif;
+  font-family: "Fira Sans", sans-serif;
 }
 .scenario-card p { margin: 0 0 22px; font-size: 17px; line-height: 1.5; }
 .scenario-card button, .bar button {
   height: 40px; padding: 0 18px; border-radius: 8px; border: 1px solid rgba(238,241,245,.18);
-  background: #eef1f5; color: #151a21; font-weight: 500; font-family: inherit;
+  background: var(--moment); color: var(--canvas); font-weight: 500; font-family: inherit;
 }
 .bar {
   position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 50;
-  display: flex; gap: 8px; padding: 8px; border-radius: 12px; background: #151a21; color: #eef1f5;
+  display: flex; gap: 8px; padding: 8px; border-radius: 12px; background: var(--surface); color: var(--ink);
   border: 1px solid rgba(238,241,245,.14); box-shadow: 0 20px 50px rgba(0,0,0,.5);
-  font-family: "Fira Sans", Manrope, sans-serif;
+  font-family: "Fira Sans", sans-serif;
 }
 .bar[hidden] { display: none; }
 .bar button { height: 36px; }
-.bar button.quiet { background: none; color: #eef1f5; }
+.bar button.quiet { background: none; color: var(--ink); }
 </style>
 </head>
 <body>
@@ -304,8 +295,8 @@ body.scenario .player { display: contents; }
           <p class="lead">People who can open and edit this board.</p>
           <div class="members">
             <div class="member"><span class="avatar">JL</span><div><b>Jo Lindqvist</b><span>jo@acme.co</span></div><span class="role">Owner</span></div>
-            <div class="member"><span class="avatar" style="background:#6c8ea4">PN</span><div><b>Priya Nair</b><span>priya@acme.co</span></div><span class="role">Editor</span></div>
-            <div class="member"><span class="avatar" style="background:#8c7fb8">TK</span><div><b>Tom Keller</b><span>tom@acme.co</span></div><span class="role">Editor</span></div>
+            <div class="member"><span class="avatar" style="background:var(--deviation)">PN</span><div><b>Priya Nair</b><span>priya@acme.co</span></div><span class="role">Editor</span></div>
+            <div class="member"><span class="avatar" style="background:var(--note)">TK</span><div><b>Tom Keller</b><span>tom@acme.co</span></div><span class="role">Editor</span></div>
           </div>
           <div class="invite">
             <h2>Invite by email</h2>

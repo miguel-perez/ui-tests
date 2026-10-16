@@ -55,7 +55,7 @@ test('keyboard rehearsal, privacy projection, dead click, deviation, separate tr
   const projection = await page.evaluate(async () => (await fetch('/api/ui-tests')).text())
   expect(projection).not.toMatch(/happyPath|expected|hooks|\/docs\/getting-started|ui-tests/)
   const taskbar = page.getByRole('complementary', { name: 'Your task' })
-  expect(await taskbar.evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgb(20, 25, 32)')
+  expect(await taskbar.evaluate(node => getComputedStyle(node).backgroundColor)).toBe('rgb(26, 27, 38)')
   await page.evaluate(() => { const button = document.createElement('button'); button.id = 'dead-click-probe'; button.textContent = 'Probe'; document.body.append(button) })
   await page.locator('#dead-click-probe').click()
   await page.waitForTimeout(400)
