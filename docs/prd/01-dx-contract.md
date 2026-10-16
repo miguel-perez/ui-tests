@@ -7,6 +7,7 @@ The criterion for every field: a developer who has written a Playwright test alr
 | Input | Where | Why the author knows it |
 | --- | --- | --- |
 | Users, one plain sentence | `context({ users })` | They know who the product is for |
+| Who to screen for, as facts | `context({ screen })`, every field optional: `did`, `within`, `often`, `role`, `uses`, `not`, `where`, `language`, `age` | They know what their customers did recently, which tools they use and who they are not; the method is derived |
 | Purpose, one verb phrase from the person's side | `context({ purpose })` | They know what people are trying to do, independent of the product |
 | Target URL | config `target.url` | Their preview deployment |
 | Goal | `goal('give an accountant read-only access', …)` | It is the test name |
@@ -27,8 +28,8 @@ The criterion for every field: a developer who has written a Playwright test alr
 | Sample size | `catch: { affecting: '1 in 3', confidence: 0.85 }` default on the goal, or an `estimate` target | The sentence, not the number |
 | The sentence | the same inputs and the observed counts | In the report and the check |
 | Goal timeout | happy-path or step count × 90 seconds, 3-minute floor; the participant may ask for more time once | Overridable |
-| Questions | SEQ and confidence per goal, UX-Lite at the end with usefulness reported on its own | Always collected, reported as context |
-| Screener | the `users` sentence, one behavioural question, panel filters where the source has them, the three fit questions and the three persona-placement questions | Shown in the trace with the reason |
+| Questions | one per screen: the SEQ after every attempt, give-ups included; "What made it difficult?" when it is 4 or below; confidence only when the outcome cannot be verified by the end state or a validation question; UX-Lite at the end with usefulness reported on its own; the open question last. Every question that takes words also takes voice, with microphone consent asked once ([`participant-overlay-research.md`](../discovery/participant-overlay-research.md)) | Always collected, reported as context; spoken answers keep their audio and transcript with the attempt |
+| Screener | the `screen` block (below), or a draft inferred from the `users` sentence when there is none; the three fit questions from the `purpose` as before | Shown in the trace as an editable table: each question with its options and their accept, reject or may-select labels, the `screen` field it came from and the rule; `ui-tests lint` prints an inferred draft as TypeScript |
 | Incentive | estimated minutes, wage floor, role and recording multipliers, raise rule, true-up reserve; a floor the author can raise and nothing can lower, except for `link` participants | Line item against the budget |
 | Panel routing | bandit over configured panels under the cap | Per-panel counts |
 | Consent, instructions, attention and speeder flags, repeat exclusion | standing defaults | Flags recorded, nothing deleted |
@@ -60,6 +61,32 @@ Discovery order mirrors Vitest: `ui-tests.config.{ts,mts,js}` first, then `vite.
 
 The actor is a run parameter, not a file kind. `actor: 'human'` in the config is the default; `ui-tests run --actor agent` runs the same context with an agent harness. A run has exactly one actor; `--actor both` is refused. `target.url` serves both actors; `target.cli`, `target.mcp` and `target.http` serve agents; a human terminal harness is a planned omission, and the lint says so if a context admits humans on them. See [`04-agent-studies.md`](04-agent-studies.md).
 
+## The `screen` block
+
+`users` names the group; a screener needs a behaviour, a window and an exclusion, which no generator can read out of one sentence ([`screener-research.md`](../discovery/screener-research.md)). So `context` takes an optional `screen` of facts about the author's customers, and the compiler derives the method:
+
+```ts
+// invite-colleague.ui.test.ts
+screen: {
+  did: 'signed up for a tool to plan work with a team',
+  within: '7 days',
+  uses: ['Trello', 'Asana', 'Notion', 'Linear'],
+  not: ['has used Weekboard'],
+},
+```
+
+| Field | Shape | Becomes |
+| --- | --- | --- |
+| `did` | one past-tense verb phrase about the category, never the product | the gate: "When was the last time you {did}?" with non-overlapping recency bands, `accept` on the band inside `within` |
+| `within` | `'<n> days\|weeks\|months\|years'`, default `'3 months'` | the accepted recency band |
+| `often` | `'daily' \| 'weekly' \| 'monthly' \| 'yearly'` | a frequency question with concrete bands, `accept` at or above the floor |
+| `role` | roles to accept | asked broad first (the kind of work), then narrow (the role among neutral roles, "None of these" rejecting), so the purpose cannot be read off the screener |
+| `uses` | tools | a multi-select with the tools as may-select, one decoy and "None of the above", both rejecting |
+| `not` | exclusions | listed among neutral options, any listed item rejecting, plus the standing exclusion of people who work in UX, design, marketing or market research |
+| `where`, `language`, `age` | ISO country codes, an ISO 639-1 code, `{ min, max }` | panel filters, never asked; prior participation is always a panel filter too |
+
+The compiler validates the block (unknown fields, malformed windows, codes and age ranges are a lint error with the field named) and writes the derived screener into the compiled context with the originating field and the rule beside each question. Without a `screen`, the compiler drafts one from the `users` sentence (the relative clause as `did`, a time phrase as `within`), marks every field it filled as inferred, and `ui-tests lint` prints the draft as TypeScript to paste in; a sentence with no behaviour in it yields no gate, and lint says so.
+
 ## Test file
 
 Mirrors describe/it, with the standard's structure: `context` is the context of use (ISO 9241-11: specified users, goals and tasks, environment), `goal` is what a person tries to achieve, `task` is a step, `outcome` is the goal's hook. RSpec users know `context` as a `describe` alias; it reads the same here. A context has no title: its name in reports is "users, purpose" and its id in the record is derived from the two, so neither is written twice.
@@ -71,6 +98,12 @@ import { context, goal, outcome, expect } from 'ui-tests'
 context({
   users: 'developers who ship UI and have no researcher',
   purpose: 'find out whether people can use what I built, without a researcher',
+  screen: {
+    did: 'shipped a user interface you built yourself',
+    within: '3 months',
+    role: ['developer', 'designer', 'founder'],
+    not: ['works in UX research'],
+  },
 }, () => {
   goal('start trying ui-tests', { happyPath: ['/', '/docs/getting-started'] }, () => {
     outcome(async ({ page }) => {
@@ -111,6 +144,8 @@ Runs on `ui-tests lint`, in dev mode, and before any run. Each rule prints its r
 | One primary goal | several goals with outcomes and no `primary` | this contract |
 | Context under 30 minutes | ten goals with long paths | MeasuringU online study time |
 | Users and purpose named | `users: 'anyone'`, or a purpose that names the product instead of what the person is trying to do | this contract; Young |
+| Screen valid | an unknown field, a `within` that is not a window, a country that is not an ISO code, `age.min` above `age.max` | this contract |
+| Screen written | no `screen` block: a warning with the inferred draft printed as TypeScript; no `did` anywhere: a warning that the screener has no gate | screener research |
 | Actor admitted | `--actor agent` on a context with `actors: ['human']`, or `actors` including `human` on a `target.cli`, `target.mcp` or `target.http` | this contract |
 
 Lint failures block a run and name the fix. Warnings appear in the trace.

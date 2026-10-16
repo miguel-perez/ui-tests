@@ -30,3 +30,22 @@ it('keeps every text token AA over the strongest pixel of the background texture
     expect(contrast(tokens[text], strongest), `${text} over the texture`).toBeGreaterThanOrEqual(4.5)
   }
 })
+
+it('keeps every light-theme text token AA on the light canvas and surface, and the player on the same tokens as the site', async () => {
+  const { playerTheme } = await import('../packages/ui-tests/src/player-styles')
+  const css = await readFile('apps/web/app/globals.css', 'utf8')
+  const light = Object.fromEntries([...css.matchAll(/--light-([\w-]+): (#[\da-f]{6})/g)].map(match => [match[1], match[2]]))
+  expect(light).toEqual(playerTheme)
+  for (const background of ['canvas', 'surface']) {
+    for (const text of ['ink', 'muted', 'moment', 'deviation', 'dead', 'pause', 'done', 'note']) {
+      expect(contrast(light[text], light[background]), `light ${text} on ${background}`).toBeGreaterThanOrEqual(4.5)
+    }
+    // Like the dark theme, the comment role is decorative only.
+    expect(contrast(light.comment, light[background])).toBeLessThan(4.5)
+  }
+  // White text on the moment hue: the primary button and the rank chips.
+  expect(contrast('#ffffff', light.moment)).toBeGreaterThanOrEqual(4.5)
+  // The inverse theme turns the ink hierarchy over: the darkest ink on the lightest ground.
+  expect(luminance(light.ink)).toBeLessThan(luminance(light.muted))
+  expect(luminance(light.canvas)).toBeLessThan(luminance(light.surface))
+})

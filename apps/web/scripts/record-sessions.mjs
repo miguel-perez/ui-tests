@@ -99,12 +99,15 @@ async function recordP3() {
   await page.evaluate(CURSOR_INIT);
   await sleep(1300);
 
-  const moments = [];
+  const moments = [], pending = [];
   let t0 = 0;
   const now = () => (Date.now() - t0) / 1000;
   const until = async (s) => { const ms = t0 + s * 1000 - Date.now(); if (ms > 0) await sleep(ms); };
   const moment = (timestamp, kind, detail, extra = {}) => {
-    moments.push({ timestamp: mmss(timestamp), seconds: timestamp, kind, detail, ...extra });
+    const entry = { timestamp: mmss(timestamp), seconds: timestamp, kind, detail, ...extra };
+    moments.push(entry);
+    // Where the cursor was, as a fraction of the 1280 × 800 frame: the hero draws its in-context sensor there.
+    pending.push(page.evaluate(() => window.__cursor.pos()).then(({ x, y }) => { entry.at = [+(x / 1280).toFixed(3), +(y / 800).toFixed(3)]; }));
     console.log(`${mmss(timestamp)}  ${kind.padEnd(10)} ${detail}   (actual ${now().toFixed(2)}s)`);
   };
 
@@ -209,6 +212,7 @@ async function recordP3() {
   moment(63, 'done', "I'm done", { route: '/settings/members' });
 
   await sleep(1200);
+  await Promise.all(pending);
   const closedAt = Date.now();
   const video = page.video();
   await page.close();
@@ -248,6 +252,7 @@ async function publishP3() {
     label: 'Example run',
     run: 'k2m9',
     goal: 'invite a colleague',
+    date: '14 Oct 2026',
     sessions: [
       {
         id: 'p3',
@@ -263,7 +268,9 @@ async function publishP3() {
         confidence: 6,
         confidenceOf: 7,
         uxLite: { ease: 2, usefulness: 4, of: 5, version: 'UX-Lite two-item, 5-point agreement' },
-        consent: { screen: true, voice: false, webcam: false },
+        // P3 talked the final answer: voice is recorded with consent and the words are its transcript.
+        consent: { screen: true, voice: true, webcam: false },
+        wordsSpoken: true,
         words: "Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.",
         video: '/sessions/p3.webm',
         poster: '/sessions/p3.jpg',

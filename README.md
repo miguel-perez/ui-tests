@@ -16,7 +16,7 @@ P3 · 00:03 · looked for Invite in the Share menu
 
 What comes back.
 
-Here is the whole of one run: what one person did, and what to fix.
+Here is one person’s attempt as it comes back: the recording, every moment on a timeline, and their words.
 
 If you have written a Playwright test, you have written this.
 
@@ -30,15 +30,17 @@ What the person sees.
 
 Your page, with a small bar over it. Nothing else.
 
-Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished.
+You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam’s email is sam@acme.co.
 
 goal('invite a colleague')
+
+The card is written from the goal, never from the path you expect.
 
 outcome(...)
 
 It runs on your side after either button.
 
-the rating and the words land in their trace.
+The rating and the words, typed or spoken, land in their trace.
 
 They never see the path you expected or the check you wrote, so nothing you wrote can lead them.
 
@@ -50,7 +52,7 @@ In the pull request.
 
 Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request with a report page anyone on the team can open. Your other tests prove the code works. This one shows whether a person can use it.
 
-the report page opens on the ranked problems, each with the moments to watch and what to change, and every person's trace below.
+The report page opens on the ranked problems, each with the moments to watch and what to change, and every person's trace below.
 
 Three commands.
 
@@ -66,13 +68,33 @@ The outcome checks that you reached the guide. If you get stuck on the way there
 
 The same test, run by an agent.
 
-Point the same file at your CLI, your MCP server or your API and run it with an agent instead of a person. Five trials, a trace for each, a report of its own. Agent runs are never counted with people and never described as people.
+Point a file at your API, your MCP server or your CLI and run it with an agent instead of a person. Five trials, a trace for each, a report of its own. Agent runs are never counted with people and never described as people.
 
 One file, two actors, two reports that never mix.
 
 npx ui-tests run --actor agent
 
-ui-tests (agent) · 3 of 5 trials · Report
+goal('add a member through the API', { target: { http: 'https://api.weekboard.app' } })
+
+add a member through the API
+
+https://ui-tests.com/r/k2m9-agent
+
+0:19
+
+POST /members, then GET /members
+
+0:22
+
+0:41
+
+called POST /invites, which does not exist
+
+0:17
+
+0:35
+
+sent the email in the query string, 400
 
 ## Without a repository
 
@@ -92,6 +114,76 @@ plan the week together without emailing screenshots around
 
 invite a colleague
 
+signed up for a tool to plan work with a team
+
+7 days
+
+Trello, Asana, Notion, Linear
+
+has used Weekboard
+
+Paste the line
+
+You see the script in your live site’s markup, or in the tag manager that publishes it.
+
+Fill the form
+
+You see the run on your dashboard, and a report page you can share once the attempts are in.
+
+## The hosted dashboard
+
+16 Oct
+
+3 of 5
+
+running
+
+change the plan to Team
+
+15 Oct
+
+5 of 5
+
+done
+
+1 problem
+
+great
+
+export last month’s board
+
+12 Oct
+
+8 of 8
+
+done
+
+3 problems
+
+check
+
+start a board from a template
+
+9 Oct
+
+5 of 5
+
+done
+
+none found
+
+great
+
+find a card from last week
+
+—
+
+0 of 5
+
+draft
+
+archive a finished board
+
 ## The file
 
 ```ts
@@ -100,6 +192,12 @@ import { context, goal, outcome, expect } from 'ui-tests'
 context({
   users: 'people who signed up this week and want a colleague on their board',
   purpose: 'plan the week together without emailing screenshots around',
+  screen: {
+    did: 'signed up for a tool to plan work with a team',
+    within: '7 days',
+    uses: ['Trello', 'Asana', 'Notion', 'Linear'],
+    not: ['has used Weekboard'],
+  },
 }, () => {
   goal('invite a colleague', { happyPath: ['/board', '/settings/members'] }, () => {
     outcome(async ({ page }) => {
@@ -113,6 +211,8 @@ context({
 
 Looked for Invite in the Share menu and found only link options
 
+slowed
+
 4 of 5
 
 "Share is where you add people."
@@ -124,6 +224,8 @@ Put "Invite a colleague" at the top of the Share menu.
 P3 · 00:03 → 00:12
 
 Pressed Add, saw nothing change, pressed it again; two invitations went out
+
+misled
 
 2 of 5
 
@@ -137,6 +239,8 @@ P3 · 00:58 → 01:04
 
 Typed the colleague's email into the board search
 
+slowed
+
 2 of 5
 
 "I figured it would find them."
@@ -148,6 +252,8 @@ When a search matches no cards, offer "Invite someone with this email".
 P3 · 00:23 → 00:32
 
 Stopped at a grey Add button and gave up
+
+blocked
 
 1 of 5
 
@@ -193,6 +299,12 @@ import { context, goal, outcome, expect } from 'ui-tests'
 context({
   users: 'developers who ship UI and have no researcher',
   purpose: 'find out whether people can use what I built, without a researcher',
+  screen: {
+    did: 'shipped a user interface you built yourself',
+    within: '3 months',
+    role: ['developer', 'designer', 'founder'],
+    not: ['works in UX research'],
+  },
 }, () => {
   goal('start trying ui-tests', { happyPath: ['/', '/docs/getting-started'] }, () => {
     outcome(async ({ page }) => {
@@ -220,11 +332,15 @@ Run it with an agent
 
 You see "ui-tests" in `devDependencies`.
 
-You see a link in the terminal, then in your browser the scenario card, your own page with the bar over it, and the ease question. Press "I'm done". The terminal prints:
+You see a link in the terminal, then in your browser the scenario card, your own page with the bar over it, and the questions one at a time. Press "Finish". The terminal prints:
 
 You type, in `ui-tests/first.ui.test.ts`:
 
-You see, on the next `npx ui-tests`, the card now reads: "Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished."
+You see, on the next `npx ui-tests`, the card now reads: "Imagine you want to invite a colleague." Pin richer wording with `scenario` once you have read it, and `ui-tests lint` prints the screener it drafted from `users` until you write a `screen` block.
+
+You type, in the same file or a new one:
+
+You see a separate agent report:
 
 Read what came back
 
@@ -287,30 +403,34 @@ These frames are generated by the CLI’s Ink renderer.
 ```text
 ● Problems found: 4 across 5 people.
 
-▏1  Looked for Invite in the Share menu and found only link options  4 of 5
- 2  Pressed Add, saw nothing change, pressed it again                2 of 5
- 3  Typed the colleague's email into the board search                2 of 5
- 4  Stopped at a grey Add button and gave up                         1 of 5
+▏1  4 of 5  Looked for Invite in the Share menu and found only link options
+ 2  2 of 5  Pressed Add, saw nothing change, pressed it again
+ 3  2 of 5  Typed the colleague's email into the board search
+ 4  1 of 5  Stopped at a grey Add button and gave up
 ```
 
 ### agent
 
 ```text
-Agent run · invite a colleague · 5 trials
-1  reached the outcome        0:41
-2  reached the outcome        0:38
-3  stopped: no Invite in the Share menu   1:12
-4  reached the outcome        0:44
-5  stopped: pressed Add twice, two invitations   1:05
+Agent run · add a member through the API · 5 trials
+1  0:19  reached the outcome · POST /members, then GET /members
+2  0:22  reached the outcome
+3  0:41  stopped: called POST /invites, which does not exist
+4  0:17  reached the outcome
+5  0:35  stopped: sent the email in the query string, 400
 3 of 5 trials reached the outcome. Report: https://ui-tests.com/r/k2m9-agent
 ```
 
 ### commands
 
 ```text
-npm install -D ui-tests
-npx ui-tests init
-npx ui-tests
+$ npm install -D ui-tests
+$ npx ui-tests init
+Created ui-tests.config.ts
+Created landing.ui.test.ts
+Created vitest.config.ts
+Next: npm run dev, then npx ui-tests
+$ npx ui-tests
 ```
 
 ### init

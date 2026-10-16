@@ -50,7 +50,11 @@ Standing text generated per run: who is running the study, what is recorded at t
 
 ## Quality and audience
 
-An attention item once per run, a speeder flag at under half the median goal time, the device and IP hash, and the screener. The screener is one behavioural question, the source's filters where it has them, the three fit questions derived from the purpose, and three persona-placement questions. It is a known-gameable gate and the trace says so. After the fact, the author can exclude a participant as "not my audience" with one click; the exclusion is a revision, the participant stays paid, and the count of such exclusions is reported.
+An attention item once per run, a speeder flag at under half the median goal time, the device and IP hash, and the screener. It is a known-gameable gate and the trace says so.
+
+The screener is derived from the context's `screen` block ([`01-dx-contract.md`](01-dx-contract.md), [`screener-research.md`](../discovery/screener-research.md)), in funnel order: panel filters first and never asked (`where`, `language`, `age`, prior participation); the recency gate from `did` and `within`, in non-overlapping bands; the frequency question from `often`; the role asked broad, then narrow; the `uses` multi-select with one decoy and "None of the above"; the `not` exclusions mixed among neutral options, always with the standing exclusion of people who work in UX, design, marketing or market research; then the three fit questions from the purpose. Every option carries an accept, reject or may-select label, and every question the field and the rule it came from. With no `screen`, the compiler drafts one from the `users` sentence and marks each field inferred; lint prints the draft to paste in, and the trace shows the derived table so a wrong inference is a one-line edit.
+
+Per source: on Prolific, `where`, `language` and `age` map to its filters and the behavioural questions run as custom screening with paid screen-out slots, a budget line in the trace; on Connect, criteria it profiles map to its demographic targeting and the rest need a paid prescreen project, which the trace estimates; on `link`, the questions are asked before consent and nothing is filtered. After the fact, the author can exclude a participant as "not my audience" with one click; the exclusion is a revision, the participant stays paid, and the count of such exclusions is reported.
 
 ## Environment
 
