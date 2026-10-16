@@ -6,6 +6,7 @@
 
 - **Three contradictions, now settled.** (1) The bar's labels: the landing and `taskbar.html` say "I'm done / I can't do this", the card said "press Finish", the overlay research says "Done / I couldn't do this". The overlay research wins; the card's last line quotes the bar's labels verbatim. (2) The card text: `scenario-card.html`, landing v3 block 3 and getting-started step 4 still say "Imagine you want to invite a colleague… Work as you normally would", which carries no data. The derived text below replaces all three. (3) Confidence: PRD 01 asks it only when the outcome cannot be verified; PRD 02's participant flow lists it for every goal. PRD 01 wins; Weekboard's outcome is verifiable, so the confidence question is not shown in this example.
 - **What the current landing covers:** about 6 of the 24 rows below (users, purpose, goal, happyPath and outcome as file text, plus the ease question and the comment box). None of consent, the screener, the impression stage, fixtures, the sample size or recording.
+- **A fourth contradiction: the impression question's form.** PRD 02 compiles the impression stage as "What is this for?" with the purpose among generated distractors. [`impression-research.md`](impression-research.md) recommends "one open 'what is this site for?'", and the method sources agree: Perfetti's five-second test asks for free recall and then open questions tied to the page's purpose ([centercentre](https://articles.centercentre.com/five_second_test/)); Lyssna's guide opens with "What was this page about?" in the participant's own words, warns against priming, and reads the answers for themes with an 80% benchmark ([Lyssna](https://www.lyssna.com/guides/five-second-testing/)). A closed list leaks the purpose and turns recognition into recall of the options. The question is open; the answers are coded against the `purpose` (model-proposed, labelled, reviewable in the trace), and the purpose is never shown. PRD 02 should be amended.
 - **The fairness answer comes from what is hidden.** `happyPath`, the outcome assertion and `screen.not` never reach the participant. The section has to mark those lines visibly.
 
 ## 1. The mapping
@@ -15,7 +16,7 @@ Shown: the participant sees it. D/V: derived or verbatim. Landing: on the curren
 | Author writes | Participant sees / runner does | Comes back | Shown | D/V | Landing |
 |---|---|---|---|---|---|
 | `users` | Motive clause of the card; a draft `screen` when none is written; the panel match sentence | Who was matched | yes (card) | D | file only |
-| `purpose` | Three fit questions ("When did you last need to…", "How do you do it today?", "How much does it matter?"); the right answer to "What is this for?"; the card's situation sentence | Fit of the sample; recognition count | yes | D | file only |
+| `purpose` | Three fit questions ("When did you last need to…", "How do you do it today?", "How much does it matter?"); what the open impression answers are coded against; the card's situation sentence | Fit of the sample; how many named the purpose | yes | D | file only |
 | `environment` | Narrows invites; device, browser and assistive technology asked in the screener | Environment per attempt | yes (screener) | D | no |
 | `screen.did` + `within` | "When was the last time you {did}?" with recency bands; accept inside `within` | Screened in or out | yes | D | no |
 | `screen.often` | Frequency question with concrete bands | same | yes | D | no |
@@ -23,7 +24,7 @@ Shown: the participant sees it. D/V: derived or verbatim. Landing: on the curren
 | `screen.uses` | Multi-select with one decoy and "None of the above" | same | yes | D | no |
 | `screen.not` | Listed among neutral options, plus the standing UX, design and marketing exclusion | same | yes, disguised | D | no |
 | `screen.where`, `language`, `age` | Panel filters, never asked | Panel counts | no | — | no |
-| `impression` (on by default) | First page flashed 500 ms, appeal 1–9, "What is this for?", first click | Recognition, appeal, first click | yes | D | no |
+| `impression` (on by default) | First page flashed 500 ms, appeal 1–9, one open "What was that page for?", first click | Named the purpose (coded against `purpose`, with the words), appeal, first click | yes | D | no |
 | `independent: true` | Goal order randomised | Order per participant | no | — | no |
 | `record: 'screen'` | Consent lists screen recording; recording indicator; higher incentive | Video on the attempt | yes | D | no |
 | `catch` / `estimate` | n derived: 1 in 3 at 0.85 gives 5 | "Five people give an 87% chance…"; the cost line | no | — | "5 people" only |
@@ -74,7 +75,7 @@ context({
 1. **Consent.** Screen recording, incentive, purposes; "the website is being tested, not you". Line 12. Consented purposes.
 2. **Screener.** "When was the last time you signed up for a tool to plan work with a team?" (accept: past 7 days); tools multi-select with a decoy; exclusion list; then the three fit questions. Lines 4–11, 5. Fit.
 3. **Practice screen.** Standing text.
-4. **Impression.** /board flashed 500 ms, appeal, "What is this for?" with the purpose among distractors, first click. Lines 5, 16. Recognition, appeal, first click.
+4. **Impression.** /board flashed 500 ms, appeal, one open "What was that page for?", first click. Lines 5, 16. How many named the purpose, with their words; appeal; first click.
 5. **Scenario card.** Lines 4, 5, 14, 15. Scenario text in the trace.
 6. **Page with the bar.** Done, I couldn't do this, recording chip, no countdown, 3-minute silent limit. Lines 15, 16, 12. Time, path, moments, how it ended.
 7. **The check after Done.** Not shown. Lines 19–21. Reached or not; P3's "2 invitations pending" is not reached.
