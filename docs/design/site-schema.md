@@ -10,7 +10,7 @@ The pages are built from content types, each rendered by one component with one 
 | --- | --- | --- | --- |
 | Claim | headline, standfirst, actions[], fine print | `Hero` | Headline and standfirst span 7 columns left; the hero artefact takes 5 columns right, stacked below on narrow widths. The background session and texture sit behind the whole hero. |
 | Section | heading, lead | `SectionHead` | Heading 5 columns, lead 7 columns, one row, 96px above, 48px below. Never a side caption. |
-| TerminalOutput | title (the command), fragment (from the Ink renderer), marked rank, label | `TerminalWindow` | The only component with terminal chrome. Width is its content's: 8 columns alone, 5 beside a Claim, 12 in the commands block. |
+| TerminalOutput | title (the command), fragment (from the Ink renderer), marked rank | `TerminalWindow` | The only component with terminal chrome. Width is its content's: 8 columns alone, 5 beside a Claim, 12 in the commands block. |
 | CodeFile | filename, language, lines, marked line | `CodeWindow` | Filename tab, copy control, highlighted lines. 8 columns alone, 12 when it is the block's only artefact. |
 | InlineCode | fragment | `Code` | Highlighted inline; appears only inside Caption text. |
 | Session | person, metadata (source, device, viewport, duration, outcome, ease, confidence, UX-Lite), recording state (screen, voice, webcam with consent), video, poster, moments[], words, audio | `SessionView` | 12 columns. Video 7 columns left, timeline 5 columns right, metadata strip above, words and audio below. Light theme. No terminal chrome. |
