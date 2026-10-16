@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&amp;family=Fira+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --moment-hue: #e0a458;
+      --canvas-bg: #101211;
+      --pill-bg: #1c1f1e;
+      --primary-text: #f0f2f1;
+      --muted-text: #a4ada5;
+      --hairline: rgba(255, 255, 255, 0.1);
+    }
+    .font-fira-sans { font-family: 'Fira Sans', sans-serif; }
+    .font-fira-code { font-family: 'Fira Code', monospace; }
+    .bg-moment { background-color: var(--moment-hue); }
+    .text-moment { color: var(--moment-hue); }
+    .border-hairline { border-color: var(--hairline); }
+  </style>
+</head>
+<body>
+  <div class="min-h-screen flex items-center justify-center" style="background-color: var(--canvas-bg);" data-sd-id="1">
+    <div class="flex flex-col items-center gap-3" data-sd-id="2">
+      <!-- Floating Control Pill -->
+      <div class="inline-flex items-center p-1.5 rounded-[8px] shadow-2xl border border-hairline" style="background-color: var(--pill-bg);" data-sd-id="3">
+        
+        <!-- I'm Done Button -->
+        <button id="action-done" class="font-fira-sans text-[14px] font-500 px-4 py-1.5 rounded-[6px] bg-moment text-[#101211] hover:opacity-90 transition-opacity" data-sd-id="4">
+          I'm done
+        </button>
+
+        <!-- Hairline Divider -->
+        <div class="w-px h-6 mx-1.5 bg-white/10" data-sd-id="5"></div>
+
+        <!-- I can't do this Button -->
+        <button id="action-fail" class="font-fira-sans text-[14px] font-500 px-4 py-1.5 rounded-[6px] border border-hairline text-[#f0f2f1] hover:bg-white/5 transition-colors" data-sd-id="6">
+          I can't do this
+        </button>
+
+      </div>
+
+      <!-- Muted Legend -->
+      <span class="font-fira-code text-[11px] uppercase tracking-wider" style="color: var(--muted-text);" data-sd-id="7">
+        floats over your page
+      </span>
+    </div>
+  </div>
+
+</body></html>

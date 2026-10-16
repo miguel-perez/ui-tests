@@ -1,0 +1,66 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@500&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --moment-hue: #e0a458;
+            --canvas-bg: #101211;
+            --chrome-lift: #1a1d1c;
+            --text-primary: #f8faf9;
+            --text-muted: #a4ada5;
+            --hairline: rgba(164, 173, 165, 0.2);
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--canvas-bg);
+        }
+        .font-sans {
+            font-family: 'Fira Sans', sans-serif;
+        }
+        .font-mono {
+            font-family: 'Fira Code', monospace;
+        }
+        .hairline-border {
+            border: 1px solid var(--hairline);
+        }
+        .moment-dot {
+            background-color: var(--moment-hue);
+        }
+        .moment-text {
+            color: var(--moment-hue);
+        }
+    </style>
+</head>
+<body>
+    <div class="w-[480px] h-[180px] bg-[#101211] flex items-center justify-center p-8" data-sd-id="1">
+        <div class="w-full space-y-3" data-sd-id="2">
+            <!-- Header Row -->
+            <div class="flex items-center justify-between" data-sd-id="3">
+                <label class="font-sans text-[16px] font-medium text-[#f8faf9]" data-sd-id="4">Cap</label>
+                <div class="flex items-center gap-2" data-sd-id="5">
+                    <span class="w-1.5 h-1.5 rounded-full moment-dot" data-sd-id="6"></span>
+                    <span class="font-mono text-[11px] text-[#a4ada5] uppercase tracking-wider" data-sd-id="7">panel live</span>
+                </div>
+            </div>
+
+            <!-- Input Field -->
+            <div class="relative" data-sd-id="8">
+                <div class="w-full h-11 bg-[#1a1d1c] hairline-border rounded-[8px] flex items-center px-4" data-sd-id="9">
+                    <span class="font-mono text-[14px] text-[#f8faf9]" data-sd-id="10">$60</span>
+                </div>
+            </div>
+
+            <!-- Subtitle/Info -->
+            <div class="font-mono text-[11px] text-[#a4ada5] leading-relaxed" data-sd-id="11">
+                About $54 for a short task, under a cap you set · within 48 hours
+            </div>
+        </div>
+    </div>
+
+</body></html>

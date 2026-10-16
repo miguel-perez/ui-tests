@@ -1,0 +1,448 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1280">
+<meta name="robots" content="noindex, nofollow">
+<title>Weekboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/*
+  Weekboard demo app. A static board for the ui-tests example run.
+  Its own identity, not ours: warm charcoal with a mint accent, Manrope.
+  Design size 1280 x 800.
+
+  --wb-bg      #221f1d  warm charcoal canvas
+  --wb-panel   #2c2825  columns, menus, settings panel
+  --wb-card    #37322e  cards and fields
+  --wb-line    #4a433e  hairlines
+  --wb-text    #f1ebe3  text
+  --wb-dim     #a79e94  secondary text
+  --wb-mint    #5fd3b1  the one accent
+*/
+:root {
+  --wb-bg: #221f1d;
+  --wb-panel: #2c2825;
+  --wb-card: #37322e;
+  --wb-line: #4a433e;
+  --wb-text: #f1ebe3;
+  --wb-dim: #a79e94;
+  --wb-mint: #5fd3b1;
+  --wb-mint-ink: #10211b;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  width: 1280px; min-height: 800px; overflow: hidden;
+  background: var(--wb-bg); color: var(--wb-text);
+  font: 14px/1.45 Manrope, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+a { color: inherit; text-decoration: none; }
+
+/* top bar */
+.top {
+  height: 56px; display: flex; align-items: center; gap: 16px;
+  padding: 0 24px; border-bottom: 1px solid var(--wb-line); background: var(--wb-panel);
+}
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 16px; letter-spacing: -0.01em; margin-right: 8px; }
+.brand i { width: 22px; height: 22px; border-radius: 7px; background: var(--wb-mint); position: relative; display: inline-block; }
+.brand i::after { content: ""; position: absolute; left: 5px; right: 5px; top: 6px; height: 3px; background: var(--wb-mint-ink); border-radius: 2px; box-shadow: 0 5px 0 var(--wb-mint-ink); }
+.crumb { color: var(--wb-dim); }
+.crumb b { color: var(--wb-text); font-weight: 600; }
+.search {
+  margin-left: auto; display: flex; align-items: center; gap: 8px; width: 300px; height: 36px;
+  padding: 0 12px; border-radius: 8px; background: var(--wb-bg); border: 1px solid var(--wb-line);
+}
+.search:focus-within { border-color: var(--wb-mint); }
+.search svg { width: 16px; height: 16px; color: var(--wb-dim); flex: none; }
+.search input { flex: 1; border: 0; background: none; outline: none; min-width: 0; }
+.search input::placeholder { color: var(--wb-dim); }
+.btn {
+  height: 36px; padding: 0 14px; border-radius: 8px; border: 1px solid var(--wb-line);
+  background: var(--wb-card); font-weight: 600; display: inline-flex; align-items: center; gap: 8px;
+}
+.btn:hover { border-color: #5c544d; }
+.btn.primary { background: var(--wb-mint); color: var(--wb-mint-ink); border-color: var(--wb-mint); }
+.btn.primary:hover { background: #74dcbd; }
+.btn.primary.grey { background: var(--wb-card); color: var(--wb-dim); border-color: var(--wb-line); }
+.btn svg { width: 16px; height: 16px; }
+.avatar {
+  width: 34px; height: 34px; border-radius: 50%; border: 0; background: #c98a5a; color: #2a1a0f;
+  font-weight: 700; font-size: 13px; display: inline-flex; align-items: center; justify-content: center;
+}
+.avatar:hover { box-shadow: 0 0 0 3px var(--wb-line); }
+
+/* menus */
+.anchor { position: relative; }
+.menu {
+  position: absolute; top: calc(100% + 8px); right: 0; min-width: 196px; z-index: 20;
+  background: var(--wb-panel); border: 1px solid var(--wb-line); border-radius: 10px; padding: 6px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.45); display: none;
+}
+.menu.open { display: block; }
+.menu button, .menu a {
+  display: flex; width: 100%; align-items: center; gap: 10px; text-align: left;
+  padding: 9px 10px; border: 0; background: none; border-radius: 6px; color: var(--wb-text);
+}
+.menu button:hover, .menu a:hover { background: var(--wb-card); }
+.menu svg { width: 16px; height: 16px; color: var(--wb-dim); }
+.menu .sep { height: 1px; background: var(--wb-line); margin: 6px 4px; }
+.menu .who { padding: 8px 10px 4px; color: var(--wb-dim); font-size: 12px; }
+
+/* views */
+.view { display: none; }
+.view.active { display: block; }
+
+/* board */
+.boardhead { display: flex; align-items: baseline; gap: 14px; padding: 28px 32px 6px; }
+.boardhead h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.01em; }
+.boardhead span { color: var(--wb-dim); }
+.columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding: 14px 32px; }
+.col { background: var(--wb-panel); border: 1px solid var(--wb-line); border-radius: 12px; padding: 12px; min-height: 560px; }
+.col h2 { margin: 4px 6px 12px; font-size: 13px; font-weight: 600; color: var(--wb-dim); display: flex; justify-content: space-between; }
+.col h2 small { font-weight: 500; }
+.card {
+  background: var(--wb-card); border-radius: 8px; padding: 12px 12px 10px; margin-bottom: 8px;
+  border: 1px solid transparent;
+}
+.card:hover { border-color: #5c544d; }
+.card .t { font-weight: 500; }
+.card .m { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--wb-dim); }
+.tag { padding: 2px 7px; border-radius: 999px; font-size: 11px; font-weight: 600; background: #4a433e; color: #e4dcd2; }
+.tag.design { background: #3a4a44; color: var(--wb-mint); }
+.tag.eng { background: #3f3b52; color: #c4b8f2; }
+.tag.ops { background: #52443a; color: #f0c6a2; }
+.m .who { margin-left: auto; width: 20px; height: 20px; border-radius: 50%; background: #6c8ea4; color: #0f1b22; font-size: 10px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
+.add { width: 100%; text-align: left; border: 0; background: none; color: var(--wb-dim); padding: 10px 8px; border-radius: 8px; display: flex; gap: 8px; align-items: center; }
+.add:hover { background: var(--wb-card); color: var(--wb-text); }
+.add svg { width: 14px; height: 14px; }
+.empty { display: none; padding: 120px 32px; text-align: center; color: var(--wb-dim); }
+.empty b { display: block; color: var(--wb-text); font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+.board.filtered-empty .columns { display: none; }
+.board.filtered-empty .empty { display: block; }
+
+/* subpages */
+.page { max-width: 760px; margin: 0 auto; padding: 36px 32px; }
+.back { display: inline-flex; align-items: center; gap: 8px; color: var(--wb-dim); background: none; border: 0; padding: 6px 8px 6px 0; margin-bottom: 18px; border-radius: 6px; }
+.back:hover { color: var(--wb-text); }
+.back svg { width: 16px; height: 16px; }
+.page h1 { margin: 0 0 6px; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; }
+.page .lead { color: var(--wb-dim); margin: 0 0 24px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 16px 0; border-top: 1px solid var(--wb-line); }
+.row:last-child { border-bottom: 1px solid var(--wb-line); }
+.row .l b { display: block; font-weight: 600; }
+.row .l span { color: var(--wb-dim); font-size: 13px; }
+.toggle { width: 40px; height: 22px; border-radius: 999px; background: var(--wb-line); border: 0; position: relative; flex: none; }
+.toggle::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; border-radius: 50%; background: var(--wb-text); transition: left .15s; }
+.toggle.on { background: var(--wb-mint); }
+.toggle.on::after { left: 21px; background: var(--wb-mint-ink); }
+.field { display: flex; align-items: center; gap: 8px; height: 38px; padding: 0 12px; border-radius: 8px; background: var(--wb-card); border: 1px solid var(--wb-line); flex: 1; }
+.field:focus-within { border-color: var(--wb-mint); }
+.field input { flex: 1; border: 0; background: none; outline: none; min-width: 0; }
+.field input::placeholder { color: var(--wb-dim); }
+.field.ro { color: var(--wb-dim); }
+select { height: 36px; border-radius: 8px; background: var(--wb-card); border: 1px solid var(--wb-line); color: var(--wb-text); padding: 0 10px; }
+
+/* settings */
+.settings { display: grid; grid-template-columns: 220px 1fr; gap: 32px; max-width: 1000px; margin: 0 auto; padding: 36px 32px; }
+.tabs { display: flex; flex-direction: column; gap: 2px; }
+.tabs a { padding: 9px 12px; border-radius: 8px; color: var(--wb-dim); }
+.tabs a:hover { color: var(--wb-text); }
+.tabs a.on { background: var(--wb-panel); color: var(--wb-text); font-weight: 600; }
+.pane { display: none; }
+.pane.on { display: block; }
+.pane h1 { margin: 0 0 4px; font-size: 22px; font-weight: 700; }
+.pane .lead { color: var(--wb-dim); margin: 0 0 22px; }
+.members { border: 1px solid var(--wb-line); border-radius: 12px; overflow: hidden; margin-bottom: 26px; }
+.member { display: grid; grid-template-columns: 34px 1fr auto; gap: 12px; align-items: center; padding: 12px 14px; border-top: 1px solid var(--wb-line); }
+.member:first-child { border-top: 0; }
+.member .avatar { width: 30px; height: 30px; font-size: 12px; }
+.member b { display: block; font-weight: 600; }
+.member span { color: var(--wb-dim); font-size: 13px; }
+.member .role { color: var(--wb-dim); font-size: 13px; }
+.invite h2 { margin: 0 0 10px; font-size: 14px; font-weight: 600; }
+.invite form { display: flex; gap: 10px; align-items: center; }
+.invite .btn { height: 38px; min-width: 72px; justify-content: center; }
+.pending { margin: 10px 0 0; min-height: 20px; font-size: 13px; color: var(--wb-dim); }
+.pending:empty { display: none; }
+
+/* ui-tests player surfaces, shown only with ?scenario */
+.player { display: none; }
+body.scenario .player { display: contents; }
+.scrim { position: fixed; inset: 0; z-index: 50; background: rgba(21,26,33,.72); display: flex; align-items: center; justify-content: center; }
+.scrim[hidden] { display: none; }
+.scenario-card {
+  width: 480px; padding: 28px 28px 24px; border-radius: 14px; background: #151a21; color: #eef1f5;
+  border: 1px solid rgba(238,241,245,.14); box-shadow: 0 30px 80px rgba(0,0,0,.5);
+  font-family: "Fira Sans", Manrope, sans-serif;
+}
+.scenario-card p { margin: 0 0 22px; font-size: 17px; line-height: 1.5; }
+.scenario-card button, .bar button {
+  height: 40px; padding: 0 18px; border-radius: 8px; border: 1px solid rgba(238,241,245,.18);
+  background: #eef1f5; color: #151a21; font-weight: 500; font-family: inherit;
+}
+.bar {
+  position: fixed; left: 50%; bottom: 20px; transform: translateX(-50%); z-index: 50;
+  display: flex; gap: 8px; padding: 8px; border-radius: 12px; background: #151a21; color: #eef1f5;
+  border: 1px solid rgba(238,241,245,.14); box-shadow: 0 20px 50px rgba(0,0,0,.5);
+  font-family: "Fira Sans", Manrope, sans-serif;
+}
+.bar[hidden] { display: none; }
+.bar button { height: 36px; }
+.bar button.quiet { background: none; color: #eef1f5; }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="#"><i></i>Weekboard</a>
+  <span class="crumb">Acme <b>· Product week</b></span>
+
+  <form class="search" id="searchForm" role="search">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+    <input id="search" type="text" placeholder="Search cards" autocomplete="off" aria-label="Search cards">
+  </form>
+
+  <div class="anchor">
+    <button class="btn primary" id="shareBtn" aria-haspopup="menu" aria-expanded="false">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v7a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-7"/><path d="M12 4v12M7 9l5-5 5 5"/></svg>
+      Share
+    </button>
+    <div class="menu" id="shareMenu" role="menu">
+      <button role="menuitem" id="copyLink"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Copy link</button>
+      <a role="menuitem" id="manageLink" href="#link"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>Manage link</a>
+      <button role="menuitem" id="embed"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></svg>Embed</button>
+    </div>
+  </div>
+
+  <div class="anchor">
+    <button class="avatar" id="avatarBtn" aria-haspopup="menu" aria-expanded="false" aria-label="Account">JL</button>
+    <div class="menu" id="avatarMenu" role="menu">
+      <div class="who">jo@acme.co</div>
+      <a role="menuitem" href="#profile" id="profileItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg>Profile</a>
+      <a role="menuitem" href="#settings" id="settingsItem"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/></svg>Settings</a>
+      <div class="sep"></div>
+      <button role="menuitem" id="signOut"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>Sign out</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <!-- board -->
+  <section class="view board active" id="view-board" data-view="board">
+    <div class="boardhead"><h1>Product week</h1><span>13 to 17 Oct</span></div>
+    <div class="columns" id="columns">
+      <div class="col" data-day="Monday">
+        <h2>Monday <small>13</small></h2>
+        <div class="cards">
+          <article class="card"><div class="t">Draft the onboarding email</div><div class="m"><span class="tag design">Design</span><span>Due today</span><span class="who">PN</span></div></article>
+          <article class="card"><div class="t">Review the Q4 roadmap with Priya</div><div class="m"><span class="tag ops">Ops</span><span>14:00</span><span class="who">JL</span></div></article>
+          <article class="card"><div class="t">Fix the export button on Safari</div><div class="m"><span class="tag eng">Eng</span><span>#412</span><span class="who">TK</span></div></article>
+        </div>
+        <button class="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add a card</button>
+      </div>
+      <div class="col" data-day="Tuesday">
+        <h2>Tuesday <small>14</small></h2>
+        <div class="cards">
+          <article class="card"><div class="t">Interview notes, round two</div><div class="m"><span class="tag design">Design</span><span>3 left</span><span class="who">PN</span></div></article>
+          <article class="card"><div class="t">Ship the pricing page</div><div class="m"><span class="tag eng">Eng</span><span>#398</span><span class="who">TK</span></div></article>
+          <article class="card"><div class="t">Reply to the Lumen contract</div><div class="m"><span class="tag ops">Ops</span><span>Before noon</span><span class="who">JL</span></div></article>
+        </div>
+        <button class="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add a card</button>
+      </div>
+      <div class="col" data-day="Wednesday">
+        <h2>Wednesday <small>15</small></h2>
+        <div class="cards">
+          <article class="card"><div class="t">Team planning</div><div class="m"><span class="tag ops">Ops</span><span>10:00</span><span class="who">JL</span></div></article>
+          <article class="card"><div class="t">Write the 2.4 release notes</div><div class="m"><span class="tag eng">Eng</span><span>Draft</span><span class="who">TK</span></div></article>
+          <article class="card"><div class="t">Book the offsite room</div><div class="m"><span class="tag ops">Ops</span><span class="who">PN</span></div></article>
+        </div>
+        <button class="add"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add a card</button>
+      </div>
+    </div>
+    <div class="empty" id="empty"><b>No cards match</b>Try a different word, or clear the search.</div>
+  </section>
+
+  <!-- link settings -->
+  <section class="view" id="view-link" data-view="link">
+    <div class="page">
+      <button class="back" id="linkBack"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>Back to board</button>
+      <h1>Link settings</h1>
+      <p class="lead">Control what people can do with the board link.</p>
+      <div class="row"><div class="l"><b>Board link</b><span>Anyone with the link can open the board.</span></div><div class="field ro" style="max-width:340px">weekboard.app/b/acme/product-week</div></div>
+      <div class="row"><div class="l"><b>Link is active</b><span>Turn off to stop the link working.</span></div><button class="toggle on" aria-pressed="true" onclick="this.classList.toggle('on')"></button></div>
+      <div class="row"><div class="l"><b>People with the link can</b><span>Applies to everyone who is not a member.</span></div><select><option>View</option><option>Comment</option><option>Edit</option></select></div>
+      <div class="row"><div class="l"><b>Expires</b><span>The link stops working after this date.</span></div><select><option>Never</option><option>In 7 days</option><option>In 30 days</option></select></div>
+      <div class="row"><div class="l"><b>Reset link</b><span>Old links stop working.</span></div><button class="btn">Reset</button></div>
+    </div>
+  </section>
+
+  <!-- settings -->
+  <section class="view" id="view-settings" data-view="settings">
+    <div class="settings">
+      <nav class="tabs" aria-label="Settings">
+        <a href="#settings" data-tab="general" id="tab-general">General</a>
+        <a href="#settings/members" data-tab="members" id="tab-members">Members</a>
+        <a href="#settings/notifications" data-tab="notifications">Notifications</a>
+        <a href="#settings/billing" data-tab="billing">Billing</a>
+      </nav>
+      <div>
+        <div class="pane" data-pane="general">
+          <h1>General</h1>
+          <p class="lead">The board's name and how the week is shown.</p>
+          <div class="row"><div class="l"><b>Board name</b></div><div class="field" style="max-width:320px"><input value="Product week"></div></div>
+          <div class="row"><div class="l"><b>Week starts on</b></div><select><option>Monday</option><option>Sunday</option></select></div>
+          <div class="row"><div class="l"><b>Show weekends</b><span>Adds Saturday and Sunday columns.</span></div><button class="toggle" aria-pressed="false" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="pane" data-pane="members">
+          <h1>Members</h1>
+          <p class="lead">People who can open and edit this board.</p>
+          <div class="members">
+            <div class="member"><span class="avatar">JL</span><div><b>Jo Lindqvist</b><span>jo@acme.co</span></div><span class="role">Owner</span></div>
+            <div class="member"><span class="avatar" style="background:#6c8ea4">PN</span><div><b>Priya Nair</b><span>priya@acme.co</span></div><span class="role">Editor</span></div>
+            <div class="member"><span class="avatar" style="background:#8c7fb8">TK</span><div><b>Tom Keller</b><span>tom@acme.co</span></div><span class="role">Editor</span></div>
+          </div>
+          <div class="invite">
+            <h2>Invite by email</h2>
+            <form id="inviteForm" novalidate>
+              <div class="field"><input id="inviteEmail" type="email" placeholder="name@company.com" autocomplete="off" aria-label="Email address"></div>
+              <button class="btn primary grey" id="inviteAdd" type="submit" aria-disabled="true">Add</button>
+            </form>
+            <p class="pending" id="pending" aria-live="polite"></p>
+          </div>
+        </div>
+        <div class="pane" data-pane="notifications">
+          <h1>Notifications</h1>
+          <p class="lead">What Weekboard sends you by email.</p>
+          <div class="row"><div class="l"><b>Daily summary</b><span>Every morning at 8:00.</span></div><button class="toggle on" aria-pressed="true" onclick="this.classList.toggle('on')"></button></div>
+          <div class="row"><div class="l"><b>Mentions</b></div><button class="toggle on" aria-pressed="true" onclick="this.classList.toggle('on')"></button></div>
+        </div>
+        <div class="pane" data-pane="billing">
+          <h1>Billing</h1>
+          <p class="lead">Free plan. Three members, unlimited boards.</p>
+          <div class="row"><div class="l"><b>Plan</b><span>Free</span></div><button class="btn">Upgrade</button></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ui-tests player surfaces, only in scenario mode -->
+<div class="player">
+  <div class="scrim" id="scenario">
+    <div class="scenario-card" role="dialog" aria-labelledby="scenarioText">
+      <p id="scenarioText">Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished.</p>
+      <button id="scenarioStart">Start</button>
+    </div>
+  </div>
+  <div class="bar" id="bar" hidden>
+    <button id="done">I'm done</button>
+    <button class="quiet" id="cant">I can't do this</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+
+  /* menus */
+  const menus = [
+    [$('#shareBtn'), $('#shareMenu')],
+    [$('#avatarBtn'), $('#avatarMenu')],
+  ];
+  function closeMenus() {
+    menus.forEach(([b, m]) => { m.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); });
+  }
+  menus.forEach(([b, m]) => {
+    b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const open = m.classList.contains('open');
+      closeMenus();
+      if (!open) { m.classList.add('open'); b.setAttribute('aria-expanded', 'true'); }
+    });
+    m.addEventListener('click', (e) => e.stopPropagation());
+  });
+  document.addEventListener('click', closeMenus);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeMenus(); });
+  $('#copyLink').addEventListener('click', () => { closeMenus(); });
+  $('#embed').addEventListener('click', () => { closeMenus(); });
+  $('#signOut').addEventListener('click', () => { closeMenus(); });
+  $('#manageLink').addEventListener('click', closeMenus);
+  $('#settingsItem').addEventListener('click', closeMenus);
+  $('#profileItem').addEventListener('click', (e) => { e.preventDefault(); closeMenus(); });
+
+  /* search */
+  const search = $('#search');
+  const board = $('#view-board');
+  $('#searchForm').addEventListener('submit', (e) => { e.preventDefault(); });
+  search.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+  search.addEventListener('input', () => {
+    const q = search.value.trim().toLowerCase();
+    let visible = 0;
+    $$('.card', board).forEach((c) => {
+      const hit = !q || c.textContent.toLowerCase().includes(q);
+      c.style.display = hit ? '' : 'none';
+      if (hit) visible++;
+    });
+    board.classList.toggle('filtered-empty', visible === 0);
+  });
+
+  /* routing */
+  function route() {
+    const h = location.hash.replace(/^#/, '');
+    let view = 'board', tab = 'general';
+    if (h === 'link') view = 'link';
+    else if (h.startsWith('settings')) { view = 'settings'; tab = h.split('/')[1] || 'general'; }
+    $$('.view').forEach((v) => v.classList.toggle('active', v.dataset.view === view));
+    if (view === 'settings') {
+      $$('.tabs a').forEach((a) => a.classList.toggle('on', a.dataset.tab === tab));
+      $$('.pane').forEach((p) => p.classList.toggle('on', p.dataset.pane === tab));
+    }
+    closeMenus();
+    window.scrollTo(0, 0);
+  }
+  window.addEventListener('hashchange', route);
+  route();
+  $('#linkBack').addEventListener('click', () => {
+    if (history.length > 1) history.back(); else location.hash = '';
+  });
+
+  /* members: invite */
+  const email = $('#inviteEmail');
+  const add = $('#inviteAdd');
+  const pending = $('#pending');
+  let invites = 0;
+  const valid = () => /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.value.trim());
+  function syncAdd() {
+    const ok = valid();
+    add.classList.toggle('grey', !ok);
+    add.setAttribute('aria-disabled', ok ? 'false' : 'true');
+  }
+  email.addEventListener('input', syncAdd);
+  $('#inviteForm').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!valid()) return;
+    invites += 1;
+    pending.textContent = invites === 1 ? '1 invitation pending' : invites + ' invitations pending';
+  });
+
+  /* player surfaces (demo only) */
+  if (/[?&]scenario/.test(location.search)) {
+    document.body.classList.add('scenario');
+    $('#scenarioStart').addEventListener('click', () => {
+      $('#scenario').hidden = true;
+      $('#bar').hidden = false;
+    });
+    $('#done').addEventListener('click', () => { $('#bar').hidden = true; });
+    $('#cant').addEventListener('click', () => { $('#bar').hidden = true; });
+  }
+})();
+</script>
+</body>
+</html>

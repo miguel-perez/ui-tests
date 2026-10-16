@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Sans:wght@500&amp;family=Fira+Code:wght@400;500&amp;display=swap" rel="stylesheet">
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+    .font-fira-sans {
+      font-family: 'Fira Sans', sans-serif;
+    }
+    .font-fira-code {
+      font-family: 'Fira Code', monospace;
+    }
+    .accent-amber {
+      color: #e0a458;
+    }
+    .bg-canvas {
+      background-color: #101211;
+    }
+    .bg-surface {
+      background-color: #1a1c1b;
+    }
+    .text-primary {
+      color: #f8faf9;
+    }
+    .text-muted {
+      color: #a4ada5;
+    }
+    .border-hairline {
+      border: 1px solid rgba(164, 173, 165, 0.2);
+    }
+    .focus-ring:focus-within {
+      outline: 2px solid #e0a458;
+      outline-offset: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="w-[560px] h-[160px] bg-canvas flex flex-col justify-center px-10" data-sd-id="1">
+    <div class="flex items-baseline justify-between mb-2" data-sd-id="2">
+      <label class="font-fira-sans font-medium text-[14px] text-primary" id="link-label" data-sd-id="3">Your link</label>
+      <span class="font-fira-code text-[11px] text-muted tracking-tight" id="link-status" data-sd-id="4">
+        Free <span class="mx-1" data-sd-id="5">·</span> as each person finishes
+      </span>
+    </div>
+    
+    <div class="relative flex items-center bg-surface border-hairline rounded-[8px] h-[48px] px-4 group focus-ring" data-sd-id="6">
+      <code class="font-fira-code text-[14px] text-primary flex-grow" id="shareable-link">
+        https://ui-tests.com/t/k2m9
+      </code>
+      
+      <button id="copy-control" class="flex items-center gap-2 hover:opacity-80 transition-opacity" aria-label="Copy link" data-sd-id="7">
+        <span class="font-fira-code text-[12px] text-muted" data-sd-id="8">Copy</span>
+        <iconify-icon icon="lucide:copy" class="text-muted text-[14px]"></iconify-icon>
+      </button>
+    </div>
+  </div>
+
+</body></html>

@@ -18,7 +18,7 @@ A reel is a 6 to 10 second clip cut from a session at a moment, with the moment'
 
 ## Block by block
 
-**1. The promise.** Two artefacts side by side. Left: a terminal window, real chrome, Fira Code, the prompt `npx ui-tests report k2m9`, the result typing in on first view, then the four ranked lines. Right: the reel for problem 1 (P3, 00:03 to 00:12, the Share menu pause) with the label `P3 · 00:03 · looked for Invite in the Share menu` and the words under it. Together they say: this is what you type, this is what you get, this is what it looks like when a person gets stuck.
+**1. The promise.** Two artefacts side by side. Left: the terminal, and it is the real one. The report renderer in `packages/ui-tests` is built with Ink: the result line, the ranked problems with their counts aligned in a column, a marker on the rank the page opens. `ui-tests report` prints it, and the rehearsal line today comes from the same renderer. A build script renders the example run through that component, captures the frame, converts the ANSI to an HTML fragment under `apps/web/generated/`, and the page embeds the fragment; a unit test re-renders and compares, so the page cannot drift from the CLI. The window around it is chrome only, the approved "quiet window" treatment: three muted dots, the command `npx ui-tests report k2m9` as the title, a hairline, the rank-1 marker as a thin bar in the moment hue, "Example run" at the right. On first view the fragment types in line by line; at rest, and under reduced motion, it is simply there. Right: the reel for problem 1 (P3, 00:03 to 00:12, the Share menu pause) with the label `P3 · 00:03 · looked for Invite in the Share menu` and the words under it. Together they say: this is what you type, this is what you get, this is what it looks like when a person gets stuck.
 
 **2. What comes back.** Artefact A: the test file in a code window with syntax highlighting (Shiki, a dark theme matched to the tokens), line numbers, a copy control. Artefact B: the trace viewer, a real component: the P3 session video on the left, the timeline on the right with every moment as a row, the issue moments marked, the current moment following playback, the metadata strip above, the person's words below. Artefact C: the report component: the four problems as rows, each expandable to its moments, each moment a thumbnail that plays the reel, the quote, what to change. Artefact D: the report's last line rendered as the report renders it.
 
@@ -39,6 +39,10 @@ One orchestrated moment: the hero terminal types its result while the reel besid
 ## Honesty
 
 Every frame that shows the example run carries "Example run" once, small, in its chrome. The recordings are real recordings of scripted attempts on a demo app; nothing claims they are real people. The page's own test at the end is real and runs.
+
+## The terminal is the CLI
+
+Every terminal window on the site shows output produced by the package's own Ink renderer, captured at build time and checked by a test. The install block's init output and the guide's "you see" terminals follow the same path once those commands print through the renderer; until then they show the renderer's current output and nothing invented.
 
 ## Why this and not screenshots
 

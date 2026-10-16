@@ -1,0 +1,124 @@
+{
+  "label": "Example run",
+  "run": "k2m9",
+  "goal": "invite a colleague",
+  "sessions": [
+    {
+      "id": "p3",
+      "person": "P3",
+      "source": "panel",
+      "device": "MacBook",
+      "browser": "Chrome",
+      "viewport": "1280×800",
+      "duration": "1:03",
+      "outcome": "incorrect",
+      "ease": 3,
+      "easeOf": 7,
+      "words": "Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.",
+      "video": "/sessions/p3.webm",
+      "poster": "/sessions/p3.jpg",
+      "posterAt": "00:05",
+      "videoSeconds": 64.28,
+      "moments": [
+        {
+          "timestamp": "00:00",
+          "seconds": 0,
+          "kind": "start",
+          "detail": "scenario dismissed",
+          "route": "/board"
+        },
+        {
+          "timestamp": "00:03",
+          "seconds": 3,
+          "kind": "click",
+          "detail": "click \"Share\"",
+          "route": "/board",
+          "note": "menu open",
+          "issue": 1
+        },
+        {
+          "timestamp": "00:05",
+          "seconds": 5,
+          "kind": "pause",
+          "detail": "pause · 7 s reading the menu",
+          "route": "/board"
+        },
+        {
+          "timestamp": "00:12",
+          "seconds": 12,
+          "kind": "deviation",
+          "detail": "click \"Manage link\"",
+          "route": "/board/link"
+        },
+        {
+          "timestamp": "00:19",
+          "seconds": 19,
+          "kind": "backtrack",
+          "detail": "back",
+          "route": "/board"
+        },
+        {
+          "timestamp": "00:23",
+          "seconds": 23,
+          "kind": "type",
+          "detail": "type \"sam@acme.co\" into Search",
+          "route": "/board",
+          "issue": 3
+        },
+        {
+          "timestamp": "00:27",
+          "seconds": 27,
+          "kind": "pause",
+          "detail": "pause · 9 s on \"No cards match\"",
+          "route": "/board"
+        },
+        {
+          "timestamp": "00:36",
+          "seconds": 36,
+          "kind": "dead-click",
+          "detail": "press Enter",
+          "route": "/board"
+        },
+        {
+          "timestamp": "00:41",
+          "seconds": 41,
+          "kind": "click",
+          "detail": "click the avatar, click \"Settings\"",
+          "route": "/settings"
+        },
+        {
+          "timestamp": "00:46",
+          "seconds": 46,
+          "kind": "click",
+          "detail": "click \"Members\"",
+          "route": "/settings/members"
+        },
+        {
+          "timestamp": "00:58",
+          "seconds": 58,
+          "kind": "press",
+          "detail": "type the email, press \"Add\"",
+          "route": "/settings/members",
+          "note": "1 invitation pending",
+          "issue": 2
+        },
+        {
+          "timestamp": "01:01",
+          "seconds": 61,
+          "kind": "press",
+          "detail": "press \"Add\" again",
+          "route": "/settings/members",
+          "note": "2 invitations pending",
+          "issue": 2
+        },
+        {
+          "timestamp": "01:03",
+          "seconds": 63,
+          "kind": "done",
+          "detail": "I'm done",
+          "route": "/settings/members"
+        }
+      ]
+    }
+  ]
+}

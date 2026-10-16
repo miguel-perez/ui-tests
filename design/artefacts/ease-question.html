@@ -1,0 +1,94 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap');
+    
+    :root {
+      --moment-hue: #e0a458;
+      --canvas-bg: #101211;
+      --surface-lift: #1a1d1c;
+      --text-primary: #fcfcfc;
+      --text-muted: #a4ada5;
+      --hairline: rgba(164, 173, 165, 0.2);
+    }
+
+    body {
+      margin: 0;
+      background-color: var(--canvas-bg);
+    }
+
+    .font-sans {
+      font-family: 'Fira Sans', sans-serif;
+    }
+
+    .font-mono {
+      font-family: 'Fira Code', monospace;
+    }
+
+    .moment-fill {
+      background-color: var(--moment-hue);
+      color: var(--canvas-bg);
+    }
+
+    .border-hairline {
+      border: 1px solid var(--hairline);
+    }
+  </style>
+</head>
+<body>
+  <div class="w-[560px] h-[420px] bg-[#101211] flex items-center justify-center p-12" data-sd-id="1">
+    <div class="relative w-full max-w-[420px] bg-[#1a1d1c] rounded-lg border-hairline p-8 flex flex-col gap-6" data-sd-id="2">
+      
+      <!-- Example Run Marker -->
+      <span class="absolute top-3 right-4 font-mono text-[11px] text-[#a4ada5] uppercase tracking-wider" data-sd-id="3">
+        Example run
+      </span>
+
+      <!-- Question -->
+      <div class="space-y-4" data-sd-id="4">
+        <h2 class="font-sans text-[20px] font-medium text-[#fcfcfc] leading-tight" data-sd-id="5">
+          How easy was that?
+        </h2>
+
+        <!-- Rating Row -->
+        <div class="space-y-2" data-sd-id="6">
+          <div class="flex justify-between gap-1" data-sd-id="7">
+            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="8">1</button>
+            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="9">2</button>
+            <button class="w-11 h-11 moment-fill font-mono text-sm font-medium rounded" data-sd-id="10">3</button>
+            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="11">4</button>
+            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="12">5</button>
+            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="13">6</button>
+            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="14">7</button>
+          </div>
+          <div class="flex justify-between font-mono text-[11px] text-[#a4ada5]" data-sd-id="15">
+            <span data-sd-id="16">1 very hard</span>
+            <span data-sd-id="17">7 very easy</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Text Area -->
+      <div class="space-y-2" data-sd-id="18">
+        <label class="block font-sans text-sm text-[#fcfcfc]" data-sd-id="19">
+          Anything you want to tell us? (optional)
+        </label>
+        <div class="w-full h-24 border-hairline bg-[#101211] rounded p-3" data-sd-id="20">
+          <!-- Text box is empty as requested -->
+        </div>
+      </div>
+
+      <!-- Action -->
+      <div class="flex justify-end pt-2" data-sd-id="21">
+        <button id="submit-btn" class="px-6 py-2 border-hairline text-[#fcfcfc] font-sans text-sm rounded hover:bg-[#fcfcfc] hover:text-[#101211] transition-all" data-sd-id="22">
+          Send
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+</body></html>
