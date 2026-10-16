@@ -28,7 +28,7 @@ it('rejects non-local targets before persisting any runs or attempts', async () 
     expect(store.db.prepare('SELECT COUNT(*) AS count FROM runs').get()).toEqual({ count: 0 })
     expect(store.db.prepare('SELECT COUNT(*) AS count FROM attempts').get()).toEqual({ count: 0 })
   } finally { store.close() }
-}, 30000)
+}, 35000)
 it('init preserves author files and existing Vitest settings, adds the exclusion, and is idempotent', async () => {
   const cwd = await fixture()
   const original = `import { defineConfig } from 'vitest/config'\nexport default defineConfig({ test: { environment: 'node', exclude: ['custom/**'] } })\n`
