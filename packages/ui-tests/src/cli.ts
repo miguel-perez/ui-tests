@@ -71,7 +71,7 @@ async function main() {
     if (!id) throw new Error('Usage: ui-tests report <run-id or report.json> [--json]')
     if (await exists(id)) {
       const report = JSON.parse(await readFile(id, 'utf8')) as Report
-      if (!report || typeof report !== 'object' || Array.isArray(report) || !Number.isInteger(report.people) || report.people < 1 || !Array.isArray(report.problems) || report.problems.some(p => !p || typeof p !== 'object' || Array.isArray(p) || typeof p.title !== 'string' || !Number.isInteger(p.people) || p.people < 1 || p.people > report.people || (p.impact !== undefined && !impacts.includes(p.impact))) || [report.reached, report.wrongAndSure].some(count => count !== undefined && (!Number.isInteger(count) || count < 0 || count > report.people))) throw new Error('Invalid report')
+      if (!report || typeof report !== 'object' || Array.isArray(report) || !Number.isInteger(report.people) || report.people < 1 || !Array.isArray(report.problems) || report.problems.some(p => !p || typeof p !== 'object' || Array.isArray(p) || typeof p.title !== 'string' || !Number.isInteger(p.people) || p.people < 1 || p.people > report.people || (p.impact !== undefined && !impacts.includes(p.impact))) || [report.reached, report.wrongAndSure].some(count => count !== undefined && (!Number.isInteger(count) || count < 0 || count > report.people)) || (report.reached !== undefined && report.wrongAndSure !== undefined && report.reached + report.wrongAndSure > report.people)) throw new Error('Invalid report')
       if (args.includes('--json')) console.log(JSON.stringify(report, null, 2))
       else printTerminal({ report })
     } else {

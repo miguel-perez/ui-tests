@@ -67,7 +67,9 @@ export function AttemptView() {
   const [playing, setPlaying] = useState<number | null>(null)
   const [now, setNow] = useState<number[]>(() => blockers.map(blocker => blocker.from))
   const at = (index: number, value: number) => setNow(times => times.map((time, i) => i === index ? value : time))
-  function stop(index: number) { videos.current[index]?.pause(); setPlaying(current => current === index ? null : current) }
+  /** The clip that should be playing, read by callbacks that outlive the render that created them (a deferred loadedmetadata). */
+  const active = useRef<number | null>(null)
+  function stop(index: number) { if (active.current === index) active.current = null; videos.current[index]?.pause(); setPlaying(current => current === index ? null : current) }
   /** One clip at a time: pressing a clip pauses any other; pressing it again pauses it; at its end it starts over. */
   function press(index: number) {
     const video = videos.current[index]!, blocker = blockers[index]
@@ -75,10 +77,12 @@ export function AttemptView() {
     if (playing !== null) stop(playing)
     const start = now[index] >= blocker.to ? blocker.from : now[index]
     const go = () => {
+      if (active.current !== index) return
       video.currentTime = start
       at(index, start)
       void video.play().catch(() => setPlaying(current => current === index ? null : current))
     }
+    active.current = index
     setPlaying(index)
     if (video.readyState === 0) { video.addEventListener('loadedmetadata', go, { once: true }); video.load() } else go()
   }

@@ -106,6 +106,7 @@ it.each([
   { people: 5, problems: [[]] },
   { people: 0, problems: [] },
   { people: 5, problems: [{ title: 'Problem', people: 6 }] },
+  { people: 5, reached: 5, wrongAndSure: 1, problems: [] },
 ])('rejects malformed report input with the CLI error: %j', async report => {
   const directory = await mkdtemp(join(tmpdir(), 'ui-tests-report-'))
   try {
