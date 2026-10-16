@@ -1,5 +1,7 @@
 # Landing content, version 2
 
+**Superseded** by [`landing-content-v3.md`](landing-content-v3.md), which is the approved copy; kept for the record. The 87% sentence in this draft is dropped in version 3: the approved page states only the problems found and their counts, because a run may mix link, panel and struggle-triggered visitors, and the detection probability holds only for a sample that meets its occurrence and sampling assumptions.
+
 The page as a document, block by block in reading order. Every example artefact is invented content in the product's real formats and carries the label "Example run" once in its frame.
 
 ---
