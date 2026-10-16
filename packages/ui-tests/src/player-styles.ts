@@ -130,7 +130,7 @@ export const playerCss = `
 .uit-confirm p { font-weight: 500; padding-right: 4px; }
 .uit-task { width: min(420px, calc(100vw - 32px)); padding: 16px 20px; gap: 8px; }
 .uit-task p:first-child { font-size: 15px; }
-.uit-bar .uit-error { white-space: normal; max-width: 420px; padding: 8px 14px; background: var(--uit-surface); border-radius: var(--uit-radius); box-shadow: 0 0 0 1px var(--uit-hair); }
+.uit-bar .uit-error, .uit-page > .uit-error { white-space: normal; max-width: 420px; padding: 8px 14px; background: var(--uit-surface); border-radius: var(--uit-radius); box-shadow: 0 0 0 1px var(--uit-hair); }
 
 /* The recording chip on its own, where the bar is not shown: the questions after the task. */
 .uit-rec { display: inline-grid; gap: 2px; padding: 8px 14px; background: var(--uit-surface); color: var(--uit-ink); border-radius: 18px; box-shadow: 0 0 0 1px var(--uit-hair), 0 8px 24px rgba(21, 26, 33, .2); font-size: 13px; }
@@ -213,6 +213,13 @@ export const playerCss = `
   .uit-bar.uit-contained .uit-seg { gap: 6px; }
   .uit-bar.uit-contained .uit-cant { padding: 0 4px; }
   .uit-bar.uit-contained .uit-seg + .uit-seg { margin-left: 6px; padding-left: 6px; }
+}
+/* The 44px touch floor holds inside the pill too: on touch the pill grows to 56px rather than shrink its controls (participant-chrome research, floors). */
+@media (pointer: coarse) {
+  .uit-bar .uit-pill, .uit-bar:not(.uit-contained) .uit-pill { min-height: 56px; }
+  .uit-pill .uit-done, .uit-pill .uit-cant, .uit-pill .uit-confirm button, .uit-recseg .uit-pause { min-height: 44px; border-radius: 22px; }
+  .uit-recseg .uit-pause { width: 44px; }
+  .uit-pill .uit-summary, .uit-pill .uit-handle { min-height: 44px; min-width: 44px; }
 }
 @media (prefers-reduced-motion: reduce) { .uit *, .uit *::before, .uit *::after { animation: none !important; transition: none !important; } }
 `

@@ -133,9 +133,14 @@ export function TaskBar({ scenario, steps = [], index = 1, total = 1, interacted
   const [step, setStep] = useState(0)
   const drag = useRef<{ y: number; moved: boolean } | null>(null)
   const confirmRef = useRef<HTMLButtonElement>(null)
+  // The confirmation replaces the controls in the pill; cancelling it puts focus back on the control that opened it, which is mounted again.
+  const doneRef = useRef<HTMLButtonElement>(null), cantRef = useRef<HTMLButtonElement>(null), back = useRef<'done' | 'leave' | null>(null)
   const style = useChrome(chrome, accent)
   useEffect(() => { if (!contained) { const saved = sessionStorage.getItem('ui-tests-bar'); if (saved === 'top') setPosition('top') } }, [contained])
-  useEffect(() => { if (confirm) confirmRef.current?.focus() }, [confirm])
+  useEffect(() => {
+    if (confirm) { confirmRef.current?.focus(); return }
+    if (back.current) { (back.current === 'done' ? doneRef : cantRef).current?.focus(); back.current = null }
+  }, [confirm])
   useEffect(() => {
     if (contained) return
     // Focus is never hidden behind the bar (WCAG 2.4.11): the host page scrolls focused controls clear of it while it is shown.
@@ -166,15 +171,15 @@ export function TaskBar({ scenario, steps = [], index = 1, total = 1, interacted
       <button className="uit-seg uit-summary" aria-expanded={expanded} aria-controls={`${id}-task`} onClick={() => setExpanded(!expanded)}>
         <span className="uit-sr">{expanded ? 'Hide task: ' : 'Show task: '}</span><b className="uit-progress">Task {index} of {total}{steps.length > 1 ? ` · step ${step + 1} of ${steps.length}` : ''}</b><span className="uit-summary-text">{summary}</span>
       </button>
-      {confirm === 'done' ? <span className="uit-seg uit-confirm" role="group" aria-label="Finished this task?"><p>Finished this task?</p><button ref={confirmRef} className="uit-primary" disabled={busy} onClick={() => { setConfirm(null); onDone() }}>Yes, I&apos;ve finished</button><button onClick={() => setConfirm(null)}>Not yet</button></span>
-        : confirm === 'leave' ? <span className="uit-seg uit-confirm" role="group" aria-label="Leave this task before trying it?"><p>Leave this task before trying it?</p><button ref={confirmRef} disabled={busy} onClick={() => { setConfirm(null); onGiveUp('abandoned early') }}>Leave this task</button><button className="uit-primary" onClick={() => setConfirm(null)}>Stay and try</button></span>
+      {confirm === 'done' ? <span className="uit-seg uit-confirm" role="group" aria-label="Finished this task?"><p>Finished this task?</p><button ref={confirmRef} className="uit-primary" disabled={busy} onClick={() => { setConfirm(null); onDone() }}>Yes, I&apos;ve finished</button><button onClick={() => { back.current = 'done'; setConfirm(null) }}>Not yet</button></span>
+        : confirm === 'leave' ? <span className="uit-seg uit-confirm" role="group" aria-label="Leave this task before trying it?"><p>Leave this task before trying it?</p><button ref={confirmRef} disabled={busy} onClick={() => { setConfirm(null); onGiveUp('abandoned early') }}>Leave this task</button><button className="uit-primary" onClick={() => { back.current = 'leave'; setConfirm(null) }}>Stay and try</button></span>
         : <span className="uit-seg">
           {canExtend && onExtend && <button className="uit-quiet" onClick={onExtend} disabled={busy}>Need more time?</button>}
-          <button className="uit-primary uit-done" disabled={busy} onClick={() => {
+          <button ref={doneRef} className="uit-primary uit-done" disabled={busy} onClick={() => {
             if (steps.length && !onLastStep) { onStep?.(step); setStep(step + 1); return }
             setConfirm('done')
           }}>{doneLabel}</button>
-          <button className="uit-quiet uit-cant" disabled={busy} onClick={() => interacted ? onGiveUp("couldn't do this") : setConfirm('leave')}>I couldn&apos;t do this</button>
+          <button ref={cantRef} className="uit-quiet uit-cant" disabled={busy} onClick={() => interacted ? onGiveUp("couldn't do this") : setConfirm('leave')}>I couldn&apos;t do this</button>
         </span>}
     </div>
     {error && <p className="uit-error" role="alert">{error}</p>}

@@ -125,6 +125,8 @@ test('keyboard rehearsal, privacy projection, a click that did nothing, off your
   await taskbar.getByRole('button', { name: 'Done', exact: true }).focus(); await page.keyboard.press('Enter')
   await taskbar.getByRole('button', { name: 'Not yet' }).click()
   await expect(taskbar.getByRole('group', { name: 'Finished this task?' })).toHaveCount(0)
+  // Cancelling puts focus back on Done, which the confirmation had replaced in the pill.
+  await expect(taskbar.getByRole('button', { name: 'Done', exact: true })).toBeFocused()
   await finish(page)
   await questions(page)
   await expect.poll(async () => traceText(await (await request.get(trace)).text())).toContain('"reached": "yes"')
