@@ -31,9 +31,9 @@ The doubt: "the user definition doesn't feel right.. how would we infer how to s
 
 Values are choice keys; values within a filter are OR, filters AND; [advanced filtering](https://docs.prolific.com/api-reference/filters/advanced-filtering) nests `{ "filter_id": "or" | "and", "selected_filters": [...] }` plus `participant_group_allowlist`, `previous_studies_allowlist`, `approval_rate`. Anything else is [custom screening](https://researcher-help.prolific.com/en/articles/445155-how-to-use-custom-screening-to-recruit-specific-participants): questions at the start of the study, vague wording, capped screen-out slots, every screened-out person paid a fixed reward (minimum $0.14). Other [in-study screening](https://researcher-help.prolific.com/en/articles/445165-can-i-screen-participants-within-my-study) is limited to prescreener validation in Prolific's wording, declared device checks, policy-compliant attention checks and consent; rejecting for a prescreen mismatch is prohibited.
 
-**CloudResearch Connect.** 120 to 250 profiled [qualifying questions](https://www.cloudresearch.com/cloudresearch-connect-faqs) (demographics, behaviour, lifestyle), US-only, 18+, census matching, quotas. [In-survey screening is not allowed](https://connect-researcher-help.cloudresearch.com/hc/en-us/articles/21150663594900) for anything Connect does not profile; the routes are requesting a new demographic (reviewed weekly), completion branches with partial pay, or a paid prescreen project then a targeted follow-up. The [API](https://connect-api.cloudresearch.com/docs/index.html) exposes projects, trusted-participant groups and launch; its public pages do not document targeting fields.
+**CloudResearch Connect.** 120 to 250 profiled [qualifying questions](https://www.cloudresearch.com/cloudresearch-connect-faqs) (demographics, behaviour, lifestyle), 18+, census matching, quotas; the API documents English with supported location codes including the US and the UK, and `demographicTargeting` for the profiled fields. [In-survey screening is not allowed](https://connect-researcher-help.cloudresearch.com/hc/en-us/articles/21150663594900) for anything Connect does not profile; the routes are requesting a new demographic (reviewed weekly), completion branches with partial pay, or a paid prescreen project then a targeted follow-up. The [API](https://connect-api.cloudresearch.com/docs/index.html) exposes projects, trusted-participant groups and launch; its public pages do not document targeting fields.
 
-**Consequence.** Code can specify country, language, age, employment, industry, prior-study exclusion, allowlists, approval rate. Everything behavioural (did X, within Y, uses Z, not a UX professional) is a question the participant answers: paid on Prolific, and on Connect only through a prescreen project.
+**Consequence.** Code can specify country, language, age, employment, industry, prior-study exclusion, allowlists, approval rate. Everything behavioural (did X, within Y, uses Z, not a UX professional) is a question the participant answers: paid per screen-out on Prolific; on Connect, criteria it already profiles map to `demographicTargeting`, criteria it does not profile go through a requested demographic, a completion branch with partial pay, or a paid prescreen project, and the adapter picks the cheapest route that Connect allows for each criterion.
 
 ## Part 3: proposal
 
@@ -58,7 +58,7 @@ context({
     role: ['business owner', 'founder', 'office manager'],       // accept list; asked as broad category then role
     uses: ['QuickBooks', 'Xero', 'FreshBooks'],                  // may-select list; one decoy is added
     not: ['has used our product'],                               // always adds: works in UX, design, marketing or market research
-    where: ['US', 'UK'], language: 'en', age: [18],              // panel filters where the source has them
+    where: ['US', 'UK'], language: 'en', age: { min: 18 },      // panel filters where the source has them; age maps to Prolific's lower/upper range and Connect's age targeting
   },
 }, () => { /* goals */ })
 ```

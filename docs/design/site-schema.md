@@ -4,7 +4,7 @@
 
 The pages are built from content types, each rendered by one component with one layout rule. A block is a sequence of typed content, not a hand-drawn layout. The grid is 12 columns on a 1248px container with 24px gutters; at 375 everything stacks in source order.
 
-### Content types and their components
+## Content types and their components
 
 | Type | Fields | Component | Layout rule at 1440 |
 | --- | --- | --- | --- |
@@ -14,7 +14,7 @@ The pages are built from content types, each rendered by one component with one 
 | CodeFile | filename, language, lines, marked line | `CodeWindow` | Filename tab, copy control, highlighted lines. 8 columns alone, 12 when it is the block's only artefact. |
 | InlineCode | fragment | `Code` | Highlighted inline; appears only inside Caption text. |
 | Session | person, metadata (source, device, viewport, duration, outcome, ease, confidence, UX-Lite), recording state (screen, voice, webcam with consent), video, poster, moments[], words, audio | `SessionView` | 12 columns. Video 7 columns left, timeline 5 columns right, metadata strip above, words and audio below. Light theme. No terminal chrome. |
-| Reel | session, from, to, moment label, words | `ReelFrame` | 16:10 frame with timestamp overlay and progress, the moment label and words inside its chrome as the caption. 5 columns in the hero, 4 as a report thumbnail. |
+| Reel | session, from, to, moment label, words | `ReelFrame` | 16:10 frame with timestamp overlay and progress, the moment label and words as its caption inside the frame's chrome (this placement supersedes the earlier artefact plan, which put them under the frame). 5 columns in the hero, 4 as a report thumbnail. |
 | Finding | rank, problem, count, quote, moments[], change | `FindingRow` | A row in `FindingsList`; expanded shows the reel thumbnail 4 columns and the quote, moments and change 8 columns. |
 | FindingsList | findings[], result line | `FindingsList` | 12 columns, rows separated by hairlines, result line as the footer. Lives in the pull-request example, not on its own. |
 | Check | name, summary, state, link | `CheckRow` in `ChecksBox` | 12 columns in the pull-request example; the box draws GitHub's chrome. |
@@ -37,4 +37,4 @@ Landing: Claim; Section + Session (what comes back); Section + three PlayerSurfa
 - Product surfaces (Session, Reel contents, Dashboard, PlayerSurface, FindingsList, OptionCard mini UIs) are in the inverse light theme; terminals and code windows are dark; the page is dark.
 - Empty area in a block never exceeds the area of its artefacts; a side caption never has a column to itself wider than its text needs.
 - Hover and focus change paint only.
-- Every artefact that shows the example run carries "Example run" once in its chrome.
+- Every component that owns chrome (`TerminalWindow`, `CodeWindow`, `SessionView`, `ReelFrame`, `FindingsList`, `ChecksBox`, `Dashboard`, `PlayerFrame`, `OptionCard`) renders the label "Example run" once in that chrome whenever its content is from the example run; the label is a property of the chrome component, set by the page, not a field on the content types, so it is never omitted or duplicated.
