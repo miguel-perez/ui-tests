@@ -32,6 +32,8 @@ for (const width of [1440, 375]) {
         await expect(page.getByRole('link', { name: 'Get started', exact: true }).first()).toHaveAttribute('href', '/docs/getting-started')
       } else {
         await expect(page.locator('.docs-content > section')).toHaveCount(5)
+        await expect(page.locator('[data-artefact="report-rows"]')).toHaveCount(1)
+        await expect(page.locator('#guide-report [data-artefact="report-rows"]')).toBeVisible()
         for (const text of [guide.install, guide.try, guide.write, guide.next, guide.once, guide.pr]) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first()).toBeVisible()
         await page.getByRole('navigation', { name: 'Getting started' }).getByRole('link', { name: /Run it with real people/ }).click()
         await expect(page.locator('#real-people h2')).toBeInViewport()
@@ -71,9 +73,9 @@ for (const width of [1440, 375]) {
       if (i > 0) await report.locator('.report-toggle').nth(i).click()
       const reel = report.locator('video')
       expect(await reel.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
-      await reel.evaluate((video: HTMLVideoElement) => video.play())
+      await report.getByRole('button', { name: 'Play problem moment', exact: true }).click()
       await expect.poll(() => reel.evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThan(0)
-      await reel.evaluate((video: HTMLVideoElement) => video.pause())
+      await report.getByRole('button', { name: 'Pause problem moment', exact: true }).click()
     }
     await page.emulateMedia({ reducedMotion: 'no-preference' })
     await report.locator('.report-toggle').nth(1).click()
@@ -87,3 +89,33 @@ for (const width of [1440, 375]) {
     }
   })
 }
+
+test('failed playback restores the trace and reel play controls without a pause event', async ({ page }) => {
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  await page.addInitScript(() => {
+    HTMLMediaElement.prototype.play = function () {
+      this.dispatchEvent(new Event('play'))
+      return new Promise<void>((_, reject) => {
+        (this as HTMLMediaElement & { rejectPlay: () => void }).rejectPlay = () => reject(new DOMException('Playback denied', 'NotAllowedError'))
+      })
+    }
+  })
+  await page.goto('/')
+  const trace = page.locator('.trace-viewer').first()
+  const report = page.locator('.report-rows').first()
+  for (const [container, label] of [[trace, 'P3 session'], [report, 'problem moment']] as const) {
+    await container.getByRole('button', { name: `Play ${label}`, exact: true }).click()
+    await expect(container.getByRole('button', { name: `Pause ${label}`, exact: true })).toBeVisible()
+    await container.locator('video').evaluate((video: HTMLVideoElement & { rejectPlay: () => void }) => video.rejectPlay())
+    await expect(container.getByRole('button', { name: `Play ${label}`, exact: true })).toBeVisible()
+  }
+  // Exercise the effect-driven playback handler as well as both button handlers.
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  await report.locator('.report-toggle').nth(1).click()
+  await expect(report.getByRole('button', { name: 'Pause problem moment', exact: true })).toBeVisible()
+  await report.locator('video').evaluate((video: HTMLVideoElement & { rejectPlay: () => void }) => video.rejectPlay())
+  await expect(report.getByRole('button', { name: 'Play problem moment', exact: true })).toBeVisible()
+  expect(errors).toEqual([])
+})

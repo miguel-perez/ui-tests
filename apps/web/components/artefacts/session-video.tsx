@@ -15,7 +15,7 @@ export function SessionVideo({ hero = false, src = '/sessions/p3.webm', poster =
       }
       video.src = src
       video.playbackRate = hero ? 0.6 : 1
-      void video.play().catch(() => {})
+      void video.play().catch(() => setPlaying(false))
     }
     const seek = () => { if (startAt) video.currentTime = startAt }
     video.addEventListener('loadedmetadata', seek)
@@ -26,5 +26,5 @@ export function SessionVideo({ hero = false, src = '/sessions/p3.webm', poster =
     return () => { clearTimeout(timer); media.removeEventListener('change', update); video.removeEventListener('loadedmetadata', seek); video.pause() }
   }, [hero, play, src, startAt])
   const video = <video ref={ref} className={hero ? 'hero-video' : 'reel-video'} src={hero ? undefined : src} data-src={src} poster={poster} muted loop playsInline preload="none" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} aria-label={hero ? 'Example session on Weekboard' : 'This problem moment'} />
-  return hero ? video : <div className="reel-player">{video}<button className="video-play" aria-label={playing ? 'Pause problem moment' : 'Play problem moment'} onClick={() => { if (playing) ref.current?.pause(); else void ref.current?.play().catch(() => {}) }}>{playing ? 'Ⅱ' : '▷'}</button></div>
+  return hero ? video : <div className="reel-player">{video}<button className="video-play" aria-label={playing ? 'Pause problem moment' : 'Play problem moment'} onClick={() => { if (playing) ref.current?.pause(); else void ref.current?.play().catch(() => setPlaying(false)) }}>{playing ? 'Ⅱ' : '▷'}</button></div>
 }

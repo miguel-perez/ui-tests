@@ -1,8 +1,32 @@
 import { it, expect } from 'vitest'
-import { readFile, stat } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises'
+import { execFile } from 'node:child_process'
+import { tmpdir } from 'node:os'
+import { join, resolve } from 'node:path'
+import { promisify } from 'node:util'
 import { rehearsal } from '../apps/web/lib/copy'
 import { sentence } from '../packages/ui-tests/src/compiler'
 import sessions from '../apps/web/public/sessions/sessions.json'
+
+it('refuses to rewrite a README without its contributing section and preserves that section when present', async () => {
+  const directory = await mkdtemp(join(tmpdir(), 'ui-tests-readme-'))
+  const exec = promisify(execFile)
+  const args = ['--import', import.meta.resolve('tsx'), resolve('apps/web/scripts/render-readme.mjs')]
+  const options = { cwd: directory, timeout: 10000 }
+  try {
+    const file = join(directory, 'README.md')
+    const original = '# Hand-maintained README\n\nKeep this content.\n'
+    await writeFile(file, original)
+    await expect(exec(process.execPath, args, options)).rejects.toMatchObject({ code: 1, stderr: expect.stringContaining('README contributing section not found') })
+    expect(await readFile(file, 'utf8')).toBe(original)
+    const contributing = '## Contributing and automation\n\nPreserve **exactly**.\n'
+    await writeFile(file, original + contributing)
+    await exec(process.execPath, args, options)
+    const rendered = await readFile(file, 'utf8')
+    expect(rendered).toContain('## Terminal output')
+    expect(rendered.slice(rendered.indexOf('## Contributing and automation'))).toBe(contributing)
+  } finally { await rm(directory, { recursive: true, force: true }) }
+}, 30000)
 
 it('keeps the actual rehearsal sentence and the approved nav mark', async () => {
   expect(rehearsal).toBe(sentence())

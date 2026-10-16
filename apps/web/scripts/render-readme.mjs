@@ -5,7 +5,9 @@ import { capture, surfaces } from './render-terminal.mjs'
 import { stripVTControlCharacters } from 'node:util'
 
 const original = await readFile('README.md', 'utf8')
-const contributing = original.slice(original.indexOf('## Contributing and automation'))
+const start = original.indexOf('## Contributing and automation')
+if (start < 0) throw new Error('README contributing section not found')
+const contributing = original.slice(start)
 function text(value) {
   if (typeof value === 'string') return [value]
   return Object.values(value).flatMap(text)

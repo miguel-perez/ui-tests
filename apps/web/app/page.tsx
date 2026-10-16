@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { SiteShell, repository } from '../components/site-shell'
+import { InlineCopy } from '../components/inline-copy'
 import { TerminalWindow } from '../components/artefacts/terminal-quiet-window'
 import { CodeWindow } from '../components/artefacts/code-window'
 import { SessionVideo } from '../components/artefacts/session-video'
@@ -13,7 +14,6 @@ import { PullRequestCheck } from '../components/artefacts/pull-request-check'
 import { promise, intro, landing, sources, inviteExample, example } from '../lib/copy'
 
 function Actions() { return <div className="actions"><Link className="button primary" href="/docs/getting-started">Get started</Link><a className="button quiet" href={repository}>GitHub</a></div> }
-export function InlineCopy({ text }: { text: string }) { return <>{text.split('`').map((part, i) => i % 2 ? <code key={i}>{part}</code> : part)}</> }
 
 export default function Home() {
   return <SiteShell><main id="content">

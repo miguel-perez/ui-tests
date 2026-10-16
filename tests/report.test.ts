@@ -1,5 +1,7 @@
 import { it, expect } from 'vitest'
-import { readFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify, stripVTControlCharacters } from 'node:util'
 import { parseHTML } from 'linkedom'
@@ -26,3 +28,20 @@ it('regenerates every committed HTML frame from Ink and keeps CLI/report/README 
   const { stdout: json } = await exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'report', 'apps/web/generated/example-report.json', '--json'], { encoding: 'utf8', timeout: 10000 })
   expect(JSON.parse(json).people).toBe(5)
 }, 30000)
+
+it.each([
+  null, 42, 'report', [],
+  { people: 5, problems: [null] },
+  { people: 5, problems: [42] },
+  { people: 5, problems: [[]] },
+  { people: 0, problems: [] },
+  { people: 5, problems: [{ title: 'Problem', people: 6 }] },
+])('rejects malformed report input with the CLI error: %j', async report => {
+  const directory = await mkdtemp(join(tmpdir(), 'ui-tests-report-'))
+  try {
+    const file = join(directory, 'report.json')
+    await writeFile(file, JSON.stringify(report))
+    await expect(exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'report', file, '--json'], { timeout: 10000 }))
+      .rejects.toMatchObject({ code: 1, stdout: '', stderr: 'Invalid report\n' })
+  } finally { await rm(directory, { recursive: true, force: true }) }
+}, 15000)

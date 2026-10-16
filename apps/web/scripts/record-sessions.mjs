@@ -328,7 +328,7 @@ async function recordAttempt(script) {
     const video = page.video();
     await page.close();
     const raw = await video.path();
-    const duration = videoDuration(ffmpeg, raw);
+    const duration = videoDuration(ffmpeg, raw) ?? (closed - created) / 1000;
     const lag = Math.max(0, (closed - created) / 1000 - duration);
     encode(raw, join(outDir, `${script.id}.webm`), Math.max(0, (t0 - created) / 1000 - lag), script.end);
     return { id: script.id, person: script.id.toUpperCase(), source: 'panel', device: 'MacBook', browser: 'Chrome', viewport: '1280×800', duration: mmss(script.end - 1), outcome: script.outcome, ease: script.ease, easeOf: 7, words: script.words, video: `/sessions/${script.id}.webm`, poster: `/sessions/${script.id}.jpg`, videoSeconds: videoDuration(ffmpeg, join(outDir, `${script.id}.webm`)), moments };
