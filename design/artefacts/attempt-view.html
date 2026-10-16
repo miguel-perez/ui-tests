@@ -1,0 +1,409 @@
+<!--
+  Approved attempt view (D2 round four), exported from the design artifact.
+  One person, one goal. Reading order and labels follow docs/discovery/reporting-schema-research.md.
+  The clips are frame pairs from a light-palette capture of the Weekboard demo; the product plays the
+  real recording (apps/web/public/sessions/p3.webm) between the clip's start and end seconds.
+  The page skeleton (doctype, head, body) is added by the site; this file is the content and its styles.
+-->
+<title>Attempt View</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+/* Layout: one 1200px column on the site's 12-col grid. The headline states the result; the three moments that
+   caused it are the visual centre, each a clip that plays in place; ratings and words follow; mechanics fold; context foots. */
+:root {
+  color-scheme: dark;
+  --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42;
+  --ink: #c0caf5; --muted: #a9b1d6; --comment: #8089b3;
+  --moment: #ff9e64; --deviation: #7aa2f7; --dead: #f7768e; --pause: #e0af68; --done: #73daca; --note: #bb9af7;
+  --no: #f7768e; --yes: #73daca;
+  --chip-ink: #1a1b26; --focus: #c0caf5;
+  --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --canvas: #f6f7fb; --surface: #ffffff; --raised: #eef0f7; --line: #d5d9e6;
+    --ink: #1f2335; --muted: #4c5374; --comment: #5c6487;
+    --moment: #a64d00; --deviation: #2f5bcc; --dead: #c0244b; --pause: #7d5600; --done: #00726a; --note: #7536c4;
+    --no: #c0244b; --yes: #00726a; --chip-ink: #ffffff; --focus: #2f5bcc;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --canvas: #f6f7fb; --surface: #ffffff; --raised: #eef0f7; --line: #d5d9e6;
+  --ink: #1f2335; --muted: #4c5374; --comment: #5c6487;
+  --moment: #a64d00; --deviation: #2f5bcc; --dead: #c0244b; --pause: #7d5600; --done: #00726a; --note: #7536c4;
+  --no: #c0244b; --yes: #00726a; --chip-ink: #ffffff; --focus: #2f5bcc;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--canvas); }
+body {
+  margin: 0; background: var(--canvas); color: var(--ink);
+  font: 400 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased;
+  padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  overflow-x: hidden;
+}
+h1, h2, h3, h4, p, ol, ul, dl, dd, figure { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+time, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+q { quotes: "\201C" "\201D"; }
+img { display: block; max-width: 100%; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.page { max-width: 1200px; margin: 0 auto; }
+
+/* Top bar: where you are */
+.crumb { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: baseline; color: var(--muted); font-size: 14px; margin-bottom: 36px; }
+.crumb b { font-weight: 500; color: var(--ink); }
+.crumb .sep { color: var(--comment); }
+.crumb .example { margin-left: auto; font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--comment); }
+
+/* Headline: did they reach it */
+.result { display: grid; grid-template-columns: 7fr 5fr; gap: 24px; align-items: end; margin-bottom: 40px; }
+.result h1 { font: 500 34px/1.15 var(--sans); letter-spacing: -.015em; text-wrap: balance; }
+.result h1 .no { color: var(--no); }
+.result .lede { color: var(--muted); margin-top: 12px; max-width: 58ch; }
+.facts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; border-left: 1px solid var(--line); padding-left: 24px; }
+.facts dt { font-size: 13px; color: var(--muted); }
+.facts dd { font: 500 17px/1.3 var(--sans); margin-top: 2px; }
+.facts dd small { font: 400 13px/1 var(--sans); color: var(--comment); margin-left: 6px; }
+.facts dd .warn { color: var(--pause); }
+.scale { display: inline-flex; gap: 2px; margin-left: 8px; vertical-align: 1px; }
+.scale i { width: 7px; height: 10px; border-radius: 1px; background: var(--line); }
+.scale i.on { background: var(--moment); }
+
+/* The moments, in the flow of the minute */
+.blockers { margin-bottom: 44px; }
+.sec-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 18px; margin-bottom: 18px; }
+.sec-h h2 { font: 500 20px/1.2 var(--sans); letter-spacing: -.01em; }
+.rank { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.rank a { color: inherit; text-decoration: none; display: inline-flex; gap: 7px; align-items: baseline; }
+.rank a:hover b { text-decoration: underline; }
+.rank .n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 3px; background: var(--moment); color: var(--chip-ink); font: 500 11px/1 var(--mono); vertical-align: 1px; }
+.rank b { font-weight: 500; color: var(--ink); }
+.rank .n.blocked { background: var(--no); }
+
+.flow { position: relative; --rail: 60px; }
+.flow::before { content: ""; position: absolute; top: 10px; bottom: 10px; left: var(--rail); width: 1px; background: var(--line); }
+.flow > li { position: relative; }
+.flow > li::after { content: ""; position: absolute; left: calc(var(--rail) - 3px); top: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--surface); border: 1px solid var(--comment); }
+.flow > li.stop::after { border-color: var(--pause); background: var(--pause); }
+.flow > li.off::after, .flow > li.back::after { border-color: var(--deviation); background: var(--deviation); }
+.flow > li.dead::after { border-color: var(--dead); background: var(--dead); }
+.flow > li.ended::after { border-color: var(--done); background: var(--done); }
+.flow > li.moment::after { content: attr(data-n); left: calc(var(--rail) - 11px); top: 18px; width: 22px; height: 22px; border-radius: 4px; border: 0; background: var(--moment); color: var(--chip-ink); font: 500 12px/22px var(--mono); text-align: center; box-shadow: 0 0 0 4px var(--canvas); }
+.flow > li.moment.blocked::after { background: var(--no); }
+.flow .row { display: grid; grid-template-columns: 46px 28px 1fr auto; gap: 0 8px; align-items: baseline; padding: 7px 10px 7px 0; font-size: 14px; color: var(--muted); }
+.flow .row time { font-size: 13px; color: var(--comment); }
+.flow .row .k { font-weight: 500; color: var(--ink); }
+.flow .row.stop .k { color: var(--pause); }
+.flow .row.off .k, .flow .row.back .k { color: var(--deviation); }
+.flow .row.dead .k { color: var(--dead); }
+.flow .row.ended .k { color: var(--done); }
+.flow .row .url { font: 400 12px/1 var(--mono); color: var(--comment); }
+.flow .row .what { grid-column: 3; }
+
+/* A moment: the clip is the card, set into the flow at its own time */
+.flow > li.moment { padding: 10px 0 10px calc(var(--rail) + 24px); }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; display: grid; grid-template-columns: 7fr 5fr; min-width: 0; }
+.card.is-playing { border-color: var(--moment); }
+.clip { position: relative; display: block; width: 100%; aspect-ratio: 16 / 10; background: #e1e2e7; overflow: hidden; }
+.clip img { width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.clip .frame { position: absolute; inset: 0; opacity: 0; transition: opacity .15s; }
+.clip .frame.is-on { opacity: 1; }
+.clip .secs { position: absolute; left: 10px; bottom: 10px; font: 500 12px/1 var(--mono); color: #fff; background: rgba(13,14,22,.78); padding: 6px 8px; border-radius: 4px; }
+.clip .play { position: absolute; right: 10px; bottom: 10px; width: 36px; height: 36px; border-radius: 50%; background: var(--moment); color: var(--chip-ink); display: grid; place-items: center; }
+.clip .play svg { width: 14px; height: 14px; }
+.clip .play .pause-ico { display: none; }
+.card.is-playing .play .play-ico { display: none; }
+.card.is-playing .play .pause-ico { display: block; }
+.clip:hover img, .clip:focus-visible img { filter: brightness(1.08); }
+.scrub { position: relative; height: 18px; margin: 0 14px; }
+.scrub .track { position: absolute; left: 0; right: 0; top: 8px; height: 2px; background: var(--line); }
+.scrub .fill { position: absolute; left: 0; top: 8px; height: 2px; width: var(--now); background: var(--moment); }
+.scrub .dot { position: absolute; top: 4px; left: var(--now); width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--moment); }
+.scrub .tick { position: absolute; top: 5px; left: var(--l); width: 2px; height: 8px; margin-left: -1px; background: var(--muted); }
+
+.text { padding: 18px 22px 20px; display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.text h3 { font: 500 18px/1.3 var(--sans); letter-spacing: -.005em; text-wrap: balance; }
+.text .impact { font: 500 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--moment); }
+.text .impact.blocked { color: var(--no); }
+.text .impact.confused { color: var(--pause); }
+.text .where { color: var(--muted); font-size: 14px; }
+.steps { display: grid; gap: 6px; font-size: 14px; }
+.steps li { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: baseline; color: var(--muted); }
+.steps li time { color: var(--comment); font-size: 12px; }
+.steps li.is-now time { color: var(--moment); font-weight: 500; }
+.steps li.is-now { color: var(--ink); }
+.steps .k { font-weight: 500; color: var(--ink); }
+.steps .k.off, .steps .k.back { color: var(--deviation); }
+.steps .k.stop { color: var(--pause); }
+.steps .k.dead { color: var(--dead); }
+.steps .k.ended { color: var(--done); }
+.text q { font-style: italic; color: var(--ink); }
+.text .said { display: grid; grid-template-columns: 44px 1fr; gap: 12px; align-items: baseline; font-size: 14px; }
+.text .said time { color: var(--comment); font-size: 12px; }
+.text .said q::before { content: ""; display: inline-block; width: 2px; height: .9em; background: var(--note); margin-right: 10px; vertical-align: -1px; }
+.text .quiet { color: var(--comment); font-size: 13px; }
+.text .fix { border-top: 1px solid var(--line); padding-top: 12px; font-size: 14px; margin-top: auto; }
+.text .fix b { font-weight: 500; color: var(--done); }
+
+/* How it felt */
+.felt { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; margin-bottom: 36px; }
+.felt > div { min-width: 0; }
+.felt h2 { font: 500 20px/1.2 var(--sans); margin-bottom: 12px; }
+.felt dl { display: grid; gap: 10px; }
+.felt dl div { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: baseline; border-top: 1px solid var(--line); padding-top: 10px; }
+.felt dt { color: var(--muted); font-size: 14px; }
+.felt dd { font: 500 16px/1.3 var(--sans); white-space: nowrap; }
+.felt dd small { font-weight: 400; font-size: 12px; color: var(--comment); margin-left: 6px; }
+.words { border-top: 1px solid var(--line); padding-top: 10px; display: grid; gap: 12px; }
+.words blockquote { margin: 0; display: grid; grid-template-columns: 56px 1fr; gap: 12px; align-items: baseline; }
+.words time { color: var(--comment); font-size: 12px; }
+.words p { font-size: 17px; line-height: 1.5; font-style: italic; }
+.words .when { color: var(--comment); font-size: 13px; }
+
+/* Folded mechanics */
+.fold { border-top: 1px solid var(--line); }
+.fold summary { list-style: none; cursor: pointer; display: flex; gap: 14px; align-items: baseline; padding: 14px 0; }
+.fold summary::-webkit-details-marker { display: none; }
+.fold summary::before { content: "+"; font: 500 16px/1 var(--mono); color: var(--comment); width: 14px; }
+.fold[open] summary::before { content: "−"; }
+.fold summary b { font-weight: 500; }
+.fold summary span { color: var(--comment); font-size: 13px; }
+.fold .body { padding: 2px 0 24px 28px; }
+.every { display: grid; gap: 2px; }
+.every li { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: baseline; padding: 5px 0; font-size: 14px; }
+.every li time { color: var(--comment); font-size: 12px; }
+.every li .url { color: var(--comment); font: 400 12px/1 var(--mono); }
+.every li .k { font-weight: 500; margin-right: 6px; }
+.every li .k.off, .every li .k.back { color: var(--deviation); }
+.every li .k.stop { color: var(--pause); }
+.every li .k.dead { color: var(--dead); }
+.every li .k.ended { color: var(--done); }
+.every li .n { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 3px; background: var(--moment); color: var(--chip-ink); font: 500 11px/1 var(--mono); margin-right: 8px; vertical-align: 1px; }
+.path { display: grid; gap: 8px; font-size: 14px; }
+.path .row { display: grid; grid-template-columns: 110px 1fr; gap: 12px; align-items: baseline; }
+.path .row span:first-child { color: var(--muted); }
+.path .chain { display: flex; flex-wrap: wrap; gap: 6px; }
+.path .chain i { font: 400 12px/1 var(--mono); font-style: normal; padding: 5px 8px; border-radius: 4px; background: var(--raised); border: 1px solid var(--line); }
+.path .chain i.off { border-color: var(--deviation); color: var(--deviation); }
+.path .chain i.on { border-color: var(--done); color: var(--done); }
+pre { margin: 0; font: 400 13px/1.6 var(--mono); background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; }
+pre .m { color: var(--no); }
+pre .p { color: var(--done); }
+pre .c { color: var(--comment); }
+
+/* Footer: who, where, recorded */
+.foot { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 14px; display: flex; flex-wrap: wrap; gap: 8px 0; font-size: 13px; color: var(--muted); }
+.foot span + span::before { content: "·"; color: var(--comment); margin: 0 10px; }
+.foot b { font-weight: 500; color: var(--ink); }
+
+@media (max-width: 900px) {
+  .result, .felt, .card { grid-template-columns: 1fr; }
+  .facts { border-left: 0; padding-left: 0; }
+  .flow { --rail: 20px; }
+  .flow > li.moment { padding-left: 0; padding-block: 16px; }
+  .flow > li.moment::after { display: none; }
+  .flow .row { grid-template-columns: 46px 1fr auto; padding-left: 28px; }
+  .flow .row > span:not(.what):not(.url) { display: none; }
+  .flow .row .what { grid-column: 2; }
+  .result h1 { font-size: 28px; }
+}
+</style>
+
+<div class="page">
+  <nav class="crumb" aria-label="Where you are">
+    <span>Run <b class="mono">k2m9</b></span><span class="sep">/</span>
+    <span>Goal <b>invite a colleague</b></span><span class="sep">/</span>
+    <span><b>Person 3</b> of 5</span>
+    <span class="example">Example run</span>
+  </nav>
+
+  <header class="result">
+    <div>
+      <h1>Person 3 <span class="no">did not reach the goal</span>, and was sure they had.</h1>
+      <p class="lede">They pressed Done after two invitations had gone out. The check expects one. Nobody would have reported this: it looked finished from their side.</p>
+    </div>
+    <dl class="facts">
+      <div><dt>Reached the goal?</dt><dd><span class="no" style="color: var(--no)">No</span><small>the check failed</small></dd></div>
+      <div><dt>How it ended</dt><dd>Pressed Done<small>at 1:03</small></dd></div>
+      <div><dt>How sure they'd done it</dt><dd>6 of 7<span class="scale" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></dd></div>
+      <div><dt>Time on this goal</dt><dd>1 min 3 s<small>stops at Done</small></dd></div>
+    </dl>
+  </header>
+
+  <section class="blockers" aria-labelledby="blockers-h">
+    <div class="sec-h">
+      <h2 id="blockers-h">What got in the way</h2>
+      <ol class="rank" aria-label="The three moments, worst first">
+        <li><a href="#m1"><span class="n blocked" aria-hidden="true">1</span><b>Wrong end state</b> at 00:58</a></li>
+        <li><a href="#m2"><span class="n" aria-hidden="true">2</span><b>Slowed 16 s</b> at 00:03</a></li>
+        <li><a href="#m3"><span class="n" aria-hidden="true">3</span><b>Confused 13 s</b> at 00:23</a></li>
+      </ol>
+    </div>
+
+    <ol class="flow" aria-label="The whole minute, in order">
+      <li class="row"><time>00:00</time><span></span><span class="what"><span class="k">Started</span> · scenario card dismissed</span><span class="url">/board</span></li>
+      <li class="moment " data-n="2" id="m2">
+        <article class="card" data-start="3" data-end="19">
+          <div>
+            <button class="clip" aria-label="Play 00:03 to 00:19: looked for Invite in the Share menu">
+              <img class="frame is-on" data-t="3" src="attempt-view/share.jpg" alt="Weekboard board with the Share menu open: Copy link, Manage link, Embed"><img class="frame" data-t="12" src="attempt-view/link.jpg" alt="The Link settings page, off the expected path">
+              <span class="secs"><span class="now">00:03</span> → 00:19</span>
+              <span class="play"><svg class="play-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg><svg class="pause-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h4v14H4zM12 3h4v14h-4z" fill="currentColor"/></svg></span>
+            </button>
+            <div class="scrub" aria-hidden="true"><div class="track"></div><div class="fill" style="--now: 0%"></div><i class="tick" style="--l: 56%"></i><div class="dot" style="--now: 0%"></div></div>
+          </div>
+          <div class="text">
+            <span class="impact ">Slowed · 16 s</span>
+            <h3>Looked for Invite in the Share menu and found only link options.</h3>
+            <p class="where">/board · the Share menu</p>
+            <ol class="steps">
+              <li class="is-now"><time>00:03</time><span><span class="k">Clicked Share</span> · menu open</span></li>
+              <li><time>00:05</time><span><span class="k stop">Stopped 7 s</span> on the menu</span></li>
+              <li><time>00:12</time><span><span class="k off">Off your path</span> · opened Link settings</span></li>
+              <li><time>00:19</time><span><span class="k back">Went back</span> to the board</span></li>
+            </ol>
+            <p class="said"><time>after</time><q>Share seemed like the place for people.</q></p>
+            <p class="fix"><b>Smallest change.</b> Put "Invite a colleague" at the top of the Share menu.</p>
+          </div>
+        </article>
+      </li>
+      <li class="moment confused" data-n="3" id="m3">
+        <article class="card" data-start="23" data-end="36">
+          <div>
+            <button class="clip" aria-label="Play 00:23 to 00:36: typed the email into the board search">
+              <img class="frame is-on" data-t="23" src="attempt-view/search.jpg" alt="Weekboard board search with sam typed and No cards match"><img class="frame" data-t="36" src="attempt-view/enter.jpg" alt="The same search after pressing Enter, nothing changed">
+              <span class="secs"><span class="now">00:23</span> → 00:36</span>
+              <span class="play"><svg class="play-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg><svg class="pause-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h4v14H4zM12 3h4v14h-4z" fill="currentColor"/></svg></span>
+            </button>
+            <div class="scrub" aria-hidden="true"><div class="track"></div><div class="fill" style="--now: 0%"></div><i class="tick" style="--l: 100%"></i><div class="dot" style="--now: 0%"></div></div>
+          </div>
+          <div class="text">
+            <span class="impact confused">Confused · 13 s</span>
+            <h3>Typed the colleague's email into the board search.</h3>
+            <p class="where">/board · Search cards</p>
+            <ol class="steps">
+              <li class="is-now"><time>00:23</time><span><span class="k">Typed sam@acme.co</span> into Search</span></li>
+              <li><time>00:27</time><span><span class="k stop">Stopped 9 s</span> on "No cards match"</span></li>
+              <li><time>00:36</time><span><span class="k dead">Pressed Enter, nothing happened</span></span></li>
+            </ol>
+            <p class="quiet">They said nothing about this moment.</p>
+            <p class="fix"><b>Smallest change.</b> When a search matches no cards, offer "Invite someone with this email".</p>
+          </div>
+        </article>
+      </li>
+      <li class="row"><time>00:41</time><span></span><span class="what"><span class="k">Clicked the avatar</span>, then Settings</span><span class="url">/settings</span></li>
+      <li class="row"><time>00:46</time><span></span><span class="what"><span class="k">Clicked Members</span></span><span class="url">/settings/members</span></li>
+      <li class="moment blocked" data-n="1" id="m1">
+        <article class="card" data-start="58" data-end="63">
+          <div>
+            <button class="clip" aria-label="Play 00:58 to 01:03: pressed Add twice">
+              <img class="frame is-on" data-t="58" src="attempt-view/add1.jpg" alt="Weekboard Members page: sam@acme.co in the invite field, Add just pressed, 1 invitation pending"><img class="frame" data-t="61" src="attempt-view/add2.jpg" alt="The same page after the second press: 2 invitations pending">
+              <span class="secs"><span class="now">00:58</span> → 01:03</span>
+              <span class="play"><svg class="play-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg><svg class="pause-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h4v14H4zM12 3h4v14h-4z" fill="currentColor"/></svg></span>
+            </button>
+            <div class="scrub" aria-hidden="true"><div class="track"></div><div class="fill" style="--now: 0%"></div><i class="tick" style="--l: 60%"></i><div class="dot" style="--now: 0%"></div></div>
+          </div>
+          <div class="text">
+            <span class="impact blocked">Wrong end state</span>
+            <h3>Pressed Add, saw nothing change, pressed it again. Two invitations went out.</h3>
+            <p class="where">/settings/members · the Add button</p>
+            <ol class="steps">
+              <li class="is-now"><time>00:58</time><span><span class="k">Typed the email, pressed Add</span> · 1 invitation pending</span></li>
+              <li><time>01:01</time><span><span class="k">Pressed Add again</span> · 2 invitations pending</span></li>
+            </ol>
+            <p class="said"><time>after</time><q>I wasn't sure the first Add did anything, so I pressed it again.</q></p>
+            <p class="fix"><b>Smallest change.</b> On press, change the button to "Invited sam@acme.co" and disable it.</p>
+          </div>
+        </article>
+      </li>
+      <li class="row ended"><time>01:03</time><span></span><span class="what"><span class="k">Pressed Done</span> · the check ran and failed: 2 invitations pending</span><span class="url">/settings/members</span></li>
+    </ol>
+  </section>
+
+  <section class="felt" aria-labelledby="felt-h">
+    <div>
+      <h2 id="felt-h">How it felt</h2>
+      <dl>
+        <div><dt>How easy was it?</dt><dd>3 of 7<small>7 = very easy · typical 5.5</small></dd></div>
+        <div><dt>How sure they'd done it</dt><dd>6 of 7<small>7 = completely sure</small></dd></div>
+        <div><dt>Time on this goal</dt><dd>1 min 3 s<small>others: 0:41 to 2:10</small></dd></div>
+      </dl>
+    </div>
+    <div>
+      <h2>What they said</h2>
+      <div class="words">
+        <blockquote><time>after</time><div><p>Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.</p><span class="when">Typed into the box after the ease question. Nothing was said while recording.</span></div></blockquote>
+      </div>
+    </div>
+  </section>
+
+  <details class="fold">
+    <summary><b>Their path and yours</b><span>5 pages visited · 2 on your path</span></summary>
+    <div class="body path">
+      <div class="row"><span>Your path</span><div class="chain"><i class="on">/board</i><i class="on">/settings/members</i></div></div>
+      <div class="row"><span>Their path</span><div class="chain"><i class="on">/board</i><i class="off">/board/link</i><i>/board</i><i>/settings</i><i class="on">/settings/members</i></div></div>
+    </div>
+  </details>
+
+  <details class="fold">
+    <summary><b>What the check saw</b><span>outcome() ran after Done</span></summary>
+    <div class="body">
+<pre><span class="c">// expect(await page.textContent('main')).toContain('1 invitation pending')</span>
+<span class="m">− 1 invitation pending</span>
+<span class="p">+ 2 invitations pending</span>
+<span class="c">// end state: /settings/members, 01:03</span></pre>
+    </div>
+  </details>
+
+  <footer class="foot">
+    <span><b>Person 3</b> of 5 · paid panel</span>
+    <span>Uses a spreadsheet for this today</span>
+    <span>Desktop · Chromium · window 1280×800</span>
+    <span>14 Oct 2026</span>
+    <span>Recorded: screen, voice. Camera: declined.</span>
+  </footer>
+</div>
+
+<script>
+(function () {
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.card')), timer = null, playing = null;
+  function fmt(s) { var m = Math.floor(s / 60), r = s % 60; return (m < 10 ? '0' : '') + m + ':' + (r < 10 ? '0' : '') + r; }
+  function secs(el) { var t = el.querySelector('time').textContent.split(':'); return (+t[0]) * 60 + (+t[1]); }
+  function setTime(card, t) {
+    var start = +card.dataset.start, end = +card.dataset.end, pct = ((t - start) / (end - start)) * 100;
+    card.querySelector('.scrub .fill').style.setProperty('--now', pct + '%');
+    card.querySelector('.scrub .dot').style.setProperty('--now', pct + '%');
+    card.querySelector('.secs .now').textContent = fmt(t);
+    var frames = card.querySelectorAll('.frame'), shown = frames[0];
+    frames.forEach(function (f) { if (+f.dataset.t <= t) shown = f; });
+    frames.forEach(function (f) { f.classList.toggle('is-on', f === shown); });
+    var steps = card.querySelectorAll('.steps li');
+    steps.forEach(function (li, i) {
+      var from = secs(li), to = steps[i + 1] ? secs(steps[i + 1]) : Infinity;
+      li.classList.toggle('is-now', t >= from && t < to);
+    });
+    card.dataset.now = t;
+  }
+  function label(card, verb) { var b = card.querySelector('.clip'); b.setAttribute('aria-label', b.getAttribute('aria-label').replace(/^(Play|Pause)/, verb)); }
+  function stop() { if (timer) { clearInterval(timer); timer = null; } if (playing) { playing.classList.remove('is-playing'); label(playing, 'Play'); playing = null; } }
+  function play(card) {
+    var again = playing === card; stop(); if (again) return;
+    var t = +card.dataset.now || +card.dataset.start, end = +card.dataset.end;
+    if (t >= end) t = +card.dataset.start;
+    playing = card; card.classList.add('is-playing'); label(card, 'Pause'); setTime(card, t);
+    timer = setInterval(function () { t += 1; setTime(card, t); if (t >= end) stop(); }, 1000);
+  }
+  cards.forEach(function (card) {
+    setTime(card, +card.dataset.start);
+    card.querySelector('.clip').addEventListener('click', function () { play(card); });
+  });
+})();
+</script>
