@@ -17,5 +17,5 @@ Approved markup exported from the design artifacts. Each file is the spec for th
 | `player-chrome.html` | Every participant surface in order: consent, screener, first impression (open question), scenario card, the bar with the recording chip, ease question, last words with voice. |
 | `scenario-card.html`, `taskbar.html`, `ease-question.html` | The same three surfaces on their own, for the components that render them. |
 | `weekboard-light.css` | The demo app's light palette. The player overrides in it are superseded by `player-chrome.html`. |
-| `report-rows.html`, `pull-request-check.html`, `trace-viewer.html`, `code-window.html`, `terminal-quiet-window.html` | The other landing artefacts from rounds two and three. |
+| `report-rows.html`, `pull-request-check.html`, `trace-viewer.html`, `code-window.html`, `terminal-quiet-window.html` | The other landing artefacts from rounds two and three, recoloured onto the site tokens. `trace-viewer.html` is superseded by `attempt-view.html`. |
 | `invite-link.html`, `cap-control.html`, `visitor-invitation.html` | The three source-option mini UIs. |
