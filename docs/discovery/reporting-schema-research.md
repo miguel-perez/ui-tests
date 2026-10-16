@@ -61,24 +61,26 @@ A developer cares about date, viewport and browser only when deciding whether a 
 | Field | Label shown | Format | Source | Priority | Default |
 | --- | --- | --- | --- | --- | --- |
 | reached | Reached the goal? | Yes / No / Couldn't tell (the check returned unknown) | Binary completion, Sauro ch. 2; CIF success; verified by the goal's check | headline | shown |
-| ended | How it ended | Pressed Done · Pressed Can't do it · Ran out of time (3 min) · Left | CIF failure kinds, NISTIR 7742 | headline | shown |
+| ended | How it ended | Pressed Done · Pressed Can't do it · Ran out of time (3 min) · Withdrew · Left (disconnected) | CIF failure kinds, NISTIR 7742; PRD terminal reasons kept distinct | headline | shown |
 | sure | How sure they'd done it | n of 7 (7 = completely sure); with "Wrong, and sure" when No and 7 | MeasuringU disasters | headline | shown |
 | blockers | What got in the way | Up to three moments, each: what happened, where (page, element), time stamp | Hanington; NN/g specific, design-not-user | headline | shown |
 | time | Time on this goal | m min s s; "timer stops at Done" on first view | Sauro ch. 2 time variants | body | shown |
 | ease | How easy was it? | n of 7 (7 = very easy; typical 5.5) | SEQ, Sauro ch. 8; MeasuringU norm | body | shown |
 | video | Recording | video, jumps to moments | Hanington | body | shown |
-| moments | What they did | timeline: clicked, typed, off your path, went back, clicked with no effect, stopped n s, pressed Done | CIF path deviation; Sauro errors | body | shown |
+| moments | What they did | timeline: clicked, typed, off your path, went back, clicked with no effect, stopped n s; the timeline ends where "How it ended" says | CIF path deviation; Sauro errors | body | shown |
 | words | What they said | quotes with time stamps | Hanington quotations | body | shown |
 | path | Their path vs yours | pages visited / pages on your path (7 / 4) | CIF deviation ratio | detail | folded |
 | check | What the check saw | assertion diff | PRD verified outcome | detail | folded |
 | lanes | Event lanes | lane chart | trace | detail | folded |
 | person | Who | Person 3 of 5 · paid panel · uses a spreadsheet for this today | CIF participant table; Krug | footer | shown |
-| setup | Where | Desktop · Chrome 141 · window 1280×800 · 16 Oct | CIF context of use | footer | shown |
+| setup | Where | Desktop · Chrome 141 · window 1280×800 · 16 Oct · screen reader, when one is used (never a quality flag) | CIF context of use; PRD environment | footer | shown |
 | consent | Recorded | screen, voice; camera declined | PRD consent | footer | shown |
 
 UX-Lite and the fit answers belong to the person, not the goal; they appear on the run report.
 
-### Run (one goal, n people)
+### Run (the study: n people, one or more goals)
+
+The goal rows repeat for each goal, the primary goal first. The study rows (`uxlite`, `fit`, `method`) appear once, after the goals, because they belong to the person and the study, not to a goal.
 
 | Field | Label shown | Format | Source | Priority | Default |
 | --- | --- | --- | --- | --- | --- |
@@ -89,11 +91,11 @@ UX-Lite and the fit answers belong to the person, not the goal; they appear on t
 | matrix | Who hit what | problems × people, marks, row counts | Sauro Table 2.1 | body | shown |
 | perperson | Each person | one row per person: reached, how it ended, time, ease, sure, link | Tufte small multiples; CIF per-task table | body | shown |
 | worked | What worked | observed successes | Hanington; NN/g | body | shown |
-| alltime | Time | every person's time on a strip; typical (median) for those who reached | Sauro; PRD | detail | folded |
-| uxlite | After all goals: easy to use? would it help? | each n of 5, per person; 0–100 only beside a norm | MeasuringU UX-Lite | detail | folded |
+| alltime | Time | every person's time on a strip; typical (median) for those who reached, and for everyone | Sauro; PRD medians for completions and for all attempts | detail | folded |
+| uxlite | After all goals: easy to use? would it help? | study row, once; each n of 5, per person; 0–100 only beside a norm | MeasuringU UX-Lite | detail | folded |
 | others | Other problems | ranked list | Krug | detail | folded |
-| fit | Who took part | screened, had the need recently, how they do it today | PRD fit; CIF participants | footer | shown (promoted to headline when fit is low) |
-| method | How this was run | goal wording shown, n planned and attempted, source, dates | CIF method | footer | shown |
+| fit | Who took part | study row, once; screened, had the need recently, how they do it today | PRD fit; CIF participants | footer | shown (promoted to headline when fit is low) |
+| method | How this was run | study row, once; goal wording shown, n planned and attempted, source, dates | CIF method | footer | shown |
 
 ### Reading orders
 
