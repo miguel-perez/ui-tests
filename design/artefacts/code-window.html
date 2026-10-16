@@ -1,0 +1,116 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&amp;family=Fira+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+  <style>
+    :root {
+      --canvas: #101211;
+      --chrome: #1a1c1b;
+      --accent: #e0a458;
+      --text-primary: #f2f2f2;
+      --text-muted: #a4ada5;
+      --border: #2a2c2b;
+      --string: #d1d5d1;
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: var(--canvas);
+      font-family: 'Fira Sans', sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    .code-font {
+      font-family: 'Fira Code', monospace;
+    }
+    .syntax-keyword { color: var(--text-primary); font-weight: 500; }
+    .syntax-string { color: var(--string); }
+    .syntax-punctuation { color: var(--text-muted); }
+    .line-number { color: #4a4d4b; text-align: right; user-select: none; }
+  </style>
+</head>
+<body>
+  <div class="w-[860px] h-[460px] flex items-center justify-center" data-sd-id="1">
+    <div class="w-[800px] bg-[#101211] rounded-lg border border-[#2a2c2b] overflow-hidden shadow-2xl" data-sd-id="2">
+      <!-- Chrome Row -->
+      <header class="bg-[#1a1c1b] border-b border-[#2a2c2b] h-10 flex items-center justify-between px-4" data-sd-id="3">
+        <div class="flex items-center gap-2" data-sd-id="4">
+          <div class="px-3 py-2 border-b-2 border-[#e0a458] h-10 flex items-center" data-sd-id="5">
+            <span class="code-font text-[13px] text-[#f2f2f2]" data-sd-id="6">invite-colleague.ui.test.ts</span>
+          </div>
+        </div>
+        <div class="flex items-center gap-4" data-sd-id="7">
+          <span class="code-font text-[11px] text-[#a4ada5] uppercase tracking-wider" data-sd-id="8">Example run</span>
+          <button id="copy-button" class="flex items-center gap-1.5 text-[#a4ada5] hover:text-[#f2f2f2] transition-colors" data-sd-id="9">
+            <iconify-icon icon="lucide:copy" class="text-sm"></iconify-icon>
+            <span class="code-font text-[11px]" data-sd-id="10">Copy</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Code Body -->
+      <div class="p-4 code-font text-[13.5px] leading-[1.6] overflow-x-auto" data-sd-id="11">
+        <div class="flex" data-sd-id="12">
+          <!-- Gutter -->
+          <div class="flex flex-col pr-4 border-r border-[#2a2c2b] line-number w-8 shrink-0" data-sd-id="13">
+            <span data-sd-id="14">1</span>
+            <span data-sd-id="15">2</span>
+            <span data-sd-id="16">3</span>
+            <span data-sd-id="17">4</span>
+            <span data-sd-id="18">5</span>
+            <span data-sd-id="19">6</span>
+            <span class="text-[#e0a458]/50" data-sd-id="20">7</span>
+            <span data-sd-id="21">8</span>
+            <span data-sd-id="22">9</span>
+            <span data-sd-id="23">10</span>
+            <span data-sd-id="24">11</span>
+            <span data-sd-id="25">12</span>
+          </div>
+          <!-- Code Lines -->
+          <div class="flex-1 pl-4" data-sd-id="26">
+            <div class="relative" data-sd-id="27">
+              <span class="syntax-keyword" data-sd-id="28">import</span> <span class="syntax-punctuation" data-sd-id="29">{</span> context<span class="syntax-punctuation" data-sd-id="30">,</span> goal<span class="syntax-punctuation" data-sd-id="31">,</span> outcome<span class="syntax-punctuation" data-sd-id="32">,</span> expect <span class="syntax-punctuation" data-sd-id="33">}</span> <span class="syntax-keyword" data-sd-id="34">from</span> <span class="syntax-string" data-sd-id="35">'ui-tests'</span><span class="syntax-punctuation" data-sd-id="36">;</span>
+            </div>
+            <div class="h-[1.6em]" data-sd-id="37">&nbsp;</div>
+            <div data-sd-id="38">
+              <span class="syntax-keyword" data-sd-id="39">context</span><span class="syntax-punctuation" data-sd-id="40">({</span>
+            </div>
+            <div class="pl-4" data-sd-id="41">
+              users<span class="syntax-punctuation" data-sd-id="42">:</span> <span class="syntax-string" data-sd-id="43">'people who signed up this week and want a colleague on their board'</span><span class="syntax-punctuation" data-sd-id="44">,</span>
+            </div>
+            <div class="pl-4" data-sd-id="45">
+              purpose<span class="syntax-punctuation" data-sd-id="46">:</span> <span class="syntax-string" data-sd-id="47">'plan the week together without emailing screenshots around'</span><span class="syntax-punctuation" data-sd-id="48">,</span>
+            </div>
+            <div data-sd-id="49">
+              <span class="syntax-punctuation" data-sd-id="50">},</span> <span class="syntax-punctuation" data-sd-id="51">()</span> <span class="syntax-keyword" data-sd-id="52">=&gt;</span> <span class="syntax-punctuation" data-sd-id="53">{</span>
+            </div>
+            <div class="relative" data-sd-id="54">
+              <!-- Moment Hue Bar -->
+              <div class="absolute -left-4 top-0 bottom-0 w-[1px] bg-[#e0a458]" data-sd-id="55"></div>
+              <span class="syntax-keyword" data-sd-id="56">goal</span><span class="syntax-punctuation" data-sd-id="57">(</span><span class="syntax-string" data-sd-id="58">'invite a colleague'</span><span class="syntax-punctuation" data-sd-id="59">,</span> <span class="syntax-punctuation" data-sd-id="60">{</span> happyPath<span class="syntax-punctuation" data-sd-id="61">:</span> <span class="syntax-punctuation" data-sd-id="62">[</span><span class="syntax-string" data-sd-id="63">'/board'</span><span class="syntax-punctuation" data-sd-id="64">,</span> <span class="syntax-string" data-sd-id="65">'/settings/members'</span><span class="syntax-punctuation" data-sd-id="66">]</span> <span class="syntax-punctuation" data-sd-id="67">},</span> <span class="syntax-punctuation" data-sd-id="68">()</span> <span class="syntax-keyword" data-sd-id="69">=&gt;</span> <span class="syntax-punctuation" data-sd-id="70">{</span>
+            </div>
+            <div class="pl-4 text-primary" data-sd-id="71">
+              <span class="syntax-keyword" data-sd-id="72">outcome</span><span class="syntax-punctuation" data-sd-id="73">(</span><span class="syntax-keyword" data-sd-id="74">async</span> <span class="syntax-punctuation" data-sd-id="75">({</span> page <span class="syntax-punctuation" data-sd-id="76">})</span> <span class="syntax-keyword" data-sd-id="77">=&gt;</span> <span class="syntax-punctuation" data-sd-id="78">{</span>
+            </div>
+            <div class="pl-8" data-sd-id="79">
+              <span class="syntax-keyword" data-sd-id="80">expect</span><span class="syntax-punctuation" data-sd-id="81">(</span><span class="syntax-keyword" data-sd-id="82">await</span> page<span class="syntax-punctuation" data-sd-id="83">.</span>textContent<span class="syntax-punctuation" data-sd-id="84">(</span><span class="syntax-string" data-sd-id="85">'main'</span><span class="syntax-punctuation" data-sd-id="86">)).</span>toContain<span class="syntax-punctuation" data-sd-id="87">(</span><span class="syntax-string" data-sd-id="88">'1 invitation pending'</span><span class="syntax-punctuation" data-sd-id="89">);</span>
+            </div>
+            <div class="pl-4" data-sd-id="90">
+              <span class="syntax-punctuation" data-sd-id="91">});</span>
+            </div>
+            <div data-sd-id="92">
+              <span class="syntax-punctuation" data-sd-id="93">});</span>
+            </div>
+            <div data-sd-id="94">
+              <span class="syntax-punctuation" data-sd-id="95">});</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</body></html>

@@ -1,0 +1,1 @@
+Chosen logomark: the internal logic break, heavy weight, standard notch, sharp corners (refinement sheet 16951edc, cell 3). Source geometry: a 60-unit square outline with a 12-unit stroke and a notch path M50 20 V50 H80 at the same stroke. logomark.svg uses currentColor; logomark-dark.svg is the same mark on the site background for uploads and favicons.

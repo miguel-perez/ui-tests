@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<!--
+  ui-tests hero, hand-authored. Design plan.
+
+  Concept: the dim room where you watch someone else's screen. The page is lit
+  by one bright rectangle, the recording; everything around it is dark, quiet
+  and typed.
+
+  Palette (6 tokens; the only colours on the site)
+    --room    #151c27  canvas. A deep slate-blue with visible hue, not a tinted black.
+    --pane    #1c2431  the one surface step, used only inside windows (chrome rows).
+    --rule    #2a3442  hairlines: window borders, chrome dividers, button outline.
+    --ink     #eef1f4  everything read: headline, body, buttons, the mark.
+    --dim     #9aa5b2  muted text: standfirst, fine print, captions, chrome labels. 6.8:1 on room.
+    --moment  #f0b23e  the moment, and nothing else: the issue marker on line 1, the thread
+                       from that line to its reel, the current timestamp, the played part of
+                       the progress bar, the period in the wordmark, the terminal's one dot,
+                       the focus ring. 9.1:1 on room. Never a fill, never a button.
+  Footage (content, not tokens): the Weekboard recording keeps its own white, two greys
+  and one blue, because it is someone else's product being watched.
+
+  Type
+    Fira Sans 500, 4.5rem / 1.06 / -0.04em        headline, two lines
+    Fira Sans 400, 1.125rem / 1.6, dim            standfirst
+    Fira Sans 400/500, 1rem / 1.6, ink            body, the person's words, nav, buttons
+    Fira Sans 400, 0.875rem, dim                  fine print, caption
+    Fira Code 500, 1rem                           wordmark
+    Fira Code 400, 0.875rem                       terminal result, chrome titles, reel label, timestamp
+
+  Layout, one sentence: the headline runs across the top; below it the copy sits in a
+  narrow left column while the right column shows the terminal result with its first
+  line opened into the reel hanging beneath it, joined by a single amber thread, so the
+  hero performs its own caption. Left aligned throughout; nothing centred.
+
+  Review against the default: the generic version of this page is a headline, then two
+  windows side by side, an accent-filled button, a near-black canvas and a green accent.
+  Changed: the windows are stacked as cause and effect (line, then the moment it opens
+  to); the canvas has a hue; the accent is amber and rationed to moments; the buttons
+  are ink, not accent; the terminal is identified by its command, the reel by its file.
+
+  The one bold spend: the reel is not beside the terminal, it is line 1 opened, hung
+  from the result on an amber thread. Everything else is quiet.
+
+  Motion: the result types in once on load (CSS only); at rest for reduced motion.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ui-tests</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --room: #151c27;
+      --pane: #1c2431;
+      --rule: #2a3442;
+      --ink: #eef1f4;
+      --dim: #9aa5b2;
+      --moment: #f0b23e;
+    }
+    html { background: var(--room); }
+    body {
+      margin: 0;
+      font-family: "Fira Sans", system-ui, sans-serif;
+      font-size: 1rem;
+      line-height: 1.6;
+      color: var(--ink);
+      -webkit-font-smoothing: antialiased;
+    }
+    .mono { font-family: "Fira Code", ui-monospace, monospace; }
+
+    .headline {
+      font-family: "Fira Sans", system-ui, sans-serif;
+      font-weight: 500;
+      font-size: clamp(2.5rem, 1rem + 3.9vw, 4.5rem);
+      line-height: 1.06;
+      letter-spacing: -0.04em;
+      max-width: 13.5em;
+      text-wrap: balance;
+    }
+
+    a:focus-visible, button:focus-visible {
+      outline: 2px solid var(--moment);
+      outline-offset: 4px;
+      border-radius: 2px;
+    }
+
+    /* The terminal result. "Problems found: 4 across 5 people." is 34 characters. */
+    .typed {
+      display: inline-block;
+      white-space: nowrap;
+      overflow: hidden;
+      vertical-align: bottom;
+      width: 34ch;
+      animation: type 1.1s steps(34, end) 0.5s both;
+    }
+    .caret {
+      display: inline-block;
+      width: 0.6ch;
+      height: 1.1em;
+      vertical-align: text-bottom;
+      background: var(--ink);
+      animation: blink 1s steps(2, start) infinite, caret-off 0s linear 1.7s forwards;
+    }
+    .row { animation: show 0.2s ease-out both; }
+    .row:nth-child(1) { animation-delay: 1.9s; }
+    .row:nth-child(2) { animation-delay: 2.1s; }
+    .row:nth-child(3) { animation-delay: 2.3s; }
+    .row:nth-child(4) { animation-delay: 2.5s; }
+    .marker, .thread { animation: show 0.3s ease-out 2.0s both; }
+    @keyframes type { from { width: 0; } to { width: 34ch; } }
+    @keyframes show { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes blink { to { visibility: hidden; } }
+    @keyframes caret-off { to { opacity: 0; } }
+
+    /* The amber thread from line 1 down into its reel. */
+    .marker {
+      position: absolute;
+      left: 1rem;
+      top: 0.45em;
+      width: 2px;
+      height: 1.15em;
+      background: var(--moment);
+    }
+    .thread::before {
+      content: "";
+      position: absolute;
+      left: 1rem;
+      top: -2.5rem;
+      width: 2px;
+      height: 2.5rem;
+      background: var(--moment);
+    }
+
+    /* The footage scales with its frame; everything inside is set in em. */
+    .frame { container-type: inline-size; }
+    .stage {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      background: #ffffff;
+      color: #343a43;
+      font-size: 13px;
+      font-size: 1.9cqw;
+      line-height: 1.4;
+    }
+    .stage .topbar {
+      display: flex; align-items: center; gap: 1em;
+      height: 3.4em; padding: 0 1.5em;
+      border-bottom: 1px solid #e4e7ec;
+    }
+    .stage .search {
+      width: 17em; height: 2em; padding: 0 0.8em;
+      display: flex; align-items: center;
+      border: 1px solid #e4e7ec; border-radius: 0.4em; color: #8b93a0;
+    }
+    .stage .share {
+      height: 2em; padding: 0 1em; border-radius: 0.4em;
+      background: #2f6fed; color: #ffffff; font-weight: 500;
+      display: flex; align-items: center;
+    }
+    .stage .avatar {
+      width: 2.6em; height: 2.6em; border-radius: 50%;
+      background: #e4e7ec; color: #343a43; font-size: 0.75em; font-weight: 500;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .stage .board {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25em;
+      padding: 1.5em;
+    }
+    .stage .day { color: #8b93a0; font-size: 0.85em; font-weight: 500; margin-bottom: 0.7em; }
+    .stage .card {
+      border: 1px solid #e4e7ec; border-radius: 0.4em;
+      padding: 0.7em 0.85em; margin-bottom: 0.6em; font-size: 0.9em;
+    }
+    .stage .add { color: #8b93a0; font-size: 0.9em; padding: 0.5em 0.85em; }
+    .stage .menu {
+      position: absolute; top: 3.9em; right: 4.9em; width: 11em;
+      background: #ffffff; border: 1px solid #e4e7ec; border-radius: 0.4em;
+      box-shadow: 0 0.6em 1.6em rgba(52, 58, 67, 0.12);
+      padding: 0.35em; font-size: 0.9em;
+    }
+    .stage .menu div { padding: 0.5em 0.7em; border-radius: 0.3em; }
+    .stage .menu .hover { background: #f1f3f6; }
+    .stage .cursor {
+      position: absolute; top: 7.55em; right: 11.6em; width: 1.1em; height: 1.6em;
+    }
+
+    .timestamp {
+      background: rgba(21, 28, 39, 0.88);
+    }
+    .played { width: 55%; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .typed, .row, .marker, .thread { animation: none; width: auto; opacity: 1; }
+      .caret { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div id="root" class="min-h-screen bg-[color:var(--room)] text-[color:var(--ink)]">
+
+    <header class="mx-auto flex h-20 max-w-[1280px] items-center justify-between px-4">
+      <a id="nav-home" href="https://ui-tests.com" class="flex items-center gap-2.5 text-[color:var(--ink)]">
+        <svg width="20" height="20" viewBox="0 0 100 100" fill="none" aria-hidden="true">
+          <rect x="20" y="20" width="60" height="60" stroke="currentColor" stroke-width="12"/>
+          <path d="M50 20V50H80" stroke="currentColor" stroke-width="12"/>
+        </svg>
+        <span class="mono text-base font-medium">ui-tests<span class="text-[color:var(--moment)]">.</span></span>
+      </a>
+      <nav class="flex items-center gap-8 text-base font-medium">
+        <a id="nav-guide" href="https://ui-tests.com/docs/getting-started" class="hover:underline underline-offset-4">Guide</a>
+        <a id="nav-github" href="https://github.com/miguel-perez/ui-tests" class="hover:underline underline-offset-4">GitHub</a>
+      </nav>
+    </header>
+
+    <main class="mx-auto max-w-[1280px] px-4 pb-16 pt-8 lg:pt-12">
+
+      <h1 class="headline">See where people get stuck on what you just shipped.</h1>
+
+      <div class="mt-10 grid grid-cols-1 gap-x-16 gap-y-10 lg:mt-12 lg:grid-cols-[408px_minmax(0,1fr)] lg:grid-rows-[auto_1fr]">
+
+        <div class="order-1 self-start lg:col-start-1 lg:row-start-1">
+          <p class="text-[1.125rem] leading-[1.6] text-[color:var(--dim)]">Say who your users are, what they are trying to do, and how you would know they did it, in one small file next to your code. One command puts real people in front of your site, records every attempt, and hands back the problems they hit, ranked, with the moment to watch, the words they said, and what to change.</p>
+          <div class="mt-8 flex flex-wrap gap-3">
+            <a id="cta-get-started" href="https://ui-tests.com/docs/getting-started" class="inline-flex h-11 items-center rounded-md bg-[color:var(--ink)] px-5 text-base font-medium text-[color:var(--room)]">Get started</a>
+            <a id="cta-github" href="https://github.com/miguel-perez/ui-tests" class="inline-flex h-11 items-center rounded-md border border-[color:var(--rule)] px-5 text-base font-medium text-[color:var(--ink)]">GitHub</a>
+          </div>
+          <p class="mt-5 text-[0.875rem] text-[color:var(--dim)]">Open source. Nothing to sign up for. Runs on your preview or your live site.</p>
+        </div>
+
+        <div class="order-2 lg:col-start-2 lg:row-start-1 lg:row-span-2">
+        <div class="overflow-hidden rounded-[10px] border border-[color:var(--rule)]">
+          <div class="flex min-h-10 flex-wrap items-center justify-between gap-x-4 gap-y-1 border-b border-[color:var(--rule)] bg-[color:var(--pane)] px-4 py-2">
+            <div class="flex min-w-0 items-center gap-2.5">
+              <span class="h-2 w-2 shrink-0 rounded-full bg-[color:var(--moment)]" aria-hidden="true"></span>
+              <span class="mono text-[0.875rem] text-[color:var(--ink)]">npx ui-tests report k2m9</span>
+            </div>
+            <span class="mono shrink-0 text-[0.8125rem] text-[color:var(--dim)]">Example run</span>
+          </div>
+          <div class="mono px-4 py-5 text-[0.875rem] leading-[1.6] text-[color:var(--ink)]">
+            <p><span class="typed">Problems found: 4 across 5 people.</span><span class="caret" aria-hidden="true"></span></p>
+            <ol class="relative mt-[1.4em] list-none p-0">
+              <li class="row flex items-start gap-4 pl-6"><span class="marker" aria-hidden="true"></span><span class="w-[1ch] shrink-0">1</span><span class="min-w-0">Looked for Invite in the Share menu and found only link options</span><span class="ml-auto shrink-0 pl-4 text-[color:var(--dim)]">4 of 5</span></li>
+              <li class="row flex items-start gap-4 pl-6"><span class="w-[1ch] shrink-0">2</span><span class="min-w-0">Pressed Add, saw nothing change, pressed it again</span><span class="ml-auto shrink-0 pl-4 text-[color:var(--dim)]">2 of 5</span></li>
+              <li class="row flex items-start gap-4 pl-6"><span class="w-[1ch] shrink-0">3</span><span class="min-w-0">Typed the colleague's email into the board search</span><span class="ml-auto shrink-0 pl-4 text-[color:var(--dim)]">2 of 5</span></li>
+              <li class="row flex items-start gap-4 pl-6"><span class="w-[1ch] shrink-0">4</span><span class="min-w-0">Stopped at a grey Add button and gave up</span><span class="ml-auto shrink-0 pl-4 text-[color:var(--dim)]">1 of 5</span></li>
+            </ol>
+          </div>
+        </div>
+
+        <div class="thread relative mt-10">
+          <div class="overflow-hidden rounded-[10px] border border-[color:var(--rule)]">
+            <div class="flex h-10 items-center justify-between border-b border-[color:var(--rule)] bg-[color:var(--pane)] px-4">
+              <span class="mono text-[0.875rem] text-[color:var(--ink)]">p3.mp4</span>
+              <span class="mono text-[0.8125rem] text-[color:var(--dim)]">Example run</span>
+            </div>
+            <div class="frame relative aspect-[16/10] w-full">
+              <div class="stage" role="img" aria-label="Recording of Weekboard, a board app, with the Share menu open and the cursor resting on Manage link">
+                <div class="topbar">
+                  <div class="font-semibold">Weekboard</div>
+                  <div class="search">Search board</div>
+                  <div class="ml-auto flex items-center gap-[0.8em]">
+                    <div class="share">Share</div>
+                    <div class="avatar">AR</div>
+                  </div>
+                </div>
+                <div class="board">
+                  <div>
+                    <div class="day">Monday</div>
+                    <div class="card">Draft the launch note</div>
+                    <div class="card">Review the Q3 budget</div>
+                    <div class="card">Book a room for the retro</div>
+                    <div class="card">Reply to the vendor</div>
+                    <div class="add">Add a card</div>
+                  </div>
+                  <div>
+                    <div class="day">Tuesday</div>
+                    <div class="card">Onboarding call with Ana</div>
+                    <div class="card">Fix the sign-in copy</div>
+                    <div class="card">Write the release notes</div>
+                    <div class="add">Add a card</div>
+                  </div>
+                  <div>
+                    <div class="day">Wednesday</div>
+                    <div class="card">Ship the pricing page</div>
+                    <div class="card">Send the invoice to Pell</div>
+                    <div class="card">Team retro</div>
+                    <div class="add">Add a card</div>
+                  </div>
+                </div>
+                <div class="menu">
+                  <div>Copy link</div>
+                  <div class="hover">Manage link</div>
+                  <div>Embed</div>
+                </div>
+                <svg class="cursor" viewBox="0 0 12 18" aria-hidden="true">
+                  <polygon points="1,1 1,14 4.4,10.9 6.9,16.6 9.1,15.6 6.7,10.1 11,10.1" fill="#111318" stroke="#ffffff" stroke-width="1" stroke-linejoin="round"/>
+                </svg>
+              </div>
+              <div class="timestamp mono absolute bottom-4 left-4 rounded px-2 py-1 text-[0.75rem] leading-none text-[color:var(--ink)]"><span class="text-[color:var(--moment)]">00:03</span> → 00:12</div>
+              <div class="absolute bottom-0 left-0 right-0 h-[2px] bg-[rgba(21,28,39,0.18)]"><div class="played h-full bg-[color:var(--moment)]"></div></div>
+            </div>
+          </div>
+          <p class="mono mt-4 text-[0.875rem] text-[color:var(--dim)]">P3 · 00:03 · looked for Invite in the Share menu</p>
+          <p class="mt-1 text-base text-[color:var(--ink)]">“Share is where you add people. I checked there first.”</p>
+        </div>
+        </div>
+
+        <p class="order-3 self-end text-[0.875rem] text-[color:var(--dim)] lg:col-start-1 lg:row-start-2">Each line opens to the moment to watch, the person's words, and the smallest change that would fix it.</p>
+
+      </div>
+    </main>
+  </div>
+</body>
+</html>

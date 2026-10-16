@@ -15,8 +15,10 @@
     "./server": "./src/server.ts"
   },
   "dependencies": {
+    "@inkjs/ui": "2.0.0",
     "better-sqlite3": "^12.4.1",
     "esbuild": "^0.25.11",
+    "ink": "8.0.0",
     "linkedom": "0.18.13",
     "tsx": "^4.20.6",
     "zod": "^4.1.12"
@@ -25,5 +27,8 @@
     "next": ">=15",
     "react": ">=19",
     "react-dom": ">=19"
+  },
+  "devDependencies": {
+    "ink-testing-library": "4.0.0"
   }
 }

@@ -1,0 +1,62 @@
+<!DOCTYPE html><html lang="en"><head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&amp;family=Fira+Sans:wght@400;500;600&amp;display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --moment-hue: #e0a458;
+      --canvas-bg: #101211;
+      --surface-lift: #1c1f1e;
+      --text-primary: #f2f2f2;
+      --text-muted: #a4ada5;
+      --hairline: rgba(255, 255, 255, 0.08);
+    }
+    body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Fira Sans', sans-serif;
+      background-color: var(--canvas-bg);
+    }
+    .font-fira-code {
+      font-family: 'Fira Code', monospace;
+    }
+    .moment-bg {
+      background-color: var(--moment-hue);
+    }
+    .border-hairline {
+      border: 1px solid var(--hairline);
+    }
+    .text-muted {
+      color: var(--text-muted);
+    }
+    .text-primary {
+      color: var(--text-primary);
+    }
+  </style>
+</head>
+<body>
+  <div class="w-[560px] h-[360px] flex items-center justify-center" data-sd-id="1">
+    <div class="relative w-[480px] bg-[#1c1f1e] rounded-[8px] border-hairline p-10 flex flex-col items-start gap-8" data-sd-id="2">
+      
+      <!-- Example run marker -->
+      <div class="absolute top-4 right-4" data-sd-id="3">
+        <span class="font-fira-code text-[11px] text-muted tracking-tight" data-sd-id="4">Example run</span>
+      </div>
+
+      <!-- Scenario Text -->
+      <p class="text-[17px] leading-[1.6] text-primary" data-sd-id="5">
+        Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished.
+      </p>
+
+      <!-- Action Button -->
+      <button id="start-task-btn" class="moment-bg text-[#101211] font-sans font-semibold text-[15px] px-8 py-3 rounded-[4px] hover:brightness-110 active:brightness-90 transition-all" data-sd-id="6">
+        Start
+      </button>
+
+    </div>
+  </div>
+
+</body></html>
