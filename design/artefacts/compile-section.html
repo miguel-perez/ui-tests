@@ -1,0 +1,634 @@
+<!--
+  Approved landing section "What you write, what they see" (D2 round six), exported from the design artifact.
+  Replaces the blocks "What the person sees" and "Three commands". One 800px reading column: heading and lead, the three
+  commands, the whole 23-line Weekboard file, then six pieces in participant order, each with the lines that produce it,
+  the screen in a constant light frame with the chrome at real size, and what comes back. Stepped frames keep one height.
+  Research: docs/discovery/contract-to-study-research.md and participant-chrome-research.md. Theme rules: README.md here.
+  The page skeleton (doctype, head, body) is added by the site; this file is the content and its styles and script.
+-->
+<title>What You Write, One Column</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+/* Layout: the landing section "What you write, what they see". Commands strip across 12 columns; the file sticky in
+   5 columns on the left with surface numbers in its gutter; the surfaces it produces scroll in 7 columns on the right,
+   each in a constant light frame with the white-labelled chrome drawn at real size. Hover links both ways. */
+:root {
+  color-scheme: dark;
+  --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42;
+  --ink: #c0caf5; --muted: #a9b1d6; --comment: #8089b3;
+  --moment: #ff9e64; --blue: #7aa2f7; --green: #9ece6a; --teal: #73daca; --purple: #bb9af7; --cyan: #89ddff; --red: #f7768e; --yellow: #e0af68;
+  --chip-ink: #1a1b26; --focus: #c0caf5;
+  /* the host page under test (Weekboard, light) and the chrome's inverse surface derived from it */
+  --host-bg: #e1e2e7; --host-panel: #eef0f5; --host-line: #c4c8da; --host-ink: #2c3353; --host-dim: #4b5a94;
+  --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225,226,231,.68); --ch-hair: rgba(225,226,231,.16); --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px;
+  --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --canvas: #f6f7fb; --surface: #ffffff; --raised: #eef0f7; --line: #d5d9e6;
+    --ink: #1f2335; --muted: #4c5374; --comment: #5c6487;
+    --moment: #a64d00; --blue: #2f5bcc; --green: #3d6b1f; --teal: #00726a; --purple: #7536c4; --cyan: #0b6e8f; --red: #c0244b; --yellow: #7d5600;
+    --chip-ink: #ffffff; --focus: #2f5bcc;
+  }
+}
+:root[data-theme="light"] {
+  color-scheme: light;
+  --canvas: #f6f7fb; --surface: #ffffff; --raised: #eef0f7; --line: #d5d9e6;
+  --ink: #1f2335; --muted: #4c5374; --comment: #5c6487;
+  --moment: #a64d00; --blue: #2f5bcc; --green: #3d6b1f; --teal: #00726a; --purple: #7536c4; --cyan: #0b6e8f; --red: #c0244b; --yellow: #7d5600;
+  --chip-ink: #ffffff; --focus: #2f5bcc;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--canvas); }
+body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased;
+  padding-block: 40px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); overflow-x: hidden; }
+h1, h2, h3, h4, p, ol, ul, dl, dd, figure, pre { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+img { display: block; max-width: 100%; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.page { max-width: 1200px; margin: 0 auto; }
+
+/* Section head: heading 5 columns, lead 7 */
+.head { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; margin-bottom: 36px; }
+.head h1 { font: 500 30px/1.15 var(--sans); letter-spacing: -.015em; text-wrap: balance; }
+.head p { color: var(--muted); max-width: 60ch; }
+.head p em { font-style: normal; color: var(--ink); border-bottom: 1px dashed var(--comment); }
+
+/* Commands strip */
+.cmds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 12px; }
+.cmd { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 14px 16px; display: grid; gap: 6px; }
+.cmd code { font-size: 14px; }
+.cmd code .p { color: var(--comment); margin-right: 8px; }
+.cmd code .f { color: var(--yellow); }
+.cmd code .a { color: var(--green); }
+.cmd .does { font-size: 13px; color: var(--muted); }
+.cmd .does b { font-weight: 500; color: var(--ink); }
+.cmd .does .arrow { color: var(--moment); margin-right: 6px; }
+.cmds-note { font-size: 13px; color: var(--comment); margin-bottom: 36px; }
+.cmds-note code { color: var(--muted); }
+
+/* Two panels */
+.panels { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; }
+.panels > *, .row > div, .rows, .file, .window, .cmd { min-width: 0; }
+.file { position: sticky; top: 24px; }
+.window { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.window .tab { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; border-bottom: 1px solid var(--line); font: 400 12px/1 var(--mono); color: var(--muted); }
+.window .tab .legend { display: flex; gap: 12px; align-items: center; color: var(--comment); font-family: var(--sans); font-size: 12px; }
+.window .tab .legend .n { vertical-align: 0; }
+.code { padding: 12px 0; overflow-x: auto; }
+.code ol { display: grid; }
+.code li { display: grid; grid-template-columns: 34px 46px 1fr; align-items: center; min-height: 24px; font: 400 13px/1.7 var(--mono); white-space: pre; padding-right: 16px; transition: background .12s; }
+.code li .ln { text-align: right; color: var(--comment); font-size: 11px; padding-right: 8px; opacity: .7; }
+.code li .marks { display: flex; gap: 3px; align-items: center; height: 24px; }
+.code li .src { padding-left: 4px; }
+.code li.lit, .code li.active { background: var(--raised); }
+.code li.active .src { box-shadow: inset 2px 0 0 var(--moment); }
+.n { display: inline-grid; place-items: center; min-width: 16px; height: 16px; padding: 0 4px; border-radius: 3px; background: var(--moment); color: var(--chip-ink); font: 500 10px/1 var(--mono); vertical-align: 1px; cursor: pointer; border: 1px solid var(--moment); }
+.n.off { background: transparent; color: var(--moment); }
+.n.lit { box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px var(--moment); }
+/* syntax roles */
+.k { color: var(--purple); } .fn { color: var(--blue); } .s { color: var(--green); } .pr { color: var(--teal); } .pu { color: var(--cyan); opacity: .8; } .nu { color: var(--moment); } .id { color: var(--ink); } .cm { color: var(--comment); }
+
+/* Surfaces */
+.rows { display: grid; gap: 28px; }
+.row { display: grid; grid-template-columns: 32px 1fr; gap: 16px; align-items: start; transition: opacity .15s; }
+.row > .n { width: 24px; height: 24px; min-width: 24px; font-size: 12px; margin-top: 2px; }
+.row .meta { display: grid; gap: 4px; margin-top: 10px; }
+.row .meta h3 { font: 500 16px/1.3 var(--sans); }
+.row .meta h3 span { font-weight: 400; color: var(--muted); }
+.row .meta .from { font-size: 13px; color: var(--muted); }
+.row .meta .from b { font-weight: 500; color: var(--ink); }
+.row .meta .back { font: 400 13px/1.5 var(--mono); color: var(--teal); }
+.row .meta .back span { color: var(--comment); font-family: var(--sans); margin-right: 8px; }
+.row .excerpt { display: none; }
+.frame { position: relative; aspect-ratio: 16 / 10; width: 100%; border-radius: 8px; overflow: hidden; background: var(--host-bg); border: 1px solid var(--line); box-shadow: 0 1px 0 rgba(0,0,0,.2); }
+.frame .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.frame .dim { position: absolute; inset: 0; background: rgba(44,51,83,.4); }
+.frame .blank { position: absolute; inset: 0; background: var(--host-bg); }
+.frame .addr { position: absolute; top: 0; left: 0; right: 0; height: 26px; background: var(--host-panel); border-bottom: 1px solid var(--host-line); display: flex; align-items: center; gap: 8px; padding: 0 10px; font: 400 11px/1 var(--mono); color: var(--host-dim); }
+.frame .addr i { width: 8px; height: 8px; border-radius: 50%; background: var(--host-line); display: inline-block; }
+.frame .addr span { margin-left: 6px; }
+.frame .label { position: absolute; right: 10px; top: 34px; font: 500 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--host-dim); background: var(--host-panel); border: 1px solid var(--host-line); border-radius: 3px; padding: 4px 6px; }
+
+/* The chrome, drawn at real size with the inverse surface */
+.ch { font-family: var(--sans); color: var(--ch-ink); }
+.sheet { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, 88%); max-height: calc(100% - 56px); overflow: hidden; background: var(--ch-surface); border-radius: calc(var(--ch-radius) + 4px); box-shadow: 0 0 0 1px var(--ch-hair), 0 18px 40px rgba(21,26,33,.35); padding: 16px 20px 16px; display: grid; gap: 9px; align-content: start; }
+.sheet .step { font-size: 11px; color: var(--ch-dim); letter-spacing: .02em; }
+.sheet h4 { font: 500 15px/1.35 var(--sans); text-wrap: balance; }
+.sheet p { font-size: 14px; line-height: 1.45; }
+.sheet p b { font-weight: 500; }
+.sheet .small { font-size: 12px; color: var(--ch-dim); line-height: 1.4; }
+.sheet ul.list { display: grid; gap: 4px; font-size: 13px; }
+.sheet ul.list li { display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; align-items: baseline; }
+.sheet ul.list li i { width: 8px; height: 8px; border-radius: 50%; background: var(--ch-accent); display: inline-block; justify-self: center; }
+.sheet ul.list li i.off { background: none; box-shadow: inset 0 0 0 1px var(--ch-dim); }
+.sheet ul.list li em { font-style: normal; font-size: 12px; color: var(--ch-dim); }
+.sheet .actions { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-top: 2px; }
+.btn { height: 36px; padding: 0 14px; border-radius: var(--ch-radius); font: 500 13px/1 var(--sans); display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.btn.pri { background: var(--ch-accent); color: var(--ch-accent-ink); }
+.btn.ghost { box-shadow: inset 0 0 0 1px var(--ch-hair); color: var(--ch-ink); }
+.btn.quiet { color: var(--ch-dim); padding: 0 6px; }
+.opts { display: grid; gap: 4px; }
+.opts li { display: flex; gap: 10px; align-items: center; padding: 7px 11px; border-radius: var(--ch-radius); box-shadow: inset 0 0 0 1px var(--ch-hair); font-size: 13px; }
+.opts li i { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ch-dim); flex: none; }
+.opts li.on i { box-shadow: inset 0 0 0 4px var(--ch-accent); }
+.opts li.sq i { border-radius: 3px; }
+.opts.two { grid-template-columns: 1fr 1fr; }
+.scale { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.scale li { height: 40px; display: grid; place-items: center; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--ch-hair); font: 500 15px/1 var(--mono); }
+.scale li.on { background: var(--ch-accent); color: var(--ch-accent-ink); }
+.anchors { display: flex; justify-content: space-between; font-size: 12px; color: var(--ch-dim); margin-top: -4px; }
+.box { border-radius: var(--ch-radius); box-shadow: inset 0 0 0 1px var(--ch-hair); padding: 10px 12px; min-height: 56px; font-size: 13px; color: var(--ch-dim); }
+.talk { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ch-ink); }
+.talk i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ch-ink); display: inline-grid; place-items: center; }
+.talk i::after { content: ""; width: 5px; height: 8px; border-radius: 3px; background: var(--ch-ink); }
+
+/* The bar: one small pill, bottom right, the recording state as its leading segment */
+.bar-wrap { position: absolute; right: 16px; bottom: 16px; display: flex; }
+.pill { height: 40px; display: flex; align-items: center; gap: 0; padding: 0 6px 0 12px; background: var(--ch-surface); color: var(--ch-ink); border-radius: 20px; box-shadow: 0 0 0 1px var(--ch-hair), 0 8px 24px rgba(21,26,33,.28); white-space: nowrap; font-size: 13px; }
+.pill .seg { display: flex; align-items: center; gap: 8px; height: 40px; }
+.pill .seg + .seg { border-left: 1px solid var(--ch-hair); margin-left: 12px; padding-left: 12px; }
+.pill .rec { font: 500 12px/1 var(--mono); color: var(--ch-dim); }
+.pill .rec .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ch-rec); box-shadow: 0 0 0 3px rgba(245,42,101,.18); }
+.pill .rec .pause { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: var(--ch-dim); }
+.pill .rec .pause:hover { background: var(--ch-hair); color: var(--ch-ink); }
+.pill .rec .pause svg { width: 10px; height: 10px; }
+.pill .task { display: block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ch-ink); line-height: 40px; }
+.pill .task b { font-weight: 500; color: var(--ch-dim); margin-right: 8px; font-size: 12px; }
+.pill .task::after { content: " ›"; color: var(--ch-dim); }
+.pill .done { height: 28px; padding: 0 12px; border-radius: 14px; background: var(--ch-accent); color: var(--ch-accent-ink); font: 500 13px/1 var(--sans); }
+.pill .cant { height: 28px; padding: 0 8px; border-radius: 14px; color: var(--ch-dim); font: 400 13px/1 var(--sans); }
+.pill .cant:hover { color: var(--ch-ink); background: var(--ch-hair); }
+.pill .grip { width: 8px; height: 16px; margin-right: 10px; background: radial-gradient(circle, var(--ch-dim) 1px, transparent 1.3px) 0 0/4px 4px; opacity: .6; }
+.pill .task:hover { text-decoration: underline; text-decoration-color: var(--ch-hair); text-underline-offset: 3px; }
+
+/* The check: no frame */
+.main .check { margin-top: 14px; }
+.check { border: 1px dashed var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 10px; background: transparent; }
+.check .who { font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--red); }
+.check pre { font: 400 13px/1.6 var(--mono); white-space: pre-wrap; }
+.check .res { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; font-size: 14px; margin: 0; }
+.check .res dd { margin: 0; }
+.check .res dd code { color: var(--ink); }
+.check .res dt { color: var(--muted); }
+.check .res dd .no { color: var(--red); font-weight: 500; }
+.check .res dd .yes { color: var(--teal); font-weight: 500; }
+
+/* Footer line */
+.after { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 18px; display: grid; grid-template-columns: 5fr 7fr; gap: 24px; }
+.after p { color: var(--muted); max-width: 62ch; }
+.after p b { font-weight: 500; color: var(--ink); }
+.after .n { vertical-align: 1px; }
+
+/* Phone: one column, excerpt of the lines before each row, a thin "you are here" header */
+.here { display: none; }
+@media (max-width: 900px) {
+  .head, .cmds, .panels, .after { grid-template-columns: 1fr; }
+  .file { position: static; }
+  .code li { grid-template-columns: 30px 1fr; }
+  .code li .marks { display: none; }
+  .row { grid-template-columns: 1fr; gap: 10px; }
+  .row > .n { display: none; }
+  .row .excerpt { display: block; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 0; overflow-x: auto; }
+  .row .excerpt li { display: grid; grid-template-columns: 30px 1fr; font: 400 12px/1.6 var(--mono); white-space: pre; padding-right: 12px; }
+  .row .excerpt li .ln { text-align: right; color: var(--comment); font-size: 10px; padding-right: 8px; }
+  .row .meta h3::before { content: attr(data-n) " · "; color: var(--moment); font-family: var(--mono); }
+  .here { display: block; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--canvas); border-bottom: 1px solid var(--line); padding: 8px 0; font: 500 12px/1 var(--mono); color: var(--muted); margin: 0 -16px; padding-inline: 16px; }
+  .here b { color: var(--moment); font-weight: 500; }
+  .sheet { width: 92%; padding: 14px; }
+  .pill .task { max-width: 120px; }
+}
+@media (prefers-reduced-motion: reduce) { .code li, .row { transition: none; } }
+
+/* Variant: one column of pairs. Each surface sits beside only the lines that produce it. */
+.pairs { display: grid; gap: 40px; }
+.pair { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; }
+.pair > * { min-width: 0; }
+.pair .side { position: sticky; top: 24px; display: grid; gap: 10px; }
+.pair .side .window .tab { font-size: 12px; }
+.pair .side .window .tab .n { margin-right: 8px; }
+.pair .excerpt { display: block; padding: 10px 0; overflow-x: auto; }
+.pair .excerpt li { display: grid; grid-template-columns: 34px 1fr; font: 400 13px/1.6 var(--mono); white-space: pre-wrap; overflow-wrap: anywhere; padding-right: 16px; min-height: 24px; align-items: start; }
+.pair .excerpt li .ln { text-align: right; color: var(--comment); font-size: 11px; padding-right: 10px; opacity: .7; }
+.pair .excerpt li.gap .ln { opacity: .4; }
+.pair .excerpt li.gap .src { color: var(--comment); }
+.pair .excerpt li.ctx .src { opacity: .45; }
+.pair .excerpt li .src { padding-left: 4px; }
+.pair .standing { border: 1px dashed var(--line); border-radius: 8px; padding: 14px 16px; font-size: 13px; color: var(--muted); }
+.pair .standing b { color: var(--ink); font-weight: 500; }
+.pair .meta { margin-top: 10px; display: grid; gap: 4px; }
+.pair .meta h3 { font: 500 16px/1.3 var(--sans); }
+.pair .meta h3 span { font-weight: 400; color: var(--muted); }
+.pair .meta h3::before { content: attr(data-n); display: inline-grid; place-items: center; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 4px; background: var(--moment); color: var(--chip-ink); font: 500 11px/1 var(--mono); margin-right: 10px; vertical-align: 2px; }
+.pair .meta .from { font-size: 13px; color: var(--muted); }
+.pair .meta .from b { font-weight: 500; color: var(--ink); }
+.pair .meta .back { font: 400 13px/1.5 var(--mono); color: var(--teal); }
+.pair .meta .back span { color: var(--comment); font-family: var(--sans); margin-right: 8px; }
+.whole { margin-top: 48px; border-top: 1px solid var(--line); padding-top: 18px; }
+.whole summary { list-style: none; cursor: pointer; display: flex; gap: 14px; align-items: baseline; padding: 6px 0 16px; }
+.whole summary::-webkit-details-marker { display: none; }
+.whole summary::before { content: "+"; font: 500 16px/1 var(--mono); color: var(--comment); width: 14px; }
+.whole[open] summary::before { content: "−"; }
+.whole summary b { font-weight: 500; }
+.whole summary span { color: var(--comment); font-size: 13px; }
+.whole .window { max-width: 760px; }
+@media (max-width: 900px) {
+  .pair { grid-template-columns: 1fr; }
+  .pair .side { position: static; }
+}
+
+/* Single column: one 800px reading column; each pair stacks the lines above the screen they produce. */
+.page { max-width: 800px; }
+.head { grid-template-columns: 1fr; gap: 10px; margin-bottom: 28px; }
+.head p { max-width: 64ch; }
+.pairs { gap: 56px; }
+.pair { grid-template-columns: 1fr; gap: 12px; }
+.pair .side { position: static; }
+.pair .excerpt li { white-space: pre; }
+.pair .meta { margin-top: 12px; }
+.pair .meta .from { max-width: 64ch; }
+.whole .window { max-width: none; }
+.after { margin-top: 48px; }
+@media (max-width: 900px) { .cmds { grid-template-columns: 1fr; } }
+
+.pair .intro { display: grid; gap: 10px; margin-bottom: 18px; max-width: 64ch; }
+.pair .intro h3 { font: 500 20px/1.25 var(--sans); letter-spacing: -.01em; }
+.pair .intro h3 span { font-weight: 400; color: var(--muted); }
+.pair .intro h3::before { content: attr(data-n); display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 4px; background: var(--moment); color: var(--chip-ink); font: 500 12px/1 var(--mono); margin-right: 12px; vertical-align: 3px; }
+.pair .intro .from { font-size: 15px; line-height: 1.6; color: var(--muted); }
+.pair .intro .from b { font-weight: 500; color: var(--ink); }
+.pair .side { margin-bottom: 14px; }
+.pair .back-line { margin-top: 14px; font: 400 13px/1.6 var(--mono); color: var(--teal); }
+.pair .back-line span { color: var(--comment); font-family: var(--sans); margin-right: 8px; }
+.pairs { gap: 0; }
+.pair { padding: 44px 0; border-top: 1px solid var(--line); }
+.pair:first-child { border-top: 0; padding-top: 8px; }
+
+.pair .excerpt li { grid-template-columns: 14px 1fr; }
+.pair .excerpt li .ln { visibility: hidden; padding: 0; }
+.pair .side .window .tab .legend { font-family: var(--mono); color: var(--teal); }
+.sheet .step { color: var(--ch-accent); opacity: .9; }
+.opts li.on { box-shadow: inset 0 0 0 1px var(--ch-accent); }
+.chip .dot { box-shadow: 0 0 0 3px rgba(245,42,101,.18); }
+
+.whole-top { margin: 8px 0 52px; }
+.whole-head { display: grid; gap: 6px; margin-bottom: 16px; max-width: 64ch; }
+.whole-head h2 { font: 500 20px/1.25 var(--sans); letter-spacing: -.01em; }
+.whole-head p { color: var(--muted); font-size: 15px; }
+.whole-head p code { color: var(--ink); }
+.whole-top .code li { white-space: pre; }
+.pair:first-child { border-top: 1px solid var(--line); padding-top: 44px; }
+
+.whole-top .code li { grid-template-columns: 34px 1fr; }
+.whole-top .code li .marks { display: none; }
+.pair .intro h3::before { background: none; color: var(--moment); min-width: 0; padding: 0; font-size: 15px; vertical-align: 0; margin-right: 10px; }
+
+/* Review pass: frames on a blank host page fit their sheet; notes separated; phone code wraps */
+.frame.auto { aspect-ratio: auto; padding: 62px 24px 36px; }
+.frame.auto .sheet { position: relative; left: auto; top: auto; z-index: 1; transform: none; margin: 0 auto; max-height: none; }
+.cmds-note { margin-bottom: 48px; }
+.whole-top { margin-top: 0; }
+.pair .intro { margin-bottom: 20px; }
+.pair .side { margin-bottom: 16px; }
+.after { margin-top: 56px; padding-top: 24px; }
+@media (max-width: 900px) {
+  .whole-top .code li, .pair .excerpt li { white-space: pre-wrap; overflow-wrap: anywhere; align-items: start; }
+  .whole-top .code li .src, .pair .excerpt li .src { padding-left: 4px; text-indent: 0; }
+  .frame.auto { padding: 50px 12px 24px; }
+}
+
+.cmds-note { margin-bottom: 24px; }
+.whole-top { margin: 0 0 40px; }
+
+.stepper { display: flex; align-items: center; gap: 10px; margin-top: 10px; font: 400 13px/1 var(--mono); color: var(--muted); }
+.stepper button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); display: grid; place-items: center; font: 500 16px/1 var(--sans); color: var(--ink); }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper .where b { color: var(--moment); font-weight: 500; }
+.stepper .dots { display: inline-flex; gap: 5px; margin-left: 6px; }
+.stepper .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.stepper .dots i.on { background: var(--moment); }
+
+/* Stepped frames keep one height: every step shares the same cell; hidden steps stay in the layout, invisible */
+.frame.auto.multi { display: grid; justify-items: center; align-items: center; }
+.frame.auto.multi .car-step { grid-area: 1 / 1; margin: 0; }
+.frame.auto.multi .car-step[hidden] { display: grid !important; visibility: hidden; }
+
+/* Narrow frames and phones: the pill docks across the bottom; the task summary folds behind its chevron */
+@media (max-width: 600px) {
+  .bar-wrap { left: 8px; right: 8px; bottom: 8px; }
+  .pill { width: 100%; justify-content: space-between; padding: 0 6px 0 10px; }
+  .pill .task { max-width: 24px; overflow: hidden; color: transparent; }
+  .pill .task::after { color: var(--ch-dim); margin-left: -24px; }
+  .pill .seg + .seg { margin-left: 8px; padding-left: 8px; }
+}
+</style>
+
+<div class="page">
+  <header class="head">
+    <h1>What you write, what they see.</h1>
+    <p>Every screen a person meets, in the order they meet it, beside the lines of your test that produce it, and what comes back from each. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.</p>
+  </header>
+
+  <div class="cmds" aria-label="Three commands">
+    <div class="cmd"><code><span class="p">$</span>npm install <span class="f">-D</span> <span class="a">ui-tests</span></code><span class="does">Adds the package.</span></div>
+    <div class="cmd"><code><span class="p">$</span>npx ui-tests <span class="a">init</span></code><span class="does">Creates <b>the file</b> below, with the example filled in.</span></div>
+    <div class="cmd"><code><span class="p">$</span>npx ui-tests <span class="a">run</span></code><span class="does">Turns it into <b>these screens</b> and puts people in front of them.</span></div>
+  </div>
+  <p class="cmds-note"><code>npx ui-tests</code> on its own runs every screen on you first, so you see the card, the bar and your own trace before anyone else does.</p>
+
+    <section class="whole-top" aria-label="The file">
+      <div class="window">
+        <div class="tab"><span>ui-tests/invite.ui.test.ts</span><span class="legend">23 lines</span></div>
+        <div class="code">
+          <ol id="code">
+            <li data-l="1"><span class="ln">1</span><span class="marks"></span><span class="src"><span class="k">import</span> <span class="pu">{</span> <span class="id">context, beforeEach, goal, outcome, expect</span> <span class="pu">}</span> <span class="k">from</span> <span class="s">'ui-tests'</span></span></li>
+            <li data-l="2"><span class="ln">2</span><span class="marks"></span><span class="src"> </span></li>
+            <li data-l="3"><span class="ln">3</span><span class="marks"></span><span class="src"><span class="fn">context</span><span class="pu">({</span></span></li>
+            <li data-l="4" data-rows="2 4"><span class="ln">4</span><span class="marks"></span><span class="src">  <span class="pr">users</span><span class="pu">: {</span></span></li>
+            <li data-l="5" data-rows="2 4"><span class="ln">5</span><span class="marks"></span><span class="src">    <span class="pr">are</span><span class="pu">:</span> <span class="s">'people who signed up this week and want a colleague on their board'</span><span class="pu">,</span></span></li>
+            <li data-l="6" data-rows="2"><span class="ln">6</span><span class="marks"></span><span class="src">    <span class="pr">did</span><span class="pu">:</span> <span class="s">'signed up for a tool to plan work with a team'</span><span class="pu">,</span></span></li>
+            <li data-l="7" data-rows="2"><span class="ln">7</span><span class="marks"></span><span class="src">    <span class="pr">within</span><span class="pu">:</span> <span class="s">'7 days'</span><span class="pu">,</span></span></li>
+            <li data-l="8" data-rows="2"><span class="ln">8</span><span class="marks"></span><span class="src">    <span class="pr">uses</span><span class="pu">: [</span><span class="s">'Trello'</span><span class="pu">,</span> <span class="s">'Asana'</span><span class="pu">,</span> <span class="s">'Notion'</span><span class="pu">,</span> <span class="s">'Linear'</span><span class="pu">],</span></span></li>
+            <li data-l="9" data-rows="2" class="hidden-line"><span class="ln">9</span><span class="marks"></span><span class="src">    <span class="pr">not</span><span class="pu">: [</span><span class="s">'has used Weekboard'</span><span class="pu">],</span></span></li>
+            <li data-l="10" data-rows="2"><span class="ln">10</span><span class="marks"></span><span class="src">  <span class="pu">},</span></span></li>
+            <li data-l="11" data-rows="2 3 4"><span class="ln">11</span><span class="marks"></span><span class="src">  <span class="pr">purpose</span><span class="pu">:</span> <span class="s">'plan the week together without emailing screenshots around'</span><span class="pu">,</span></span></li>
+            <li data-l="12" data-rows="1 5"><span class="ln">12</span><span class="marks"></span><span class="src">  <span class="pr">video</span><span class="pu">:</span> <span class="nu">true</span><span class="pu">,</span></span></li>
+            <li data-l="13"><span class="ln">13</span><span class="marks"></span><span class="src"><span class="pu">}, () => {</span></span></li>
+            <li data-l="14" data-rows="4"><span class="ln">14</span><span class="marks"></span><span class="src">  <span class="fn">beforeEach</span><span class="pu">(</span><span class="k">async</span> <span class="pu">() => ({</span> <span class="pr">colleague</span><span class="pu">:</span> <span class="s">'Sam'</span><span class="pu">,</span> <span class="pr">email</span><span class="pu">:</span> <span class="s">'sam@acme.co'</span> <span class="pu">}))</span></span></li>
+            <li data-l="15" data-rows="4 5"><span class="ln">15</span><span class="marks"></span><span class="src">  <span class="fn">goal</span><span class="pu">(</span><span class="s">'invite a colleague'</span><span class="pu">, {</span></span></li>
+            <li data-l="16" data-rows="3 5" class="hidden-line"><span class="ln">16</span><span class="marks"></span><span class="src">    <span class="pr">happyPath</span><span class="pu">: [</span><span class="s">'/board'</span><span class="pu">,</span> <span class="s">'/settings/members'</span><span class="pu">],</span></span></li>
+            <li data-l="17" data-rows="n"><span class="ln">17</span><span class="marks"></span><span class="src">    <span class="pr">catch</span><span class="pu">: {</span> <span class="pr">affecting</span><span class="pu">:</span> <span class="s">'1 in 3'</span><span class="pu">,</span> <span class="pr">confidence</span><span class="pu">:</span> <span class="nu">0.85</span> <span class="pu">},</span></span></li>
+            <li data-l="18"><span class="ln">18</span><span class="marks"></span><span class="src">  <span class="pu">}, () => {</span></span></li>
+            <li data-l="19" data-rows="6" class="hidden-line"><span class="ln">19</span><span class="marks"></span><span class="src">    <span class="fn">outcome</span><span class="pu">(</span><span class="k">async</span> <span class="pu">({</span> <span class="id">page</span> <span class="pu">}) => {</span></span></li>
+            <li data-l="20" data-rows="6"><span class="ln">20</span><span class="marks"></span><span class="src">      <span class="fn">expect</span><span class="pu">(</span><span class="k">await</span> <span class="id">page</span><span class="pu">.</span><span class="fn">textContent</span><span class="pu">(</span><span class="s">'main'</span><span class="pu">)).</span><span class="fn">toContain</span><span class="pu">(</span><span class="s">'1 invitation pending'</span><span class="pu">)</span></span></li>
+            <li data-l="21" data-rows="6"><span class="ln">21</span><span class="marks"></span><span class="src">    <span class="pu">})</span></span></li>
+            <li data-l="22"><span class="ln">22</span><span class="marks"></span><span class="src">  <span class="pu">})</span></span></li>
+            <li data-l="23"><span class="ln">23</span><span class="marks"></span><span class="src"><span class="pu">})</span></span></li>
+          </ol>
+        </div>
+      </div>
+
+  </section>
+
+  <ol class="pairs" id="rows">
+
+      <li class="pair" id="r1" data-fields="video" data-lines="12" data-name="Consent">
+        <div class="intro"><h3 data-n="1">Consent <span>· before anything loads</span></h3><p class="from">What the person does on the page is always recorded, and the consent says so in plain words. <code>video: true</code> adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.</p></div>
+        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
+        <div class="main">
+          <figure class="frame auto" aria-label="Consent screen">
+            <div class="blank"></div>
+            <div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
+            <div class="sheet ch">
+              <span class="step">Weekboard · before you start</span>
+              <h4>Weekboard would like to watch you try something on their site.</h4>
+              <ul class="list">
+                <li><i></i><span>What you do on their page: where you click, what you type, which pages you open</span><em>always</em></li>
+                <li><i></i><span>Your screen, as a video, while you try it</span><em>needed</em></li>
+                <li><i class="off"></i><span>Your voice, only if you choose to talk later</span><em>optional</em></li>
+                <li><i class="off"></i><span>Your camera</span><em>off</em></li>
+              </ul>
+              <p class="small">The website is being tested, not you. You can stop at any time and still be paid $9.</p>
+              <div class="actions"><button class="btn quiet">What is recorded?</button><button class="btn pri">Continue</button></div>
+            </div>
+          </figure>
+          <p class="back-line"><span>Comes back</span>recorded: actions, screen, voice · camera: declined</p>
+        </div>
+      </li>
+
+      <li class="pair" id="r2" data-fields="users · purpose · catch" data-lines="4 5 6 7 8 9 10 11 17" data-name="Screener">
+        <div class="intro"><h3 data-n="2">Who gets in, and how many <span>· the sample</span></h3><p class="from">Six questions, one per screen; press Next to see them all. The first three come from <code>users</code>: <code>did</code> and <code>within</code> become a recency question with bands, <code>uses</code> a multi-select with one decoy, <code>not</code> an item among neutral ones, so nobody can tell what disqualifies. The last three come from <code>purpose</code>: when they last needed it, how they do it today, how much it matters. Write <code>users</code> as the sentence alone and the first three are drafted from it.</p><p class="from">The <code>catch</code> line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $54, under a cap you set before it starts; your own link and your own visitors cost nothing.</p></div>
+        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
+        <div class="main">
+          <figure class="frame auto multi" aria-label="Screener questions, one at a time">
+            <div class="blank"></div>
+            <div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
+            <div class="sheet ch car-step" data-step="1">
+              <span class="step">A few questions first · 1 of 6</span>
+              <h4>When did you last sign up for a tool to plan work with a team?</h4>
+              <ul class="opts"><li class="on "><i></i>In the past week</li><li class=""><i></i>In the past month</li><li class=""><i></i>Earlier this year</li><li class=""><i></i>I haven't</li></ul>
+              <div class="actions"><span class="small">Pick one.</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" data-step="2" hidden>
+              <span class="step">A few questions first · 2 of 6</span>
+              <h4>Which of these do you use to plan work? Pick all that apply.</h4>
+              <ul class="opts"><li class="sq"><i></i>Trello</li><li class="on sq"><i></i>Asana</li><li class="sq"><i></i>Notion</li><li class="sq"><i></i>Linear</li><li class="sq"><i></i>Basecamp</li><li class="sq"><i></i>None of these</li></ul>
+              <div class="actions"><span class="small">Pick all that apply.</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" data-step="3" hidden>
+              <span class="step">A few questions first · 3 of 6</span>
+              <h4>Which of these have you done? Pick all that apply.</h4>
+              <ul class="opts"><li class="sq"><i></i>Managed a team of more than five</li><li class="sq"><i></i>Used Weekboard</li><li class="on sq"><i></i>Taken a course on planning or project management</li><li class="sq"><i></i>None of these</li></ul>
+              <div class="actions"><span class="small">Pick all that apply.</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" data-step="4" hidden>
+              <span class="step">A few questions first · 4 of 6</span>
+              <h4>When did you last need to plan a week with other people?</h4>
+              <ul class="opts"><li class="on "><i></i>This week</li><li class=""><i></i>This month</li><li class=""><i></i>Earlier this year</li><li class=""><i></i>I don't</li></ul>
+              <div class="actions"><span class="small">Pick one.</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" data-step="5" hidden>
+              <span class="step">A few questions first · 5 of 6</span>
+              <h4>How do you do it today?</h4>
+              <ul class="opts"><li class="on "><i></i>A shared document or spreadsheet</li><li class=""><i></i>A planning tool</li><li class=""><i></i>Chat and email</li><li class=""><i></i>In my head</li></ul>
+              <div class="actions"><span class="small">Pick one.</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" data-step="6" hidden>
+              <span class="step">A few questions first · 6 of 6</span>
+              <h4>How much does it matter to you to get this right?</h4>
+              <ul class="opts"><li class="on "><i></i>A lot: it costs me time every week</li><li class=""><i></i>Some</li><li class=""><i></i>Not much</li></ul>
+              <div class="actions"><span class="small">Pick one.</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+          </figure>
+          <div class="stepper" aria-label="Step through the six questions"><button type="button" class="prev" aria-label="Previous question">‹</button><span class="where"><b>1</b> of 6</span><button type="button" class="nextb" aria-label="Next question">›</button><span class="dots" aria-hidden="true"></span></div>
+          <div class="check" aria-label="The sample, worked out on your side">
+            <span class="who">Worked out on your side</span>
+            <dl class="res">
+              <dt>People</dt><dd>5 from the panel, matched to <code>users</code></dd>
+              <dt>Chance of seeing a 1-in-3 problem</dt><dd>87%</dd>
+              <dt>Cost</dt><dd>about $54 · cap $60 · results within 48 hours</dd>
+            </dl>
+          </div>
+          <p class="back-line"><span>Comes back</span>screened 20 · matched 5 · fit: 3 of 5 had the need this month · how they do it today, in their words</p>
+        </div>
+      </li>
+
+      <li class="pair" id="r3" data-fields="purpose · happyPath" data-lines="11 16" data-name="First impression">
+        <div class="intro"><h3 data-n="3">First impression <span>· on by default</span></h3><p class="from">The page the task starts on is flashed for 500 ms, then one open question. The start is the first page of the <code>happyPath</code> unless the goal names a <code>start</code>; name another page for the flash with <code>impression: { page }</code> when the task begins behind a login and the purpose lives on the public page. The answers are read against the <code>purpose</code>, which the person never sees, and you can re-read any of them. Then the page comes back for one click.</p></div>
+        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
+        <div class="main">
+          <figure class="frame" aria-label="First impression question over the flashed page">
+            <img class="shot" src="attempt-view/board.jpg" alt="The Weekboard board, as flashed for half a second">
+            <div class="dim"></div>
+            <div class="addr"><i></i><i></i><i></i><span>weekboard.app/board</span></div>
+            <div class="sheet ch">
+              <span class="step">You saw a page for half a second</span>
+              <h4>What was that page for?</h4>
+              <div class="box">In your own words. There is no right answer.</div>
+              <div class="actions"><span class="talk"><i aria-hidden="true"></i>Talk instead</span><button class="btn pri">Next</button></div>
+            </div>
+          </figure>
+          <p class="back-line"><span>Comes back</span>named the purpose: 4 of 5, with their words · first click on your path: 3 of 5</p>
+        </div>
+      </li>
+
+      <li class="pair" id="r4" data-fields="users · purpose · beforeEach · goal" data-lines="5 11 14 15" data-name="Scenario card">
+        <div class="intro"><h3 data-n="4">Scenario card <span>· from the goal, never the path</span></h3><p class="from">The situation from <code>users.are</code> and <code>purpose</code>, the action from the goal's name, the name and email from <code>beforeEach</code>. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with <code>scenario</code>.</p></div>
+        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
+        <div class="main">
+          <figure class="frame" aria-label="Scenario card over the dimmed page">
+            <img class="shot" src="attempt-view/board.jpg" alt="The Weekboard board behind the card">
+            <div class="dim"></div>
+            <div class="addr"><i></i><i></i><i></i><span>weekboard.app/board</span></div>
+            <div class="sheet ch">
+              <span class="step">Task 1 of 1</span>
+              <p>You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.</p>
+              <p class="small">When you think you've finished, press <b>Done</b>. If you get stuck, press <b>I couldn't do this</b>.</p>
+              <div class="actions"><span></span><button class="btn pri">Start task</button></div>
+            </div>
+          </figure>
+          <p class="back-line"><span>Comes back</span>the exact card text, kept with the run</p>
+        </div>
+      </li>
+
+      <li class="pair" id="r5" data-fields="goal · happyPath · video · outcome" data-lines="12 15 16 19 20 21" data-name="Your page, with the bar">
+        <div class="intro"><h3 data-n="5">Your page, with the bar, then the check <span>· two controls, one check</span></h3><p class="from">One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from <code>video</code>, with a pause; there is no microphone during the task. The summary is the goal's name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: the two pages of the <code>happyPath</code> set a silent three-minute limit, and the person may ask for more time once. The pill takes your font, inverts your page's colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.</p><p class="from">When they press Done, the <code>outcome</code> runs against the page as they left it. What they said does not count; what the page says does. A check that cannot decide returns "couldn't tell" and is never rounded either way.</p></div>
+        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
+        <div class="main">
+          <figure class="frame" aria-label="The page under test with the bar">
+            <img class="shot" src="attempt-view/board.jpg" alt="The Weekboard board with the bar over it">
+            <div class="addr"><i></i><i></i><i></i><span>weekboard.app/board</span></div>
+            <div class="bar-wrap ch">
+              <div class="pill" role="region" aria-label="Weekboard study">
+                <span class="grip" aria-hidden="true"></span>
+                <span class="seg rec" aria-label="Recording, 41 seconds"><span class="dot"></span><span>0:41</span><button class="pause" type="button" aria-label="Pause recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg></button></span>
+                <button class="seg task" type="button" aria-expanded="false"><b>Task 1 of 1</b>Invite Sam to the board</button>
+                <span class="seg"><button class="done" type="button">Done</button><button class="cant" type="button">I couldn't do this</button></span>
+              </div>
+            </div>
+          </figure>
+          <div class="check" aria-label="The outcome check, run on your side">
+            <span class="who">After Done · runs on your side</span>
+            <pre><span class="fn">expect</span><span class="pu">(</span><span class="k">await</span> page.<span class="fn">textContent</span><span class="pu">(</span><span class="s">'main'</span><span class="pu">)).</span><span class="fn">toContain</span><span class="pu">(</span><span class="s">'1 invitation pending'</span><span class="pu">)</span></pre>
+            <dl class="res">
+              <dt>Person 3, after Done</dt><dd><span class="no">Not reached</span> · main contained "2 invitations pending"</dd>
+              <dt>Person 5, after Done</dt><dd><span class="yes">Reached</span> · 1:12</dd>
+            </dl>
+          </div>
+          <p class="back-line"><span>Comes back</span>time on this goal · every moment · their path against yours · how it ended · reached the goal: yes / no / couldn't tell, with the diff</p>
+        </div>
+      </li>
+
+      
+      <li class="pair" id="r7" data-lines="" data-name="After the task">
+        <div class="intro"><h3 data-n="6">After the task <span>· not from your file</span></h3><p class="from">Five screens, one question each; press Next to see them all. The first two come after every attempt, including the ones that gave up: how easy it was, with nothing preselected, and, at 4 or below, what made it difficult. The last three come once, after all goals: would it help them, is it easy to use, and anything they want to say, typed or spoken. Confidence is asked only when a goal has no check, so Weekboard's people never see it.</p></div>
+        <div class="main">
+          <figure class="frame auto multi" aria-label="The questions after the task, one at a time">
+            <div class="blank"></div>
+            <div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
+            <div class="sheet ch car-step">
+              <span class="step">After the task · 1 of 2</span>
+              <h4>Overall, how difficult or easy did you find this task?</h4>
+              <ul class="scale" role="radiogroup" aria-label="1 very difficult to 7 very easy"><li role="radio" aria-checked="false" tabindex="-1">1</li><li role="radio" aria-checked="false" tabindex="-1">2</li><li role="radio" aria-checked="true" tabindex="0" class="on">3</li><li role="radio" aria-checked="false" tabindex="-1">4</li><li role="radio" aria-checked="false" tabindex="-1">5</li><li role="radio" aria-checked="false" tabindex="-1">6</li><li role="radio" aria-checked="false" tabindex="-1">7</li></ul>
+              <div class="anchors"><span>Very difficult</span><span>Very easy</span></div>
+              <div class="actions"><span class="small">Press a number key, or tap.</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" hidden>
+              <span class="step">After the task · 2 of 2</span>
+              <h4>What made it difficult?</h4>
+              <div class="box">Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.</div>
+              <div class="actions"><span class="talk"><i aria-hidden="true"></i>Talk instead</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" hidden>
+              <span class="step">After all goals · 1 of 3</span>
+              <h4>Would Weekboard be useful to you?</h4>
+              <ul class="opts"><li><i></i>Strongly disagree</li><li><i></i>Disagree</li><li><i></i>Neither</li><li class="on"><i></i>Agree</li><li><i></i>Strongly agree</li></ul>
+              <div class="actions"><span class="small"></span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" hidden>
+              <span class="step">After all goals · 2 of 3</span>
+              <h4>Weekboard is easy to use.</h4>
+              <ul class="opts"><li><i></i>Strongly disagree</li><li class="on"><i></i>Disagree</li><li><i></i>Neither</li><li><i></i>Agree</li><li><i></i>Strongly agree</li></ul>
+              <div class="actions"><span class="small"></span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" hidden>
+              <span class="step">After all goals · 3 of 3</span>
+              <h4>Anything you want to tell Weekboard?</h4>
+              <div class="box">Type here, or talk.</div>
+              <div class="actions"><span class="talk"><i aria-hidden="true"></i>Talk instead</span><button class="btn pri next-step" type="button">Finish</button></div>
+            </div>
+          </figure>
+          <div class="stepper" aria-label="Step through the five questions"><button type="button" class="prev" aria-label="Previous question">‹</button><span class="where"><b>1</b> of 5</span><button type="button" class="nextb" aria-label="Next question">›</button><span class="dots" aria-hidden="true"></span></div>
+          <p class="back-line"><span>Comes back</span>ease 3 of 7 · what made it difficult, in their words · would it help them 4 of 5 · easy to use 2 of 5 · words and audio</p>
+        </div>
+      </li>
+
+      
+    </ol>
+  </div>
+
+
+
+</div>
+
+<script>
+(function () {
+  var master = Array.prototype.slice.call(document.querySelectorAll('#code li'));
+  function line(n) { return document.querySelector('#code li[data-l="' + n + '"]'); }
+  document.querySelectorAll('.pair').forEach(function (pair, i) {
+    var ex = pair.querySelector('.excerpt'), note = pair.querySelector('.lines-note');
+    var nums = (pair.dataset.lines || '').split(' ').filter(Boolean).map(Number).sort(function (a, b) { return a - b; });
+    if (!nums.length) {
+      var side = pair.querySelector('.side'); if (side) side.remove();
+      return;
+    }
+    var prev = null;
+    nums.forEach(function (n) {
+      if (prev !== null && n - prev > 1) { var g = document.createElement('li'); g.className = 'gap'; g.innerHTML = '<span class="ln"></span><span class="src">  ⋯</span>'; ex.appendChild(g); }
+      var src = line(n), li = document.createElement('li'); if (src.classList.contains('hidden-line')) li.className = 'hidden-line';
+      li.innerHTML = '<span class="ln">' + n + '</span>' + src.querySelector('.src').outerHTML; ex.appendChild(li); prev = n;
+    });
+    var ranges = [], a = nums[0], b = nums[0];
+    for (var k = 1; k <= nums.length; k++) { if (k < nums.length && nums[k] === b + 1) { b = nums[k]; } else { ranges.push(a === b ? String(a) : a + '–' + b); if (k < nums.length) { a = b = nums[k]; } } }
+    note.textContent = pair.dataset.fields || '';
+  });
+})();
+
+(function () {
+  document.querySelectorAll('.pair').forEach(function (pair) {
+    var steps = Array.prototype.slice.call(pair.querySelectorAll('.car-step')); if (!steps.length) return;
+    var i = 0, where = pair.querySelector('.stepper .where b'), dots = pair.querySelector('.stepper .dots'), prev = pair.querySelector('.stepper .prev'), next = pair.querySelector('.stepper .nextb');
+    steps.forEach(function () { var d = document.createElement('i'); dots.appendChild(d); });
+    function show(n) {
+      i = Math.max(0, Math.min(steps.length - 1, n));
+      steps.forEach(function (s, k) { s.hidden = k !== i; });
+      dots.querySelectorAll('i').forEach(function (d, k) { d.classList.toggle('on', k === i); });
+      where.textContent = i + 1; prev.disabled = i === 0; next.disabled = i === steps.length - 1;
+    }
+    prev.addEventListener('click', function () { show(i - 1); });
+    next.addEventListener('click', function () { show(i + 1); });
+    pair.querySelectorAll('.next-step').forEach(function (b) { b.addEventListener('click', function () { show(i + 1 > steps.length - 1 ? 0 : i + 1); }); });
+    show(0);
+  });
+})();
+
+(function () {
+  document.querySelectorAll(".scale[role=radiogroup]").forEach(function (g) {
+    var items = Array.prototype.slice.call(g.querySelectorAll("[role=radio]"));
+    function pick(n) { items.forEach(function (li, k) { var on = k === n; li.classList.toggle("on", on); li.setAttribute("aria-checked", on ? "true" : "false"); li.tabIndex = on ? 0 : -1; }); items[n].focus(); }
+    items.forEach(function (li, k) { li.addEventListener("click", function () { pick(k); }); });
+    g.addEventListener("keydown", function (e) {
+      var i = items.findIndex(function (li) { return li.getAttribute("aria-checked") === "true"; });
+      if (/^[1-7]$/.test(e.key)) { pick(+e.key - 1); e.preventDefault(); }
+      else if (e.key === "ArrowRight" || e.key === "ArrowDown") { pick(Math.min(items.length - 1, i + 1)); e.preventDefault(); }
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { pick(Math.max(0, i - 1)); e.preventDefault(); }
+    });
+  });
+})();
+</script>

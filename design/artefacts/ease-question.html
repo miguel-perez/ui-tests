@@ -1,94 +1,178 @@
-<!DOCTYPE html><html lang="en"><head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Fira+Sans:wght@400;500;600&family=Fira+Code:wght@400;500&display=swap');
-    
-    :root {
-      --moment-hue: #e0a458;
-      --canvas-bg: #101211;
-      --surface-lift: #1a1d1c;
-      --text-primary: #fcfcfc;
-      --text-muted: #a4ada5;
-      --hairline: rgba(164, 173, 165, 0.2);
-    }
+<!--
+  Participant chrome (D2 round five and six). Spec: docs/discovery/participant-chrome-research.md and participant-overlay-research.md.
+  Theme rule: the chrome is the INVERSE of the host page (dark pill and sheets on a light site, light on a dark site), opaque,
+  with a hairline and a soft shadow, the host's font, and the ONE accent the author sets (Weekboard: mint). It never shares a
+  panel colour with the host page and never carries ui-tests branding. The site's own product surfaces (attempt view, report
+  rows, dashboard) use the site's dark tokens; only the demo app under test is light.
+  The bar is one 40px pill, bottom right by default, draggable, hidden while a host input has focus: recording state as its
+  leading segment (dot, time, pause; no microphone during the task), the task summary, Done, and "I couldn't do this" as text.
+  Under 600px it docks across the bottom and the task summary folds behind its chevron. Stepped sheets keep one height.
+-->
+<style>
+*, *::before, *::after { box-sizing: border-box; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+img { display: block; max-width: 100%; }
+:root {
+  color-scheme: dark;
+  --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42;
+  --ink: #c0caf5; --muted: #a9b1d6; --comment: #8089b3;
+  --moment: #ff9e64; --blue: #7aa2f7; --green: #9ece6a; --teal: #73daca; --purple: #bb9af7; --cyan: #89ddff; --red: #f7768e; --yellow: #e0af68;
+  --chip-ink: #1a1b26; --focus: #c0caf5;
+  /* the host page under test (Weekboard, light) and the chrome's inverse surface derived from it */
+  --host-bg: #e1e2e7; --host-panel: #eef0f5; --host-line: #c4c8da; --host-ink: #2c3353; --host-dim: #4b5a94;
+  --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225,226,231,.68); --ch-hair: rgba(225,226,231,.16); --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px;
+  --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
+}
+/* The chrome, drawn at real size with the inverse surface */
+.ch { font-family: var(--sans); color: var(--ch-ink); }
+.sheet { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(420px, 88%); max-height: calc(100% - 56px); overflow: hidden; background: var(--ch-surface); border-radius: calc(var(--ch-radius) + 4px); box-shadow: 0 0 0 1px var(--ch-hair), 0 18px 40px rgba(21,26,33,.35); padding: 16px 20px 16px; display: grid; gap: 9px; align-content: start; }
+.sheet .step { font-size: 11px; color: var(--ch-dim); letter-spacing: .02em; }
+.sheet h4 { font: 500 15px/1.35 var(--sans); text-wrap: balance; }
+.sheet p { font-size: 14px; line-height: 1.45; }
+.sheet p b { font-weight: 500; }
+.sheet .small { font-size: 12px; color: var(--ch-dim); line-height: 1.4; }
+.sheet ul.list { display: grid; gap: 4px; font-size: 13px; }
+.sheet ul.list li { display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; align-items: baseline; }
+.sheet ul.list li i { width: 8px; height: 8px; border-radius: 50%; background: var(--ch-accent); display: inline-block; justify-self: center; }
+.sheet ul.list li i.off { background: none; box-shadow: inset 0 0 0 1px var(--ch-dim); }
+.sheet ul.list li em { font-style: normal; font-size: 12px; color: var(--ch-dim); }
+.sheet .actions { display: flex; gap: 10px; align-items: center; justify-content: space-between; margin-top: 2px; }
+.btn { height: 36px; padding: 0 14px; border-radius: var(--ch-radius); font: 500 13px/1 var(--sans); display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
+.btn.pri { background: var(--ch-accent); color: var(--ch-accent-ink); }
+.btn.ghost { box-shadow: inset 0 0 0 1px var(--ch-hair); color: var(--ch-ink); }
+.btn.quiet { color: var(--ch-dim); padding: 0 6px; }
+.opts { display: grid; gap: 4px; }
+.opts li { display: flex; gap: 10px; align-items: center; padding: 7px 11px; border-radius: var(--ch-radius); box-shadow: inset 0 0 0 1px var(--ch-hair); font-size: 13px; }
+.opts li i { width: 14px; height: 14px; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ch-dim); flex: none; }
+.opts li.on i { box-shadow: inset 0 0 0 4px var(--ch-accent); }
+.opts li.sq i { border-radius: 3px; }
+.opts.two { grid-template-columns: 1fr 1fr; }
+.scale { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.scale li { height: 40px; display: grid; place-items: center; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--ch-hair); font: 500 15px/1 var(--mono); }
+.scale li.on { background: var(--ch-accent); color: var(--ch-accent-ink); }
+.anchors { display: flex; justify-content: space-between; font-size: 12px; color: var(--ch-dim); margin-top: -4px; }
+.box { border-radius: var(--ch-radius); box-shadow: inset 0 0 0 1px var(--ch-hair); padding: 10px 12px; min-height: 56px; font-size: 13px; color: var(--ch-dim); }
+.talk { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--ch-ink); }
+.talk i { width: 16px; height: 16px; border-radius: 50%; box-shadow: inset 0 0 0 1.5px var(--ch-ink); display: inline-grid; place-items: center; }
+.talk i::after { content: ""; width: 5px; height: 8px; border-radius: 3px; background: var(--ch-ink); }
 
-    body {
-      margin: 0;
-      background-color: var(--canvas-bg);
-    }
+/* The bar: one small pill, bottom right, the recording state as its leading segment */
+.bar-wrap { position: absolute; right: 16px; bottom: 16px; display: flex; }
+.pill { height: 40px; display: flex; align-items: center; gap: 0; padding: 0 6px 0 12px; background: var(--ch-surface); color: var(--ch-ink); border-radius: 20px; box-shadow: 0 0 0 1px var(--ch-hair), 0 8px 24px rgba(21,26,33,.28); white-space: nowrap; font-size: 13px; }
+.pill .seg { display: flex; align-items: center; gap: 8px; height: 40px; }
+.pill .seg + .seg { border-left: 1px solid var(--ch-hair); margin-left: 12px; padding-left: 12px; }
+.pill .rec { font: 500 12px/1 var(--mono); color: var(--ch-dim); }
+.pill .rec .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ch-rec); box-shadow: 0 0 0 3px rgba(245,42,101,.18); }
+.pill .rec .pause { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: var(--ch-dim); }
+.pill .rec .pause:hover { background: var(--ch-hair); color: var(--ch-ink); }
+.pill .rec .pause svg { width: 10px; height: 10px; }
+.pill .task { display: block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ch-ink); line-height: 40px; }
+.pill .task b { font-weight: 500; color: var(--ch-dim); margin-right: 8px; font-size: 12px; }
+.pill .task::after { content: " ›"; color: var(--ch-dim); }
+.pill .done { height: 28px; padding: 0 12px; border-radius: 14px; background: var(--ch-accent); color: var(--ch-accent-ink); font: 500 13px/1 var(--sans); }
+.pill .cant { height: 28px; padding: 0 8px; border-radius: 14px; color: var(--ch-dim); font: 400 13px/1 var(--sans); }
+.pill .cant:hover { color: var(--ch-ink); background: var(--ch-hair); }
+.pill .grip { width: 8px; height: 16px; margin-right: 10px; background: radial-gradient(circle, var(--ch-dim) 1px, transparent 1.3px) 0 0/4px 4px; opacity: .6; }
+.pill .task:hover { text-decoration: underline; text-decoration-color: var(--ch-hair); text-underline-offset: 3px; }
 
-    .font-sans {
-      font-family: 'Fira Sans', sans-serif;
-    }
+.sheet .step { font-size: 11px; color: var(--ch-dim); letter-spacing: .02em; }
+.sheet .step { color: var(--ch-accent); opacity: .9; }
+.opts li.on { box-shadow: inset 0 0 0 1px var(--ch-accent); }
+.frame.auto { aspect-ratio: auto; padding: 62px 24px 36px; }
+.frame.auto .sheet { position: relative; left: auto; top: auto; z-index: 1; transform: none; margin: 0 auto; max-height: none; }
+.frame.auto.multi { display: grid; justify-items: center; align-items: center; }
+.frame.auto.multi .car-step { grid-area: 1 / 1; margin: 0; }
+.frame.auto.multi .car-step[hidden] { display: grid !important; visibility: hidden; }
+.frame { position: relative; aspect-ratio: 16 / 10; width: 100%; max-width: 800px; border-radius: 8px; overflow: hidden; background: var(--host-bg); border: 1px solid var(--line); }
+.frame .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.frame .dim { position: absolute; inset: 0; background: rgba(44,51,83,.4); }
+.frame .blank { position: absolute; inset: 0; background: var(--host-bg); }
+.frame .addr { position: absolute; top: 0; left: 0; right: 0; height: 26px; background: var(--host-panel); border-bottom: 1px solid var(--host-line); display: flex; align-items: center; gap: 8px; padding: 0 10px; font: 400 11px/1 var(--mono); color: var(--host-dim); }
+.frame .addr i { width: 8px; height: 8px; border-radius: 50%; background: var(--host-line); display: inline-block; }
+.frame .addr span { margin-left: 6px; }
+.frame .label { position: absolute; right: 10px; top: 34px; font: 500 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--host-dim); background: var(--host-panel); border: 1px solid var(--host-line); border-radius: 3px; padding: 4px 6px; }
 
-    .font-mono {
-      font-family: 'Fira Code', monospace;
-    }
 
-    .moment-fill {
-      background-color: var(--moment-hue);
-      color: var(--canvas-bg);
-    }
+.frame.auto { aspect-ratio: auto; padding: 62px 24px 36px; }
+.frame.auto .sheet { position: relative; left: auto; top: auto; z-index: 1; transform: none; margin: 0 auto; max-height: none; }
+.cmds-note { margin-bottom: 48px; }
+.whole-top { margin-top: 0; }
+.pair .intro { margin-bottom: 20px; }
+.pair .side { margin-bottom: 16px; }
+.after { margin-top: 56px; padding-top: 24px; }
+@media (max-width: 900px) {
+  .whole-top .code li, .pair .excerpt li { white-space: pre-wrap; overflow-wrap: anywhere; align-items: start; }
+  .whole-top .code li .src, .pair .excerpt li .src { padding-left: 4px; text-indent: 0; }
+  .frame.auto { padding: 50px 12px 24px; }
+}
 
-    .border-hairline {
-      border: 1px solid var(--hairline);
-    }
-  </style>
-</head>
-<body>
-  <div class="w-[560px] h-[420px] bg-[#101211] flex items-center justify-center p-12" data-sd-id="1">
-    <div class="relative w-full max-w-[420px] bg-[#1a1d1c] rounded-lg border-hairline p-8 flex flex-col gap-6" data-sd-id="2">
-      
-      <!-- Example Run Marker -->
-      <span class="absolute top-3 right-4 font-mono text-[11px] text-[#a4ada5] uppercase tracking-wider" data-sd-id="3">
-        Example run
-      </span>
+.cmds-note { margin-bottom: 24px; }
+.whole-top { margin: 0 0 40px; }
 
-      <!-- Question -->
-      <div class="space-y-4" data-sd-id="4">
-        <h2 class="font-sans text-[20px] font-medium text-[#fcfcfc] leading-tight" data-sd-id="5">
-          How easy was that?
-        </h2>
+.stepper { display: flex; align-items: center; gap: 10px; margin-top: 10px; font: 400 13px/1 var(--mono); color: var(--muted); }
+.stepper button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); display: grid; place-items: center; font: 500 16px/1 var(--sans); color: var(--ink); }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper .where b { color: var(--moment); font-weight: 500; }
+.stepper .dots { display: inline-flex; gap: 5px; margin-left: 6px; }
+.stepper .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.stepper .dots i.on { background: var(--moment); }
 
-        <!-- Rating Row -->
-        <div class="space-y-2" data-sd-id="6">
-          <div class="flex justify-between gap-1" data-sd-id="7">
-            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="8">1</button>
-            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="9">2</button>
-            <button class="w-11 h-11 moment-fill font-mono text-sm font-medium rounded" data-sd-id="10">3</button>
-            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="11">4</button>
-            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="12">5</button>
-            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="13">6</button>
-            <button class="w-11 h-11 border-hairline font-mono text-sm text-[#fcfcfc] hover:border-[#a4ada5] transition-colors rounded" data-sd-id="14">7</button>
-          </div>
-          <div class="flex justify-between font-mono text-[11px] text-[#a4ada5]" data-sd-id="15">
-            <span data-sd-id="16">1 very hard</span>
-            <span data-sd-id="17">7 very easy</span>
-          </div>
-        </div>
-      </div>
+/* Stepped frames keep one height: every step shares the same cell; hidden steps stay in the layout, invisible */
+.frame.auto.multi { display: grid; justify-items: center; align-items: center; }
+.frame.auto.multi .car-step { grid-area: 1 / 1; margin: 0; }
+.frame.auto.multi .car-step[hidden] { display: grid !important; visibility: hidden; }
 
-      <!-- Text Area -->
-      <div class="space-y-2" data-sd-id="18">
-        <label class="block font-sans text-sm text-[#fcfcfc]" data-sd-id="19">
-          Anything you want to tell us? (optional)
-        </label>
-        <div class="w-full h-24 border-hairline bg-[#101211] rounded p-3" data-sd-id="20">
-          <!-- Text box is empty as requested -->
-        </div>
-      </div>
+/* Narrow frames and phones: the pill docks across the bottom; the task summary folds behind its chevron */
+@media (max-width: 600px) {
+  .bar-wrap { left: 8px; right: 8px; bottom: 8px; }
+  .pill { width: 100%; justify-content: space-between; padding: 0 6px 0 10px; }
+  .pill .task { max-width: 24px; overflow: hidden; color: transparent; }
+  .pill .task::after { color: var(--ch-dim); margin-left: -24px; }
+  .pill .seg + .seg { margin-left: 8px; padding-left: 8px; }
+}
+/* Narrow frames and phones: the pill docks across the bottom; the task summary folds behind its chevron */
+@media (max-width: 600px) {
+  .bar-wrap { left: 8px; right: 8px; bottom: 8px; }
+  .pill { width: 100%; justify-content: space-between; padding: 0 6px 0 10px; }
+  .pill .task { max-width: 24px; overflow: hidden; color: transparent; }
+  .pill .task::after { color: var(--ch-dim); margin-left: -24px; }
+  .pill .seg + .seg { margin-left: 8px; padding-left: 8px; }
+}
 
-      <!-- Action -->
-      <div class="flex justify-end pt-2" data-sd-id="21">
-        <button id="submit-btn" class="px-6 py-2 border-hairline text-[#fcfcfc] font-sans text-sm rounded hover:bg-[#fcfcfc] hover:text-[#101211] transition-all" data-sd-id="22">
-          Send
-        </button>
-      </div>
-
-    </div>
-  </div>
-
-</body></html>
+.frame.auto.multi { display: grid; justify-items: center; align-items: center; }
+.frame.auto.multi .car-step { grid-area: 1 / 1; margin: 0; }
+.frame.auto.multi .car-step[hidden] { display: grid !important; visibility: hidden; }
+body { background: var(--canvas); color: var(--ink); font: 400 15px/1.55 var(--sans); margin: 0; padding: 32px; display: grid; gap: 40px; }
+h2 { font: 500 16px/1.3 var(--sans); margin: 0 0 10px; color: var(--muted); }
+.stepper { display: flex; align-items: center; gap: 10px; margin-top: 10px; font: 400 13px/1 var(--mono); color: var(--muted); }
+.stepper button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); display: grid; place-items: center; font: 500 16px/1 var(--sans); color: var(--ink); }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper .where b { color: var(--moment); font-weight: 500; }
+.stepper .dots { display: inline-flex; gap: 5px; margin-left: 6px; }
+.stepper .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.stepper .dots i.on { background: var(--moment); }
+</style>
+<figure class="frame auto" aria-label="The ease question"><div class="blank"></div><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
+<div class="sheet ch">
+              <span class="step">After the task · 1 of 2</span>
+              <h4>Overall, how difficult or easy did you find this task?</h4>
+              <ul class="scale" role="radiogroup" aria-label="1 very difficult to 7 very easy"><li role="radio" aria-checked="false" tabindex="-1">1</li><li role="radio" aria-checked="false" tabindex="-1">2</li><li role="radio" aria-checked="true" tabindex="0" class="on">3</li><li role="radio" aria-checked="false" tabindex="-1">4</li><li role="radio" aria-checked="false" tabindex="-1">5</li><li role="radio" aria-checked="false" tabindex="-1">6</li><li role="radio" aria-checked="false" tabindex="-1">7</li></ul>
+              <div class="anchors"><span>Very difficult</span><span>Very easy</span></div>
+              <div class="actions"><span class="small">Press a number key, or tap.</span><button class="btn pri" type="button">Next</button></div>
+            </div>
+</figure>
+<script>
+(function () {
+  document.querySelectorAll(".scale[role=radiogroup]").forEach(function (g) {
+    var items = Array.prototype.slice.call(g.querySelectorAll("[role=radio]"));
+    function pick(n) { items.forEach(function (li, k) { var on = k === n; li.classList.toggle("on", on); li.setAttribute("aria-checked", on ? "true" : "false"); li.tabIndex = on ? 0 : -1; }); items[n].focus(); }
+    items.forEach(function (li, k) { li.addEventListener("click", function () { pick(k); }); });
+    g.addEventListener("keydown", function (e) {
+      var i = items.findIndex(function (li) { return li.getAttribute("aria-checked") === "true"; });
+      if (/^[1-7]$/.test(e.key)) { pick(+e.key - 1); e.preventDefault(); }
+      else if (e.key === "ArrowRight" || e.key === "ArrowDown") { pick(Math.min(items.length - 1, i + 1)); e.preventDefault(); }
+      else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { pick(Math.max(0, i - 1)); e.preventDefault(); }
+    });
+  });
+})();
+</script>
