@@ -85,7 +85,7 @@ Token key. Themeable: A accent, S surface, T text, R radius, F font. Fixed: focu
 | Element | Behaviour | Desktop / phone | Tokens | Accessibility | Source |
 |---|---|---|---|---|---|
 | Sheet | The card's dialog, one question per screen | Centred 520px / bottom sheet | S, R | Focus to the question | Tidwell; overlay research |
-| SEQ 1–7 | Settled stem and anchors; nothing preselected | Seven 44px squares / seven 40px squares filling the width, 4px gap | Selected is A; others hairline | `radiogroup`, arrow keys | MeasuringU; Tidwell Good Defaults |
+| SEQ 1–7 | Settled stem and anchors; nothing preselected | Seven 44px squares / seven 40px visual squares inside 44px touch targets, 4px gap, reflowing to two rows if the width needs it | Selected is A; others hairline | `radiogroup`, arrow keys | MeasuringU; Tidwell Good Defaults |
 | Confidence | Same control, only when completion cannot be verified | Same | Same | Same | Overlay research |
 | Open box | Prompt inside the box | 3 rows / 16px font (no iOS zoom) | T, F | Visible label | Tidwell Input Prompt; Stripe |
 | "Talk instead" | Swaps the box for a mic control with level meter, timer and "Stop" | 44px | A | Mic permission asked only on this tap; transcript shown after | Norman feedback |
@@ -96,7 +96,7 @@ Token key. Themeable: A accent, S surface, T text, R radius, F font. Fixed: focu
 1. **What the author sets**, under `chrome:` in the config: `name` (card and consent), `accent`, `surface` (`"inverse"` default, `"light"`, `"dark"` or a colour), `text`, `radius` (0–16px), `font` (`"inherit"` default or a stack), `scheme` (`"auto"` default), `position` (`"bottom"` default or `"top"`), `poweredBy` (default `false`).
 2. **Inherit only what is safe.** `font-family` from the host body's computed style; `scheme` from `prefers-color-scheme` and the host body's background luminance. Never sample the accent from the host: a sampled accent can match the site's own buttons and make Done look like part of the site under test. The default accent is the inverse surface's text colour. Radius ships neutral at 10px.
 3. **Distinct without our brand: the inverse surface.** The default surface is the host's text colour and the chrome text is the host's background colour, so a dark pill sits on a light site and a light pill on a dark site, opaque, with a 1px hairline at 12% and a soft shadow. The bar never matches the host's panels and needs no logo; distinctness comes from form and tone, not identity.
-4. **Floors the author cannot override.** Focus ring, 44px touch targets, reduced motion, 16px inputs and the recording red. If the accent fails 3:1 on the surface or the button text fails 4.5:1 on the accent, `npm run validate` warns; at runtime the text on the accent flips between black and white.
+4. **Floors the author cannot override.** Focus ring, 44px touch targets, reduced motion, 16px inputs and the recording red. `npm run validate` checks every rendered pair the config produces: text on surface, dim text on surface, button text on accent, accent and hairline on surface, at 4.5:1 for text and 3:1 for non-text, and warns with the failing pair. At runtime the text on the accent flips between black and white, and a `text` or `surface` value that cannot reach the floor falls back to the inverse default.
 5. **Where "ui-tests" appears.** One "Powered by ui-tests" line in the consent screen's footer, only when `poweredBy: true`. Never in the bar, card, questions or recording chip.
 
 ### Revision after the author's review
