@@ -1,11 +1,12 @@
 <!--
-  Participant chrome (D2 round five). Spec: docs/discovery/participant-chrome-research.md and participant-overlay-research.md.
+  Participant chrome (D2 round five and six). Spec: docs/discovery/participant-chrome-research.md and participant-overlay-research.md.
   Theme rule: the chrome is the INVERSE of the host page (dark pill and sheets on a light site, light on a dark site), opaque,
   with a hairline and a soft shadow, the host's font, and the ONE accent the author sets (Weekboard: mint). It never shares a
   panel colour with the host page and never carries ui-tests branding. The site's own product surfaces (attempt view, report
   rows, dashboard) use the site's dark tokens; only the demo app under test is light.
   The bar is one 40px pill, bottom right by default, draggable, hidden while a host input has focus: recording state as its
   leading segment (dot, time, pause; no microphone during the task), the task summary, Done, and "I couldn't do this" as text.
+  Under 600px it docks across the bottom and the task summary folds behind its chevron. Stepped sheets keep one height.
 -->
 <style>
 *, *::before, *::after { box-sizing: border-box; }
@@ -79,6 +80,9 @@ img { display: block; max-width: 100%; }
 .opts li.on { box-shadow: inset 0 0 0 1px var(--ch-accent); }
 .frame.auto { aspect-ratio: auto; padding: 62px 24px 36px; }
 .frame.auto .sheet { position: relative; left: auto; top: auto; z-index: 1; transform: none; margin: 0 auto; max-height: none; }
+.frame.auto.multi { display: grid; justify-items: center; align-items: center; }
+.frame.auto.multi .car-step { grid-area: 1 / 1; margin: 0; }
+.frame.auto.multi .car-step[hidden] { display: grid !important; visibility: hidden; }
 .frame { position: relative; aspect-ratio: 16 / 10; width: 100%; max-width: 800px; border-radius: 8px; overflow: hidden; background: var(--host-bg); border: 1px solid var(--line); }
 .frame .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
 .frame .dim { position: absolute; inset: 0; background: rgba(44,51,83,.4); }
@@ -113,9 +117,40 @@ img { display: block; max-width: 100%; }
 .stepper .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
 .stepper .dots i.on { background: var(--moment); }
 
+/* Stepped frames keep one height: every step shares the same cell; hidden steps stay in the layout, invisible */
+.frame.auto.multi { display: grid; justify-items: center; align-items: center; }
+.frame.auto.multi .car-step { grid-area: 1 / 1; margin: 0; }
+.frame.auto.multi .car-step[hidden] { display: grid !important; visibility: hidden; }
+
+/* Narrow frames and phones: the pill docks across the bottom; the task summary folds behind its chevron */
+@media (max-width: 600px) {
+  .bar-wrap { left: 8px; right: 8px; bottom: 8px; }
+  .pill { width: 100%; justify-content: space-between; padding: 0 6px 0 10px; }
+  .pill .task { max-width: 24px; overflow: hidden; color: transparent; }
+  .pill .task::after { color: var(--ch-dim); margin-left: -24px; }
+  .pill .seg + .seg { margin-left: 8px; padding-left: 8px; }
+}
+/* Narrow frames and phones: the pill docks across the bottom; the task summary folds behind its chevron */
+@media (max-width: 600px) {
+  .bar-wrap { left: 8px; right: 8px; bottom: 8px; }
+  .pill { width: 100%; justify-content: space-between; padding: 0 6px 0 10px; }
+  .pill .task { max-width: 24px; overflow: hidden; color: transparent; }
+  .pill .task::after { color: var(--ch-dim); margin-left: -24px; }
+  .pill .seg + .seg { margin-left: 8px; padding-left: 8px; }
+}
+
+.frame.auto.multi { display: grid; justify-items: center; align-items: center; }
+.frame.auto.multi .car-step { grid-area: 1 / 1; margin: 0; }
+.frame.auto.multi .car-step[hidden] { display: grid !important; visibility: hidden; }
 body { background: var(--canvas); color: var(--ink); font: 400 15px/1.55 var(--sans); margin: 0; padding: 32px; display: grid; gap: 40px; }
 h2 { font: 500 16px/1.3 var(--sans); margin: 0 0 10px; color: var(--muted); }
-.screener-step[hidden] { display: none; }
+.stepper { display: flex; align-items: center; gap: 10px; margin-top: 10px; font: 400 13px/1 var(--mono); color: var(--muted); }
+.stepper button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); display: grid; place-items: center; font: 500 16px/1 var(--sans); color: var(--ink); }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper .where b { color: var(--moment); font-weight: 500; }
+.stepper .dots { display: inline-flex; gap: 5px; margin-left: 6px; }
+.stepper .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.stepper .dots i.on { background: var(--moment); }
 </style>
 <figure class="frame" aria-label="The page under test with the bar"><img class="shot" src="attempt-view/board.jpg" alt="The Weekboard board"><div class="addr"><i></i><i></i><i></i><span>weekboard.app/board</span></div>
 <div class="bar-wrap ch">

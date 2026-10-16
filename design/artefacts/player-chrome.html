@@ -1,11 +1,12 @@
 <!--
-  Participant chrome (D2 round five). Spec: docs/discovery/participant-chrome-research.md and participant-overlay-research.md.
+  Participant chrome (D2 round five and six). Spec: docs/discovery/participant-chrome-research.md and participant-overlay-research.md.
   Theme rule: the chrome is the INVERSE of the host page (dark pill and sheets on a light site, light on a dark site), opaque,
   with a hairline and a soft shadow, the host's font, and the ONE accent the author sets (Weekboard: mint). It never shares a
   panel colour with the host page and never carries ui-tests branding. The site's own product surfaces (attempt view, report
   rows, dashboard) use the site's dark tokens; only the demo app under test is light.
   The bar is one 40px pill, bottom right by default, draggable, hidden while a host input has focus: recording state as its
   leading segment (dot, time, pause; no microphone during the task), the task summary, Done, and "I couldn't do this" as text.
+  Under 600px it docks across the bottom and the task summary folds behind its chevron. Stepped sheets keep one height.
 -->
 <style>
 *, *::before, *::after { box-sizing: border-box; }
@@ -79,6 +80,9 @@ img { display: block; max-width: 100%; }
 .opts li.on { box-shadow: inset 0 0 0 1px var(--ch-accent); }
 .frame.auto { aspect-ratio: auto; padding: 62px 24px 36px; }
 .frame.auto .sheet { position: relative; left: auto; top: auto; z-index: 1; transform: none; margin: 0 auto; max-height: none; }
+.frame.auto.multi { display: grid; justify-items: center; align-items: center; }
+.frame.auto.multi .car-step { grid-area: 1 / 1; margin: 0; }
+.frame.auto.multi .car-step[hidden] { display: grid !important; visibility: hidden; }
 .frame { position: relative; aspect-ratio: 16 / 10; width: 100%; max-width: 800px; border-radius: 8px; overflow: hidden; background: var(--host-bg); border: 1px solid var(--line); }
 .frame .shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
 .frame .dim { position: absolute; inset: 0; background: rgba(44,51,83,.4); }
@@ -113,9 +117,40 @@ img { display: block; max-width: 100%; }
 .stepper .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
 .stepper .dots i.on { background: var(--moment); }
 
+/* Stepped frames keep one height: every step shares the same cell; hidden steps stay in the layout, invisible */
+.frame.auto.multi { display: grid; justify-items: center; align-items: center; }
+.frame.auto.multi .car-step { grid-area: 1 / 1; margin: 0; }
+.frame.auto.multi .car-step[hidden] { display: grid !important; visibility: hidden; }
+
+/* Narrow frames and phones: the pill docks across the bottom; the task summary folds behind its chevron */
+@media (max-width: 600px) {
+  .bar-wrap { left: 8px; right: 8px; bottom: 8px; }
+  .pill { width: 100%; justify-content: space-between; padding: 0 6px 0 10px; }
+  .pill .task { max-width: 24px; overflow: hidden; color: transparent; }
+  .pill .task::after { color: var(--ch-dim); margin-left: -24px; }
+  .pill .seg + .seg { margin-left: 8px; padding-left: 8px; }
+}
+/* Narrow frames and phones: the pill docks across the bottom; the task summary folds behind its chevron */
+@media (max-width: 600px) {
+  .bar-wrap { left: 8px; right: 8px; bottom: 8px; }
+  .pill { width: 100%; justify-content: space-between; padding: 0 6px 0 10px; }
+  .pill .task { max-width: 24px; overflow: hidden; color: transparent; }
+  .pill .task::after { color: var(--ch-dim); margin-left: -24px; }
+  .pill .seg + .seg { margin-left: 8px; padding-left: 8px; }
+}
+
+.frame.auto.multi { display: grid; justify-items: center; align-items: center; }
+.frame.auto.multi .car-step { grid-area: 1 / 1; margin: 0; }
+.frame.auto.multi .car-step[hidden] { display: grid !important; visibility: hidden; }
 body { background: var(--canvas); color: var(--ink); font: 400 15px/1.55 var(--sans); margin: 0; padding: 32px; display: grid; gap: 40px; }
 h2 { font: 500 16px/1.3 var(--sans); margin: 0 0 10px; color: var(--muted); }
-.screener-step[hidden] { display: none; }
+.stepper { display: flex; align-items: center; gap: 10px; margin-top: 10px; font: 400 13px/1 var(--mono); color: var(--muted); }
+.stepper button { width: 28px; height: 28px; border-radius: 6px; border: 1px solid var(--line); display: grid; place-items: center; font: 500 16px/1 var(--sans); color: var(--ink); }
+.stepper button:disabled { opacity: .35; cursor: default; }
+.stepper .where b { color: var(--moment); font-weight: 500; }
+.stepper .dots { display: inline-flex; gap: 5px; margin-left: 6px; }
+.stepper .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
+.stepper .dots i.on { background: var(--moment); }
 </style>
 <section><h2>Consent</h2>
 <figure class="frame auto" aria-label="Consent screen"><div class="blank"></div><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
@@ -133,45 +168,46 @@ h2 { font: 500 16px/1.3 var(--sans); margin: 0 0 10px; color: var(--muted); }
             </div>
 </figure>
 </section>
-<section><h2>Screener (first of six)</h2>
-<figure class="frame auto" aria-label="Screener questions, one at a time"><div class="blank"></div><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
-<div class="sheet ch screener-step" data-step="1">
+<section class="pair"><h2>Screener (six screens)</h2>
+<figure class="frame auto multi" aria-label="Screener questions, one at a time"><div class="blank"></div><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
+<div class="sheet ch car-step" data-step="1">
               <span class="step">A few questions first · 1 of 6</span>
               <h4>When did you last sign up for a tool to plan work with a team?</h4>
               <ul class="opts"><li class="on "><i></i>In the past week</li><li class=""><i></i>In the past month</li><li class=""><i></i>Earlier this year</li><li class=""><i></i>I haven't</li></ul>
-              <div class="actions"><span class="small">From did and within</span><button class="btn pri next-step" type="button">Next</button></div>
+              <div class="actions"><span class="small">Pick one.</span><button class="btn pri next-step" type="button">Next</button></div>
             </div>
-            <div class="sheet ch screener-step" data-step="2" hidden>
+            <div class="sheet ch car-step" data-step="2" hidden>
               <span class="step">A few questions first · 2 of 6</span>
               <h4>Which of these do you use to plan work? Pick all that apply.</h4>
               <ul class="opts"><li class="sq"><i></i>Trello</li><li class="on sq"><i></i>Asana</li><li class="sq"><i></i>Notion</li><li class="sq"><i></i>Linear</li><li class="sq"><i></i>Basecamp</li><li class="sq"><i></i>None of these</li></ul>
-              <div class="actions"><span class="small">From uses, with one decoy</span><button class="btn pri next-step" type="button">Next</button></div>
+              <div class="actions"><span class="small">Pick all that apply.</span><button class="btn pri next-step" type="button">Next</button></div>
             </div>
-            <div class="sheet ch screener-step" data-step="3" hidden>
+            <div class="sheet ch car-step" data-step="3" hidden>
               <span class="step">A few questions first · 3 of 6</span>
               <h4>Which of these have you done? Pick all that apply.</h4>
               <ul class="opts"><li class="sq"><i></i>Managed a team of more than five</li><li class="sq"><i></i>Used Weekboard</li><li class="on sq"><i></i>Taken a course on planning or project management</li><li class="sq"><i></i>None of these</li></ul>
-              <div class="actions"><span class="small">not, asked among neutral options</span><button class="btn pri next-step" type="button">Next</button></div>
+              <div class="actions"><span class="small">Pick all that apply.</span><button class="btn pri next-step" type="button">Next</button></div>
             </div>
-            <div class="sheet ch screener-step" data-step="4" hidden>
+            <div class="sheet ch car-step" data-step="4" hidden>
               <span class="step">A few questions first · 4 of 6</span>
               <h4>When did you last need to plan a week with other people?</h4>
               <ul class="opts"><li class="on "><i></i>This week</li><li class=""><i></i>This month</li><li class=""><i></i>Earlier this year</li><li class=""><i></i>I don't</li></ul>
-              <div class="actions"><span class="small">From purpose: recency</span><button class="btn pri next-step" type="button">Next</button></div>
+              <div class="actions"><span class="small">Pick one.</span><button class="btn pri next-step" type="button">Next</button></div>
             </div>
-            <div class="sheet ch screener-step" data-step="5" hidden>
+            <div class="sheet ch car-step" data-step="5" hidden>
               <span class="step">A few questions first · 5 of 6</span>
               <h4>How do you do it today?</h4>
               <ul class="opts"><li class="on "><i></i>A shared document or spreadsheet</li><li class=""><i></i>A planning tool</li><li class=""><i></i>Chat and email</li><li class=""><i></i>In my head</li></ul>
-              <div class="actions"><span class="small">From purpose: how, in their words</span><button class="btn pri next-step" type="button">Next</button></div>
+              <div class="actions"><span class="small">Pick one.</span><button class="btn pri next-step" type="button">Next</button></div>
             </div>
-            <div class="sheet ch screener-step" data-step="6" hidden>
+            <div class="sheet ch car-step" data-step="6" hidden>
               <span class="step">A few questions first · 6 of 6</span>
               <h4>How much does it matter to you to get this right?</h4>
               <ul class="opts"><li class="on "><i></i>A lot: it costs me time every week</li><li class=""><i></i>Some</li><li class=""><i></i>Not much</li></ul>
-              <div class="actions"><span class="small">From purpose: importance</span><button class="btn pri next-step" type="button">Next</button></div>
+              <div class="actions"><span class="small">Pick one.</span><button class="btn pri next-step" type="button">Next</button></div>
             </div>
 </figure>
+<div class="stepper"><button type="button" class="prev" aria-label="Previous">‹</button><span class="where"><b>1</b> of 6</span><button type="button" class="nextb" aria-label="Next">›</button><span class="dots" aria-hidden="true"></span></div>
 </section>
 <section><h2>First impression</h2>
 <figure class="frame" aria-label="First impression question over the flashed page"><img class="shot" src="attempt-view/board.jpg" alt="The Weekboard board"><div class="dim"></div><div class="addr"><i></i><i></i><i></i><span>weekboard.app/board</span></div>
@@ -205,26 +241,58 @@ h2 { font: 500 16px/1.3 var(--sans); margin: 0 0 10px; color: var(--muted); }
             </div>
 </figure>
 </section>
-<section><h2>Ease question</h2>
-<figure class="frame auto" aria-label="The ease question"><div class="blank"></div><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
-<div class="sheet ch">
-              <span class="step">Question 1 of 3</span>
+<section class="pair"><h2>After the task (five screens)</h2>
+<figure class="frame auto multi" aria-label="The questions after the task, one at a time"><div class="blank"></div><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
+<div class="sheet ch car-step">
+              <span class="step">After the task · 1 of 2</span>
               <h4>Overall, how difficult or easy did you find this task?</h4>
-              <ul class="scale" role="radiogroup" aria-label="1 very difficult to 7 very easy">
-                <li>1</li><li>2</li><li class="on">3</li><li>4</li><li>5</li><li>6</li><li>7</li>
-              </ul>
+              <ul class="scale" role="radiogroup" aria-label="1 very difficult to 7 very easy"><li role="radio" aria-checked="false" tabindex="-1">1</li><li role="radio" aria-checked="false" tabindex="-1">2</li><li role="radio" aria-checked="true" tabindex="0" class="on">3</li><li role="radio" aria-checked="false" tabindex="-1">4</li><li role="radio" aria-checked="false" tabindex="-1">5</li><li role="radio" aria-checked="false" tabindex="-1">6</li><li role="radio" aria-checked="false" tabindex="-1">7</li></ul>
               <div class="anchors"><span>Very difficult</span><span>Very easy</span></div>
-              <div class="actions"><span class="small">Press a number key, or tap.</span><button class="btn pri">Next</button></div>
+              <div class="actions"><span class="small">Press a number key, or tap.</span><button class="btn pri next-step" type="button">Next</button></div>
             </div>
-</figure>
-</section>
-<section><h2>Last words</h2>
-<figure class="frame auto" aria-label="The last question with a voice option"><div class="blank"></div><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
-<div class="sheet ch">
-              <span class="step">Question 3 of 3</span>
+            <div class="sheet ch car-step" hidden>
+              <span class="step">After the task · 2 of 2</span>
+              <h4>What made it difficult?</h4>
+              <div class="box">Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.</div>
+              <div class="actions"><span class="talk"><i aria-hidden="true"></i>Talk instead</span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" hidden>
+              <span class="step">After all goals · 1 of 3</span>
+              <h4>Would Weekboard be useful to you?</h4>
+              <ul class="opts"><li><i></i>Strongly disagree</li><li><i></i>Disagree</li><li><i></i>Neither</li><li class="on"><i></i>Agree</li><li><i></i>Strongly agree</li></ul>
+              <div class="actions"><span class="small"></span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" hidden>
+              <span class="step">After all goals · 2 of 3</span>
+              <h4>Weekboard is easy to use.</h4>
+              <ul class="opts"><li><i></i>Strongly disagree</li><li class="on"><i></i>Disagree</li><li><i></i>Neither</li><li><i></i>Agree</li><li><i></i>Strongly agree</li></ul>
+              <div class="actions"><span class="small"></span><button class="btn pri next-step" type="button">Next</button></div>
+            </div>
+            <div class="sheet ch car-step" hidden>
+              <span class="step">After all goals · 3 of 3</span>
               <h4>Anything you want to tell Weekboard?</h4>
               <div class="box">Type here, or talk.</div>
-              <div class="actions"><span class="talk"><i aria-hidden="true"></i>Talk instead</span><button class="btn pri">Finish</button></div>
+              <div class="actions"><span class="talk"><i aria-hidden="true"></i>Talk instead</span><button class="btn pri next-step" type="button">Finish</button></div>
             </div>
 </figure>
+<div class="stepper"><button type="button" class="prev" aria-label="Previous">‹</button><span class="where"><b>1</b> of 5</span><button type="button" class="nextb" aria-label="Next">›</button><span class="dots" aria-hidden="true"></span></div>
 </section>
+<script>
+(function () {
+  document.querySelectorAll('.pair').forEach(function (pair) {
+    var steps = Array.prototype.slice.call(pair.querySelectorAll('.car-step')); if (!steps.length) return;
+    var i = 0, where = pair.querySelector('.stepper .where b'), dots = pair.querySelector('.stepper .dots'), prev = pair.querySelector('.stepper .prev'), next = pair.querySelector('.stepper .nextb');
+    steps.forEach(function () { var d = document.createElement('i'); dots.appendChild(d); });
+    function show(n) {
+      i = Math.max(0, Math.min(steps.length - 1, n));
+      steps.forEach(function (s, k) { s.hidden = k !== i; });
+      dots.querySelectorAll('i').forEach(function (d, k) { d.classList.toggle('on', k === i); });
+      where.textContent = i + 1; prev.disabled = i === 0; next.disabled = i === steps.length - 1;
+    }
+    prev.addEventListener('click', function () { show(i - 1); });
+    next.addEventListener('click', function () { show(i + 1); });
+    pair.querySelectorAll('.next-step').forEach(function (b) { b.addEventListener('click', function () { show(i + 1 > steps.length - 1 ? 0 : i + 1); }); });
+    show(0);
+  });
+})();
+</script>
