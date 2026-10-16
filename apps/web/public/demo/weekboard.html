@@ -203,6 +203,12 @@ body.scenario .player { display: contents; }
 .pill .done { height: 28px; padding: 0 12px; border-radius: 14px; background: var(--ch-accent); color: var(--ch-accent-ink); font-weight: 500; }
 .pill .cant { height: 28px; padding: 0 8px; border-radius: 14px; color: var(--ch-dim); }
 .pill .cant:hover, .pill .rec .pause:hover { color: var(--ch-ink); background: var(--ch-hair); }
+/* Paused: a hollow dot and the word in place of the time, so colour is never the only signal (as packages/ui-tests draws it). */
+.pill .rec .dot.paused { background: transparent; box-shadow: inset 0 0 0 1.5px var(--ch-rec); }
+/* Hit areas past the drawn controls: 36px for a pointer, 44px on touch (participant-chrome research, floors); the icons keep their size. */
+.pill .rec .pause, .pill .done, .pill .cant { position: relative; }
+.pill .rec .pause::before, .pill .done::before, .pill .cant::before { content: ""; position: absolute; left: 50%; top: 50%; width: max(100%, 36px); height: 36px; transform: translate(-50%, -50%); }
+@media (pointer: coarse) { .pill .rec .pause::before, .pill .done::before, .pill .cant::before { width: max(100%, 44px); height: 44px; } }
 .task-sheet { position: absolute; right: 0; bottom: 52px; width: 400px; }
 .task-sheet[hidden] { display: none; }
 </style>
@@ -359,7 +365,7 @@ body.scenario .player { display: contents; }
     </div>
     <div class="pill">
       <span class="grip" aria-hidden="true"></span>
-      <span class="seg rec" role="group" aria-label="Recording"><span class="dot" aria-hidden="true"></span><time id="recTime">0:00</time><button class="pause" type="button" aria-label="Pause recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg></button></span>
+      <span class="seg rec" role="group" aria-label="Recording"><span class="dot" aria-hidden="true"></span><time id="recTime">0:00</time><button class="pause" id="recPause" type="button" aria-pressed="false" aria-label="Pause recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1"/><rect x="9.5" y="2" width="3.5" height="12" rx="1"/></svg></button></span>
       <button class="seg task" id="taskToggle" type="button" aria-expanded="false" aria-controls="taskSheet"><b>Task 1 of 1</b>Invite Sam to the board</button>
       <span class="seg"><button class="done" id="done" type="button">Done</button><button class="cant" id="cant" type="button">I couldn't do this</button></span>
     </div>
@@ -460,18 +466,27 @@ body.scenario .player { display: contents; }
     behind.forEach(el => { el.inert = true; });
     $('#scenario').setAttribute('aria-modal', 'true');
     $('#scenarioStart').focus();
-    let timer = 0;
+    // The recording segment: the time recorded since Start, which stops while paused and resumes from where it stopped.
+    let timer = 0, recorded = 0, since = 0, paused = false;
+    const shown = () => Math.floor((recorded + (paused ? 0 : Date.now() - since)) / 1000);
+    const tick = () => { const s = shown(); $('#recTime').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
+    const pauseIcon = $('#recPause').innerHTML;
+    const resumeIcon = '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M4 2.5v11l9-5.5z"/></svg>';
+    $('#recPause').addEventListener('click', () => {
+      if (paused) { since = Date.now(); paused = false; tick(); timer = setInterval(tick, 1000); }
+      else { recorded += Date.now() - since; paused = true; clearInterval(timer); $('#recTime').textContent = 'Paused'; }
+      $('.pill .rec .dot').classList.toggle('paused', paused);
+      $('#recPause').setAttribute('aria-pressed', String(paused));
+      $('#recPause').setAttribute('aria-label', paused ? 'Resume recording' : 'Pause recording');
+      $('#recPause').innerHTML = paused ? resumeIcon : pauseIcon;
+    });
     $('#scenarioStart').addEventListener('click', () => {
       $('#scenario').hidden = true;
       behind.forEach(el => { el.inert = false; });
       $('#bar').hidden = false;
       $('#done').focus();
-      // The recording segment shows the time since Start, once a second.
-      const started = Date.now();
-      timer = setInterval(() => {
-        const s = Math.floor((Date.now() - started) / 1000);
-        $('#recTime').textContent = Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-      }, 1000);
+      since = Date.now();
+      timer = setInterval(tick, 1000);
     });
     $('#taskToggle').addEventListener('click', () => {
       const open = $('#taskSheet').hidden;
