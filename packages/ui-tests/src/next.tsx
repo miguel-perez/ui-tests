@@ -30,6 +30,12 @@ function snapshot() {
   root.querySelectorAll('*').forEach(node => { for (const attribute of Array.from(node.attributes)) if (/^on|token|secret|password/i.test(attribute.name)) node.removeAttribute(attribute.name) })
   return { url: location.origin + location.pathname, dom: root.outerHTML }
 }
+/** The page body without the player's own surfaces, whose clock re-renders every second. */
+function pageMarkup() {
+  const body = document.body.cloneNode(true) as HTMLElement
+  body.querySelectorAll('[data-research-taskbar]').forEach(node => node.remove())
+  return body.innerHTML
+}
 /** A short, stable label for an element: tag, id and aria-label. */
 function targetLabel(element: Element) {
   return `${element.tagName.toLowerCase()}${element.id ? `#${element.id}` : ''}${element.getAttribute('aria-label') ? `[${element.getAttribute('aria-label')}]` : ''}`.slice(0, 300)
@@ -320,8 +326,8 @@ export function UiTests() {
       const element = event.target instanceof Element ? event.target.closest('button,a,input,[role=button]') ?? event.target : null
       if (!element || element.closest('[data-research-taskbar]')) return
       activity(); setInteracted(true)
-      const before = document.body.innerHTML, url = location.href, target = targetLabel(element)
-      const timer = setTimeout(() => { record({ type: 'click', target, changed: before !== document.body.innerHTML || url !== location.href }); timers.delete(timer) }, 300)
+      const before = pageMarkup(), url = location.href, target = targetLabel(element)
+      const timer = setTimeout(() => { record({ type: 'click', target, changed: before !== pageMarkup() || url !== location.href }); timers.delete(timer) }, 300)
       timers.add(timer)
     }
     /** Records that an input changed, without its value. */
