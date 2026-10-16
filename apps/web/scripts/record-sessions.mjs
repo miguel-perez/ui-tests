@@ -1,4 +1,5 @@
-// Records the example run's five attempts on the light Weekboard demo app, with the dark player chrome over it.
+// Records the example run's five attempts on the light Weekboard demo app, under the participant chrome of
+// design/artefacts/player-chrome.html: the inverse of Weekboard with its mint accent, the bar reading Done and I couldn't do this.
 // Run from the repo root with Playwright's bundled browsers inside this worktree:
 //   PLAYWRIGHT_BROWSERS_PATH=0 node apps/web/scripts/record-sessions.mjs
 //
@@ -100,7 +101,7 @@ const run = {
 /** Who each person is, how their attempt ended and what they answered. The moments are what the recording below captures. */
 const people = {
   p1: { today: 'Trello', reached: 'yes', ended: 'done', time: 57, sure: 6, ease: 4, afterGoals: { help: 4, easy: 4 }, consent: { screen: true, voice: false, camera: false }, words: 'I figured it would find them.', endState: '1 invitation pending' },
-  p2: { today: 'email', reached: 'no', ended: "can't do it", time: 53, sure: 4, ease: 2, afterGoals: { help: 4, easy: 2 }, consent: { screen: true, voice: false, camera: false }, words: 'It looked switched off.', endState: 'no invitation' },
+  p2: { today: 'email', reached: 'no', ended: "couldn't do this", time: 53, sure: 4, ease: 2, afterGoals: { help: 4, easy: 2 }, consent: { screen: true, voice: false, camera: false }, words: 'It looked switched off.', endState: 'no invitation' },
   p3: { today: 'a spreadsheet', reached: 'no', ended: 'done', time: 63, sure: 6, ease: 3, afterGoals: { help: 4, easy: 2 }, consent: { screen: true, voice: true, camera: false }, words: "Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.", wordsWhere: 'Said aloud after the questions. Nothing was said during the attempt.', endState: '2 invitations pending' },
   p4: { today: 'Notion', reached: 'no', ended: 'done', time: 47, sure: 4, ease: 4, afterGoals: { help: 4, easy: 2 }, consent: { screen: true, voice: false, camera: false }, words: "I wasn't sure the first one did anything.", endState: '2 invitations pending' },
   p5: { today: 'a whiteboard', reached: 'yes', ended: 'done', time: 52, sure: 6, ease: 5, afterGoals: { help: 4, easy: 4 }, consent: { screen: true, voice: false, camera: false }, words: 'Share is where you add people.', endState: '1 invitation pending' },
@@ -347,7 +348,7 @@ const scripts = [
     { at: 40, target: '#tab-members', kind: 'click', what: 'Clicked Members', route: '/settings/members' },
     { at: 45, target: '#inviteEmail', kind: 'type', what: 'Typed sam@', rest: ', an incomplete email', route: '/settings/members', text: 'sam@' },
     { at: 49, target: '#inviteAdd', kind: 'stopped', what: 'Stopped 4 s', rest: ' on a grey Add button', route: '/settings/members', issue: 2, hover: true },
-    { at: 53, target: '#cant', kind: 'ended', what: "Pressed Can't do it", route: '/settings/members' },
+    { at: 53, target: '#cant', kind: 'ended', what: "Pressed I couldn't do this", route: '/settings/members' },
   ] },
   { id: 'p4', end: 48, actions: [
     { at: 7, target: '#avatarBtn', kind: 'click', what: 'Clicked the avatar', route: '/board' },

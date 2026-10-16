@@ -67,12 +67,12 @@ it('writes the rehearsal trace page in the new words', async () => {
   const store = new SQLiteAdapter(':memory:')
   try {
     const run = store.create(compile([{ users: 'people who plan work', purpose: 'plan the week', goals: [{ name: 'invite a colleague', options: { happyPath: ['/board', '/settings/members'] }, tasks: [], outcomes: [() => {}], source: 'test' }], source: 'test' }])[0])
-    Object.assign(run, { reason: "can't do it", seq: 2, confidence: 6, afterGoal: { ease: 2, usefulness: 4 }, result: { reached: 'no', reason: "How it ended: pressed Can't do it" }, endedAt: run.startedAt + 63000 })
+    Object.assign(run, { reason: "couldn't do this", seq: 2, confidence: 6, afterGoal: { ease: 2, usefulness: 4 }, result: { reached: 'no', reason: "How it ended: pressed I couldn't do this" }, endedAt: run.startedAt + 63000 })
     const { document } = parseHTML(renderTrace(run, [{ type: 'pause', at: run.startedAt + 5000, url: 'http://localhost/board', stoppedMs: 7000 }, { type: 'url', at: run.startedAt + 12000, url: 'http://localhost/board/link' }]))
     // Raw records (the stored result, events and compiled context) keep their field names; everything a person reads uses the new words.
     for (const pre of document.querySelectorAll('pre, script, style')) pre.remove()
     const text = document.body.textContent!
     expect(offences(text, shown)).toEqual([])
-    for (const line of ['Reached the goal: No', "How it ended: pressed Can't do it", 'Time on this goal: 63.0 s', 'How easy was it? 2 of 7 (7 = very easy)', "How sure they'd done it: 6 of 7 (7 = completely sure)", 'Easy to use? 2 of 5 · Would it help them? 4 of 5', 'Stopped 7 s', 'Off your path · opened /board/link', 'Their path and yours']) expect(text).toContain(line)
+    for (const line of ['Reached the goal: No', "How it ended: pressed I couldn't do this", 'Time on this goal: 63.0 s', 'How easy was it? 2 of 7 (7 = very easy)', "How sure they'd done it: 6 of 7 (7 = completely sure)", 'Easy to use? 2 of 5 · Would it help them? 4 of 5', 'Stopped 7 s', 'Off your path · opened /board/link', 'Their path and yours']) expect(text).toContain(line)
   } finally { store.close() }
 })

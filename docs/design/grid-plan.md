@@ -2,6 +2,8 @@
 
 16 October 2026. Written before the round-three layout code (issue #18, item 9), from [`site-schema.md`](site-schema.md). Every block on both pages is built to these maps; the PR puts each map beside its capture with the ui-harness layout readings.
 
+**Themes.** This plan places content; it does not set colours. The theme rules are written once in [`../../design/artefacts/README.md`](../../design/artefacts/README.md#theme-rules-in-one-place): product surfaces dark on the dark page, the demo app light, terminals and code dark, the participant chrome the inverse of its host with the author's accent.
+
 ## The grid
 
 - Container 1248 px centred at 1440 (96 px margins), 12 columns of 82 px with 24 px gutters. One column 82, two 188, three 294, four 400, five 506, six 612, seven 718, eight 824, twelve 1248.
@@ -126,7 +128,7 @@ At 375:
 
 ### L4 · Section + OptionsRow
 
-**Rule.** Three OptionCards of 4 columns each, equal height (the row stretches), no table. Each card: name with icon, the who sentence, the mini UI (light theme), then cost and timing as a two-item footer. No caption, no empty columns.
+**Rule.** Three OptionCards of 4 columns each, equal height (the row stretches), no table. Each card: name with icon, the who sentence, the mini UI, then cost and timing as a two-item footer. No caption, no empty columns.
 
 At 1440:
 
@@ -285,7 +287,7 @@ At 1440:
 
 ### G7-G8 · Without a repository: Step × 2
 
-**Rule.** Same StepPair rule. Step 1: the snippet (type) and the markup sentence (see). Step 2: the hosted form with the `screen` fields (type, light theme) and the dashboard row of the run it starts (see).
+**Rule.** Same StepPair rule. Step 1: the snippet (type) and the markup sentence (see). Step 2: the hosted form with the `screen` fields (type) and the dashboard row of the run it starts (see).
 
 At 1440:
 
@@ -294,7 +296,7 @@ At 1440:
 [number and title                                                                             ]  72
 [type: Snippet CodeWindow                     ] [see: Caption (markup)                        ]  pair · 120
 [number and title                                                                             ]  72
-[type: HostedForm (light, with screen fields) ] [see: Dashboard with the new run              ]  pair · 560
+[type: HostedForm (with screen fields)       ] [see: Dashboard with the new run              ]  pair · 560
 ```
 
 ## What is measured

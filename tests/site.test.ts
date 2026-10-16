@@ -53,14 +53,14 @@ it('ships all five real attempts, four small playable reels and the card posters
     expect(sessions.attempts.find(a => a.id === id)?.moments).toContainEqual(expect.objectContaining({ seconds, issue }))
   }
   // Every attempt's flow ends where "How it ended" says.
-  for (const attempt of sessions.attempts) expect(attempt.moments.at(-1)).toMatchObject({ kind: 'ended', what: attempt.ended === 'done' ? 'Pressed Done' : "Pressed Can't do it" })
+  for (const attempt of sessions.attempts) expect(attempt.moments.at(-1)).toMatchObject({ kind: 'ended', what: attempt.ended === 'done' ? 'Pressed Done' : "Pressed I couldn't do this" })
   const p3 = sessions.attempts.find(a => a.id === 'p3')!
   expect(p3).toMatchObject({ person: 'Person 3', source: 'paid panel', reached: 'no', ended: 'done', sure: 6, ease: 3, time: 63, consent: { screen: true, voice: true, camera: false } })
   expect(p3.blockers?.map(b => [b.n, b.impact, b.from, b.to])).toEqual([[1, 'wrong end state', 58, 63], [2, 'slowed', 3, 19], [3, 'confused', 23, 36]])
   for (const blocker of p3.blockers ?? []) expect((await stat(`apps/web/public${blocker.poster}`)).size).toBeGreaterThan(15000)
 })
 
-it('applies the light Weekboard palette to the demo and keeps the player chrome dark', async () => {
+it('applies the light Weekboard palette to the demo and draws the chrome as its inverse with the mint accent', async () => {
   const demo = await readFile('apps/web/public/demo/weekboard.html', 'utf8')
   const palette = await readFile('design/artefacts/weekboard-light.css', 'utf8')
   // The light canvas is a cool grey, never white, with the same orange accent.
@@ -68,7 +68,27 @@ it('applies the light Weekboard palette to the demo and keeps the player chrome 
     expect(palette).toContain(token)
     expect(demo).toContain(token)
   }
-  expect(demo).toContain('--player-surface: #1f2335')
-  expect(demo).toMatch(/\.scenario-card \{[^}]*background: var\(--player-surface\)/)
-  expect(demo).toMatch(/\.bar \{[^}]*background: var\(--player-surface\)/)
+  // The chrome: Weekboard's ink as the surface and its canvas as the text, the mint accent, never the app's orange.
+  for (const token of ['--ch-surface: #2c3353', '--ch-ink: #e1e2e7', '--ch-accent: #5fe3c0']) expect(demo).toContain(token)
+  expect(demo).toMatch(/\.sheet \{[^}]*background: var\(--ch-surface\)/)
+  expect(demo).toMatch(/\.pill \{[^}]*background: var\(--ch-surface\)/)
+  expect(demo).not.toMatch(/--player-|#ff9e64/)
+  // The card's text and the bar's two labels, as the research settled them.
+  expect(demo).toContain("You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.")
+  expect(demo).toContain("When you think you've finished, press <b>Done</b>. If you get stuck, press <b>I couldn't do this</b>.")
+  expect(demo).toMatch(/id="scenarioStart">Start task</)
+  expect(demo).toMatch(/id="done" type="button">Done</)
+  expect(demo).toMatch(/id="cant" type="button">I couldn't do this</)
+})
+
+it('carries the derived card text in all four places and no old bar label anywhere it is shown', async () => {
+  const { landing, guide } = await import('../apps/web/lib/copy')
+  const derived = "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co."
+  expect(landing.scenario).toBe(derived)
+  expect(guide.next).toContain(derived)
+  for (const file of ['apps/web/public/demo/weekboard.html', 'design/artefacts/scenario-card.html', 'README.md']) {
+    const text = await readFile(file, 'utf8')
+    expect(text, file).toContain(derived)
+    expect(text, file).not.toContain('Imagine you want to invite a colleague')
+  }
 })

@@ -38,10 +38,21 @@ for (const width of [1440, 375]) {
       const dots = await page.locator('.window-dots').evaluateAll(nodes => nodes.map(node => !!node.closest('[data-artefact="terminal-window"]')))
       expect(dots.length).toBeGreaterThan(0)
       expect(dots.every(Boolean)).toBe(true)
-      // Item 4: product surfaces light, terminals and code windows dark, the page dark.
-      for (const selector of ['.attempt-view', '.findings-list', '.dashboard', '.reel-frame', '.option-mini', '.hosted-form', '.uit-card', '.uit-bar', '.uit-questions']) {
-        for (const surface of await page.locator(selector).evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(luminance(surface), `${selector} is light`).toBeGreaterThan(.8)
+      // The theme rules (design/artefacts/README.md): product surfaces dark on the dark page, terminals and code windows dark.
+      for (const selector of ['.attempt-view', '.findings-list', '.dashboard', '.reel-frame', '.option-mini', '.hosted-form', '.option-card']) {
+        for (const surface of await page.locator(selector).evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(luminance(surface), `${selector} is dark`).toBeLessThan(.05)
       }
+      expect(await page.locator('.theme-light').count()).toBe(0)
+      // The participant chrome over the light Weekboard is its inverse: Weekboard's ink, opaque, never a panel colour of the page or the app.
+      const panels = new Set(['rgb(26, 27, 38)', 'rgb(31, 35, 53)', 'rgb(225, 226, 231)', 'rgb(238, 240, 245)'])
+      for (const selector of ['.uit-card', '.uit-pill', '.uit-questions']) {
+        for (const surface of await page.locator(selector).evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) {
+          expect(surface, `${selector} is the inverse of Weekboard`).toBe('rgb(44, 51, 83)')
+          expect(panels.has(surface)).toBe(false)
+        }
+      }
+      // The one accent Weekboard's author sets, mint, never the app's orange.
+      for (const accent of await page.locator('.uit-card .uit-primary').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(accent).toBe('rgb(95, 227, 192)')
       for (const surface of await page.locator('.terminal-window, .code-window').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(luminance(surface)).toBeLessThan(.05)
       // Every component that owns chrome carries "Example run" at most once.
       for (const count of await page.locator('[data-artefact]').evaluateAll(nodes => nodes.map(node => [...node.querySelectorAll('.example-label')].filter(label => label.closest('[data-artefact]') === node).length))) expect(count).toBeLessThanOrEqual(1)
@@ -231,15 +242,20 @@ test('the player surfaces on the page are the real player: card, bar with its co
   const card = page.locator('[data-artefact="player-card"]')
   await expect(card.getByText('Task 1 of 1')).toBeVisible()
   await expect(card.getByText(landing.scenario)).toBeVisible()
-  await expect(card.getByText("When you think you've finished, press Finish. If you can't find it, press I couldn't do this.")).toBeVisible()
+  await expect(card.getByText("When you think you've finished, press Done. If you get stuck, press I couldn't do this.")).toBeVisible()
   await card.getByRole('button', { name: 'Start task' }).click()
   const bar = card.getByRole('complementary', { name: 'Example task bar' })
   await expect(bar).toBeVisible()
-  await expect(card.getByRole('group', { name: 'Example recording' })).toContainText('Screen not recorded · Voice off · Webcam off')
+  // The recording state is the pill's leading segment: dot, time and pause.
+  await expect(bar.getByRole('group', { name: 'Recording', exact: true })).toContainText('Screen recorded · Voice off · Webcam off')
+  await bar.getByRole('button', { name: 'Pause recording' }).click()
+  await expect(bar.getByRole('group', { name: 'Recording', exact: true })).toContainText('Paused')
+  await bar.getByRole('button', { name: 'Resume recording' }).click()
+  await expect(bar.getByRole('button', { name: 'Done', exact: true })).toHaveCSS('background-color', 'rgb(95, 227, 192)')
   await bar.getByRole('button', { name: "I couldn't do this" }).click()
   await expect(bar.getByRole('group', { name: 'Leave this task before trying it?' })).toBeVisible()
   await bar.getByRole('button', { name: 'Stay and try' }).click()
-  await bar.getByRole('button', { name: 'Finish' }).click()
+  await bar.getByRole('button', { name: 'Done', exact: true }).click()
   await bar.getByRole('button', { name: "Yes, I've finished" }).click()
   const questions = card.locator('.uit-questions')
   await expect(questions.getByText('Question 1 of 4')).toBeVisible()
@@ -309,6 +325,12 @@ test('the guide keeps its controls still on hover too', async ({ page }) => {
   await expect(form.getByLabel('Your link', { exact: true })).toBeChecked()
   await expect(form.getByLabel('A paid panel', { exact: true })).not.toBeChecked()
   const method = form.getByLabel('How you can tell', { exact: true })
+  // A change made before the form hydrates is lost in the dev server: retry until the evidence field follows the method.
+  await expect(async () => {
+    await method.selectOption('Element seen')
+    await expect(form.getByLabel('Element', { exact: true })).toBeVisible({ timeout: 500 })
+  }).toPass({ timeout: 10_000 })
+  await method.selectOption('Page reached')
   await form.getByLabel('Page path', { exact: true }).fill('/settings/team')
   await method.selectOption('Element seen')
   await expect(form.getByLabel('Element', { exact: true })).toHaveValue('')

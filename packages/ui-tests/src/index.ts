@@ -23,8 +23,10 @@ function source() { return new Error().stack?.split('\n').find(line => /\.ui\.te
 export function resetContexts() { contexts = []; activeContext = undefined; activeGoal = undefined }
 /** Returns every context authored since the last reset. */
 export function getContexts() { return contexts }
-/** Identity helper that types `ui-tests.config.ts`: the target URL and an optional author name. */
-export function defineConfig<T extends { target: { url: string }; author?: string }>(config: T): T { return config }
+/** The participant chrome the author sets: the one accent for Done, the selected answers and the task label (a `#rrggbb` colour). */
+export type ChromeConfig = { accent?: string }
+/** Identity helper that types `ui-tests.config.ts`: the target URL, an optional author name and the chrome's accent. */
+export function defineConfig<T extends { target: { url: string }; author?: string; chrome?: ChromeConfig }>(config: T): T { return config }
 /** Declares a context. The body runs immediately and registers goals against this context. */
 export function context(input: { users: string; purpose: string; screen?: Screen; author?: string }, body: () => void) {
   const previous = activeContext

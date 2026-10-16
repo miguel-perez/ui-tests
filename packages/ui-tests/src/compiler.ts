@@ -63,6 +63,8 @@ export function compile(contexts: Context[]) {
     const id = createHash('sha256').update(`${c.users}:${c.purpose}`).digest('hex').slice(0, 12)
     return {
       id, name: `${c.users}: ${c.purpose}`, users: c.users, purpose: c.purpose, author: c.author ?? 'The author',
+      // The chrome's one accent, set by the author under `chrome:` in the config; never sampled from the host page.
+      accent: undefined as string | undefined,
       impression: { question: 'What would this help you do?', answer: c.purpose, distractors: [generateTemplate('manage a different part of your day'), generateTemplate('share updates with your team')], rule: rule.impression },
       fitQuestions: [
         { question: `How relevant is it to ${c.purpose}?`, choices: ['Not relevant', 'Somewhat relevant', 'Very relevant'], rule: rule.fit },

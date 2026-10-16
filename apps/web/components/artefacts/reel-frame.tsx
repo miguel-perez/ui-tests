@@ -24,7 +24,7 @@ export function ReelFrame({ src, poster, from, to, label, words, play = false, e
   const start = src.includes('problem-') ? 0 : from
   const length = to !== undefined ? to - from : 8
   const progress = Math.max(0, Math.min(1, (time - start) / length))
-  return <figure className="reel-frame theme-light" data-artefact="reel-frame">
+  return <figure className="reel-frame" data-artefact="reel-frame">
     <figcaption className="reel-chrome"><span className="reel-label">{label}</span>{example && <span className="example-label">Example run</span>}{words && <span className="reel-words">{words}</span>}</figcaption>
     <div className="reel-player">
       <video ref={ref} src={src} poster={poster} muted loop playsInline preload="none" onPlay={() => setPlaying(true)} onPause={() => setPlaying(false)} onTimeUpdate={event => setTime(event.currentTarget.currentTime)} aria-label={label} />

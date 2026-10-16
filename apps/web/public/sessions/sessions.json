@@ -51,7 +51,7 @@
         {
           "timestamp": "00:04",
           "seconds": 4,
-          "actualSeconds": 4,
+          "actualSeconds": 4.002,
           "kind": "click",
           "what": "Clicked Share",
           "rest": " · menu open",
@@ -61,7 +61,7 @@
         {
           "timestamp": "00:13",
           "seconds": 13,
-          "actualSeconds": 13.001,
+          "actualSeconds": 13,
           "kind": "off-path",
           "what": "Off your path",
           "rest": " · opened Link settings",
@@ -70,7 +70,7 @@
         {
           "timestamp": "00:22",
           "seconds": 22,
-          "actualSeconds": 22,
+          "actualSeconds": 22.001,
           "kind": "went-back",
           "what": "Went back",
           "rest": " to the board",
@@ -79,7 +79,7 @@
         {
           "timestamp": "00:30",
           "seconds": 30,
-          "actualSeconds": 30.002,
+          "actualSeconds": 30.001,
           "kind": "type",
           "what": "Typed sam@acme.co",
           "rest": " into Search",
@@ -97,7 +97,7 @@
         {
           "timestamp": "00:40",
           "seconds": 40,
-          "actualSeconds": 40.002,
+          "actualSeconds": 40.001,
           "kind": "click",
           "what": "Clicked Settings",
           "route": "/settings"
@@ -105,7 +105,7 @@
         {
           "timestamp": "00:44",
           "seconds": 44,
-          "actualSeconds": 44.002,
+          "actualSeconds": 44,
           "kind": "click",
           "what": "Clicked Members",
           "route": "/settings/members"
@@ -121,7 +121,7 @@
         {
           "timestamp": "00:54",
           "seconds": 54,
-          "actualSeconds": 54.001,
+          "actualSeconds": 54.002,
           "kind": "press",
           "what": "Pressed Add",
           "rest": " · 1 invitation pending",
@@ -130,7 +130,7 @@
         {
           "timestamp": "00:57",
           "seconds": 57,
-          "actualSeconds": 57.001,
+          "actualSeconds": 57,
           "kind": "ended",
           "what": "Pressed Done",
           "rest": " · the check ran and passed",
@@ -148,7 +148,7 @@
       "window": "1280×800",
       "today": "email",
       "reached": "no",
-      "ended": "can't do it",
+      "ended": "couldn't do this",
       "time": 53,
       "sure": 4,
       "ease": 2,
@@ -178,7 +178,7 @@
         {
           "timestamp": "00:06",
           "seconds": 6,
-          "actualSeconds": 6.001,
+          "actualSeconds": 6.002,
           "kind": "click",
           "what": "Clicked Share",
           "rest": " · menu open",
@@ -188,7 +188,7 @@
         {
           "timestamp": "00:17",
           "seconds": 17,
-          "actualSeconds": 17.002,
+          "actualSeconds": 17,
           "kind": "off-path",
           "what": "Off your path",
           "rest": " · opened Link settings",
@@ -197,7 +197,7 @@
         {
           "timestamp": "00:25",
           "seconds": 25,
-          "actualSeconds": 25.001,
+          "actualSeconds": 25,
           "kind": "went-back",
           "what": "Went back",
           "rest": " to the board",
@@ -206,7 +206,7 @@
         {
           "timestamp": "00:34",
           "seconds": 34,
-          "actualSeconds": 34,
+          "actualSeconds": 34.002,
           "kind": "click",
           "what": "Clicked the avatar",
           "route": "/board"
@@ -239,7 +239,7 @@
         {
           "timestamp": "00:49",
           "seconds": 49,
-          "actualSeconds": 49.001,
+          "actualSeconds": 48.999,
           "kind": "stopped",
           "what": "Stopped 4 s",
           "rest": " on a grey Add button",
@@ -251,7 +251,7 @@
           "seconds": 53,
           "actualSeconds": 53.001,
           "kind": "ended",
-          "what": "Pressed Can't do it",
+          "what": "Pressed I couldn't do this",
           "route": "/settings/members"
         }
       ]
@@ -285,7 +285,7 @@
       "video": "/sessions/p3.webm",
       "poster": "/sessions/p3.jpg",
       "posterAt": "00:05",
-      "videoSeconds": 64.28,
+      "videoSeconds": 64.32,
       "moments": [
         {
           "timestamp": "00:00",
@@ -295,8 +295,8 @@
           "rest": " · scenario card dismissed",
           "route": "/board",
           "at": [
-            0.358,
-            0.565
+            0.626,
+            0.614
           ]
         },
         {
@@ -441,8 +441,8 @@
           "rest": " · the check ran and failed: 2 invitations pending",
           "route": "/settings/members",
           "at": [
-            0.457,
-            0.941
+            0.865,
+            0.955
           ]
         }
       ],
@@ -531,7 +531,7 @@
         {
           "timestamp": "00:07",
           "seconds": 7,
-          "actualSeconds": 7.002,
+          "actualSeconds": 7,
           "kind": "click",
           "what": "Clicked the avatar",
           "route": "/board"
@@ -547,7 +547,7 @@
         {
           "timestamp": "00:19",
           "seconds": 19,
-          "actualSeconds": 19.002,
+          "actualSeconds": 19.001,
           "kind": "click",
           "what": "Clicked Members",
           "route": "/settings/members"
@@ -555,7 +555,7 @@
         {
           "timestamp": "00:36",
           "seconds": 36,
-          "actualSeconds": 36,
+          "actualSeconds": 36.002,
           "kind": "type",
           "what": "Typed the email",
           "route": "/settings/members"
@@ -563,7 +563,7 @@
         {
           "timestamp": "00:41",
           "seconds": 41,
-          "actualSeconds": 41.002,
+          "actualSeconds": 41.001,
           "kind": "press",
           "what": "Pressed Add",
           "rest": " · 1 invitation pending",
@@ -583,7 +583,7 @@
         {
           "timestamp": "00:47",
           "seconds": 47,
-          "actualSeconds": 47,
+          "actualSeconds": 47.001,
           "kind": "ended",
           "what": "Pressed Done",
           "rest": " · the check ran and failed: 2 invitations pending",
@@ -641,7 +641,7 @@
         {
           "timestamp": "00:20",
           "seconds": 20,
-          "actualSeconds": 20,
+          "actualSeconds": 20.001,
           "kind": "off-path",
           "what": "Off your path",
           "rest": " · opened Link settings",
@@ -650,7 +650,7 @@
         {
           "timestamp": "00:28",
           "seconds": 28,
-          "actualSeconds": 28,
+          "actualSeconds": 28.001,
           "kind": "went-back",
           "what": "Went back",
           "rest": " to the board",
@@ -659,7 +659,7 @@
         {
           "timestamp": "00:34",
           "seconds": 34,
-          "actualSeconds": 34.002,
+          "actualSeconds": 34,
           "kind": "click",
           "what": "Clicked the avatar",
           "route": "/board"
@@ -675,7 +675,7 @@
         {
           "timestamp": "00:39",
           "seconds": 39,
-          "actualSeconds": 39.001,
+          "actualSeconds": 39,
           "kind": "click",
           "what": "Clicked Members",
           "route": "/settings/members"
@@ -683,7 +683,7 @@
         {
           "timestamp": "00:45",
           "seconds": 45,
-          "actualSeconds": 45.001,
+          "actualSeconds": 45.002,
           "kind": "type",
           "what": "Typed the email",
           "route": "/settings/members"
@@ -691,7 +691,7 @@
         {
           "timestamp": "00:49",
           "seconds": 49,
-          "actualSeconds": 49.002,
+          "actualSeconds": 49.001,
           "kind": "press",
           "what": "Pressed Add",
           "rest": " · 1 invitation pending",

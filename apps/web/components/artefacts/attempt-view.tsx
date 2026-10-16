@@ -60,7 +60,7 @@ function MomentCard({ blocker, playing, now, onPress, onTime, onPause, video }: 
 /**
  * AttemptView: one person, one goal (design/artefacts/attempt-view.html). The result first, then the minute as one vertical flow
  * with the moments that got in the way set into it as cards whose clips play the real recording in place, then how it felt,
- * the mechanics folded, and the context as a footer. Light theme, as every product surface.
+ * the mechanics folded, and the context as a footer. Dark, on the site tokens, as every product surface; only the Weekboard recording in the clips is light.
  */
 export function AttemptView() {
   const videos = useRef<(HTMLVideoElement | null)[]>([])
@@ -93,7 +93,7 @@ export function AttemptView() {
     at(index, Math.max(blocker.from, video.currentTime))
   }
   const sure = wrongAndSure(shown)
-  return <figure className="window theme-light attempt-view" data-artefact="attempt-view" aria-label={`${shown.person}, ${run.goal}`}>
+  return <figure className="window attempt-view" data-artefact="attempt-view" aria-label={`${shown.person}, ${run.goal}`}>
     <figcaption className="window-chrome attempt-crumb">
       <span>Run <b className="mono">{run.run}</b></span><span className="sep" aria-hidden="true">/</span>
       <span>Goal <b>{run.goal}</b></span><span className="sep" aria-hidden="true">/</span>
