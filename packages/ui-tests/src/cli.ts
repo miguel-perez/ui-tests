@@ -101,7 +101,7 @@ async function main() {
   const file = option('--file') ?? (await findTests(process.cwd()))[0]
   if (!file) throw new Error('No *.ui.test.ts found. Run npx ui-tests init.')
   const result = await compileFile(file, path.join(dataDirectory(), 'compiled'))
-  for (const d of result.diagnostics) console.log(`${d.severity} [${d.rule}] ${d.source}\n  ${d.reason} Fix: ${d.fix}`)
+  for (const d of result.diagnostics) console.log(`${d.severity} [${d.rule}] ${d.source}\n  ${d.reason} Fix: ${d.fix}${d.draft ? `\n\n${d.draft.replace(/^/gm, '  ')}\n` : ''}`)
   if (result.diagnostics.some(d => d.severity === 'error')) throw new Error('Lint failed; fix the rules above before starting dev mode.')
   if (command === 'lint') { console.log(`Compiled ${file}: ${result.bundle.replace(/hooks-.*$/, 'context.json')}`); return }
   if (command !== 'dev') throw new Error(`Unknown command: ${command}`)
@@ -118,12 +118,16 @@ async function main() {
   const pending = result.compiled.flatMap((compiled, contextIndex) => compiled.goals.map((_, goalIndex) => ({ compiled, contextIndex, goalIndex })))
     .filter(entry => (selectedContext === undefined || entry.contextIndex === Number(selectedContext)) && (selectedGoal === undefined || entry.goalIndex === Number(selectedGoal)))
   if (!pending.length) throw new Error('No matching context/goal; --context and --goal are zero-based indices.')
+  const total = pending.length
   let active = pending.shift()!
   /** Creates the next rehearsal run for the active context and goal and records its hooks bundle. */
   function createRun() {
     active.compiled.author = config.author ?? result.authored[active.contextIndex].author ?? userInfo().username
     const created = store.create(active.compiled, active.goalIndex)
-    created.hooksBundle = result.bundle; created.authoredContextIndex = active.contextIndex; store.update(created)
+    created.hooksBundle = result.bundle; created.authoredContextIndex = active.contextIndex
+    // "Task n of N" on the card and the bar counts the tasks of this session (participant-overlay research, progress).
+    created.sequence = { index: total - pending.length, total }
+    store.update(created)
     return created
   }
   const target = new URL(config.target.url)
@@ -134,8 +138,8 @@ async function main() {
     const [, id, token] = request.url?.split('/') ?? []
     const requested = owned.has(id) ? store.authorize(id, token ?? '') : undefined
     if (!requested) { response.writeHead(404).end(); return }
-    response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff' })
-    response.end(renderTrace(requested, store.events(id)))
+    response.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; media-src data:; frame-ancestors 'none'", 'X-Content-Type-Options': 'nosniff' })
+    response.end(renderTrace(requested, store.events(id), store))
   })
   await new Promise<void>((resolve, reject) => { server.once('error', reject); server.listen(Number(option('--port') ?? 0), '127.0.0.1', resolve) })
   const address = server.address(); if (!address || typeof address === 'string') throw new Error('Viewer did not start')

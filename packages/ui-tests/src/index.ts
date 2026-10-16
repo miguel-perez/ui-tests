@@ -1,4 +1,6 @@
 import { isDeepStrictEqual } from 'node:util'
+import type { Screen } from './screener.ts'
+export type { Screen } from './screener.ts'
 
 /** The end state of an attempt: the final URL and the serialised DOM. */
 export type Snapshot = { url: string; dom: string }
@@ -10,8 +12,8 @@ export type Hook = (evidence: Evidence) => void | Promise<void>
 export type Options = { happyPath?: string[]; minutes?: number; scenario?: string; fixtures?: string[]; catch?: { affecting: string; confidence: number } }
 /** An authored goal with its options, task steps, outcome hooks and source location. */
 export type Goal = { name: string; options: Options; tasks: { name: string; check?: Hook }[]; outcomes: Hook[]; source: string }
-/** An authored context: the people, their purpose and the goals declared in its body. */
-export type Context = { users: string; purpose: string; author?: string; goals: Goal[]; source: string }
+/** An authored context: the people, their purpose, the optional `screen` facts the screener is derived from, and the goals declared in its body. */
+export type Context = { users: string; purpose: string; screen?: Screen; author?: string; goals: Goal[]; source: string }
 let contexts: Context[] = []
 let activeContext: Context | undefined
 let activeGoal: Goal | undefined
@@ -24,7 +26,7 @@ export function getContexts() { return contexts }
 /** Identity helper that types `ui-tests.config.ts`: the target URL and an optional author name. */
 export function defineConfig<T extends { target: { url: string }; author?: string }>(config: T): T { return config }
 /** Declares a context. The body runs immediately and registers goals against this context. */
-export function context(input: { users: string; purpose: string; author?: string }, body: () => void) {
+export function context(input: { users: string; purpose: string; screen?: Screen; author?: string }, body: () => void) {
   const previous = activeContext
   const entry: Context = { ...input, goals: [], source: source() }
   contexts.push(entry); activeContext = entry

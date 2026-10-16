@@ -2,6 +2,7 @@
   "label": "Example run",
   "run": "k2m9",
   "goal": "invite a colleague",
+  "date": "14 Oct 2026",
   "sessions": [
     {
       "id": "p1",
@@ -235,7 +236,7 @@
       },
       "consent": {
         "screen": true,
-        "voice": false,
+        "voice": true,
         "webcam": false
       },
       "words": "Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.",
@@ -249,7 +250,11 @@
           "seconds": 0,
           "kind": "start",
           "detail": "scenario dismissed",
-          "route": "/board"
+          "route": "/board",
+          "at": [
+            0.358,
+            0.565
+          ]
         },
         {
           "timestamp": "00:03",
@@ -258,28 +263,44 @@
           "detail": "click \"Share\"",
           "route": "/board",
           "note": "menu open",
-          "issue": 1
+          "issue": 1,
+          "at": [
+            0.91,
+            0.034
+          ]
         },
         {
           "timestamp": "00:05",
           "seconds": 5,
           "kind": "pause",
           "detail": "pause · 7 s reading the menu",
-          "route": "/board"
+          "route": "/board",
+          "at": [
+            0.91,
+            0.034
+          ]
         },
         {
           "timestamp": "00:12",
           "seconds": 12,
           "kind": "deviation",
           "detail": "click \"Manage link\"",
-          "route": "/board/link"
+          "route": "/board/link",
+          "at": [
+            0.847,
+            0.151
+          ]
         },
         {
           "timestamp": "00:19",
           "seconds": 19,
           "kind": "backtrack",
           "detail": "back",
-          "route": "/board"
+          "route": "/board",
+          "at": [
+            0.267,
+            0.136
+          ]
         },
         {
           "timestamp": "00:23",
@@ -287,35 +308,55 @@
           "kind": "type",
           "detail": "type \"sam@acme.co\" into Search",
           "route": "/board",
-          "issue": 3
+          "issue": 3,
+          "at": [
+            0.704,
+            0.034
+          ]
         },
         {
           "timestamp": "00:27",
           "seconds": 27,
           "kind": "pause",
           "detail": "pause · 9 s on \"No cards match\"",
-          "route": "/board"
+          "route": "/board",
+          "at": [
+            0.704,
+            0.034
+          ]
         },
         {
           "timestamp": "00:36",
           "seconds": 36,
           "kind": "dead-click",
           "detail": "press Enter",
-          "route": "/board"
+          "route": "/board",
+          "at": [
+            0.775,
+            0.034
+          ]
         },
         {
           "timestamp": "00:41",
           "seconds": 41,
           "kind": "click",
           "detail": "click the avatar, click \"Settings\"",
-          "route": "/settings"
+          "route": "/settings",
+          "at": [
+            0.968,
+            0.034
+          ]
         },
         {
           "timestamp": "00:46",
           "seconds": 46,
           "kind": "click",
           "detail": "click \"Members\"",
-          "route": "/settings/members"
+          "route": "/settings/members",
+          "at": [
+            0.197,
+            0.193
+          ]
         },
         {
           "timestamp": "00:58",
@@ -324,7 +365,11 @@
           "detail": "type the email, press \"Add\"",
           "route": "/settings/members",
           "note": "1 invitation pending",
-          "issue": 2
+          "issue": 2,
+          "at": [
+            0.838,
+            0.579
+          ]
         },
         {
           "timestamp": "01:01",
@@ -333,16 +378,25 @@
           "detail": "press \"Add\" again",
           "route": "/settings/members",
           "note": "2 invitations pending",
-          "issue": 2
+          "issue": 2,
+          "at": [
+            0.839,
+            0.58
+          ]
         },
         {
           "timestamp": "01:03",
           "seconds": 63,
           "kind": "done",
           "detail": "I'm done",
-          "route": "/settings/members"
+          "route": "/settings/members",
+          "at": [
+            0.448,
+            0.941
+          ]
         }
-      ]
+      ],
+      "wordsSpoken": true
     },
     {
       "id": "p4",

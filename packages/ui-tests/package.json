@@ -12,7 +12,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./next": "./src/next.tsx",
-    "./server": "./src/server.ts"
+    "./server": "./src/server.ts",
+    "./colours": "./src/colours.ts"
   },
   "dependencies": {
     "@inkjs/ui": "2.0.0",

@@ -7,8 +7,14 @@ import type { Snapshot } from './index.ts'
 
 /** A recorder event: clicks with whether anything changed, URL changes, scroll, masked input, pauses and task-step snapshots. */
 export type Event = { type: 'click' | 'url' | 'scroll' | 'input' | 'pause' | 'step'; at: number; url: string; target?: string; changed?: boolean; duration?: number; step?: number; snapshot?: Snapshot }
+/** How an attempt ended. `abandoned early` is leaving before the first interaction; `gave up` is after trying. Both are distinct from failure. */
+export type Reason = 'done' | 'gave up' | 'abandoned early' | 'timed out'
+/** A spoken answer: the transcript as the person saw it and the stored audio it came from. */
+export type VoiceAnswer = { question: 'difficulty' | 'words'; transcript: string; recording: string; mime: string; seconds: number }
+/** What is captured for an attempt, each with the consent behind it. Interaction events are always recorded; voice only once the person chooses to talk. */
+export type Recording = { events: true; screen: boolean; voice: boolean; webcam: boolean }
 /** A run and its single rehearsal attempt: status, timings, terminal reason, answers, end-state snapshot and hook result. */
-export type Run = { id: string; token: string; context: CompiledContext; goalIndex: number; hooksBundle?: string; authoredContextIndex?: number; status: 'created' | 'consented' | 'active' | 'questions' | 'finished'; startedAt: number; endedAt?: number; reason?: 'done' | 'gave up' | 'timed out'; seq?: number; confidence?: number; words?: string; snapshot?: Snapshot; result?: unknown; answers?: Record<string, string> }
+export type Run = { id: string; token: string; context: CompiledContext; goalIndex: number; sequence?: { index: number; total: number }; hooksBundle?: string; authoredContextIndex?: number; status: 'created' | 'consented' | 'active' | 'questions' | 'finished'; startedAt: number; endedAt?: number; extendedSeconds?: number; reason?: Reason; seq?: number; difficulty?: string; confidence?: number; uxLite?: { ease: number; usefulness: number }; words?: string; voice?: VoiceAnswer[]; recording?: Recording; snapshot?: Snapshot; result?: unknown; answers?: Record<string, string> }
 /** Storage behind the collector and the CLI. The SQLite adapter is the development implementation. */
 export interface StorageAdapter {
   create(context: CompiledContext, goalIndex?: number): Run
@@ -17,6 +23,10 @@ export interface StorageAdapter {
   update(run: Run, previous?: Run): boolean
   append(id: string, events: Event[]): void
   events(id: string): Event[]
+  /** Stores one voice recording for a run and returns its id. */
+  saveRecording(id: string, mime: string, audio: Buffer): string
+  /** Loads a stored voice recording. */
+  recording(id: string): { mime: string; audio: Buffer } | undefined
   close(): void
 }
 /** The local data directory: `UI_TESTS_DATA_DIR`, or `.ui-tests` next to the nearest `package-lock.json`. */
@@ -38,12 +48,13 @@ export class SQLiteAdapter implements StorageAdapter {
     this.db.exec(`CREATE TABLE IF NOT EXISTS runs (id TEXT PRIMARY KEY, token TEXT NOT NULL, data TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS attempts (run_id TEXT PRIMARY KEY REFERENCES runs(id), rehearsal INTEGER NOT NULL DEFAULT 1, data TEXT NOT NULL);
       CREATE TABLE IF NOT EXISTS events (id INTEGER PRIMARY KEY, run_id TEXT NOT NULL REFERENCES runs(id), data TEXT NOT NULL);
-      CREATE TABLE IF NOT EXISTS snapshots (run_id TEXT PRIMARY KEY REFERENCES runs(id), url TEXT NOT NULL, dom TEXT NOT NULL);`)
+      CREATE TABLE IF NOT EXISTS snapshots (run_id TEXT PRIMARY KEY REFERENCES runs(id), url TEXT NOT NULL, dom TEXT NOT NULL);
+      CREATE TABLE IF NOT EXISTS recordings (id TEXT PRIMARY KEY, run_id TEXT NOT NULL REFERENCES runs(id), mime TEXT NOT NULL, audio BLOB NOT NULL);`)
   }
   /** Creates a run with a fresh participant token and its rehearsal attempt row. */
   create(context: CompiledContext, goalIndex = 0): Run {
     if (!context.goals[goalIndex]) throw new Error('Unknown goal')
-    const run: Run = { id: randomUUID(), token: randomBytes(32).toString('hex'), context, goalIndex, status: 'created', startedAt: Date.now() }
+    const run: Run = { id: randomUUID(), token: randomBytes(32).toString('hex'), context, goalIndex, status: 'created', startedAt: Date.now(), recording: { events: true, screen: false, voice: false, webcam: false } }
     this.db.prepare('INSERT INTO runs VALUES (?, ?, ?)').run(run.id, run.token, JSON.stringify(run))
     this.db.prepare('INSERT INTO attempts(run_id,data) VALUES (?,?)').run(run.id, JSON.stringify({ rehearsal: true }))
     return run
@@ -63,7 +74,7 @@ export class SQLiteAdapter implements StorageAdapter {
         ? this.db.prepare('UPDATE runs SET data=? WHERE id=? AND data=?').run(JSON.stringify(run), run.id, JSON.stringify(previous))
         : this.db.prepare('UPDATE runs SET data=? WHERE id=?').run(JSON.stringify(run), run.id)
       if (!updated.changes) return false
-      this.db.prepare('UPDATE attempts SET data=? WHERE run_id=?').run(JSON.stringify({ reason: run.reason, seq: run.seq, confidence: run.confidence, startedAt: run.startedAt, endedAt: run.endedAt, rehearsal: true }), run.id)
+      this.db.prepare('UPDATE attempts SET data=? WHERE run_id=?').run(JSON.stringify({ reason: run.reason, seq: run.seq, confidence: run.confidence, uxLite: run.uxLite, voice: run.voice?.map(answer => answer.recording), startedAt: run.startedAt, endedAt: run.endedAt, rehearsal: true }), run.id)
       if (run.snapshot) this.db.prepare('INSERT OR REPLACE INTO snapshots VALUES (?,?,?)').run(run.id, run.snapshot.url, run.snapshot.dom)
       return true
     })()
@@ -74,6 +85,14 @@ export class SQLiteAdapter implements StorageAdapter {
   }
   /** Returns a run's events in insertion order. */
   events(id: string) { return (this.db.prepare('SELECT data FROM events WHERE run_id=? ORDER BY id').all(id) as { data: string }[]).map(row => JSON.parse(row.data) as Event) }
+  /** Stores one voice recording as a blob beside the run, so the run record stays small. */
+  saveRecording(id: string, mime: string, audio: Buffer) {
+    const recording = randomUUID()
+    this.db.prepare('INSERT INTO recordings VALUES (?,?,?,?)').run(recording, id, mime, audio)
+    return recording
+  }
+  /** Loads a stored voice recording by id. */
+  recording(id: string) { return this.db.prepare('SELECT mime, audio FROM recordings WHERE id=?').get(id) as { mime: string; audio: Buffer } | undefined }
   /** Closes the database handle. */
   close() { this.db.close() }
 }

@@ -59,3 +59,15 @@ it('lint compiles in a separate CLI process and prints actionable source diagnos
   const { stdout } = await exec(process.execPath, [cli, 'lint', '--file', file], { cwd, timeout: 10000 })
   expect(stdout).toContain('Compiled'); expect(stdout).not.toContain('error [')
 }, 30000)
+it('lint prints the screener it drafted from users as TypeScript to paste in, and is quiet about it once screen is written', async () => {
+  const cwd = await fixture(), file = path.join(cwd, 'draft.ui.test.ts')
+  const body = (screen: string) => `import { context, goal, outcome, expect } from 'ui-tests'\ncontext({users:'people who signed up this week and want a colleague on their board',purpose:'plan the week together'${screen}},()=>goal('invite a colleague',()=>outcome(({page})=>expect(page.url()).toContain('/members'))))`
+  await writeFile(file, body(''))
+  const { stdout } = await exec(process.execPath, [cli, 'lint', '--file', file], { cwd, timeout: 10000 })
+  expect(stdout).toContain('warning [screen-inferred]')
+  expect(stdout).toContain("  screen: {\n    did: 'signed up', // inferred\n    within: '7 days', // inferred\n  },")
+  expect(stdout).toContain('Compiled')
+  await writeFile(file, body(",screen:{did:'signed up for a tool to plan work with a team',within:'7 days'}"))
+  const { stdout: pinned } = await exec(process.execPath, [cli, 'lint', '--file', file], { cwd, timeout: 10000 })
+  expect(pinned).not.toContain('screen-')
+}, 30000)

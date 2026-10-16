@@ -7,24 +7,25 @@ export const landing = {
   moment: 'P3 · 00:03 · looked for Invite in the Share menu',
   words: '“Share is where you add people. I checked there first.”',
   comesBack: 'What comes back.',
-  comesBackLead: 'Here is the whole of one run: what one person did, and what to fix.',
+  comesBackLead: 'Here is one person’s attempt as it comes back: the recording, every moment on a timeline, and their words.',
   fileCaption: 'If you have written a Playwright test, you have written this.',
   result: 'Problems found: 4 across 5 people.',
   priority: 'Problem 1 is one link. Problem 2 is the one to fix first: both people who hit it believed they were finished, and their colleague got the same email twice.',
   closing: 'A run reports the problems it found, or that it found none this time. There is no score and no pass.',
   person: 'What the person sees.',
   personLead: 'Your page, with a small bar over it. Nothing else.',
-  scenario: 'Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished.',
+  scenario: 'You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam’s email is sam@acme.co.',
   scenarioLine: "goal('invite a colleague')",
+  scenarioCaption: 'The card is written from the goal, never from the path you expect.',
   barLine: 'outcome(...)',
   barCaption: 'It runs on your side after either button.',
-  easeCaption: 'the rating and the words land in their trace.',
+  easeCaption: 'The rating and the words, typed or spoken, land in their trace.',
   personClosing: 'They never see the path you expected or the check you wrote, so nothing you wrote can lead them.',
   people: 'Where the people come from.',
   peopleLead: 'Friends are kind and coworkers know too much. Three ways to reach people who are neither.',
   pr: 'In the pull request.',
   prLead: 'Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request with a report page anyone on the team can open. Your other tests prove the code works. This one shows whether a person can use it.',
-  prCaption: "the report page opens on the ranked problems, each with the moments to watch and what to change, and every person's trace below.",
+  prCaption: "The report page opens on the ranked problems, each with the moments to watch and what to change, and every person's trace below.",
   commands: 'Three commands.',
   requirement: 'Node 22 and a Next.js app.',
   commandsClosing: 'The third command runs the example task on you, so you see the card, the bar and your own trace before anyone else does. Open source, with no seats and no account. Your own link and your own visitors cost nothing. The panel is the only thing you pay for, and you set the cap before it starts.',
@@ -36,6 +37,12 @@ export const example = `import { context, goal, outcome, expect } from 'ui-tests
 context({
   users: 'developers who ship UI and have no researcher',
   purpose: 'find out whether people can use what I built, without a researcher',
+  screen: {
+    did: 'shipped a user interface you built yourself',
+    within: '3 months',
+    role: ['developer', 'designer', 'founder'],
+    not: ['works in UX research'],
+  },
 }, () => {
   goal('start trying ui-tests', { happyPath: ['/', '/docs/getting-started'] }, () => {
     outcome(async ({ page }) => {
@@ -48,6 +55,12 @@ export const inviteExample = `import { context, goal, outcome, expect } from 'ui
 context({
   users: 'people who signed up this week and want a colleague on their board',
   purpose: 'plan the week together without emailing screenshots around',
+  screen: {
+    did: 'signed up for a tool to plan work with a team',
+    within: '7 days',
+    uses: ['Trello', 'Asana', 'Notion', 'Linear'],
+    not: ['has used Weekboard'],
+  },
 }, () => {
   goal('invite a colleague', { happyPath: ['/board', '/settings/members'] }, () => {
     outcome(async ({ page }) => {
@@ -56,10 +69,10 @@ context({
   })
 })`
 export const problems = [
-  { title: 'Looked for Invite in the Share menu and found only link options', count: '4 of 5', quote: '"Share is where you add people."', watch: 'P1 00:04, P2 00:06, P3 00:03, P5 00:09', change: 'Put "Invite a colleague" at the top of the Share menu.', moment: 'P3 · 00:03 → 00:12' },
-  { title: 'Pressed Add, saw nothing change, pressed it again; two invitations went out', count: '2 of 5', quote: '"I wasn\'t sure the first one did anything."', watch: 'P3 00:58, P4 00:41', change: 'On press, change the button to "Invited sam@acme.co" and disable it.', moment: 'P3 · 00:58 → 01:04' },
-  { title: "Typed the colleague's email into the board search", count: '2 of 5', quote: '"I figured it would find them."', watch: 'P3 00:23, P1 00:30', change: 'When a search matches no cards, offer "Invite someone with this email".', moment: 'P3 · 00:23 → 00:32' },
-  { title: 'Stopped at a grey Add button and gave up', count: '1 of 5', quote: '"It looked switched off."', watch: 'P2 00:49', change: 'Keep the button solid. Validate the address on press, with a message.', moment: 'P2 · 00:45 → 00:54' },
+  { title: 'Looked for Invite in the Share menu and found only link options', severity: 'slowed', count: '4 of 5', quote: '"Share is where you add people."', watch: 'P1 00:04, P2 00:06, P3 00:03, P5 00:09', change: 'Put "Invite a colleague" at the top of the Share menu.', moment: 'P3 · 00:03 → 00:12' },
+  { title: 'Pressed Add, saw nothing change, pressed it again; two invitations went out', severity: 'misled', count: '2 of 5', quote: '"I wasn\'t sure the first one did anything."', watch: 'P3 00:58, P4 00:41', change: 'On press, change the button to "Invited sam@acme.co" and disable it.', moment: 'P3 · 00:58 → 01:04' },
+  { title: "Typed the colleague's email into the board search", severity: 'slowed', count: '2 of 5', quote: '"I figured it would find them."', watch: 'P3 00:23, P1 00:30', change: 'When a search matches no cards, offer "Invite someone with this email".', moment: 'P3 · 00:23 → 00:32' },
+  { title: 'Stopped at a grey Add button and gave up', severity: 'blocked', count: '1 of 5', quote: '"It looked switched off."', watch: 'P2 00:49', change: 'Keep the button solid. Validate the address on press, with a message.', moment: 'P2 · 00:45 → 00:54' },
 ] as const
 export const sources = [
   ['Your link', 'Anyone you send it to: a customer, a community, the person at the next desk', 'Free', 'As each person finishes'],
@@ -72,19 +85,28 @@ export const guide = {
   title: 'Getting started',
   titles: ['Install', 'Set up', 'Try it on yourself', 'Write your own', 'Run it with real people', 'Run it with an agent'],
   install: 'You see "ui-tests" in `devDependencies`.',
-  try: 'You see a link in the terminal, then in your browser the scenario card, your own page with the bar over it, and the ease question. Press "I\'m done". The terminal prints:',
+  try: 'You see a link in the terminal, then in your browser the scenario card, your own page with the bar over it, and the questions one at a time. Press "Finish". The terminal prints:',
   write: 'You type, in `ui-tests/first.ui.test.ts`:',
-  next: 'You see, on the next `npx ui-tests`, the card now reads: "Imagine you want to invite a colleague to your board. Work as you normally would, then tell us when you are finished."',
+  next: 'You see, on the next `npx ui-tests`, the card now reads: "Imagine you want to invite a colleague." Pin richer wording with `scenario` once you have read it, and `ui-tests lint` prints the screener it drafted from `users` until you write a `screen` block.',
+  agent: 'You type, in the same file or a new one:',
+  agentSee: 'You see a separate agent report:',
   read: 'Read what came back',
   once: 'You type, once the attempts are in:',
   pr: 'Then, for the pull request, put `npx ui-tests run` in the job that deploys your preview. On the next pull request you see the check:',
 }
 export const agent = {
   heading: 'The same test, run by an agent.',
-  lead: 'Point the same file at your CLI, your MCP server or your API and run it with an agent instead of a person. Five trials, a trace for each, a report of its own. Agent runs are never counted with people and never described as people.',
+  lead: 'Point a file at your API, your MCP server or your CLI and run it with an agent instead of a person. Five trials, a trace for each, a report of its own. Agent runs are never counted with people and never described as people.',
   closing: 'One file, two actors, two reports that never mix.',
   command: 'npx ui-tests run --actor agent',
-  check: 'ui-tests (agent) · 3 of 5 trials · Report',
+  fileLine: "goal('add a member through the API', { target: { http: 'https://api.weekboard.app' } })",
+  report: { goal: 'add a member through the API', url: 'https://ui-tests.com/r/k2m9-agent', trials: [
+    { seconds: '0:19', detail: 'POST /members, then GET /members' },
+    { seconds: '0:22' },
+    { seconds: '0:41', stopped: 'called POST /invites, which does not exist' },
+    { seconds: '0:17' },
+    { seconds: '0:35', stopped: 'sent the email in the query string, 400' },
+  ] },
 }
 export const hosted = {
   heading: 'No repo to put it in? Paste one line.',
@@ -94,5 +116,18 @@ export const hosted = {
   users: 'people who signed up this week and want a colleague on their board',
   purpose: 'plan the week together without emailing screenshots around',
   goal: 'invite a colleague',
+  screen: { did: 'signed up for a tool to plan work with a team', within: '7 days', uses: 'Trello, Asana, Notion, Linear', not: 'has used Weekboard' },
+  paste: 'Paste the line',
+  pasteSee: 'You see the script in your live site’s markup, or in the tag manager that publishes it.',
+  fill: 'Fill the form',
+  fillSee: 'You see the run on your dashboard, and a report page you can share once the attempts are in.',
 }
+/** The hosted dashboard: other runs on the same site, none of them the example run shown above it. Fixed fields first, the name last. */
+export const runs = [
+  { date: '16 Oct', participants: '3 of 5', status: 'running', progress: 0.6, result: '', band: '', name: 'change the plan to Team' },
+  { date: '15 Oct', participants: '5 of 5', status: 'done', progress: 1, result: '1 problem', band: 'great', name: 'export last month’s board' },
+  { date: '12 Oct', participants: '8 of 8', status: 'done', progress: 1, result: '3 problems', band: 'check', name: 'start a board from a template' },
+  { date: '9 Oct', participants: '5 of 5', status: 'done', progress: 1, result: 'none found', band: 'great', name: 'find a card from last week' },
+  { date: '—', participants: '0 of 5', status: 'draft', progress: 0, result: '', band: '', name: 'archive a finished board' },
+] as const
 export const ui = { wordmark: 'ui-tests', guide: 'Guide', github: 'GitHub', getStarted: 'Get started', skip: 'Skip to content', navigation: 'Main navigation', steps: 'Getting started', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy. Select and copy the code.', typescript: 'TypeScript', shell: 'Shell', output: 'Output', example: 'Example run' }
