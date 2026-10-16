@@ -1,0 +1,8 @@
+Created ui-tests.config.ts
+Created landing.ui.test.ts
+Created vitest.config.ts
+Mount instructions:
+1. Import { UiTests } from &apos;ui-tests/next&apos; and mount &lt;UiTests /&gt; in your root layout body.
+2. In app/ui-tests/[run]/page.tsx render &lt;Player runId={run} token={token} /&gt; from &apos;ui-tests/next&apos;.
+3. In app/api/ui-tests/route.ts export GET and POST = createCollector() from &apos;ui-tests/server&apos;; export const runtime = &apos;nodejs&apos;.
+4. Run npm run dev, then npx ui-tests.

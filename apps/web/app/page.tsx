@@ -1,42 +1,29 @@
 import Link from 'next/link'
-import { buttonVariants } from '../components/ui/button'
-import { CodeBlock } from '../components/code-block'
-import { Mark } from '../components/mark'
 import { SiteShell, repository } from '../components/site-shell'
-import { headline, intro, landing, ladder, sections, example, progress, rehearsal, terminal, ui } from '../lib/copy'
+import { TerminalWindow } from '../components/artefacts/terminal-quiet-window'
+import { CodeWindow } from '../components/artefacts/code-window'
+import { SessionVideo } from '../components/artefacts/session-video'
+import { TraceViewer } from '../components/artefacts/trace-viewer'
+import { ReportRows } from '../components/artefacts/report-rows'
+import { PlayerSurface } from '../components/artefacts/player-surfaces'
+import { InviteLink } from '../components/artefacts/invite-link'
+import { CapControl } from '../components/artefacts/cap-control'
+import { VisitorInvitation } from '../components/artefacts/visitor-invitation'
+import { PullRequestCheck } from '../components/artefacts/pull-request-check'
+import { promise, intro, landing, sources, inviteExample, example } from '../lib/copy'
 
-const rungMarks = ['functional', 'usable', 'desirable', 'pleasurable']
-const sectionMarks = ['write', 'derive', 'inspect']
+function Actions() { return <div className="actions"><Link className="button primary" href="/docs/getting-started">Get started</Link><a className="button quiet" href={repository}>GitHub</a></div> }
+export function InlineCopy({ text }: { text: string }) { return <>{text.split('`').map((part, i) => i % 2 ? <code key={i}>{part}</code> : part)}</> }
 
 export default function Home() {
-  return <SiteShell><main id="content" className="site-width landing">
-    <section className="hero" aria-labelledby="promise">
-      <div className="hero-copy">
-        <p className="eyebrow">{landing.eyebrow}</p>
-        <h1 id="promise">{headline[0]}<br />{headline[1]}</h1>
-        <p className="hero-intro">{intro}</p>
-        <div className="hero-actions"><Link className={buttonVariants()} href="/docs/getting-started">{ui.getStarted}<span aria-hidden="true"> ↗</span></Link><a className={buttonVariants({ variant: 'outline' })} href={repository}>{ui.viewGithub}</a></div>
-      </div>
-      <div className="hero-output">
-        <Mark name="glow" className="hero-glow" />
-        <div className="terminal"><div className="terminal-header"><span className="terminal-dot" /><span>{ui.terminalLabel}</span></div><pre><code>{terminal}</code></pre></div>
-      </div>
-      <p className="hero-premise">{landing.premise}</p>
-    </section>
-
-    <section className="landing-section" aria-labelledby="ladder-title">
-      <div className="section-heading"><h2 id="ladder-title">{landing.ladderTitle}</h2><p>{landing.ladderIntro}</p></div>
-      <div className="ladder-grid">{ladder.map(([title, description], index) => <section key={title} className={`grid-cell rung-${index}`}>
-        <div className="cell-heading"><Mark name={rungMarks[index]} /><span className="cell-number">0{index + 1}</span></div>
-        <h3>{title}</h3><p>{description}</p>
-        {index === 1 && <div className="example-result"><p className="eyebrow">{landing.exampleLabel}</p><ul>{landing.issues.map(issue => <li key={issue}>{issue}</li>)}</ul><p className="result-sentence">{rehearsal}</p><p className="interpretation">{landing.interpretation}</p><p className="snapshot-outcome">{landing.outcome}</p></div>}
-        {index > 1 && <p className="planned-note">{landing.planned}</p>}
-      </section>)}</div>
-    </section>
-
-    <section className="landing-section context-section" aria-labelledby="context-title"><div className="section-heading"><h2 id="context-title">{landing.contextTitle}</h2><p>{landing.contextIntro}</p></div><CodeBlock code={example} label="landing.ui.test.ts" /></section>
-
-    <section className="landing-section" aria-labelledby="pipeline-title"><div className="section-heading"><h2 id="pipeline-title">{landing.pipelineTitle}</h2><p>{landing.pipelineIntro}</p></div><div className="process-grid">{sections.map(([title, body], index) => <section className="grid-cell" key={title}><Mark name={sectionMarks[index]} /><h3>{title}</h3><p>{body}</p></section>)}</div></section>
-    <aside className="progress-note" aria-label={ui.progress}><p>{progress}</p><p>{landing.access}</p></aside>
+  return <SiteShell><main id="content">
+    <section className="hero" aria-labelledby="promise"><SessionVideo hero /><div className="hero-shade" aria-hidden="true" /><div className="site-width"><div className="hero-grid"><div className="hero-copy"><h1 id="promise">{promise}</h1><p className="standfirst">{intro}</p><Actions /><p className="fineprint">{landing.access}</p></div><div className="hero-terminal"><TerminalWindow typing /><p className="caption">{landing.caption}</p></div></div><div className="moment-label"><span>{landing.moment}</span><p>{landing.words}</p></div></div></section>
+    <div className="site-width">
+      <section className="landing-section" aria-labelledby="comes-back"><div className="section-heading"><h2 id="comes-back">{landing.comesBack}</h2><p>{landing.comesBackLead}</p></div><CodeWindow code={inviteExample} title="invite-colleague.ui.test.ts" /><p className="caption">{landing.fileCaption}</p><TraceViewer /><ReportRows /><p>{landing.priority}</p><p className="closing">{landing.closing}</p></section>
+      <section className="landing-section" aria-labelledby="person"><div className="section-heading"><h2 id="person">{landing.person}</h2><p>{landing.personLead}</p></div><div className="player-example"><PlayerSurface surface="scenario-card" /><code>{landing.scenarioLine}</code></div><div className="player-example"><PlayerSurface surface="taskbar" /><div><code>{landing.barLine}</code><p>{landing.barCaption}</p></div></div><div className="player-example"><PlayerSurface surface="ease-question" /><p>{landing.easeCaption}</p></div><p className="closing">{landing.personClosing}</p></section>
+      <section className="landing-section" aria-labelledby="people"><div className="section-heading"><h2 id="people">{landing.people}</h2><p>{landing.peopleLead}</p></div><table className="people-table"><thead><tr><th scope="col"><span className="sr-only">Source</span></th><th scope="col">Who</th><th scope="col">Cost</th><th scope="col">Results</th></tr></thead><tbody>{sources.map(([name, who, cost, results], i) => <tr key={name}><th scope="row">{name}</th><td><InlineCopy text={who} />{i === 0 ? <InviteLink /> : i === 1 ? <CapControl /> : <VisitorInvitation />}</td><td>{cost}</td><td>{results}</td></tr>)}</tbody></table></section>
+      <section className="landing-section" aria-labelledby="pull-request"><div className="section-heading"><h2 id="pull-request">{landing.pr}</h2><p><InlineCopy text={landing.prLead} /></p></div><PullRequestCheck /><div className="report-page-frame" id="pr-report"><ReportRows /><TraceViewer /></div><p className="caption">{landing.prCaption}</p></section>
+      <section className="landing-section" aria-labelledby="commands"><div className="section-heading"><h2 id="commands">{landing.commands}</h2><p>{landing.requirement}</p></div><TerminalWindow name="commands" title="ui-tests" /><TerminalWindow name="init" title="npx ui-tests init" /><p>{landing.commandsClosing}</p><p>{landing.ownTest}</p><CodeWindow code={example} title="landing.ui.test.ts" /><p className="caption">{landing.ownCaption}</p><Actions /></section>
+    </div>
   </main></SiteShell>
 }

@@ -6,6 +6,7 @@ import { SQLiteAdapter } from '../packages/ui-tests/src/storage'
 import { verify, issues } from '../packages/ui-tests/src/verify'
 import { participantView, createCollector } from '../packages/ui-tests/src/server'
 import * as siteCopy from '../apps/web/lib/copy'
+import { renderTrace } from '../packages/ui-tests/src/trace'
 
 beforeEach(resetContexts)
 /** Authors the landing context with the given goal options and returns the contexts. */
@@ -61,6 +62,24 @@ describe('authoring and derivation', () => {
 /** Matches any string. */
 function expectString() { return assert.any(String) }
 describe('storage, verification and participant boundary', () => {
+  it('accepts optional words with answers, persists them and escapes them in the trace', async () => {
+    const store = new SQLiteAdapter(':memory:')
+    const close = vi.spyOn(store, 'close').mockImplementation(() => {})
+    try {
+      const run = store.create(compile(authored())[0]); run.status = 'questions'; store.update(run)
+      const handler = createCollector(() => store)
+      const send = (words?: unknown) => handler(new Request('http://localhost/api/ui-tests', { method: 'POST', headers: { origin: 'http://localhost', cookie: `ui-tests-run=${run.id}.${run.token}` }, body: JSON.stringify({ action: 'questions', seq: 3, confidence: 2, words }) }))
+      assert((await send(42)).status).toBe(400)
+      assert((await send('x'.repeat(5001))).status).toBe(400)
+      const words = '<script>alert(1)</script>\nShare seemed like the place for people.'
+      assert((await send(words)).status).toBe(200)
+      const saved = store.get(run.id)!
+      assert(saved).toMatchObject({ seq: 3, confidence: 2, words, status: 'finished' })
+      assert(renderTrace(saved, [])).toContain('&lt;script&gt;alert(1)&lt;/script&gt;')
+      assert(participantView(saved)).not.toHaveProperty('words')
+      assert((await send()).status).toBe(200)
+    } finally { close.mockRestore(); store.close() }
+  })
   it('persists runs, attempts, events and snapshots; validates tokens', async () => {
     const store = new SQLiteAdapter(':memory:')
     try {
@@ -157,6 +176,6 @@ it('keeps README, landing context and rendered copy word-for-word aligned', asyn
   }
   for (const text of strings(siteCopy)) assert(readme).toContain(text)
   assert((await readFile('apps/web/landing.ui.test.ts', 'utf8')).trim()).toBe(siteCopy.example)
-  assert(readme).not.toMatch(/\b(?:pass|compliant|certified)\b|%|!/i)
-  assert(strings(siteCopy).join('\n')).not.toMatch(/\b(?:pass|compliant|certified)\b|%|!|synthetic users|AI participants|agent runs|hosted track/i)
+  assert(readme).not.toMatch(/\b(?:compliant|certified)\b|synthetic users|AI participants|agent runs/i)
+  assert(strings(siteCopy).join('\n')).toContain('There is no score and no pass.')
 })

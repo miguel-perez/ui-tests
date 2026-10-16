@@ -13,6 +13,7 @@ export function renderTrace(run: Run, events: Event[]) {
     <p>Terminal reason: {run.reason ?? 'In progress'}. Final URL: {run.snapshot?.url ?? 'Not yet recorded'}.</p>
     <h2>First issue signals</h2><ul>{issues(run, events).map((issue, i) => <li key={i}>{issue.kind} at {new Date(issue.at).toISOString()} (+{((issue.at - run.startedAt) / 1000).toFixed(1)}s): {issue.detail}</li>)}</ul>
     <h2>Timings and answers</h2><p>Started {new Date(run.startedAt).toISOString()}; duration {((Number(run.endedAt ?? Date.now()) - run.startedAt) / 1000).toFixed(1)} seconds. SEQ: {run.seq ?? 'pending'} / 7. Confidence: {run.confidence ?? 'pending'} / 5.</p>
+    {run.words && <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>Their words: {run.words}</p>}
     <h2>URL path versus happy path</h2><pre>{JSON.stringify({ actual: events.filter(e => e.type === 'url').map(e => e.url), expected: goal.happyPath }, null, 2)}</pre>
     <h2>Events</h2><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{JSON.stringify(events, null, 2)}</pre>
     <h2>End-state snapshot</h2><pre style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{run.snapshot?.dom ?? 'Not yet recorded'}</pre>

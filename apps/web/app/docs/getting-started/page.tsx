@@ -1,25 +1,19 @@
-import { CodeBlock } from '../../../components/code-block'
 import { SiteShell } from '../../../components/site-shell'
-import { commands, example, guide, snippets, rehearsal, progress, ui } from '../../../lib/copy'
-
-const anchors = ['install', 'init-and-mount', 'write-the-test', 'run-dev-mode', 'read-the-result']
-function StepLinks() {
-  return <ol>{guide.titles.map((title, index) => <li key={title}><a href={`#${anchors[index]}`}><span className="step-number">0{index + 1}</span>{title}</a></li>)}</ol>
-}
-
+import { TerminalWindow } from '../../../components/artefacts/terminal-quiet-window'
+import { CodeWindow } from '../../../components/artefacts/code-window'
+import { PlayerSurface } from '../../../components/artefacts/player-surfaces'
+import { TraceViewer } from '../../../components/artefacts/trace-viewer'
+import { ReportRows } from '../../../components/artefacts/report-rows'
+import { PullRequestCheck } from '../../../components/artefacts/pull-request-check'
+import { guide, landing, inviteExample } from '../../../lib/copy'
+import { InlineCopy } from '../../page'
+const anchors = ['install', 'set-up', 'try-it', 'write-your-own', 'real-people']
 export default function GettingStarted() {
-  return <SiteShell><div className="docs-layout site-width">
-    <div className="docs-sidebar"><nav aria-label={ui.steps}><p className="eyebrow">{ui.steps}</p><StepLinks /></nav></div>
-    <main id="content" className="docs-content">
-      <header className="docs-intro"><p className="eyebrow">{ui.guide}</p><h1>{guide.title}</h1><p>{guide.intro}</p></header>
-      <aside className="tip" aria-label={ui.tip}><strong>{ui.tip}</strong><p>{guide.requirement}</p></aside>
-      <section id={anchors[0]}><h2><span>01</span>{guide.titles[0]}</h2><p>{guide.install}</p><CodeBlock code={commands.install} label={ui.shell} language={ui.shell} /></section>
-      <section id={anchors[1]}><h2><span>02</span>{guide.titles[1]}</h2><CodeBlock code={commands.init} label={ui.shell} language={ui.shell} /><p>{guide.init}</p><CodeBlock code={snippets.layout} label="app/layout.tsx" /><p>{guide.player}</p><CodeBlock code={snippets.player} label="app/ui-tests/[run]/page.tsx" /><p>{guide.collector}</p><CodeBlock code={snippets.collector} label="app/api/ui-tests/route.ts" /></section>
-      <section id={anchors[2]}><h2><span>03</span>{guide.titles[2]}</h2><p>{guide.write}</p><CodeBlock code={example} label="landing.ui.test.ts" /><p>{guide.scenario}</p><p>{guide.config}</p><CodeBlock code={snippets.config} label="ui-tests.config.ts" /></section>
-      <section id={anchors[3]}><h2><span>04</span>{guide.titles[3]}</h2><p>{guide.run}</p><CodeBlock code={snippets.run} label={ui.shell} language={ui.shell} /><p>{guide.participate}</p><p>{guide.clone}</p><CodeBlock code={snippets.clone} label={ui.shell} language={ui.shell} /></section>
-      <section id={anchors[4]}><h2><span>05</span>{guide.titles[4]}</h2><p>{guide.result}</p><p>{guide.isolation}</p><CodeBlock code={rehearsal} label={ui.output} language={ui.output} /><p>{guide.sentence}</p><p>{guide.finish}</p><CodeBlock code={snippets.inspect} label={ui.shell} language={ui.shell} /></section>
-      <aside className="progress-note" aria-label={ui.progress}><p>{progress}</p></aside>
-    </main>
-    <div className="docs-rail"><nav aria-label={ui.onPage}><p className="eyebrow">{ui.onPage}</p><StepLinks /></nav></div>
-  </div></SiteShell>
+  return <SiteShell><div className="docs-layout site-width"><nav className="docs-sidebar" aria-label="Getting started"><ol>{guide.titles.map((title, i) => <li key={title}><a href={`#${anchors[i]}`}><span>0{i + 1}</span>{title}</a></li>)}</ol></nav><main id="content" className="docs-content"><header><h1>{guide.title}</h1><p>{landing.requirement}</p></header>
+    <section id={anchors[0]}><h2>1. {guide.titles[0]}</h2><p>You type:</p><TerminalWindow name="install" title="npm install -D ui-tests" /><p><InlineCopy text={guide.install} /></p></section>
+    <section id={anchors[1]}><h2>2. {guide.titles[1]}</h2><p>You type:</p><TerminalWindow name="initCommand" title="npx ui-tests init" /><p>You see:</p><TerminalWindow name="init" title="npx ui-tests init" /></section>
+    <section id={anchors[2]}><h2>3. {guide.titles[2]}</h2><p>You type:</p><TerminalWindow name="devCommand" title="npx ui-tests" /><p>{guide.try}</p><PlayerSurface surface="scenario-card" /><PlayerSurface surface="taskbar" /><PlayerSurface surface="ease-question" /><TerminalWindow name="dev" title="npx ui-tests" /><TraceViewer /></section>
+    <section id={anchors[3]}><h2>4. {guide.titles[3]}</h2><p><InlineCopy text={guide.write} /></p><CodeWindow code={inviteExample} title="ui-tests/first.ui.test.ts" /><p><InlineCopy text={guide.next} /></p><PlayerSurface surface="scenario-card" /></section>
+    <section id={anchors[4]}><h2>5. {guide.titles[4]}</h2><p>You type:</p><TerminalWindow name="runCommand" title="npx ui-tests run" /><p>You see:</p><TerminalWindow name="run" title="npx ui-tests run" /><h3>{guide.read}</h3><p>{guide.once}</p><TerminalWindow name="reportCommand" /><p>You see:</p><TerminalWindow /><ReportRows /><p><InlineCopy text={guide.pr} /></p><PullRequestCheck reportId="guide-report" /><div id="guide-report"><ReportRows /></div></section>
+  </main></div></SiteShell>
 }

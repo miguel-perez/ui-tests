@@ -7,8 +7,7 @@
 
 import { chromium } from '@playwright/test';
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync, rmSync, copyFileSync } from 'node:fs';
-import { homedir } from 'node:os';
+import { existsSync, mkdirSync, readdirSync, statSync, writeFileSync, rmSync, copyFileSync, readFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
@@ -18,6 +17,7 @@ const publicDir = join(root, 'apps/web/public');
 const demoPath = join(publicDir, 'demo/weekboard.html');
 const outDir = join(publicDir, 'sessions');
 const tmpDir = join(outDir, '.tmp');
+if (!resolve(chromium.executablePath()).startsWith(root + '/')) throw new Error('Set PLAYWRIGHT_BROWSERS_PATH=0 and install bundled Chromium inside this worktree.');
 
 const SIZE = { width: 1280, height: 800 };
 const EMAIL = 'sam@acme.co';
@@ -69,15 +69,13 @@ const CURSOR_INIT = `
 })();`;
 
 function findFfmpeg() {
-  const cache = join(homedir(), 'Library/Caches/ms-playwright');
-  if (existsSync(cache)) {
-    const dirs = readdirSync(cache).filter((d) => d.startsWith('ffmpeg-')).sort().reverse();
-    for (const d of dirs) {
-      const files = readdirSync(join(cache, d)).filter((f) => f.startsWith('ffmpeg'));
-      if (files.length) return join(cache, d, files[0]);
-    }
+  const cache = join(root, 'node_modules/playwright-core/.local-browsers');
+  const dirs = readdirSync(cache).filter(d => d.startsWith('ffmpeg-')).sort().reverse();
+  for (const d of dirs) {
+    const file = readdirSync(join(cache, d)).find(f => f.startsWith('ffmpeg'));
+    if (file) return join(cache, d, file);
   }
-  return 'ffmpeg';
+  throw new Error('Install Playwright bundled FFmpeg inside this worktree.');
 }
 
 function videoDuration(ffmpeg, file) {
@@ -221,59 +219,143 @@ async function recordP3() {
   return { rawPath, pageCreated, t0, closedAt, moments };
 }
 
-const { rawPath, pageCreated, t0, closedAt, moments } = await recordP3();
+async function publishP3() {
+  const { rawPath, pageCreated, t0, closedAt, moments } = await recordP3();
 
-// Trim the lead-in so 00:00 is the scenario dismissal, and encode small.
-const ffmpeg = findFfmpeg();
-const rawDuration = videoDuration(ffmpeg, rawPath) ?? (closedAt - pageCreated) / 1000;
-const lag = Math.max(0, (closedAt - pageCreated) / 1000 - rawDuration);
-const offset = Math.max(0, (t0 - pageCreated) / 1000 - lag);
-const finalPath = join(outDir, 'p3.webm');
-console.log(`raw ${rawDuration.toFixed(2)}s, lag ${lag.toFixed(2)}s, trimming ${offset.toFixed(2)}s`);
+  // Trim the lead-in so 00:00 is the scenario dismissal, and encode small.
+  const ffmpeg = findFfmpeg();
+  const rawDuration = videoDuration(ffmpeg, rawPath) ?? (closedAt - pageCreated) / 1000;
+  const lag = Math.max(0, (closedAt - pageCreated) / 1000 - rawDuration);
+  const offset = Math.max(0, (t0 - pageCreated) / 1000 - lag);
+  const finalPath = join(outDir, 'p3.webm');
+  console.log(`raw ${rawDuration.toFixed(2)}s, lag ${lag.toFixed(2)}s, trimming ${offset.toFixed(2)}s`);
 
-const enc = spawnSync(ffmpeg, [
-  '-hide_banner', '-loglevel', 'error', '-y',
-  '-ss', offset.toFixed(3), '-i', rawPath,
-  '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '36', '-deadline', 'good', '-cpu-used', '2',
-  '-row-mt', '1', '-pix_fmt', 'yuv420p', '-an', finalPath,
-], { encoding: 'utf8' });
-if (enc.status !== 0) {
-  console.error(enc.stderr);
+  const enc = spawnSync(ffmpeg, [
+    '-hide_banner', '-loglevel', 'error', '-y',
+    '-ss', offset.toFixed(3), '-i', rawPath,
+    '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '36', '-deadline', 'good', '-cpu-used', '2',
+    '-row-mt', '1', '-pix_fmt', 'yuv420p', '-an', finalPath,
+  ], { encoding: 'utf8' });
+  if (enc.status !== 0) {
+    console.error(enc.stderr);
+    rmSync(tmpDir, { recursive: true, force: true });
+    throw new Error('Encoding failed; the recording was not published because its metadata assumes the trimmed time origin.');
+  }
   rmSync(tmpDir, { recursive: true, force: true });
-  throw new Error('Encoding failed; the recording was not published because its metadata assumes the trimmed time origin.');
+
+  const finalDuration = videoDuration(ffmpeg, finalPath);
+  const sessions = {
+    label: 'Example run',
+    run: 'k2m9',
+    goal: 'invite a colleague',
+    sessions: [
+      {
+        id: 'p3',
+        person: 'P3',
+        source: 'panel',
+        device: 'MacBook',
+        browser: 'Chrome',
+        viewport: '1280×800',
+        duration: '1:03',
+        outcome: 'incorrect',
+        ease: 3,
+        easeOf: 7,
+        words: "Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.",
+        video: '/sessions/p3.webm',
+        poster: '/sessions/p3.jpg',
+        posterAt: '00:05',
+        videoSeconds: finalDuration ? Math.round(finalDuration * 100) / 100 : null,
+        moments,
+      },
+    ],
+  };
+  writeFileSync(join(outDir, 'sessions.json'), JSON.stringify(sessions, null, 2) + '\n');
+
+  const size = statSync(finalPath).size;
+  console.log(`wrote ${finalPath} (${(size / 1024 / 1024).toFixed(2)} MB, ${finalDuration?.toFixed(2)}s)`);
+  console.log(`wrote ${join(outDir, 'p3.jpg')}`);
+  console.log(`wrote ${join(outDir, 'sessions.json')}`);
+  if (size > 3 * 1024 * 1024) console.warn('Warning: p3.webm is over 3 MB.');
 }
-rmSync(tmpDir, { recursive: true, force: true });
 
-const finalDuration = videoDuration(ffmpeg, finalPath);
-const sessions = {
-  label: 'Example run',
-  run: 'k2m9',
-  goal: 'invite a colleague',
-  sessions: [
-    {
-      id: 'p3',
-      person: 'P3',
-      source: 'panel',
-      device: 'MacBook',
-      browser: 'Chrome',
-      viewport: '1280×800',
-      duration: '1:03',
-      outcome: 'incorrect',
-      ease: 3,
-      easeOf: 7,
-      words: "Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.",
-      video: '/sessions/p3.webm',
-      poster: '/sessions/p3.jpg',
-      posterAt: '00:05',
-      videoSeconds: finalDuration ? Math.round(finalDuration * 100) / 100 : null,
-      moments,
-    },
-  ],
-};
-writeFileSync(join(outDir, 'sessions.json'), JSON.stringify(sessions, null, 2) + '\n');
+if (process.argv.includes('--p3')) await publishP3();
 
-const size = statSync(finalPath).size;
-console.log(`wrote ${finalPath} (${(size / 1024 / 1024).toFixed(2)} MB, ${finalDuration?.toFixed(2)}s)`);
-console.log(`wrote ${join(outDir, 'p3.jpg')}`);
-console.log(`wrote ${join(outDir, 'sessions.json')}`);
-if (size > 3 * 1024 * 1024) console.warn('Warning: p3.webm is over 3 MB.');
+// The remaining attempts follow the Watch column, without modifying approved P3.
+const scripts = [
+  { id: 'p1', ease: 4, outcome: 'correct', words: 'I figured it would find them.', end: 58, actions: [[4, '#shareBtn', 'click "Share"', 1], [13, '#manageLink', 'click "Manage link"'], [22, '#linkBack', 'back'], [30, '#search', 'type "sam@acme.co" into Search', 3, EMAIL], [39, '#avatarBtn', 'click the avatar'], [40, '#settingsItem', 'click "Settings"'], [44, '#tab-members', 'click "Members"'], [49, '#inviteEmail', 'type the email', null, EMAIL], [54, '#inviteAdd', 'press "Add"'], [57, '#done', "I'm done"]] },
+  { id: 'p2', ease: 2, outcome: 'incorrect', words: 'It looked switched off.', end: 55, actions: [[6, '#shareBtn', 'click "Share"', 1], [17, '#manageLink', 'click "Manage link"'], [25, '#linkBack', 'back'], [34, '#avatarBtn', 'click the avatar'], [35, '#settingsItem', 'click "Settings"'], [40, '#tab-members', 'click "Members"'], [45, '#inviteEmail', 'type an incomplete email', null, 'sam@'], [49, '#inviteAdd', 'stopped at a grey Add button', 4, null, true], [53, '#cant', "I can't do this"]] },
+  { id: 'p4', ease: 4, outcome: 'incorrect', words: "I wasn't sure the first one did anything.", end: 48, actions: [[7, '#avatarBtn', 'click the avatar'], [9, '#settingsItem', 'click "Settings"'], [19, '#tab-members', 'click "Members"'], [36, '#inviteEmail', 'type the email', null, EMAIL], [41, '#inviteAdd', 'press "Add"', 2], [44, '#inviteAdd', 'press "Add" again', 2], [47, '#done', "I'm done"]] },
+  { id: 'p5', ease: 5, outcome: 'correct', words: 'Share is where you add people.', end: 53, actions: [[9, '#shareBtn', 'click "Share"', 1], [20, '#manageLink', 'click "Manage link"'], [28, '#linkBack', 'back'], [34, '#avatarBtn', 'click the avatar'], [35, '#settingsItem', 'click "Settings"'], [39, '#tab-members', 'click "Members"'], [45, '#inviteEmail', 'type the email', null, EMAIL], [49, '#inviteAdd', 'press "Add"'], [52, '#done', "I'm done"]] },
+];
+const ffmpeg = findFfmpeg();
+function encode(input, output, start, duration) {
+  const result = spawnSync(ffmpeg, ['-hide_banner', '-loglevel', 'error', '-y', '-ss', String(start), '-i', input, '-t', String(duration), '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '36', '-deadline', 'good', '-cpu-used', '4', '-pix_fmt', 'yuv420p', '-an', output], { encoding: 'utf8' });
+  if (result.status !== 0) throw new Error(result.stderr);
+  if (statSync(output).size > 2 * 1024 * 1024) throw new Error(`${output} exceeds 2 MB`);
+}
+async function recordAttempt(script) {
+  const browser = await chromium.launch();
+  const context = await browser.newContext({ viewport: SIZE, recordVideo: { dir: tmpDir, size: SIZE } });
+  try {
+    const page = await context.newPage();
+    const created = Date.now();
+    await page.goto(pathToFileURL(demoPath).href + '?scenario=1');
+    await page.evaluate(() => document.fonts.ready);
+    await page.evaluate(CURSOR_INIT);
+    await sleep(1000);
+    const t0 = Date.now();
+    await page.locator('#scenarioStart').click();
+    const moments = [{ timestamp: '00:00', seconds: 0, kind: 'start', detail: 'scenario dismissed' }];
+    const until = async seconds => { await sleep(Math.max(0, t0 + seconds * 1000 - Date.now())); };
+    for (const [seconds, selector, detail, issue, text, hover] of script.actions) {
+      await until(seconds - 0.8);
+      const box = await page.locator(selector).boundingBox();
+      if (!box) throw new Error(`Missing recording target ${selector}`);
+      const x = box.x + box.width / 2, y = box.y + box.height / 2;
+      await page.evaluate(([x, y]) => window.__cursor.moveTo(x, y, 600), [x, y]);
+      await page.mouse.move(x, y);
+      await until(seconds);
+      const actualSeconds = (Date.now() - t0) / 1000;
+      if (Math.abs(actualSeconds - seconds) > 0.1) throw new Error(`Timing drift: ${script.id} ${seconds} / ${actualSeconds}`);
+      if (!hover) { await page.evaluate(() => window.__cursor.flash()); await page.mouse.click(x, y); }
+      if (text) await page.keyboard.type(text, { delay: 65 });
+      moments.push({ timestamp: mmss(seconds), seconds, actualSeconds, kind: hover ? 'pause' : text ? 'type' : 'click', detail, ...(issue ? { issue } : {}) });
+      if (issue === 1 || (script.id === 'p4' && issue === 2)) await page.screenshot({ path: join(outDir, `${script.id}.jpg`), type: 'jpeg', quality: 82 });
+      console.log(`${script.id} ${mmss(seconds)} ${detail}`);
+    }
+    await until(script.end);
+    const closed = Date.now();
+    const video = page.video();
+    await page.close();
+    const raw = await video.path();
+    const duration = videoDuration(ffmpeg, raw);
+    const lag = Math.max(0, (closed - created) / 1000 - duration);
+    encode(raw, join(outDir, `${script.id}.webm`), Math.max(0, (t0 - created) / 1000 - lag), script.end);
+    return { id: script.id, person: script.id.toUpperCase(), source: 'panel', device: 'MacBook', browser: 'Chrome', viewport: '1280×800', duration: mmss(script.end - 1), outcome: script.outcome, ease: script.ease, easeOf: 7, words: script.words, video: `/sessions/${script.id}.webm`, poster: `/sessions/${script.id}.jpg`, videoSeconds: videoDuration(ffmpeg, join(outDir, `${script.id}.webm`)), moments };
+  } finally { await context.close(); await browser.close(); }
+}
+if (!process.argv.includes('--p3')) {
+  const metadata = JSON.parse(readFileSync(join(outDir, 'sessions.json'), 'utf8'));
+  for (const script of process.argv.includes('--reels') ? [] : scripts) {
+    const session = await recordAttempt(script);
+    metadata.sessions = metadata.sessions.filter(s => s.id !== session.id).concat(session).sort((a, b) => a.id.localeCompare(b.id));
+    writeFileSync(join(outDir, 'sessions.json'), JSON.stringify(metadata, null, 2) + '\n');
+  }
+  const reels = [['p3', 3, 9], ['p3', 58, 6], ['p3', 23, 9], ['p2', 45, 9]];
+  const browser = await chromium.launch();
+  try {
+    const page = await browser.newPage({ viewport: SIZE });
+    for (const [index, [id, start, duration]] of reels.entries()) {
+      const output = join(outDir, `problem-${index + 1}.webm`);
+      encode(join(outDir, `${id}.webm`), output, start, duration);
+      await page.goto(pathToFileURL(demoPath).href);
+      await page.setContent('<video style="width:1280px;height:800px;position:fixed;inset:0" muted></video>');
+      await page.locator('video').evaluate(async (video, url) => { video.src = url; await new Promise(resolve => video.addEventListener('loadeddata', resolve, { once: true })); }, pathToFileURL(output).href);
+      await page.locator('video').evaluate(video => video.play());
+      await page.waitForFunction(() => document.querySelector('video').currentTime > 0.15);
+      await page.locator('video').evaluate(video => video.pause());
+      await page.screenshot({ path: join(outDir, `problem-${index + 1}.jpg`), type: 'jpeg', quality: 82 });
+    }
+  } finally { await browser.close(); }
+  rmSync(tmpDir, { recursive: true, force: true });
+}
