@@ -325,6 +325,12 @@ test('the guide keeps its controls still on hover too', async ({ page }) => {
   await expect(form.getByLabel('Your link', { exact: true })).toBeChecked()
   await expect(form.getByLabel('A paid panel', { exact: true })).not.toBeChecked()
   const method = form.getByLabel('How you can tell', { exact: true })
+  // A change made before the form hydrates is lost in the dev server: retry until the evidence field follows the method.
+  await expect(async () => {
+    await method.selectOption('Element seen')
+    await expect(form.getByLabel('Element', { exact: true })).toBeVisible({ timeout: 500 })
+  }).toPass({ timeout: 10_000 })
+  await method.selectOption('Page reached')
   await form.getByLabel('Page path', { exact: true }).fill('/settings/team')
   await method.selectOption('Element seen')
   await expect(form.getByLabel('Element', { exact: true })).toHaveValue('')
