@@ -33,7 +33,7 @@
 - **PlaybookUX** ([pricing](https://www.playbookux.com/pricing/)): "7M+ Consumers & Professionals"; bring-your-own is Enterprise only.
 - **Hotjar Engage** is no longer sold to new customers; Trymata redirects to QuestionPro.
 
-Pattern: nobody uses a three-way table of link, panel and intercept. The panel gets its own page; "your own users" is one line or card. Turnaround is always stated in hours or "same day", never 48 hours.
+Pattern: nobody uses a three-way table of link, panel and intercept. The panel gets its own page; "your own users" is one line or card. For their core panels the vendors state turnaround in hours or "same day"; only the extended or partner panels (Maze Extended, Lyssna's partner panel, TestingTime) are quoted in days, and those are the narrow-audience cases.
 
 ## 3. Live-site intercepts
 
@@ -64,7 +64,7 @@ Every tunnel dies when the laptop sleeps or the process stops.
 | Source | Defensible turnaround | Cost statement | Top caveat |
 |---|---|---|---|
 | Your link | As each person finishes; depends on who you send it to | Free from ui-tests; a protected preview needs a shareable link or the bypass secret | Previews are protected by default; tunnels show warning pages and die with the laptop |
-| Paid panel (name Prolific, as Maze does) | First people in minutes, usually all five within a few hours; narrow audiences a day or more | Our formula: about $11 a person for a short recorded task including the panel's fee, five about $55, cap about $70 with the reserve. Prolific's own minimum would be far lower; resellers far higher | A sentence must become filters plus a screener; recording touches Prolific's PII rule |
+| Paid panel (name Prolific, as Maze does) | First people in minutes, usually all five within a few hours; narrow audiences a day or more | Our formula on Prolific: about $11 a person for a short recorded task including Prolific's fee, five about $55, cap about $70 with the reserve. Connect adds its paid prescreen project when the criteria are not profiled fields; Prolific's own minimum would be far lower; resellers far higher | A sentence must become filters plus a screener; recording touches Prolific's PII rule |
 | Your visitors | Traffic × sampling × acceptance; no published acceptance benchmark | Paid at the panel rate under a daily cap (PRD); competitors give nothing under 15 minutes | Struggle-triggered invitations have no vendor precedent; needs frequency caps, consent before recording, never on checkout |
 
 **Claims on the current page the evidence contradicts:** "Within 48 hours"; "About $54 for a short task" with a $60 cap; "matched to the `users` line" without showing the translation into filters and a screener; the panel left unnamed; "Your link… Free" with no word on protected previews; "invited the moment they are visibly struggling… as each person finishes"; "The paid panel is the only thing you pay for" when the preview host's access options may not be free.
