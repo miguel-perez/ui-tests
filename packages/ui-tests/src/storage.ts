@@ -64,6 +64,8 @@ export class SQLiteAdapter implements StorageAdapter {
       this.db.prepare('UPDATE recordings SET created_at=?').run(Date.now())
     }
     this.db.exec('CREATE INDEX IF NOT EXISTS recordings_run ON recordings(run_id); CREATE INDEX IF NOT EXISTS recordings_created ON recordings(created_at)')
+    // Every opening enforces retention, so no command or request reads a recording past it.
+    this.purgeRecordings(Date.now() - recordingRetentionMs)
   }
   /** Creates a run with a fresh participant token and its rehearsal attempt row. */
   create(context: CompiledContext, goalIndex = 0): Run {

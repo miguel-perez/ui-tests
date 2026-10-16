@@ -56,6 +56,8 @@ export function createCollector(getStorage: () => StorageAdapter = () => new SQL
         headers['Set-Cookie'] = `ui-tests-run=${run.id}.${run.token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=7200${new URL(request.url).protocol === 'https:' ? '; Secure' : ''}`
       } else {
         if (!run) return new Response('Unauthorized', { status: 401 })
+        // Withdrawal is final: nothing else may write to the attempt afterwards.
+        if (run.withdrawnAt && body.action !== 'withdraw') return new Response('Attempt was withdrawn', { status: 409 })
         if (body.action === 'begin') {
           if (run.status !== 'consented') return new Response('Consent is required before beginning', { status: 409 })
           run.status = 'active'; run.startedAt = Date.now()
@@ -74,7 +76,6 @@ export function createCollector(getStorage: () => StorageAdapter = () => new SQL
           // Withdrawal removes every recording for the run and marks the attempt withdrawn; it is final.
           return Response.json(participantView(store.withdraw(run.id)!), { headers })
         } else if (body.action === 'voice') {
-          if (run.withdrawnAt) return new Response('Attempt was withdrawn', { status: 409 })
           if (run.status !== 'questions') return new Response('Questions are not available', { status: 409 })
           const audio = Buffer.from(body.audio, 'base64')
           if (!audio.length || audio.length > maxAudioBytes) return new Response('Recording too large', { status: 413 })

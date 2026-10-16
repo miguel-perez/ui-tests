@@ -6,7 +6,7 @@ import path from 'node:path'
 import { userInfo } from 'node:os'
 import { build } from 'esbuild'
 import { compileFile } from './compiler.ts'
-import { SQLiteAdapter, dataDirectory } from './storage.ts'
+import { SQLiteAdapter, dataDirectory, recordingRetentionMs } from './storage.ts'
 import { verify } from './verify.ts'
 import { renderTrace } from './trace.tsx'
 import type { Context } from './index.ts'
@@ -173,8 +173,10 @@ async function main() {
       }
     } catch (error) { console.error(error) } finally { verifying = false }
   }, 100)
+  // A dev session can stay open for days: sweep expired recordings hourly, whether or not the player sends anything.
+  const retention = setInterval(() => store.purgeRecordings(Date.now() - recordingRetentionMs), 60 * 60 * 1000)
   /** Shuts down the viewer and storage and exits. */
-  function stop() { clearInterval(interval); server.close(); store.close(); process.exit(0) }
+  function stop() { clearInterval(interval); clearInterval(retention); server.close(); store.close(); process.exit(0) }
   process.on('SIGINT', stop); process.on('SIGTERM', stop)
 }
 main().catch(error => { console.error(error instanceof Error ? error.message : error); process.exit(1) })

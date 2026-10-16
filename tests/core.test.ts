@@ -1,5 +1,8 @@
 import { describe, it, expect as assert, beforeEach, vi } from 'vitest'
 import { readFile } from 'node:fs/promises'
+import { mkdtempSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { context, goal, task, outcome, expect, getContexts, resetContexts } from '../packages/ui-tests/src/index'
 import { compile, compileFile, lint, generateTemplate, sentence, sampleSize } from '../packages/ui-tests/src/compiler'
 import { deriveScreener, inferScreen, recencyBands } from '../packages/ui-tests/src/screener'
@@ -189,6 +192,10 @@ describe('storage, verification and participant boundary', () => {
       assert(withdrawn.recording?.voice).toBe(false)
       assert(store.db.prepare('SELECT data FROM attempts').get()).toEqual({ data: assert.stringContaining('"withdrawnAt"') })
       assert(renderTrace(withdrawn, [], store)).toContain('their recordings were deleted')
+      // Withdrawal is final: no other action may write to the attempt afterwards.
+      for (const action of [{ action: 'begin' }, { action: 'events', events: [] }, { action: 'extend' }, { action: 'end', reason: 'done', snapshot: { url: 'http://localhost/', dom: '' } }, { action: 'questions', seq: 5 }, voice]) assert((await post(action)).status).toBe(409)
+      assert(store.get(run.id)!).toEqual(withdrawn)
+      assert(store.db.prepare('SELECT COUNT(*) AS n FROM recordings').get()).toEqual({ n: 0 })
     } finally { close.mockRestore(); store.close() }
   })
   it('deletes recordings past the 90-day retention default', async () => {
@@ -203,6 +210,16 @@ describe('storage, verification and participant boundary', () => {
       assert(store.recording(old)).toBeUndefined()
       assert(store.recording(recent)!.audio.toString()).toBe('recent')
     } finally { close.mockRestore(); store.close() }
+  })
+  it('deletes expired recordings whenever the database is opened, without a collector request', () => {
+    const file = path.join(mkdtempSync(path.join(tmpdir(), 'ui-tests-retention-')), 'dev.sqlite')
+    const first = new SQLiteAdapter(file)
+    const run = first.create(compile(authored())[0])
+    const old = first.saveRecording(run.id, 'audio/webm', Buffer.from('old'))
+    first.db.prepare('UPDATE recordings SET created_at=?').run(Date.now() - recordingRetentionMs - 1000)
+    first.close()
+    const reopened = new SQLiteAdapter(file)
+    try { assert(reopened.recording(old)).toBeUndefined() } finally { reopened.close() }
   })
   it('gives more time once, records an early abandonment apart from giving up, and asks confidence only when unverifiable', async () => {
     const store = new SQLiteAdapter(':memory:')
