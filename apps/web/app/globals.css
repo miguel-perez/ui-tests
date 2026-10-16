@@ -110,10 +110,9 @@ main { position: relative; isolation: isolate; }
 /* Smaller in presence than the first version: half the hero, dim and faded at its edges, never behind the headline. */
 .hero-session { position: absolute; right: max(24px, calc(50% - 680px)); top: 50%; width: min(720px, 54%); aspect-ratio: 1280 / 800; transform: translateY(-50%); opacity: .2; -webkit-mask-image: radial-gradient(ellipse at center, #000 45%, transparent 75%); mask-image: radial-gradient(ellipse at center, #000 45%, transparent 75%); }
 .hero-session video { display: block; width: 100%; height: 100%; object-fit: contain; filter: grayscale(.4); }
-.sensor { position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; border: 2px solid var(--moment); border-radius: 50%; animation: sensor 1.6s ease-out both; }
+.sensor { position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; border: 2px solid var(--moment); border-radius: 50%; opacity: 0; }
 .sensor::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: var(--moment); }
-@keyframes sensor { 0% { transform: scale(.4); opacity: 0; } 15% { opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
-[data-motion="still"] .sensor { animation: none; opacity: 1; }
+[data-motion="still"] .sensor.poster { opacity: 1; }
 
 /* L2 · Session. 12 columns: metadata strip above, video 7 left, timeline 5 right, words below. Light theme. */
 .session-view { color: var(--ink); background: var(--surface); }

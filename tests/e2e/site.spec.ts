@@ -115,7 +115,7 @@ for (const width of [1440, 375]) {
     // Item 1: under reduced motion the session is its poster with that frame's sensor, and the texture holds still.
     await expect(page.locator('.hero-backdrop')).toHaveAttribute('data-motion', 'still')
     expect(await page.locator('.hero video').evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
-    await expect(page.locator('.hero .sensor').first()).toBeAttached()
+    await expect(page.locator('.hero .sensor.poster')).toHaveCSS('opacity', '1')
     expect(await page.evaluate(() => document.getAnimations().length)).toBe(0)
     const still = await page.locator('.trace-texture').evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())
     await page.waitForTimeout(250)
@@ -173,10 +173,14 @@ test('the hero session plays dim and slow with in-context sensors only, and the 
   await expect.poll(() => video.evaluate((element: HTMLVideoElement) => !element.paused), { timeout: 10_000 }).toBe(true)
   expect(await video.evaluate((element: HTMLVideoElement) => element.playbackRate)).toBe(.6)
   expect(Number(await page.locator('.hero-session').evaluate(node => getComputedStyle(node).opacity))).toBeLessThanOrEqual(.25)
-  // A sensor appears where the system detects a moment: a small mark in the moment hue, nothing written.
-  await expect(page.locator('.hero .sensor').first()).toBeAttached({ timeout: 15_000 })
+  // A sensor pulses where the system detects a moment: a small mark in the moment hue, nothing written.
+  const backdrop = page.locator('.hero-backdrop')
+  const markup = await backdrop.evaluate(node => node.outerHTML)
+  await expect.poll(() => page.locator('.hero .sensor').evaluateAll(nodes => nodes.some(node => node.getAnimations().length > 0)), { timeout: 15_000 }).toBe(true)
   await expect(page.locator('.hero .sensor').first()).toHaveText('')
   await expect(page.locator('.hero .sensor').first()).toHaveCSS('border-color', 'rgb(255, 158, 100)')
+  // The pulse is an animation, not new markup, so a recorder still sees a dead click on this page as dead.
+  expect(await backdrop.evaluate(node => node.outerHTML)).toBe(markup)
   const texture = page.locator('.trace-texture')
   const image = await texture.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())
   await expect.poll(() => texture.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())).not.toBe(image)

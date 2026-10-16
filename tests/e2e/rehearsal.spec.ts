@@ -262,6 +262,9 @@ test('Talk instead asks for the microphone once, records with a live indicator a
   await page.waitForTimeout(600)
   await page.getByRole('button', { name: 'Stop' }).click()
   await box.fill('Share seemed like the place for people!')
+  // A result the speech service delivers after Stop does not overwrite the correction.
+  await page.waitForTimeout(500)
+  await expect(box).toHaveValue('Share seemed like the place for people!')
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   await expect(page.getByRole('button', { name: 'Send answers' })).toBeEnabled({ timeout: 15_000 })
   await page.getByRole('button', { name: 'Send answers' }).click()

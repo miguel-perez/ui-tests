@@ -9,6 +9,8 @@ const sensed = (p3.moments as Moment[]).filter(moment => moment.at && (moment.is
 /** The poster frame is 00:05, the pause in the Share menu: under reduced motion its sensor is the still. */
 const still = sensed.filter(moment => moment.seconds === 5)
 const PULSE = 1.6
+/** One pulse: the ring grows from the cursor and fades. */
+const pulse: Keyframe[] = [{ transform: 'scale(.4)', opacity: 0 }, { opacity: 1, offset: .15 }, { transform: 'scale(1.4)', opacity: 0 }]
 
 function useReducedMotion() {
   const [reduced, setReduced] = useState(true)
@@ -69,7 +71,7 @@ export function HeroBackdrop() {
   const canvas = useRef<HTMLCanvasElement>(null)
   const video = useRef<HTMLVideoElement>(null)
   const reduced = useReducedMotion()
-  const [active, setActive] = useState<Moment[]>(still)
+  const sensors = useRef<(HTMLSpanElement | null)[]>([])
   useEffect(() => {
     const element = canvas.current!
     let frame = 0, last = 0, clock = 0, visible = true
@@ -88,13 +90,17 @@ export function HeroBackdrop() {
   }, [reduced])
   useEffect(() => {
     const element = video.current!
-    if (reduced) { element.pause(); setActive(still); return }
-    let frame = 0, shown = ''
+    if (reduced) { element.pause(); return }
+    let frame = 0, previous = 0
+    // Every sensor is always in the DOM and pulses through the Web Animations API, so the page's markup never changes on its own
+    // and a recorder comparing it before and after a visitor's click still sees a dead click as dead.
     const sense = () => {
       const t = element.currentTime
-      const now = sensed.filter(moment => t >= moment.seconds && t < moment.seconds + PULSE)
-      const key = now.map(moment => moment.seconds).join()
-      if (key !== shown) { shown = key; setActive(now) }
+      sensed.forEach((moment, index) => {
+        const crossed = t < previous ? moment.seconds <= t : moment.seconds > previous && moment.seconds <= t
+        if (crossed) sensors.current[index]?.animate(pulse, { duration: PULSE * 1000, easing: 'ease-out' })
+      })
+      previous = t
       frame = requestAnimationFrame(sense)
     }
     // The session starts after the page has settled, so the poster is the first paint and the video never delays it.
@@ -105,7 +111,7 @@ export function HeroBackdrop() {
     <canvas ref={canvas} className="trace-texture" data-motion={reduced ? 'still' : 'running'} />
     <div className="hero-session">
       <video ref={video} src={p3.video} poster={p3.poster} muted loop playsInline preload="none" tabIndex={-1} />
-      {active.map(moment => <span key={moment.seconds} className="sensor" style={{ left: `${moment.at![0] * 100}%`, top: `${moment.at![1] * 100}%` }} />)}
+      {sensed.map((moment, index) => <span key={moment.seconds} ref={node => { sensors.current[index] = node }} className={still.includes(moment) ? 'sensor poster' : 'sensor'} style={{ left: `${moment.at![0] * 100}%`, top: `${moment.at![1] * 100}%` }} />)}
     </div>
   </div>
 }

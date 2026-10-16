@@ -164,7 +164,7 @@ export function TalkInstead({ consent, onConsent, clip, onClip, onTranscript, on
     const current = { recorder, stream, speech, started, timer: setInterval(() => setSeconds((Date.now() - started) / 1000), 250), text: '' }
     session.current = current
     recorder.onstop = () => {
-      clearInterval(current.timer); stream.getTracks().forEach(track => track.stop())
+      clearInterval(current.timer); stream.getTracks().forEach(track => track.stop()); if (speech) speech.onresult = null
       const type = recorder.mimeType || mime || 'audio/webm'
       onClip({ blob: new Blob(chunks, { type }), mime: type.split(';')[0], seconds: (Date.now() - started) / 1000, transcript: current.text })
       onLive?.(false)
@@ -183,7 +183,8 @@ export function TalkInstead({ consent, onConsent, clip, onClip, onTranscript, on
     } else setNote('No live transcript in this browser: type what you said, or leave the box empty. The recording is kept.')
     onTranscript(''); setSeconds(0); recorder.start(250); setState('recording'); onLive?.(true)
   }
-  function stop() { const current = session.current; if (!current) return; current.speech?.stop(); current.recorder.stop() }
+  /** Stops listening first: a result the speech service delivers after Stop must not overwrite what the person then corrects. */
+  function stop() { const current = session.current; if (!current) return; if (current.speech) current.speech.onresult = null; current.speech?.stop(); current.recorder.stop() }
   return <div className="uit-talk-wrap">
     {state === 'asking' && <div className="uit-talk-consent" role="group" aria-label="Talk instead of typing?">
       <p>Talk your answer instead of typing it? The microphone records only while the red dot shows. The audio and the words are kept with this attempt.</p>
