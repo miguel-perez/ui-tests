@@ -12,7 +12,7 @@ export function Stepped({ label, url, what, children }: { label: string; url: st
   const show = (n: number) => setCurrent(Math.max(0, Math.min(steps.length - 1, n)))
   function next(event: MouseEvent) { if ((event.target as Element).closest('.next-step')) setCurrent(current + 1 > steps.length - 1 ? 0 : current + 1) }
   return <>
-    <figure className="compile-frame auto multi" aria-label={label} onClick={next}>
+    <figure className="compile-frame auto multi" aria-label={label} onClick={next} data-figure>
       <div className="frame-addr" aria-hidden="true"><i /><i /><i /><span>{url}</span></div>
       {/* Not the hidden attribute: Tailwind's base layer would take a hidden step out of the layout. Inert and invisible instead. */}
       {steps.map((step, i) => <div className={`car-step${i === current ? ' is-current' : ''}`} key={i} inert={i !== current} aria-hidden={i !== current}>{step}</div>)}

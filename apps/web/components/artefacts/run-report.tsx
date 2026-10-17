@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Icon } from '../icon'
 import { run, clock } from '../../lib/attempts'
-import { pullRequest } from '../../lib/copy'
+import { runFacts } from '../../lib/copy'
 import { rows, findings, total, result, legend, caveat, people, closing, source, clip, issueMarkdown, type Finding, type Moment } from '../../lib/pull-request'
 
 const impactWord = (finding: Finding) => finding.impact === 'worked' ? 'Worked' : finding.impact[0].toUpperCase() + finding.impact.slice(1)
@@ -69,11 +69,11 @@ export function RunReport({ level = 1, address, links, example = false }: { leve
   async function copyIssue() {
     try { await navigator.clipboard.writeText(issueMarkdown(finding, moment)); setStatus('Copied') } catch { setStatus('Could not copy. Select the text of the problem instead.') }
   }
-  return <figure className="window run-report" data-artefact="run-report" aria-label={`Report: ${run.goal}, run ${run.run}`}>
+  return <figure className="window run-report" data-artefact="run-report" data-figure aria-label={`Report: ${run.goal}, run ${run.run}`}>
     {address && <figcaption className="rr-addr"><span className="rr-dots" aria-hidden="true"><i /><i /><i /></span><span className="rr-url">{address}</span>{example && <span className="example-label">{run.label}</span>}</figcaption>}
     <div className="rr-body">
       <header className="rr-top">
-        <p className="rr-crumb"><span>{pullRequest.product}</span><span>Run <b className="num">{run.run}</b></span><span>{run.date}</span><span>{total} people from a {source}</span>{!address && example && <span className="example-label">{run.label}</span>}</p>
+        <p className="rr-crumb"><span>{runFacts.product}</span><span>Run <b className="num">{run.run}</b></span><span>{run.date}</span><span>{total} people from a {source}</span>{!address && example && <span className="example-label">{run.label}</span>}</p>
         <Heading className="rr-result"><b>{run.goal}</b> · {result.reached} · {result.problems}{result.failed && <> · <span className="no">{result.failed}</span></>}</Heading>
       </header>
       <ul className="rr-people" aria-label="The people, each linking to their attempt">{people.map(person => <li key={person.number}>
@@ -98,7 +98,7 @@ export function RunReport({ level = 1, address, links, example = false }: { leve
             <div><dt>Moments</dt><dd><span className="rr-moments">{finding.moments.map(entry => <button key={`${entry.person}-${entry.seconds}`} className="rr-chip" aria-pressed={entry.person === moment.person && entry.seconds === moment.seconds} onClick={() => { setMoment(entry); setStatus('') }}><Icon name="play" size={10} />Person {entry.person} · {clock(entry.seconds)}</button>)}</span></dd></div>
             {finding.change && <div><dt>Suggested change</dt><dd className="rr-fix"><b>{finding.change}</b></dd></div>}
           </dl>
-          {finding.impact !== 'worked' && <div className="rr-act"><button className="rr-copy" onClick={copyIssue}><Icon name="copy" size={13} />{pullRequest.copyIssue}</button><span role="status" className="rr-status">{status}</span></div>}
+          {finding.impact !== 'worked' && <div className="rr-act"><button className="rr-copy" onClick={copyIssue}><Icon name="copy" size={13} />{runFacts.copyIssue}</button><span role="status" className="rr-status">{status}</span></div>}
         </section>
       </div>
       <p className="rr-foot">After the goal: {closing.afterGoal.map(([label, value], index) => <span key={label}>{index > 0 && ' · '}{label} <b>{value} of 5</b></span>)} · First look: {closing.firstLook.map(([label, value], index) => <span key={label}>{index > 0 && ', '}{label} <b>{value} of {total}</b></span>)} · Who took part: {closing.whoTookPart} · {closing.environment} · {caveat}</p>

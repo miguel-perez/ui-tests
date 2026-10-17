@@ -32,7 +32,8 @@ figure, blockquote { margin: 0; }
 h1, h2, h3, h4, p, dl, dd { margin: 0; }
 h2 { font-size: 36px; font-weight: 500; line-height: 1.2; letter-spacing: -.025em; }
 h3, h4 { font-weight: 500; }
-.site-width { width: calc(100% - 48px); max-width: 1248px; margin: auto; }
+/* The container: 1248px centred, 96px margins at 1440 and 16px on a phone. */
+.site-width { width: calc(100% - 32px); max-width: 1248px; margin: auto; }
 .site-header nav { height: 80px; display: flex; align-items: center; justify-content: space-between; }
 .wordmark { display: flex; align-items: center; gap: 10px; font: 500 17px var(--font-mono), monospace; }
 .wordmark svg { width: 20px; height: 20px; color: var(--accent); }
@@ -51,13 +52,17 @@ main { position: relative; isolation: isolate; }
 .fineprint { font-size: 14px; color: var(--muted); }
 .text-link { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
 
-/* The grid: 12 columns, 24px gutters, on the 1248px container (docs/design/grid-plan.md). */
-.row-7-5, .row-8-4, .section-head, .hero-grid, .step-pair { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); }
-.row-7-5 > :first-child { grid-column: 1 / span 7; }
-.row-7-5 > :last-child { grid-column: 8 / span 5; }
-.row-8-4 > :first-child { grid-column: 1 / span 8; }
-.row-8-4 > :last-child { grid-column: 9 / span 4; }
-.row-7-5, .row-8-4 { align-items: center; }
+/* The page grid (design/artefacts/README.md, "The page grid, in one place"; docs/design/grid-plan.md): 12 columns, 24px gutters, on
+   the 1248px container. A section's heading takes the first five columns and its lead the right seven: one 5fr / 7fr split with one
+   gutter, so at 1440 the heading starts at 96 and is 510 wide, and the lead and any right-seven figure start at 630 and are 714 wide.
+   A figure takes all twelve columns or the right seven; nothing is centred in a narrower column. */
+.hero-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); }
+.section-head, .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: var(--gutter); }
+.split > * { min-width: 0; }
+/* A figure in the right seven with its words beside it in the first five, vertically centred. */
+.split.figure-right { align-items: center; }
+.split.figure-right > :first-child { grid-column: 2; grid-row: 1; }
+.split.figure-right > :last-child { grid-column: 1; grid-row: 1; }
 
 /* Blocks: 96 above the section head, 48 between artefacts, 24 between an artefact and its caption underneath. */
 .block { position: relative; padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
@@ -66,8 +71,8 @@ main { position: relative; isolation: isolate; }
 .block::before { content: ''; position: absolute; bottom: -10px; left: -8px; width: 36px; height: 20px; background: var(--canvas); }
 .block::after { content: ''; position: absolute; bottom: -10px; left: 0; width: 20px; height: 20px; z-index: 1; -webkit-mask: var(--mark-motif) center / 14px no-repeat; mask: var(--mark-motif) center / 14px no-repeat; background-color: var(--comment); }
 .section-head { align-items: baseline; }
-.section-head h2 { grid-column: 1 / span 5; }
-.section-head p { grid-column: 6 / span 7; color: var(--muted); font-size: 18px; max-width: 64ch; }
+.section-head h2 { grid-column: 1; }
+.section-head p { grid-column: 2; color: var(--muted); font-size: 18px; max-width: 64ch; text-wrap: pretty; }
 
 /* Caption: beside an artefact of 8 columns or fewer, or under a wider one in one or two lines. */
 .caption { color: var(--muted); font-size: 15px; }
@@ -242,18 +247,32 @@ main { position: relative; isolation: isolate; }
 .attempt-foot span + span::before { content: '·'; margin: 0 10px; }
 .attempt-foot b { font-weight: 500; color: var(--ink); }
 
-/* L3 · Compilation (design/artefacts/compile-section.html): one 800px reading column, centred on the grid (8 of 12 columns at 1440).
+/* L3 · Compilation (design/artefacts/compile-section.html), on the page grid: the commands and the whole file across twelve columns,
+   then the six steps as tabs, one open at a time, each a 5/7 pair: the text and its lines on the left, sticky; the screen on the right.
    The frames are the light Weekboard page; the chrome over it is that page's inverse with its mint accent, at real size. */
-.compile-column { max-width: 800px; margin: 0 auto; }
-.compile-head { display: grid; gap: 10px; margin-bottom: 28px; }
-.compile-head p { color: var(--muted); font-size: 18px; max-width: 64ch; }
-.compile-commands { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); margin-bottom: 12px; }
+.compile-commands { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); }
 .compile-command { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
 .compile-command code { font-size: 14px; white-space: nowrap; overflow-wrap: normal; }
 .compile-command > span { font-size: 13px; color: var(--muted); }
 .compile-command b { font-weight: 500; color: var(--ink); }
-.compile-note { font-size: 13px; color: var(--muted); margin-bottom: 24px; }
+.block > .compile-note { margin-top: 12px; font-size: 13px; color: var(--muted); }
 .compile-note .code-inline { font-size: 12px; }
+.block > .compile-note + .lines-window { margin-top: var(--space-1); }
+/* The tab strip: the step's number in the moment colour, its name; the open tab underlined in the moment colour. */
+.block > .compile-tabs { margin-top: 40px; }
+.compile-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.compile-tabs::-webkit-scrollbar { display: none; }
+.compile-tabs button { flex: none; display: inline-flex; gap: 8px; align-items: baseline; padding: 10px 14px 12px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; font-size: 14px; color: var(--muted); white-space: nowrap; }
+.compile-tabs button b, .compile-stepnav b { font: 500 12px/1 var(--font-mono), monospace; color: var(--moment); }
+.compile-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--moment); }
+.compile-tabs button:focus-visible { outline-offset: -2px; }
+.block > .compile-step { margin-top: 28px; }
+.compile-pair { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gutter); align-items: start; scroll-margin-top: 24px; }
+.compile-left { position: sticky; top: 24px; display: grid; gap: 20px; min-width: 0; }
+.block > .compile-stepnav { margin-top: 32px; }
+.compile-stepnav { display: flex; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
+.compile-stepnav button { display: inline-flex; gap: 8px; align-items: baseline; border: 0; background: none; padding: 0; color: var(--muted); }
+.compile-stepnav button:disabled { visibility: hidden; }
 .lines-window .window-chrome { min-height: 40px; }
 .lines-legend { margin-left: auto; color: var(--done); white-space: nowrap; }
 .lines-window .copy-control { margin-left: 0; }
@@ -263,10 +282,7 @@ main { position: relative; isolation: isolate; }
 .lines-body .ln { text-align: right; padding-right: 14px; color: var(--muted); font-size: 11px; opacity: .8; user-select: none; }
 .lines-body code { font: inherit; }
 .lines-body li.gap code { color: var(--muted); }
-.compile-pieces { list-style: none; margin: 40px 0 0; padding: 0; }
-.compile-piece { padding: 44px 0; border-top: 1px solid var(--line); display: grid; gap: 16px; }
-.compile-piece:last-child { padding-bottom: 0; }
-.compile-intro { display: grid; gap: 10px; max-width: 64ch; margin-bottom: 4px; }
+.compile-intro { display: grid; gap: 10px; max-width: 64ch; }
 .compile-intro h3 { font-size: 20px; line-height: 1.25; letter-spacing: -.01em; }
 .compile-intro h3 > span:not(.compile-n) { font-weight: 400; color: var(--muted); }
 .compile-n { color: var(--moment); font: 500 15px var(--font-mono), monospace; margin-right: 10px; vertical-align: 1px; }
@@ -352,9 +368,6 @@ main { position: relative; isolation: isolate; }
 /* L4 · Sources (design/artefacts/sources-section.html): the heading and lead stacked, then a table of the three sources, one row
    open at a time. The open row and its well take the surface token edge to edge (a full-bleed shadow clipped to the row's height,
    so nothing overflows the page); the header sticks on the canvas once scrolled past. Tokens only: the section reads the site's tokens. */
-.src-head { display: grid; gap: 10px; margin-bottom: 28px; max-width: 64ch; }
-.src-head p { color: var(--muted); font-size: 18px; text-wrap: pretty; }
-.block > .src-table { margin-top: 0; }
 .src-cols, .src-row { display: grid; grid-template-columns: 28px 3fr 3fr 2fr 2fr 2fr 24px; column-gap: var(--gutter); align-items: center; }
 .src-cols { position: sticky; top: 0; z-index: 5; padding: 12px 0; font: 500 11px/1.4 var(--font-sans), sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--canvas); box-shadow: 0 0 0 100vmax var(--canvas); clip-path: inset(0 -100vmax); }
 .src-cols.is-stuck { color: var(--ink); }
@@ -374,7 +387,7 @@ main { position: relative; isolation: isolate; }
 .src-chev { width: 24px; height: 24px; display: grid; place-items: center; justify-self: end; color: var(--muted); transition: transform .2s; }
 .src-chev svg { width: 16px; height: 16px; }
 .src-row[aria-expanded="true"] .src-chev { transform: rotate(180deg); color: var(--moment); }
-.src-well { display: grid; grid-template-columns: 5fr 7fr; gap: 32px; align-items: start; padding: 40px 0 48px; background: var(--surface); box-shadow: 0 0 0 100vmax var(--surface); clip-path: inset(0 -100vmax); }
+.src-well { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gutter); align-items: start; padding: 40px 0 48px; background: var(--surface); box-shadow: 0 0 0 100vmax var(--surface); clip-path: inset(0 -100vmax); }
 .src-well[hidden] { display: none; }
 .src-well > * { min-width: 0; }
 /* The left column sits under the name column: the icon's 28px and one gutter in. */
@@ -417,17 +430,17 @@ main { position: relative; isolation: isolate; }
 .wordmark.prolific { --mark: url('/marks/prolific.svg'); aspect-ratio: 1180.3 / 275.9; }
 .wordmark.connect { --mark: url('/marks/connect.webp'); aspect-ratio: 770 / 170; height: 18px; }
 
-/* L5 · PullRequest (design/artefacts/pr-section.html): three pieces in one column, centred on 10 of the 12 columns, in the order a
-   developer meets them. GitHub's chrome is drawn in the site's neutrals; colour stays on the data. */
-.pr-column { max-width: 1036px; margin: 0 auto; }
-.pr-head { display: grid; gap: 10px; margin-bottom: 36px; max-width: 70ch; }
-.pr-head p { color: var(--muted); font-size: 18px; text-wrap: pretty; }
-.pr-piece { border-top: 1px solid var(--line); padding: 40px 0 48px; display: grid; gap: 18px; }
-.pr-piece:last-child { padding-bottom: 0; }
-.pr-intro { display: grid; gap: 8px; max-width: 64ch; }
-.pr-intro h3 { font: 500 20px/1.25 var(--font-sans), sans-serif; letter-spacing: -.01em; }
-.pr-intro h3::before { content: attr(data-n); color: var(--moment); font: 15px var(--font-mono), monospace; margin-right: 10px; }
-.pr-intro p { color: var(--muted); font-size: 15px; line-height: 1.6; text-wrap: pretty; }
+/* L2 · WhatComesBack (design/artefacts/what-comes-back.html): three numbered pieces in the order a developer meets them, each a
+   64ch intro over its artefact across all twelve columns, hairlines between them. GitHub's chrome is drawn in the site's neutrals;
+   colour stays on the data. */
+.block > .piece { margin-top: 36px; }
+.piece { border-top: 1px solid var(--line); padding-top: 40px; display: grid; gap: 18px; }
+.piece + .piece { margin-top: 48px; }
+.piece-intro { display: grid; gap: 8px; max-width: 64ch; }
+.piece-intro h3 { font: 500 20px/1.25 var(--font-sans), sans-serif; letter-spacing: -.01em; }
+.piece-intro h3::before { content: attr(data-n); color: var(--moment); font: 15px var(--font-mono), monospace; margin-right: 10px; }
+.piece-intro p { color: var(--muted); font-size: 15px; line-height: 1.6; text-wrap: pretty; }
+.piece > .caption-under { margin-top: 6px; }
 .pr-gh { font-size: 14px; }
 .pr-gh-hd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); font-weight: 500; }
 .pr-gh-hd .example-label { margin-left: auto; }
@@ -537,8 +550,8 @@ main { position: relative; isolation: isolate; }
 .report-title { font-size: 28px; font-weight: 500; letter-spacing: -.02em; }
 .attempt-none { color: var(--muted); font-size: 14px; }
 
-/* L6 · AgentRun: the terminal in 8 columns, the caption in 4 beside it. */
-.row-8-4 .terminal-body { font-size: 13px; }
+/* L5 · AgentRun: the terminal in the right seven, the caption in the first five beside it. */
+.figure-right .terminal-body { font-size: 13px; }
 
 /* L7 · Snippet and Dashboard. Fixed fields first (date, people, status, result), the name last. */
 .dashboard-scroll { overflow-x: auto; }
@@ -585,27 +598,29 @@ main { position: relative; isolation: isolate; }
 
 /* The guide: the step index, then Step × 6 and the hosted track as Step × 2. */
 .guide { padding-bottom: var(--space-3); }
-.guide-head { padding-top: var(--space-2); max-width: 718px; }
-.guide-head h1 { font-size: 48px; line-height: 1.1; font-weight: 500; letter-spacing: -.04em; margin-bottom: var(--space-1); }
-.guide-head p { color: var(--muted); font-size: 18px; }
+.guide-head { padding-top: var(--space-2); align-items: baseline; }
+.guide-head h1 { font-size: 48px; line-height: 1.1; font-weight: 500; letter-spacing: -.04em; }
+.guide-head p { color: var(--muted); font-size: 18px; max-width: 64ch; }
 .step-index { margin-top: var(--space-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .step-index ol { display: flex; flex-wrap: wrap; gap: 0 var(--space-1); list-style: none; margin: 0; padding: 0; }
 .step-index a { display: inline-flex; align-items: center; gap: 10px; padding: 14px 0; font-size: 14px; color: var(--muted); }
 .step-index span { font: 12px var(--font-mono), monospace; }
-.step { padding-top: var(--space-3); }
-.step-head { display: grid; grid-template-columns: auto 1fr; column-gap: 16px; align-items: baseline; margin-bottom: var(--space-1); }
-.step-number { font: 500 14px var(--font-mono), monospace; color: var(--moment); }
-.step-head h2 { font-size: 30px; }
-.step-intro { grid-column: 2; margin-top: 8px; color: var(--muted); max-width: 824px; }
-.step-pair { align-items: start; }
-.step-type { grid-column: 1 / span 6; min-width: 0; display: grid; gap: var(--space-1); }
-.step-see { grid-column: 7 / span 6; min-width: 0; display: grid; gap: var(--space-1); }
+/* A step: the number and title in the first five columns, sticky; its sentence, what you type and what you see in the right seven. */
+.step { padding-top: var(--space-3); align-items: start; }
+.step > h2 { position: sticky; top: 24px; font-size: 30px; }
+.step-number { display: block; margin-bottom: 8px; font: 500 14px var(--font-mono), monospace; color: var(--moment); }
+.step-body { display: grid; gap: var(--space-2); }
+.step-intro { color: var(--muted); max-width: 64ch; }
+.step-type, .step-see { min-width: 0; display: grid; gap: var(--space-1); }
 .step-label { font: 12px var(--font-mono), monospace; color: var(--muted); margin-bottom: -12px; }
 .step .terminal-body { padding: 16px 20px; font-size: 13px; }
 .mount-steps { list-style: none; counter-reset: step; padding: 0; margin: 0; display: grid; gap: 12px; font-size: 15px; }
 .mount-steps li { counter-increment: step; position: relative; padding-left: 36px; overflow-wrap: anywhere; }
 .mount-steps li::before { content: counter(step); position: absolute; left: 0; top: 2px; width: 24px; height: 24px; display: grid; place-items: center; border: 1.5px solid var(--muted); border-radius: 4px; font: 12px var(--font-mono), monospace; color: var(--muted); }
-.track { margin-top: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--line); }
+/* Named for the guide alone: the attempt view's scrub line has a `.track` of its own (issue #46, item 5). */
+.guide-track { margin-top: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--line); }
+.guide-track > h2 { grid-column: 1; }
+.guide-track > .step { grid-column: 1 / -1; }
 
 /* States change paint only: no size, weight, margin, padding or position changes on hover, focus or active. */
 @media (hover: hover) {
@@ -621,8 +636,6 @@ main { position: relative; isolation: isolate; }
   .src-row:not([aria-expanded="true"]):hover { background: linear-gradient(90deg, transparent, var(--surface) 12%, var(--surface) 88%, transparent); }
 }
 @media (max-width: 1100px) {
-  .row-7-5 > :first-child, .row-8-4 > :first-child { grid-column: 1 / span 7; }
-  .row-7-5 > :last-child, .row-8-4 > :last-child { grid-column: 8 / span 5; }
   .hero-copy { grid-column: 1 / -1; }
   .hero-artefact { grid-column: 1 / span 9; margin-top: var(--space-2); }
 }
@@ -649,6 +662,8 @@ main { position: relative; isolation: isolate; }
 }
 /* Below 900px the report's two panes stack and the check page's side list goes above it. */
 @media (max-width: 900px) {
+  .compile-pair { grid-template-columns: minmax(0, 1fr); }
+  .compile-left { position: static; }
   .rr-viewer, .pr-cp { grid-template-columns: minmax(0, 1fr); }
   .rr-pane { position: static; }
   .pr-side { border-right: 0; border-bottom: 1px solid var(--line); }
@@ -657,11 +672,10 @@ main { position: relative; isolation: isolate; }
 @media (max-width: 700px) {
   .site-header nav { height: 64px; }
   .nav-links { gap: 20px; }
-  .row-7-5, .row-8-4, .section-head, .hero-grid, .step-pair { grid-template-columns: minmax(0, 1fr); }
-  .row-7-5 > *, .row-8-4 > *, .section-head > *, .hero-grid > *, .step-pair > * { grid-column: 1 / -1 !important; }
-  .row-7-5, .row-8-4 { row-gap: var(--space-1); }
-  .section-head { row-gap: var(--space-1); }
-  .step-pair { row-gap: var(--space-2); }
+  .section-head, .split, .hero-grid, .compile-pair { grid-template-columns: minmax(0, 1fr); }
+  .section-head > *, .split > *, .hero-grid > *, .compile-pair > * { grid-column: 1 / -1 !important; grid-row: auto !important; }
+  .section-head, .split, .compile-pair { row-gap: var(--space-1); }
+  .step > h2, .compile-left { position: static; }
   .hero-grid { padding: var(--space-2) 0; }
   .hero h1 { font-size: 44px; max-width: none; }
   .hero-artefact { margin-top: var(--space-2); }
@@ -675,8 +689,8 @@ main { position: relative; isolation: isolate; }
   .flow-row { grid-template-columns: 46px minmax(0, 1fr); row-gap: 4px; }
   .flow-row .url { grid-column: 2; }
   .attempt-headline { font-size: 28px; }
-  .pr-head p { font-size: 16px; }
-  .pr-piece { padding: 32px 0; }
+  .piece { padding-top: 32px; }
+  .piece + .piece { margin-top: 32px; }
   .pr-main { padding: 16px; }
   .rr-body { padding: 20px 16px; }
   .rr-result { font-size: 17px; }
@@ -688,8 +702,7 @@ main { position: relative; isolation: isolate; }
   .hosted-form form > *, .hosted-screen > * { grid-column: 1 !important; }
   .guide-head h1 { font-size: 40px; }
   .step { padding-top: var(--space-2); }
-  .step-head h2 { font-size: 26px; }
-  .step-intro { grid-column: 1 / -1; }
+  .step > h2 { font-size: 26px; }
   /* The compilation stacks: commands one per row, the code wraps, the frames fit their sheets, the pill docks across the bottom. */
   .compile-commands { grid-template-columns: minmax(0, 1fr); }
   .lines-body li { white-space: pre-wrap; overflow-wrap: anywhere; grid-template-columns: 34px minmax(0, 1fr); padding-right: 12px; font-size: 12px; }
@@ -709,7 +722,6 @@ main { position: relative; isolation: isolate; }
   /* The frame is 327px wide here: tighter separators and a narrower give-up control keep every control inside the pill. */
   .ch-pill .seg + .seg { margin-left: 6px; padding-left: 6px; }
   .ch-pill .cant { padding: 0 6px; }
-  .compile-piece { padding: 32px 0; }
   .src-frame.auto { padding: 44px 12px 20px; }
   .src-frame.shot { aspect-ratio: auto; min-height: 300px; }
 }

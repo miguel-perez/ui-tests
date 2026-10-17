@@ -1,11 +1,11 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { mkdir } from 'node:fs/promises'
-import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, runs, sources } from '../../apps/web/lib/copy'
+import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, runs, sources, whatComesBack } from '../../apps/web/lib/copy'
 import { shown, offences } from '../vocabulary'
 
 /** Every content type's component on the landing page (docs/design/site-schema.md). */
-const artefacts = ['terminal-window', 'code-window', 'attempt-view', 'compilation', 'sources', 'pull-request', 'merge-box', 'check-page', 'run-report', 'dashboard']
+const artefacts = ['terminal-window', 'code-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'run-report', 'dashboard']
 /** Relative luminance of a computed rgb() colour. */
 const luminance = (rgb: string) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return r * .2126 + g * .7152 + b * .0722 }
 /** The distinct colours of the text inside each matched element. */
@@ -74,7 +74,7 @@ for (const width of [1440, 375]) {
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(promise)
         await expect(page.getByText(intro)).toBeVisible()
         for (const [key, text] of Object.entries(landing)) if (!['fileCaption', 'moment', 'words', 'scenario', 'priority', 'result', 'reached'].includes(key)) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first(), key).toBeVisible()
-        for (const text of [agent.heading, agent.lead, agent.closing, hosted.heading, hosted.lead, hosted.closing, compilation.heading, compilation.lead]) await expect(page.getByText(text, { exact: true })).toBeVisible()
+        for (const text of [agent.heading, agent.lead, agent.closing, hosted.heading, hosted.lead, hosted.closing, compilation.heading, compilation.lead, whatComesBack.heading, whatComesBack.lead.replaceAll('`', '')]) await expect(page.getByText(text, { exact: true })).toBeVisible()
         // Round six: one section in place of "What the person sees" and "Three commands".
         await expect(page.getByRole('heading', { name: 'What the person sees.' })).toHaveCount(0)
         await expect(page.getByRole('heading', { name: 'Three commands.' })).toHaveCount(0)
@@ -85,16 +85,16 @@ for (const width of [1440, 375]) {
         expect(await page.locator('.hero-backdrop > *').evaluateAll(nodes => nodes.map(node => node.className))).toEqual(['trace-texture'])
         await expect(page.locator('.hero-backdrop')).toHaveText('')
         await expect(page.getByRole('button', { name: /frustration gestures|texture/i })).toHaveCount(0)
-        // Item 2: block 2 shows one results artefact, the attempt view; the report views live in the pull-request example.
+        // Issue #46, item 2: "What comes back." in place of the attempt view block and "In the pull request": the check, its page and
+        // the report; the one-person attempt view is off the landing, behind each name in the report's people line.
         const comesBack = page.locator('section[aria-labelledby="comes-back"]')
-        await expect(comesBack.locator('[data-artefact]')).toHaveCount(1)
-        await expect(comesBack.locator('[data-artefact="attempt-view"]')).toHaveCount(1)
-        // Issue #22: nothing on the attempt view or in the report rows, the check, the dashboard or the terminals uses the old words.
-        expect(offences(await comesBack.innerText(), shown)).toEqual([])
-        for (const selector of ['.pr-section', '.dashboard', '.terminal-window']) for (const text of await page.locator(selector).allInnerTexts()) expect(offences(text, shown), selector).toEqual([])
-        // Issue #35: the three-piece section in place of the checks box and the findings list.
-        const pr = page.locator('section[aria-labelledby="pull-request"]')
-        for (const piece of ['merge-box', 'check-page', 'run-report']) await expect(pr.locator(`[data-artefact="${piece}"]`)).toHaveCount(1)
+        for (const piece of ['merge-box', 'check-page', 'run-report']) await expect(comesBack.locator(`[data-artefact="${piece}"]`)).toHaveCount(1)
+        await expect(page.locator('[data-artefact="attempt-view"], [data-artefact="pull-request"], section[aria-labelledby="pull-request"]')).toHaveCount(0)
+        await expect(page.getByRole('heading', { name: 'In the pull request.' })).toHaveCount(0)
+        // The page order: hero, what comes back, what you write, where the people come from, the agent section, the hosted section.
+        expect(await page.locator('main section[aria-labelledby]').evaluateAll(nodes => nodes.filter(node => !node.parentElement?.closest('section')).map(node => node.getAttribute('aria-labelledby')))).toEqual(['promise', 'comes-back', 'what-you-write', 'people', 'agents', 'hosted'])
+        // Issue #22: nothing in the report rows, the check, the dashboard or the terminals uses the old words.
+        for (const selector of ['section[aria-labelledby="comes-back"]', '.dashboard', '.terminal-window']) for (const text of await page.locator(selector).allInnerTexts()) expect(offences(text, shown), selector).toEqual([])
         await expect(page.locator('.checks-box, .findings-list, [data-artefact="checks-box"], [data-artefact="findings-list"]')).toHaveCount(0)
         // Item 3: the hosted block shows the snippet and a dashboard of several runs; no reels repeated.
         const hostedBlock = page.locator('section[aria-labelledby="hosted"]')
@@ -153,7 +153,9 @@ for (const width of [1440, 375]) {
     expect(await page.locator('.trace-texture').evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())).toBe(still)
     await expect(page.locator('.types-once pre')).toHaveCSS('animation-name', 'none')
 
-    // The attempt view (issue #22, item 1): the result, the index worst first, the flow, how it felt, the folds closed, the footer.
+    // The attempt view (issue #22, item 1), on its own page since issue #46, behind Person 3 in the report's people line: the result,
+    // the index worst first, the flow, how it felt, the folds closed, the footer.
+    await page.goto('/r/k2m9/p3')
     const view = page.locator('.attempt-view')
     await expect(view.locator('.attempt-headline')).toHaveText('Person 3 did not reach the goal.')
     for (const [term, value] of [['Reached the goal?', 'No'], ['How it ended', 'Pressed Done'], ["How sure they'd done it", '6 of 7'], ['Time on this goal', '1 min 3 s']]) await expect(view.locator('.attempt-facts div').filter({ hasText: term })).toContainText(value)
@@ -206,7 +208,8 @@ for (const width of [1440, 375]) {
     expect(await view.locator('*').evaluateAll(nodes => nodes.every(node => getComputedStyle(node).transitionDuration.split(', ').every(duration => duration === '0s')))).toBe(true)
 
     // The report in the section: one clip at a time, played on its control from its start second, under reduced motion too.
-    const report = page.locator('section[aria-labelledby="pull-request"] .run-report')
+    await page.goto('/')
+    const report = page.locator('section[aria-labelledby="comes-back"] .run-report')
     const clipVideo = report.locator('.rr-clip video')
     expect(await clipVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
     await report.getByRole('button', { name: /^Play Person 3 · 00:58/ }).click()
@@ -247,7 +250,7 @@ test('the texture behind the hero moves slowly and continuously in the line colo
   await expect(page.locator('.site-header .wordmark')).toHaveCSS('display', 'flex')
 })
 
-for (const width of [1440, 375]) test(`what you write, what they see: one column, the file, six pieces, stepped frames of one height, no console errors at ${width}px`, async ({ page }) => {
+for (const width of [1440, 375]) test(`what you write, what they see: the commands, the file, then one step at a time by tab, key and hash, stepped frames of one height, no console errors at ${width}px`, async ({ page }) => {
   const errors: string[] = []
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
   page.on('pageerror', error => errors.push(error.message))
@@ -255,42 +258,73 @@ for (const width of [1440, 375]) test(`what you write, what they see: one column
   await page.goto('/')
   await page.evaluate(() => document.fonts.ready)
   const section = page.locator('section.compilation')
-  const column = (await section.locator('.compile-column').boundingBox())!
-  // One 800px reading column, centred on the grid: 8 of 12 columns at 1440; the whole width of the 327px column at 375.
-  if (width === 1440) { expect(column.width).toBe(800); expect(Math.abs(column.x + column.width / 2 - 720)).toBeLessThanOrEqual(1) }
-  else expect(column.width).toBe(327)
   // The three commands as cards, in one row at 1440 and stacked at 375.
   const commands = await section.locator('.compile-command').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().top))
   expect(commands).toHaveLength(3)
   if (width === 1440) expect(new Set(commands).size).toBe(1); else expect(new Set(commands).size).toBe(3)
-  // The whole file, as init writes it, in the site's highlighter.
+  // The whole file, as init writes it, in the site's highlighter, above the tabs.
   const file = section.locator('.lines-window').first()
   expect((await file.locator('li code').allInnerTexts()).join('\n')).toBe(inviteExample)
-  // Six pieces in participant order, each with its note, its own lines under their original numbers, a frame and what comes back.
-  await expect(section.locator('.compile-piece h3')).toHaveText(compilation.pieces.map(piece => new RegExp(`^${piece.n}${piece.name}`)))
-  for (const piece of compilation.pieces) {
+  // Issue #46, item 3: a tab strip, 1 Consent to 6 After the task, and one step visible at a time.
+  const tabs = section.getByRole('tab')
+  await expect(tabs).toHaveText(compilation.pieces.map(piece => `${piece.n}${piece.tab}`))
+  const open = async () => ({ selected: await tabs.evaluateAll(nodes => nodes.findIndex(node => node.getAttribute('aria-selected') === 'true')), visible: await section.locator('[role="tabpanel"]:visible').count() })
+  expect(await open()).toEqual({ selected: 0, visible: 1 })
+  // Each step: its number and name, its note and its own lines under their original numbers on the left; a frame and what comes back on the right.
+  for (const [i, piece] of compilation.pieces.entries()) {
+    await tabs.nth(i).click()
+    expect(await open()).toEqual({ selected: i, visible: 1 })
+    await expect(page).toHaveURL(new RegExp(`#step${piece.n}$`))
     const row = section.locator(`#piece-${piece.id}`)
+    await expect(row).toBeVisible()
+    await expect(row.locator('.compile-intro h3')).toHaveText(new RegExp(`^${piece.n}${piece.name}`))
     await expect(row.locator('.compile-back')).toHaveText(`Comes back${piece.returns}`)
-    await expect(row.locator('.compile-frame')).toHaveCount(1)
+    await expect(row.locator('.compile-frame[data-figure]')).toHaveCount(1)
+    // The text and its lines on the left, the screen on the right: a 5/7 pair at 1440, stacked at 375.
+    const [left, main] = await Promise.all([row.locator('.compile-left').boundingBox(), row.locator('.compile-main').boundingBox()])
+    if (width === 1440) { expect(Math.round(left!.width)).toBe(510); expect(Math.round(main!.x)).toBe(630) } else expect(main!.y).toBeGreaterThanOrEqual(left!.y + left!.height - 1)
     if (!piece.lines.length) { await expect(row.locator('.lines-window')).toHaveCount(0); continue }
     const numbers = (await row.locator('.lines-body .ln').allInnerTexts()).filter(Boolean).map(Number)
     expect(numbers).toEqual(piece.lines)
     // A skipped run of lines is one dots row.
-    const gaps = piece.lines.filter((n, i) => i && n - piece.lines[i - 1] > 1).length
+    const gaps = piece.lines.filter((n, j) => j && n - piece.lines[j - 1] > 1).length
     await expect(row.locator('.lines-body li.gap')).toHaveCount(gaps)
+    // At 375 the code wraps instead of scrolling.
+    if (width === 375) for (const body of await row.locator('.lines-body').all()) expect(await body.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true)
   }
-  // At 375 the code wraps instead of scrolling.
-  if (width === 375) for (const body of await section.locator('.lines-body').all()) expect(await body.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true)
+  // Arrow keys, Home and End move between the tabs and take the focus with them.
+  await tabs.nth(5).focus()
+  await page.keyboard.press('ArrowLeft'); expect((await open()).selected).toBe(4); await expect(tabs.nth(4)).toBeFocused()
+  await page.keyboard.press('Home'); expect((await open()).selected).toBe(0); await expect(tabs.nth(0)).toBeFocused()
+  await page.keyboard.press('ArrowRight'); expect((await open()).selected).toBe(1)
+  await page.keyboard.press('End'); expect((await open()).selected).toBe(5); await expect(tabs.nth(5)).toBeFocused()
+  await expect(tabs.nth(5)).toHaveAttribute('tabindex', '0'); await expect(tabs.nth(0)).toHaveAttribute('tabindex', '-1')
+  // Previous and next under the pair, named for the steps they open.
+  const nav = section.getByRole('navigation', { name: 'Previous and next step' })
+  await expect(nav.locator('.sprev')).toHaveText(`←Previous step: 5${compilation.pieces[4].tab}`)
+  // At the last step next is disabled and hidden, so it keeps its place but is not offered.
+  await expect(nav.locator('.snext')).toBeDisabled()
+  await expect(nav.locator('.snext')).toBeHidden()
+  await nav.getByRole('button', { name: /^Previous step: /, exact: false }).click()
+  expect((await open()).selected).toBe(4)
+  await nav.getByRole('button', { name: /^Next step: / }).click()
+  expect((await open()).selected).toBe(5)
+  // On a phone the strip scrolls sideways inside itself, never the page.
+  if (width === 375) {
+    expect(await section.locator('.compile-tabs').evaluate(node => node.scrollWidth > node.clientWidth)).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
   // The stepped frames keep one height through every step, by the sheet's own Next and by the control under the frame.
-  for (const [id, count] of [['screener', 6], ['after', 5]] as const) {
+  for (const [id, count, step] of [['screener', 6, 2], ['after', 5, 6]] as const) {
+    await tabs.nth(step - 1).click()
     const row = section.locator(`#piece-${id}`), frame = row.locator('.compile-frame'), stepper = row.locator('.stepper')
     await frame.scrollIntoViewIfNeeded()
     const height = (await frame.boundingBox())!.height
     await expect(stepper.locator('.where')).toHaveText(`1 of ${count}`)
     await expect(stepper.getByRole('button', { name: /^Previous/ })).toBeDisabled()
-    for (let step = 2; step <= count; step++) {
+    for (let n = 2; n <= count; n++) {
       await frame.locator('.car-step.is-current .next-step').click()
-      await expect(stepper.locator('.where')).toHaveText(`${step} of ${count}`)
+      await expect(stepper.locator('.where')).toHaveText(`${n} of ${count}`)
       expect((await frame.boundingBox())!.height).toBe(height)
       await expect(frame.locator('.car-step.is-current')).toHaveCount(1)
       await expect(frame.locator('.car-step')).toHaveCount(count)
@@ -302,7 +336,14 @@ for (const width of [1440, 375]) test(`what you write, what they see: one column
   }
   await expect(section.locator('#piece-after .car-step').first()).toContainText('Overall, how difficult or easy did you find this task?')
   await expect(section.locator('#piece-card')).toContainText(landing.scenario)
+  await tabs.nth(4).click()
   await expect(section.locator('#piece-bar .ch-pill')).toHaveCSS('height', '40px')
+  expect((await new AxeBuilder({ page }).include('section.compilation').analyze()).violations).toEqual([])
+  // A plain hash opens its step on load, and the strip is in view.
+  await page.goto('/#step4')
+  await expect(section.locator('#piece-card')).toBeVisible()
+  expect(await open()).toEqual({ selected: 3, visible: 1 })
+  await expect(section.locator('.compile-tabs')).toBeInViewport()
   expect(errors).toEqual([])
 })
 
@@ -336,7 +377,7 @@ for (const width of [1440, 375]) test(`the sources table opens one row at a time
   await expect(section.locator('#paid-panel-well')).toBeVisible()
   await expect(section.locator('#paid-panel-well [role="img"][aria-label="Prolific"]')).toBeVisible()
   await expect(section.locator('#paid-panel-well [role="img"][aria-label="CloudResearch Connect"]')).toBeVisible()
-  await section.locator('.src-head h2').click()
+  await section.locator('.section-head h2').click()
   expect(await open()).toEqual(['false', 'false', 'false'])
   // The join screen is the real player's: its words, what is recorded and Start.
   await rows.nth(0).click()
@@ -367,7 +408,8 @@ for (const width of [1440, 375]) test(`the sources table opens one row at a time
 
 for (const width of [1440, 375]) test(`hover, focus and active never move anything at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1000 })
-  await page.goto('/')
+  // The attempt view first, on its own page.
+  await page.goto('/r/k2m9/p3')
   // The flow's rows first: every row keeps its exact box when the pointer rests on it.
   const rows = page.locator('.attempt-flow > li')
   for (let i = 0; i < await rows.count(); i++) {
@@ -378,7 +420,13 @@ for (const width of [1440, 375]) test(`hover, focus and active never move anythi
     await row.hover()
     expect(await row.boundingBox(), `flow row ${i + 1} hover`).toEqual(before)
   }
-  const targets = ['.moment-press', '.attempt-index a', '.attempt-fold summary', '.rr-row:not(.is-sel)', '.rr-chip', '.rr-copy', '.rr-play', '.rr-people a', '.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.pr-chk a', '.nav-links a', '.stepper .nextb', '.dashboard tbody tr']
+  await still(page, ['.moment-press', '.attempt-index a', '.attempt-fold summary'])
+  await page.goto('/#step2')
+  await still(page, ['.rr-row:not(.is-sel)', '.rr-chip', '.rr-copy', '.rr-play', '.rr-people a', '.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.pr-chk a', '.nav-links a', '.compile-tabs button[aria-selected="false"]', '.compile-stepnav .snext', '.stepper .nextb', '.dashboard tbody tr'])
+})
+
+/** Each target keeps its exact box on hover, and buttons and links on focus and press too. */
+async function still(page: Page, targets: string[]) {
   for (const selector of targets) {
     const target = page.locator(selector).first()
     await target.scrollIntoViewIfNeeded()
@@ -394,7 +442,7 @@ for (const width of [1440, 375]) test(`hover, focus and active never move anythi
       await page.mouse.move(0, 0); await page.mouse.up()
     }
   }
-})
+}
 
 test('the guide keeps its controls still on hover too', async ({ page }) => {
   await page.goto('/docs/getting-started')
@@ -440,10 +488,10 @@ test('failed playback restores the attempt clip and reel play controls without a
       })
     }
   })
-  await page.goto('/')
   const view = page.locator('.attempt-view')
   const report = page.locator('.run-report')
-  for (const [container, play, pause] of [[view, /^Play 00:03 to 00:19/, /^Pause 00:03 to 00:19/], [report, /^Play Person 3 · 00:58/, /^Pause Person 3 · 00:58/]] as const) {
+  for (const [route, container, play, pause] of [['/r/k2m9/p3', view, /^Play 00:03 to 00:19/, /^Pause 00:03 to 00:19/], ['/', report, /^Play Person 3 · 00:58/, /^Pause Person 3 · 00:58/]] as const) {
+    await page.goto(route)
     await container.getByRole('button', { name: play }).click()
     await expect(container.getByRole('button', { name: pause })).toBeVisible()
     const video = container.locator('video').first()

@@ -1,6 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { createHmac } from 'node:crypto'
+import { readFile } from 'node:fs/promises'
 import { shown, offences } from '../vocabulary'
 
 /** The share secret playwright.config.ts gives the dev server; the signature is the one lib/share.ts makes. */
@@ -18,17 +19,21 @@ async function open(page: Page, route: string, width: number) {
 }
 
 for (const width of [1440, 375]) {
-  test(`the section "In the pull request": a neutral check, its page on GitHub and the report at ${width}px`, async ({ page }) => {
+  test(`the section "What comes back.": a neutral check, its page on GitHub and the report at ${width}px`, async ({ page }) => {
     const errors = await open(page, '/', width)
-    const pr = page.locator('section[aria-labelledby="pull-request"]')
-    await expect(pr.getByRole('heading', { level: 2 })).toHaveText('In the pull request.')
-    await expect(pr.locator('.pr-head p')).toContainText('It never fails your build.')
-    await expect(pr.locator('.pr-intro h3')).toHaveText(['The check', 'Its details, on GitHub', 'The report'])
-    // One column: the three pieces stack in the order a developer meets them, inside 10 of the 12 columns at 1440.
-    const boxes = await pr.locator('.pr-piece').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect()).map(r => ({ x: Math.round(r.x), y: r.y, width: Math.round(r.width) })))
+    const pr = page.locator('section[aria-labelledby="comes-back"]')
+    await expect(pr.getByRole('heading', { level: 2 })).toHaveText('What comes back.')
+    // The artefact's words (design/artefacts/what-comes-back.html), verbatim.
+    const { parseHTML } = await import('linkedom')
+    const artefact = parseHTML(await readFile('design/artefacts/what-comes-back.html', 'utf8')).document
+    await expect(pr.locator('.section-head p')).toHaveText(artefact.querySelector('.head p')!.textContent!)
+    await expect(pr.locator('.piece-intro h3')).toHaveText([...artefact.querySelectorAll('.piece .intro h2')].map(node => node.textContent!))
+    await expect(pr.locator('.piece-intro p')).toHaveText([...artefact.querySelectorAll('.piece .intro p')].map(node => node.textContent!))
+    // On the page grid: the three pieces stack in the order a developer meets them, each across all twelve columns at 1440.
+    const boxes = await pr.locator('.piece').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect()).map(r => ({ x: Math.round(r.x), y: r.y, width: Math.round(r.width) })))
     expect(new Set(boxes.map(box => box.x)).size).toBe(1)
     expect(boxes.every((box, i) => i === 0 || box.y > boxes[i - 1].y)).toBe(true)
-    if (width === 1440) expect(boxes[0].width).toBe(1036)
+    if (width === 1440) expect(boxes.map(box => [box.x, box.width])).toEqual([[96, 1248], [96, 1248], [96, 1248]])
     // The check in the merge box: neutral, never green or red, beside the team's green checks.
     const ours = pr.locator('.pr-chk.ours')
     await expect(ours).toContainText('ui-tests · 4 problems found · 2 of 5 people reached the goal')
@@ -53,7 +58,7 @@ for (const width of [1440, 375]) {
     await expect(ours.getByRole('link', { name: 'ui-tests details' })).toHaveAttribute('href', '#check-page')
     expect(offences(await pr.innerText(), shown)).toEqual([])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
-    expect((await new AxeBuilder({ page }).include('section[aria-labelledby="pull-request"]').analyze()).violations).toEqual([])
+    expect((await new AxeBuilder({ page }).include('section[aria-labelledby="comes-back"]').analyze()).violations).toEqual([])
     expect(errors).toEqual([])
   })
 
@@ -148,4 +153,29 @@ test('the check links select the problem and the moment; each person opens their
   expect((await page.request.get(`/r/k2m9/p1?s=${sign('/r/k2m9/p1')}`)).status()).toBe(200)
   // An altered or foreign signature, and an unknown run, are not found.
   for (const route of ['/r/k2m9?s=forged', `/r/k2m9/p1?s=${sign('/r/k2m9')}`, '/r/zzzz', '/r/k2m9/p9']) expect((await page.request.get(route)).status(), route).toBe(404)
+})
+
+for (const width of [1440, 375]) test(`the attempt page /r/k2m9/p3 renders the attempt view with no empty block at ${width}px`, async ({ page }) => {
+  const errors = await open(page, '/r/k2m9/p3', width)
+  const view = page.locator('[data-artefact="attempt-view"]')
+  await expect(view.locator('.attempt-headline')).toHaveText('Person 3 did not reach the goal.')
+  // Issue #46, item 5: the guide's `.track` rule gave each clip's scrub line a 96px margin and 48px padding, an empty grey block
+  // over the second moment's heading at 375. The scrub line stays a 2px line inside its own strip, under the clip.
+  for (const card of await view.locator('.moment-card').all()) {
+    const [scrub, track] = await Promise.all([card.locator('.moment-scrub').boundingBox(), card.locator('.moment-scrub .track').boundingBox()])
+    expect(track!.height).toBe(2)
+    expect(track!.y).toBeGreaterThanOrEqual(scrub!.y)
+    expect(track!.y + track!.height).toBeLessThanOrEqual(scrub!.y + scrub!.height)
+  }
+  // Nothing grey sits over the second moment's heading.
+  const heading = view.locator('#moment-2 .moment-text h3')
+  await heading.scrollIntoViewIfNeeded()
+  const covered = await heading.evaluate(node => {
+    const r = node.getBoundingClientRect(), hits: string[] = []
+    for (let y = r.top + 2; y < r.bottom; y += 6) for (let x = r.left + 2; x < r.right; x += 20) { const top = document.elementFromPoint(x, y); if (top && !node.contains(top)) hits.push(top.className) }
+    return hits
+  })
+  expect(covered).toEqual([])
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  expect(errors).toEqual([])
 })

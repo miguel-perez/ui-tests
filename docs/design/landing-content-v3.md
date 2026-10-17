@@ -2,6 +2,8 @@
 
 The page written out in reading order, one block at a time. One example run (inviting a colleague to a board in a freshly launched app) carries through every block so the visitor follows a single story. The artefacts are invented content in the product's real formats; each frame carries the label "Example run" once. Each block is preceded by a note, in italics, of the question the visitor is asking at that point; the note is for the designer and is not page copy.
 
+**The page since the composition round (issue #46).** Six sections, in this order: the promise (block 1); what comes back (block 2, which since issue #46 carries the check, its page and the report that block 5 used to carry, and no longer the one-person attempt); what you write, what they see (block 3, its six screens one at a time as tabs); where the people come from (block 4); the agent section; the hosted section. Every section sits on one grid ([`../../design/artefacts/README.md`](../../design/artefacts/README.md#the-page-grid-in-one-place)); the words of every block are unchanged except block 2's, which are [`../../design/artefacts/what-comes-back.html`](../../design/artefacts/what-comes-back.html)'s.
+
 ---
 
 ## The visitor
@@ -64,70 +66,33 @@ Pressed Done, but your check failed: 2 of 5.
 
 *What do I actually get, and would I know what to do with it.*
 
+Rebuilt in the composition round (issue #46) from [`../../design/artefacts/what-comes-back.html`](../../design/artefacts/what-comes-back.html), in place of this block's one-person attempt and of block 5, "In the pull request"; the words below are the artefact's, verbatim. The one-person attempt view is no longer on the landing: it is the page `/r/k2m9/p<n>` behind each name in the report's people line. Frame label: Example run.
+
 **Heading.** What comes back.
 
-**Lead.** Here is the whole of one run: the file that asked for it, what one person did, and what to fix.
+**Lead.** Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request, and behind it the report: whether people reached the goal, the problems they hit, worst first, and for each one the clip, their words, the moment to watch and the smallest change. The check never fails your build. Your other tests prove the code works. This one shows whether a person can use it.
 
-**Artefact A: the file.** Frame label: Example run.
-
-```ts
-import { context, goal, outcome, expect } from 'ui-tests'
-
-context({
-  users: 'people who signed up this week and want a colleague on their board',
-  purpose: 'plan the week together without emailing screenshots around',
-}, () => {
-  goal('invite a colleague', { happyPath: ['/board', '/settings/members'] }, () => {
-    outcome(async ({ page }) => {
-      expect(await page.textContent('main')).toContain('1 invitation pending')
-    })
-  })
-})
-```
-
-**Caption.** If you have written a Playwright test, you have written this.
-
-**Artefact B: one person.**
+1. **The check.** One line in the merge box, next to your other checks. Its mark is neutral, never red or green: there is no pass to give, and it never blocks a merge unless you ask it to.
 
 ```text
-Person 3 · invite a colleague
-1:03 · outcome incorrect · ease 3 of 7
-
-00:00  scenario dismissed                      /board
-00:03  click "Share"                           menu open
-00:05  pause · 7 s reading the menu
-00:12  click "Manage link"                     deviation · /board/link
-00:19  back                                   backtrack · /board
-00:23  type "sam@acme.co" into Search
-00:27  pause · 9 s on "No cards match"
-00:36  press Enter                             dead click
-00:41  click the avatar, click "Settings"      /settings
-00:46  click "Members"                         /settings/members
-00:58  type the email, press "Add"             1 invitation pending
-01:01  press "Add" again                       2 invitations pending
-01:03  I'm done
+ui-tests · 4 problems found · 2 of 5 people reached the goal
 ```
 
-Their words, after the ease question: "Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again."
+2. **Its details, on GitHub.** Press Details and GitHub shows the check's own page: the sentence, the three problems to fix first with where they are and a link to the moment, and a link to the report. One screen, no pictures, no scrolling.
 
-**Artefact C: the problems, ranked across the run.**
+The page: "5 people tried *invite a colleague* on this preview. 2 of 5 reached the goal; 2 of 5 pressed Done, but your check failed. This check never fails your build. It reports problems, or that none were seen this time." Then the three to fix first, by impact, then by how many people hit them:
 
-| # | Problem | People | Impact | What they said | Moments | Suggested change |
-| --- | --- | --- | --- | --- | --- | --- |
-| 1 | Pressed Add, saw nothing change, pressed it again; Sam got two invitations | 2 of 5 | Blocked | "I wasn't sure the first Add did anything, so I pressed it again." | Person 3 · 00:58, Person 4 · 00:41 | On press, change the button to "Invited sam@acme.co" and disable it. |
-| 2 | The Add button looked switched off; Person 2 pressed I couldn't do this | 1 of 5 | Blocked | "It looked switched off." | Person 2 · 00:49 | Keep the button solid, and check the address on press, with a message. |
-| 3 | Looked for Invite in the Share menu and found only link options | 4 of 5 | Slowed | "Share is where you add people." | Person 1 · 00:04, Person 2 · 00:06, Person 3 · 00:03, Person 5 · 00:09 | Put "Invite a colleague" at the top of the Share menu. |
-| 4 | Typed Sam's email into the board search | 2 of 5 | Confused | "I figured it would find them." | Person 1 · 00:30, Person 3 · 00:23 | When a search matches no cards, offer "Invite someone with this email". |
+| # | Problem | Where | People | Impact | Moment |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Pressed Add, saw nothing change, pressed it again; Sam got two invitations | `/settings/members` · `button "Add"` | 2 of 5 | Blocked | Person 3 · 00:58 |
+| 2 | The Add button looked switched off; Person 2 pressed I couldn't do this | `/settings/members` · `button "Add"` | 1 of 5 | Blocked | Person 2 · 00:49 |
+| 3 | Looked for Invite in the Share menu and found only link options | `/board` · `menu "Share"` | 4 of 5 | Slowed | Person 1 · 00:04 |
 
-Ranked by impact, then by how many people: Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect.
+Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect. Open the report · +1 more problem · What worked. Footer: 5 people · paid panel (Prolific, CloudResearch Connect) · the preview · the commit · the date.
 
-**Artefact D: the last line of the report.**
+3. **The report.** The page the check links to, and the one you can send as a link. One line says whether it worked. The five people sit under it, each with their outcome and a link to their attempt. Then the problems on the left, worst first, with impact, where, who hit it and how many; on the right the evidence for the one selected, which stays put while the list scrolls: the clip, the words, where as a locator you can paste, the moments, the smallest change, and a copy as an issue. One line closes the page.
 
-```text
-Problems found: 4, seen across all 5 people.
-```
-
-Under it: Problem 3 is one link. Problem 1 is the one to fix first: both people who hit it believed they were finished, and their colleague got the same email twice.
+The report (`/r/k2m9`; `design/artefacts/run-report.html`): "invite a colleague · Reached the goal: 2 of 5 · Problems found: 4, seen across all 5 people · Pressed Done, but your check failed: 2 of 5". The problems in the run's rank, then "Found Settings, then Members, on their own" (5 of 5) as what worked. The closing line ends: "Found automatically from what people did; it can miss problems. Watch the clips."
 
 **Closing line.** A run reports the problems it found, or that it found none this time. There is no score and no pass.
 
@@ -136,6 +101,8 @@ Under it: Problem 3 is one link. Problem 1 is the one to fix first: both people 
 ## 3. What you write, what they see
 
 *Do I have to write a script, and will I lead them.*
+
+Since the composition round (issue #46) the six screens below are tabs under the commands and the file, one step open at a time (1 Consent, 2 Screener, 3 First look, 4 Scenario card, 5 Your page, with the bar, 6 After the task); the words are unchanged.
 
 **Heading.** What you write, what they see.
 
@@ -334,31 +301,7 @@ One row is open at a time; each opens to how it works, the caveat and one pictur
 
 ## 5. In the pull request
 
-*Does it fit the way I already work.*
-
-**Heading.** In the pull request.
-
-**Lead.** Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request. It never fails your build. Its details are the worst problems with the moment to watch, and the full report opens for you, or for anyone you send a link to. Your other tests prove the code works. This one shows whether a person can use it.
-
-**Artefact** (issue #35; `design/artefacts/pr-section.html`). Three pieces in one column. Frame label: Example run.
-
-1. **The check.** One line in the merge box, next to your other checks, with a neutral mark, never red or green:
-
-```text
-ui-tests · 4 problems found · 2 of 5 people reached the goal
-```
-
-2. **Its details, on GitHub.** The check's page: "5 people tried *invite a colleague* on this preview. 2 of 5 reached the goal; 2 of 5 pressed Done, but your check failed. This check never fails your build. It reports problems, or that none were seen this time." Then the three to fix first, by impact, then by how many people hit them:
-
-| # | Problem | Where | People | Impact | Moment |
-| --- | --- | --- | --- | --- | --- |
-| 1 | Pressed Add, saw nothing change, pressed it again; Sam got two invitations | `/settings/members` · `button "Add"` | 2 of 5 | Blocked | Person 3 · 00:58 |
-| 2 | The Add button looked switched off; Person 2 pressed I couldn't do this | `/settings/members` · `button "Add"` | 1 of 5 | Blocked | Person 2 · 00:49 |
-| 3 | Looked for Invite in the Share menu and found only link options | `/board` · `menu "Share"` | 4 of 5 | Slowed | Person 1 · 00:04 |
-
-Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect. Open the report · +1 more problem · What worked. Footer: 5 people · paid panel (Prolific, CloudResearch Connect) · the preview · the commit · the date.
-
-3. **The report** (`/r/k2m9`; `design/artefacts/run-report.html`). "invite a colleague · Reached the goal: 2 of 5 · Problems found: 4, seen across all 5 people · Pressed Done, but your check failed: 2 of 5". The five people in one line, each linking to their attempt. The problems on the left with the fourth, "Typed Sam's email into the board search" (confused, 2 of 5), then "Found Settings, then Members, on their own" (5 of 5) as what worked; on the right the selected problem's clip, quote, where as a Playwright locator, Moments, Suggested change and Copy as an issue. The closing line ends: "Found automatically from what people did; it can miss problems. Watch the clips."
+Folded into block 2 in the composition round (issue #46): the check, its page and the report are the three pieces of "What comes back.", in the artefact's words. The heading "In the pull request." and its lead are no longer on the page.
 
 ---
 

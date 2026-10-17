@@ -37,7 +37,7 @@ export function SourcesTable({ columns, rows }: { columns: readonly string[]; ro
     window.addEventListener('scroll', tick, { passive: true }); tick()
     return () => window.removeEventListener('scroll', tick)
   }, [])
-  return <div className="src-table" ref={table} data-artefact="sources">
+  return <div className="src-table" ref={table} data-artefact="sources" data-figure>
     <div className={`src-cols${stuck ? ' is-stuck' : ''}`} ref={header} aria-hidden="true"><span />{columns.map(column => <span key={column}>{column}</span>)}<span /></div>
     {rows.map(row => <div className="src" id={row.id} key={row.id} data-open={open === row.id || undefined}>
       <button className="src-row" id={`${row.id}-row`} type="button" aria-expanded={open === row.id} aria-controls={`${row.id}-well`} onClick={() => setOpen(open === row.id ? null : row.id)}>{row.cells}</button>

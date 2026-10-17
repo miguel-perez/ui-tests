@@ -1,9 +1,9 @@
 import { checkSentence, buildLine, ranked, legend, caveat, problemsLine, type CheckRun, type Impact } from 'ui-tests/check'
 import { run, attempt, clock, short, typical, type Attempt } from './attempts'
-import { problems, worked, pullRequest } from './copy'
+import { problems, worked, runFacts } from './copy'
 
 /**
- * PullRequest (docs/design/site-schema.md): the check, its page and the report, all from the run's data. The report's rows come
+ * WhatComesBack (docs/design/site-schema.md): the check, its page and the report, all from the run's data. The report's rows come
  * from the problems' moments (who hit it, x of n) and are ranked by impact, then by how many people hit them; the check is built
  * by `ui-tests/check` from the same rows, so the landing's check page and the one GitHub shows say the same thing.
  */
@@ -31,13 +31,13 @@ export const reached = run.attempts.filter(entry => entry.reached === 'yes').len
 export const pressedDoneFailed = run.attempts.filter(entry => entry.reached === 'no' && entry.ended === 'done').length
 /** How many people hit at least one problem. */
 export const seenBy = new Set(findings.flatMap(finding => finding.people)).size
-export const panelOf = (entry: Attempt) => pullRequest.panels[entry.number]
+export const panelOf = (entry: Attempt) => runFacts.panels[entry.number]
 const panels = [...new Set(run.attempts.map(panelOf))]
 /** "paid panel (Prolific, CloudResearch Connect)": the source with its panels named, on first use. */
 export const source = `paid panel (${panels.join(', ')})`
 
 export const reportPath = `/r/${run.run}`
-export const reportUrl = `${pullRequest.host}${reportPath}`
+export const reportUrl = `${runFacts.host}${reportPath}`
 export const attemptPath = (person: number) => `${reportPath}/p${person}`
 /** A moment on the report: the problem's anchor and the second to play from, as the check's links carry it. */
 export const momentHash = (finding: Finding, moment: Moment) => `#${finding.id}&t=${moment.seconds}`
@@ -47,7 +47,7 @@ export const exampleCheck: CheckRun = {
   goal: run.goal, people: total, attempted: total, reached, pressedDoneFailed,
   problems: findings.map(finding => ({ title: finding.title, page: finding.page, locator: finding.locator, people: finding.people.length, impact: finding.impact as Impact, moment: { ...finding.moments[0], url: `${reportUrl}${momentHash(finding, finding.moments[0])}` } })),
   reportUrl,
-  footer: { people: `${total} people · ${source}`, preview: pullRequest.preview, commit: pullRequest.commit, date: run.date },
+  footer: { people: `${total} people · ${source}`, preview: runFacts.preview, commit: runFacts.commit, date: run.date },
 }
 /** The check page's first paragraph: the sentence, and that the check never fails the build. */
 export const checkLead = `${checkSentence(exampleCheck)} ${buildLine()}`
@@ -67,8 +67,8 @@ const environment = [...new Set(run.attempts.map(entry => `${entry.device.toLowe
 /** The closing line: the study-wide answers, the first look, who took part, the environment and the caveat. */
 export const closing = {
   afterGoal: [['would it help them', typical(run.attempts.map(entry => entry.afterGoals.help))], ['easy to use', typical(run.attempts.map(entry => entry.afterGoals.easy))]] as const,
-  firstLook: [['named the purpose', pullRequest.firstLook.named], ['first click on your path', pullRequest.firstLook.firstClick]] as const,
-  whoTookPart: `${total} people from a ${source}, ${pullRequest.screened}`,
+  firstLook: [['named the purpose', runFacts.firstLook.named], ['first click on your path', runFacts.firstLook.firstClick]] as const,
+  whoTookPart: `${total} people from a ${source}, ${runFacts.screened}`,
   environment,
 }
 
