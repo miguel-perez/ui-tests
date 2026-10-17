@@ -76,11 +76,11 @@ sent the email in the query string, 400
 
 No repo to put it in? One command.
 
-`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.
+`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.
 
 The command
 
-Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.
+Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.
 
 Terminal
 
@@ -109,7 +109,7 @@ or your tag manager
 
 Same test, same report, on a box you own.
 
-No repository? `npx ui-tests host` deploys the collector, the player and the store to a free tier in an account you own, Cloudflare Workers first, and prints the one line to paste on your live site, through your tag manager if that is how you ship. Then the same test in a form on your deploy instead of a file; the recordings stay in your bucket. Run it again to update.
+No repository? `npx ui-tests host` deploys the collector, the player and the store to a free tier in an account you own, Cloudflare Workers first, and prints the one line to paste on your live site, through your tag manager if that is how you ship. Then the same test in a form on your deploy instead of a file; the recordings stay in your bucket. Run it again to update.
 
 host: not shipped yet; see https://github.com/miguel-perez/ui-tests/issues/59
 

@@ -213,8 +213,8 @@ export const worth = {
  */
 export const hosted = {
   heading: 'No repo to put it in? One command.',
-  lead: '`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.',
-  command: { name: 'The command', intro: 'Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.', tab: ['Terminal', 'Example'] },
+  lead: '`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.',
+  command: { name: 'The command', intro: 'Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.', tab: ['Terminal', 'Example'] },
   terminal: `$ npx ui-tests host
 Deploying to your account…
   collector   https://ui-tests.weekboard.workers.dev
@@ -224,7 +224,7 @@ Deploying to your account…
   line: { name: 'The line', intro: 'One script tag, pointing at your deploy. It records only while a run is open and a person has said yes; the rest of the time it is forty lines that do nothing.', tab: ['index.html', 'or your tag manager'] },
   snippet: '<script src="https://ui-tests.weekboard.workers.dev/s.js" async></script>',
   closing: 'Same test, same report, on a box you own.',
-  guide: 'No repository? `npx ui-tests host` deploys the collector, the player and the store to a free tier in an account you own, Cloudflare Workers first, and prints the one line to paste on your live site, through your tag manager if that is how you ship. Then the same test in a form on your deploy instead of a file; the recordings stay in your bucket. Run it again to update.',
+  guide: 'No repository? `npx ui-tests host` deploys the collector, the player and the store to a free tier in an account you own, Cloudflare Workers first, and prints the one line to paste on your live site, through your tag manager if that is how you ship. Then the same test in a form on your deploy instead of a file; the recordings stay in your bucket. Run it again to update.',
   caveat: hostCaveat,
   issue: hostIssue,
 }
