@@ -46,12 +46,14 @@ First five seconds: another platform with a demo button, or a unit test library,
 **Artefact.** The result as it lands in the terminal. Frame label: Example run.
 
 ```text
-Problems found: 4 across 5 people.
+Problems found: 4, seen across all 5 people.
+Reached the goal: 2 of 5.
+Pressed Done, but your check failed: 2 of 5.
 
-1  Looked for Invite in the Share menu and found only link options   4 of 5
-2  Pressed Add, saw nothing change, pressed it again                 2 of 5
-3  Typed the colleague's email into the board search                 2 of 5
-4  Stopped at a grey Add button and gave up                          1 of 5
+1  2 of 5  blocked   Pressed Add, saw nothing change, pressed it again
+2  1 of 5  blocked   Add looked switched off; pressed I couldn't do this
+3  4 of 5  slowed    Looked for Invite in the Share menu, found only links
+4  2 of 5  confused  Typed Sam's email into the board search
 ```
 
 **Caption.** Each line opens to the moment to watch, the person's words, and the smallest change that would fix it.
@@ -88,7 +90,7 @@ context({
 **Artefact B: one person.**
 
 ```text
-P3 · invite a colleague
+Person 3 · invite a colleague
 1:03 · outcome incorrect · ease 3 of 7
 
 00:00  scenario dismissed                      /board
@@ -110,20 +112,22 @@ Their words, after the ease question: "Share seemed like the place for people. W
 
 **Artefact C: the problems, ranked across the run.**
 
-| # | Problem | People | What they said | Watch | What to change |
-| --- | --- | --- | --- | --- | --- |
-| 1 | Looked for Invite in the Share menu and found only link options | 4 of 5 | "Share is where you add people." | P1 00:04, P2 00:06, P3 00:03, P5 00:09 | Put "Invite a colleague" at the top of the Share menu. |
-| 2 | Pressed Add, saw nothing change, pressed it again; two invitations went out | 2 of 5 | "I wasn't sure the first one did anything." | P3 00:58, P4 00:41 | On press, change the button to "Invited sam@acme.co" and disable it. |
-| 3 | Typed the colleague's email into the board search | 2 of 5 | "I figured it would find them." | P3 00:23, P1 00:30 | When a search matches no cards, offer "Invite someone with this email". |
-| 4 | Stopped at a grey Add button and gave up | 1 of 5 | "It looked switched off." | P2 00:49 | Keep the button solid. Validate the address on press, with a message. |
+| # | Problem | People | Impact | What they said | Moments | Suggested change |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | Pressed Add, saw nothing change, pressed it again; Sam got two invitations | 2 of 5 | Blocked | "I wasn't sure the first Add did anything, so I pressed it again." | Person 3 · 00:58, Person 4 · 00:41 | On press, change the button to "Invited sam@acme.co" and disable it. |
+| 2 | The Add button looked switched off; Person 2 pressed I couldn't do this | 1 of 5 | Blocked | "It looked switched off." | Person 2 · 00:49 | Keep the button solid, and check the address on press, with a message. |
+| 3 | Looked for Invite in the Share menu and found only link options | 4 of 5 | Slowed | "Share is where you add people." | Person 1 · 00:04, Person 2 · 00:06, Person 3 · 00:03, Person 5 · 00:09 | Put "Invite a colleague" at the top of the Share menu. |
+| 4 | Typed Sam's email into the board search | 2 of 5 | Confused | "I figured it would find them." | Person 1 · 00:30, Person 3 · 00:23 | When a search matches no cards, offer "Invite someone with this email". |
+
+Ranked by impact, then by how many people: Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect.
 
 **Artefact D: the last line of the report.**
 
 ```text
-Problems found: 4 across 5 people.
+Problems found: 4, seen across all 5 people.
 ```
 
-Under it: Problem 1 is one link. Problem 2 is the one to fix first: both people who hit it believed they were finished, and their colleague got the same email twice.
+Under it: Problem 3 is one link. Problem 1 is the one to fix first: both people who hit it believed they were finished, and their colleague got the same email twice.
 
 **Closing line.** A run reports the problems it found, or that it found none this time. There is no score and no pass.
 
@@ -478,12 +482,14 @@ npx ui-tests report k2m9
 You see:
 
 ```text
-Problems found: 4 across 5 people.
+Problems found: 4, seen across all 5 people.
+Reached the goal: 2 of 5.
+Pressed Done, but your check failed: 2 of 5.
 
-1  Looked for Invite in the Share menu and found only link options   4 of 5   P1 00:04, P2 00:06, P3 00:03, P5 00:09
-2  Pressed Add, saw nothing change, pressed it again                 2 of 5   P3 00:58, P4 00:41
-3  Typed the colleague's email into the board search                 2 of 5   P3 00:23, P1 00:30
-4  Stopped at a grey Add button and gave up                          1 of 5   P2 00:49
+1  2 of 5  blocked   Pressed Add, saw nothing change, pressed it again
+2  1 of 5  blocked   Add looked switched off; pressed I couldn't do this
+3  4 of 5  slowed    Looked for Invite in the Share menu, found only links
+4  2 of 5  confused  Typed Sam's email into the board search
 
 Report: https://ui-tests.com/r/k2m9
 ```
@@ -491,7 +497,7 @@ Report: https://ui-tests.com/r/k2m9
 Then, for the pull request, put `npx ui-tests run` in the job that deploys your preview. On the next pull request you see the check:
 
 ```text
-ui-tests · Problems found: 4 across 5 people · Report
+ui-tests · 4 problems found · 2 of 5 people reached the goal · Details
 ```
 
 ---
