@@ -148,7 +148,7 @@ h1 { font: 500 30px/1.15 var(--sans); letter-spacing: -.015em; text-wrap: balanc
 (function () {
   var $ = function (id) { return document.getElementById(id); };
   var inputs = ['i-pay', 'i-hours', 'i-share', 'i-price'].map($);
-  var num = function (el) { var v = parseFloat(String(el.value).replace(/[^0-9.]/g, '')); return isFinite(v) && v > 0 ? v : 0; };
+  var num = function (el) { var raw = String(el.value).trim(); if (/^\s*-/.test(raw)) return 0; var v = parseFloat(raw.replace(/[^0-9.]/g, '')); if (!isFinite(v) || v <= 0) return 0; if (el.id === 'i-share') v = Math.min(v, 100); return v; };
   var fmt = function (n, d) { return n.toLocaleString('en-US', { maximumFractionDigits: d === undefined ? 0 : d, minimumFractionDigits: d === undefined ? 0 : d }); };
   function size(el) { el.style.setProperty('--n', Math.max(1, String(el.value).length)); }
   function render() {
@@ -160,7 +160,7 @@ h1 { font: 500 30px/1.15 var(--sans); letter-spacing: -.015em; text-wrap: balanc
     $('o-min').textContent = m; $('o-min2').textContent = m;
     inputs.forEach(size);
   }
-  inputs.forEach(function (el) { el.addEventListener('input', render); el.addEventListener('blur', function () { var v = num(el); if (v) el.value = el.id === 'i-share' ? fmt(v) : fmt(v); render(); }); });
+  inputs.forEach(function (el) { el.addEventListener('input', render); el.addEventListener('blur', function () { var v = num(el); if (v) el.value = fmt(v, Math.min(2, (String(v).split('.')[1] || '').length)); render(); }); });
   render();
 })();
 </script>
