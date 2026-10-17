@@ -23,7 +23,7 @@ const text = ['ink', 'muted', 'accent']
 /** The data roles: colour that carries meaning (the moment, stop, nothing happened, reached, words) and the code roles. */
 const data = ['accent', 'moment', 'blue', 'green', 'teal', 'purple', 'cyan', 'red', 'yellow', 'no', 'yes', 'done', 'note', 'pause', 'deviation', 'dead', 'correct', 'incorrect']
 
-describe('the token file (design/artefacts/tokens.css)', () => {
+describe('the token file (design/artefacts/tokens.css), which the artefacts render in the viewer\'s theme', () => {
   it('declares the light theme first and the same dark alternate under the system setting and under data-theme', () => {
     expect(file).toMatch(/^:root \{\s*color-scheme: light;/m)
     expect(light).toMatchObject({ ink: '#111111', accent: '#4b3ff0', line: '#e2e2e2', canvas: '#f6f6f6', surface: '#ffffff' })
@@ -50,16 +50,23 @@ describe('the token file (design/artefacts/tokens.css)', () => {
   })
 })
 
+/** The light block of the token file, word for word: the only theme the site carries (issue #43). */
+const lightBlock = /^:root \{[^}]*\}/m.exec(file)![0]
+
 describe('the site reads the tokens only', () => {
-  it('carries tokens.css verbatim as the token block of globals.css', async () => {
+  it('carries the light block of tokens.css verbatim as the token block of globals.css, and no dark block', async () => {
     const css = await readFile('apps/web/app/globals.css', 'utf8')
-    expect(css).toContain(file.trimEnd())
+    expect(css).toContain(lightBlock)
+    // Light only, whatever the system setting: neither dark block, nothing that switches on the system theme or data-theme.
+    expect(css).not.toContain('color-scheme: dark')
+    expect(css).not.toMatch(/prefers-color-scheme|data-theme/)
+    for (const value of [chosen.canvas, chosen.ink, chosen.surface]) expect(css).not.toContain(value)
     // Comment is decoration only (it is below the text floor in the light theme): nothing sets type in it.
     expect(css).not.toMatch(/(?:^|[;{]\s*)color:\s*var\(--comment\)/m)
   })
 
   it('has no literal colour outside the token blocks, except the participant chrome, which is constant over its constant host', async () => {
-    const css = (await readFile('apps/web/app/globals.css', 'utf8')).replace(file.trimEnd(), '')
+    const css = (await readFile('apps/web/app/globals.css', 'utf8')).replace(lightBlock, '')
     const offending: string[] = []
     for (const [, selector, body] of css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
       const name = selector.replace(/^[\s\S]*;/, '').trim()
@@ -73,6 +80,22 @@ describe('the site reads the tokens only', () => {
       }
     }
     expect(offending).toEqual([])
+  })
+
+  it('reads neither the system theme nor data-theme anywhere in apps/web outside comments', async () => {
+    const offending: string[] = []
+    for (const directory of ['apps/web/app', 'apps/web/components', 'apps/web/lib', 'apps/web/scripts', 'apps/web/public']) {
+      for (const entry of await readdir(directory, { recursive: true })) {
+        if (!/\.(tsx?|m?js|css|html)$/.test(entry) || entry.startsWith('demo/')) continue
+        const source = (await readFile(path.join(directory, entry), 'utf8')).replace(/\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|^\s*\/\/.*$/gm, '')
+        for (const match of source.matchAll(/prefers-color-scheme|data-theme|dataset\.theme/g)) offending.push(`${directory}/${entry}: ${match[0]}`)
+      }
+    }
+    expect(offending).toEqual([])
+  })
+
+  it('tells the browser the site is light, so form controls, scrollbars and the overscroll ground are light too', async () => {
+    expect(await readFile('apps/web/app/layout.tsx', 'utf8')).toMatch(/export const viewport: Viewport = \{ colorScheme: 'light' \}/)
   })
 
   it('has no literal colour in any component, page or library module', async () => {

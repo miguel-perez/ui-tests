@@ -1,5 +1,5 @@
 @import "tailwindcss";
-/* The site's tokens: light first, the Tokyo Night palette as the dark alternate. The ground is ink, one accent, two greys and white; the roles are derived in OKLCH around the accent at one lightness and chroma, each at 4.5:1 or better on the canvas. Colour stays on the data; chrome is neutral. The demo app under test keeps its own cool grey (host-*); the participant chrome is its inverse (ch-*). */
+/* The site's tokens: light only, whatever the system setting. The ground is ink, one accent, two greys and white; the roles are derived in OKLCH around the accent at one lightness and chroma, each at 4.5:1 or better on the canvas. Colour stays on the data; chrome is neutral. The demo app under test keeps its own cool grey (host-*); the participant chrome is its inverse (ch-*). */
 :root {
   color-scheme: light;
   --canvas: #f6f6f6; --surface: #ffffff; --raised: #efefef; --line: #e2e2e2; --ink: #111111; --muted: #575757;
@@ -11,26 +11,9 @@
   --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225,226,231,.68); --ch-hair: rgba(225,226,231,.16); --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px;
   --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
 }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42; --ink: #c0caf5; --muted: #a9b1d6;
-    --comment: #8089b3; --accent: #7aa2f7; --moment: #ff9e64; --blue: #7aa2f7; --green: #9ece6a; --teal: #73daca;
-    --purple: #bb9af7; --cyan: #89ddff; --red: #f7768e; --yellow: #e0af68; --no: #f7768e; --yes: #73daca;
-    --done: #73daca; --note: #bb9af7; --pause: #e0af68; --deviation: #7aa2f7; --dead: #f7768e; --correct: #73daca;
-    --incorrect: #f7768e; --chip-ink: #1a1b26; --focus: #c0caf5;
-  }
-}
-:root[data-theme="dark"] {
-  color-scheme: dark;
-  --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42; --ink: #c0caf5; --muted: #a9b1d6;
-  --comment: #8089b3; --accent: #7aa2f7; --moment: #ff9e64; --blue: #7aa2f7; --green: #9ece6a; --teal: #73daca;
-  --purple: #bb9af7; --cyan: #89ddff; --red: #f7768e; --yellow: #e0af68; --no: #f7768e; --yes: #73daca;
-  --done: #73daca; --note: #bb9af7; --pause: #e0af68; --deviation: #7aa2f7; --dead: #f7768e; --correct: #73daca;
-  --incorrect: #f7768e; --chip-ink: #1a1b26; --focus: #c0caf5;
-}
-/* The site's own tokens on top of the block above, which is design/artefacts/tokens.css verbatim (tests/contrast.test.ts holds
-   them equal). The theme rules are written once, in design/artefacts/README.md. Round four's name for going off your path is
+/* The site's own tokens on top of the block above, which is the light block of design/artefacts/tokens.css verbatim
+   (tests/contrast.test.ts holds them equal). The artefacts carry Tokyo Night as the viewer's dark alternate; the site does not
+   (issue #43). The theme rules are written once, in design/artefacts/README.md. Round four's name for going off your path is
    the accent. The demo app under test keeps its own light grey (public/demo/weekboard.html, weekboard-light.css), unchanged, so
    its frames match its screenshots; the participant chrome over it is the inverse with the mint accent (ch-*, player-styles.ts). */
 :root { --path: var(--accent); --host-bg: #e1e2e7; --host-chrome: #eef0f5; --host-line: #c4c8da;
@@ -368,7 +351,7 @@ main { position: relative; isolation: isolate; }
 
 /* L4 · Sources (design/artefacts/sources-section.html): the heading and lead stacked, then a table of the three sources, one row
    open at a time. The open row and its well take the surface token edge to edge (a full-bleed shadow clipped to the row's height,
-   so nothing overflows the page); the header sticks on the canvas once scrolled past. Tokens only: the section follows the site's theme. */
+   so nothing overflows the page); the header sticks on the canvas once scrolled past. Tokens only: the section reads the site's tokens. */
 .src-head { display: grid; gap: 10px; margin-bottom: 28px; max-width: 64ch; }
 .src-head p { color: var(--muted); font-size: 18px; text-wrap: pretty; }
 .block > .src-table { margin-top: 0; }
@@ -426,7 +409,7 @@ main { position: relative; isolation: isolate; }
 .src-fill-sub dt { color: var(--muted); }
 .src-fill-sub dd { color: var(--ink); text-wrap: pretty; }
 .src-fill-sub .code-inline { font-size: 12px; }
-/* Prolific's and CloudResearch Connect's own wordmarks, drawn in the ink of the page from their shapes, so they read on either theme. */
+/* Prolific's and CloudResearch Connect's own wordmarks, drawn in the ink of the page from their shapes. */
 .wordmark-group { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--ink); }
 .wordmark-maker { font-size: 13px; font-weight: 500; color: var(--muted); }
 /* Scoped to the group: the site's own wordmark in the header shares the class name. */
