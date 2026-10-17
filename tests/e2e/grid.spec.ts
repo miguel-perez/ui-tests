@@ -65,6 +65,76 @@ for (const [name, route, count] of [['landing', '/', 5], ['guide', '/docs/gettin
   })
 }
 
+// Issue #51, item 3: no separators and one rhythm in three steps, --space-1 24, --space-2 48 and --space-3 96, which on a phone are
+// 24, 36 and 64. Every section opens with --space-3; a head is followed by --space-2; nothing else spaces a section's top-level
+// children but those steps; the last section closes with --space-3; the hero keeps --space-3 above and below.
+for (const [name, route] of [['landing', '/'], ['guide', '/docs/getting-started']] as const) for (const width of [1440, 375]) {
+  test(`the ${name} keeps one rhythm and no separators at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 })
+    await page.goto(route)
+    await page.evaluate(() => document.fonts.ready)
+    const [one, two, three] = width === 1440 ? [24, 48, 96] : [24, 36, 64]
+    const sections = await page.locator('[data-section]').evaluateAll(nodes => nodes.map(node => {
+      const style = getComputedStyle(node), motif = (pseudo: string) => getComputedStyle(node, pseudo).content
+      const head = node.querySelector(':scope > .section-head'), next = head?.nextElementSibling
+      const children = [...node.children].map((child, i) => { const own = getComputedStyle(child); return { i, top: parseFloat(own.marginTop), bottom: parseFloat(own.marginBottom), name: child.className } })
+      return { name: node.getAttribute('data-section'), top: parseFloat(style.paddingTop), border: parseFloat(style.borderBottomWidth) + parseFloat(style.borderTopWidth), before: motif('::before'), after: motif('::after'), gap: head && next ? Math.round(next.getBoundingClientRect().top - head.getBoundingClientRect().bottom) : null, children, block: node.classList.contains('block') }
+    }))
+    expect(sections.length).toBeGreaterThan(4)
+    for (const section of sections) {
+      expect(section.top, `${section.name} opens with --space-3`).toBe(three)
+      expect(section.border, `${section.name} has no rule`).toBe(0)
+      expect([section.before, section.after], `${section.name} has no motif`).toEqual(['none', 'none'])
+      if (section.gap !== null) expect(section.gap, `${section.name}: from its head to its first figure`).toBe(two)
+      if (section.block) for (const child of section.children) {
+        expect(child.bottom, `${section.name} > ${child.name}`).toBe(0)
+        expect(child.i ? [one, two] : [0], `${section.name} > ${child.name}`).toContain(child.top)
+      }
+    }
+    if (name === 'landing') {
+      expect(sections.filter(section => section.gap !== null)).toHaveLength(5)
+      await expect(page.locator('.hero-grid')).toHaveCSS('padding-top', `${three}px`)
+      await expect(page.locator('.hero-grid')).toHaveCSS('padding-bottom', `${three}px`)
+      await expect(page.locator('.block').last()).toHaveCSS('padding-bottom', `${three}px`)
+    } else await expect(page.locator('.guide')).toHaveCSS('padding-bottom', `${three}px`)
+  })
+}
+
+// Issue #51, item 4: the footer on every page, on the grid: the wordmark at 96 and the links ending flush at 1344 at 1440; one column
+// at 375, the links left-aligned.
+for (const route of ['/', '/docs/getting-started', '/r/k2m9']) for (const width of [1440, 375]) {
+  test(`the footer of ${route} sits on the grid at ${width}`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 })
+    await page.goto(route)
+    await page.evaluate(() => document.fonts.ready)
+    const footer = page.getByRole('contentinfo')
+    await expect(footer).toHaveCount(1)
+    const links = footer.getByRole('navigation').getByRole('link')
+    await expect(links).toHaveText(['miguel.design', 'Open source MIT licence', 'Report a bug or suggest an improvement'])
+    expect(await links.evaluateAll(nodes => nodes.map(node => node.getAttribute('href')))).toEqual(['https://miguel.design', 'https://github.com/miguel-perez/ui-tests/blob/main/LICENSE', 'https://github.com/miguel-perez/ui-tests/issues/new'])
+    await expect(footer.getByRole('link', { name: /github/i })).toHaveCount(0)
+    for (const link of await links.all()) {
+      await expect(link).toHaveCSS('color', 'rgb(87, 87, 87)')
+      await expect(link).toHaveCSS('font-size', '14px')
+    }
+    await expect(footer).toHaveCSS('padding-top', width === 1440 ? '48px' : '36px')
+    await expect(footer).toHaveCSS('padding-bottom', width === 1440 ? '48px' : '36px')
+    const wordmark = await footer.locator('.wordmark').boundingBox(), boxes = await links.evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect()).map(({ x, right, top, bottom }) => ({ x, right, top, bottom })))
+    const left = Math.min(...boxes.map(box => box.x)), right = Math.max(...boxes.map(box => box.right))
+    if (width === 1440) {
+      expect(near(wordmark!.x, 96), `wordmark at ${wordmark!.x}`).toBe(true)
+      expect(near(right, 1344), `links end at ${right}`).toBe(true)
+      expect(near(boxes.at(-1)!.right, 1344), 'the last link ends flush').toBe(true)
+      expect(left, 'links in the right seven').toBeGreaterThanOrEqual(630 - 2)
+    } else {
+      expect(near(wordmark!.x, 16), `wordmark at ${wordmark!.x}`).toBe(true)
+      expect(near(left, 16), `links start at ${left}`).toBe(true)
+      expect(right).toBeLessThanOrEqual(359 + 1)
+      expect(Math.min(...boxes.map(box => box.top)), 'links under the wordmark').toBeGreaterThanOrEqual(wordmark!.y + wordmark!.height)
+    }
+  })
+}
+
 test.afterAll(async () => {
   // The readings go to the PR description beside the column map; ignored runtime output, never committed.
   if (!Object.keys(readings).length) return

@@ -703,6 +703,16 @@ Output
 
 Example run
 
+## The footer
+
+miguel.design
+
+Open source MIT licence
+
+Report a bug or suggest an improvement
+
+About ui-tests
+
 ## Rehearsal
 
 Rehearsal: 0 of 5 planned attempts recorded.

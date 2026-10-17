@@ -204,4 +204,6 @@ export const runs = [
   { date: '9 Oct', participants: '5 of 5', status: 'done', progress: 1, result: 'Reached 5 of 5 · none found', band: 'great', name: 'find a card from last week' },
   { date: '—', participants: '0 of 5', status: 'draft', progress: 0, result: '', band: '', name: 'archive a finished board' },
 ] as const
+/** The footer's links (issue #51): the author's site, the licence and the new-issue page; the header already links to GitHub. */
+export const footer = { site: 'miguel.design', licence: 'Open source MIT licence', report: 'Report a bug or suggest an improvement', label: 'About ui-tests' }
 export const ui = { wordmark: 'ui-tests', guide: 'Guide', github: 'GitHub', getStarted: 'Get started', skip: 'Skip to content', navigation: 'Main navigation', steps: 'Getting started', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy. Select and copy the code.', typescript: 'TypeScript', shell: 'Shell', output: 'Output', example: 'Example run' }

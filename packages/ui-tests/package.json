@@ -1,6 +1,7 @@
 {
   "name": "ui-tests",
   "version": "0.1.0",
+  "license": "MIT",
   "type": "module",
   "description": "Usability testing that runs like your unit tests.",
   "engines": {

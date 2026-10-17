@@ -5,7 +5,7 @@ const hashed = /^#step([1-9])$/
 
 /**
  * The compile section's steps, one at a time (design/artefacts/compile-section.html): a tab strip, 1 Consent to 6 After the task,
- * then the open step, then previous and next. Arrow keys, Home and End move between the tabs; each step has a plain hash, #step1
+ * then the open step, then previous and next, as one figure of the section (issue #51). Arrow keys, Home and End move between the tabs; each step has a plain hash, #step1
  * to #step6, that opens it on load and when a link changes the hash. On desktop every step shares one grid cell, so the steps keep
  * the tallest step's height and the page never jumps when a tab changes; the steps not open stay in the layout, invisible and inert
  * (issue #49). On a phone each step takes its own height and the strip scrolls sideways.
@@ -42,7 +42,7 @@ export function CompileSteps({ label, steps, children }: { label: string; steps:
     show(to, { focus: true })
   }
   const name = (index: number) => <><b>{steps[index].n}</b>{steps[index].name}</>
-  return <>
+  return <div className="compile-stepper">
     <div className="compile-tabs" role="tablist" aria-label={label} ref={strip} onKeyDown={key}>
       {steps.map((step, i) => <button key={step.n} type="button" role="tab" id={`tab-step${step.n}`} aria-controls={`step${step.n}`} aria-selected={i === current} tabIndex={i === current ? 0 : -1} ref={node => { tabs.current[i] = node }} onClick={() => show(i, { focus: true })}>{name(i)}</button>)}
     </div>
@@ -52,5 +52,5 @@ export function CompileSteps({ label, steps, children }: { label: string; steps:
       <button type="button" className="sprev" disabled={current === 0} aria-label={current === 0 ? 'Previous step' : undefined} onClick={() => show(current - 1, { toStrip: true })}>{current > 0 && <><span aria-hidden="true">←</span><span className="sr-only">Previous step: </span>{name(current - 1)}</>}</button>
       <button type="button" className="snext" disabled={current === last} aria-label={current === last ? 'Next step' : undefined} onClick={() => show(current + 1, { toStrip: true })}>{current < last && <><span className="sr-only">Next step: </span>{name(current + 1)}<span aria-hidden="true">→</span></>}</button>
     </nav>
-  </>
+  </div>
 }
