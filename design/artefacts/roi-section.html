@@ -153,7 +153,7 @@ h1 { font: 500 30px/1.15 var(--sans); letter-spacing: -.015em; text-wrap: balanc
   function size(el) { el.style.setProperty('--n', Math.max(1, String(el.value).length)); }
   function render() {
     var pay = num($('i-pay')), hours = num($('i-hours')), share = num($('i-share')) / 100, price = num($('i-price'));
-    var wage = hours ? pay / hours : 0, rate = share ? wage / share : 0, h = rate ? price / rate : 0, min = Math.round(h * 60);
+    var wage = hours ? pay / hours : 0, rate = share ? wage / share : 0, shown = Math.round(rate) || rate, h = shown ? price / shown : 0, min = Math.round(h * 60);
     $('o-wage').textContent = fmt(wage); $('o-rate').textContent = fmt(rate); $('o-rate2').textContent = fmt(rate);
     $('o-h').textContent = fmt(h, 2); $('o-price').textContent = fmt(price);
     var m = min >= 90 ? fmt(h, 1) + '\u00a0hours' : min + '\u00a0minutes';
