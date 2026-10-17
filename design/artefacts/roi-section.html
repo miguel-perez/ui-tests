@@ -1,0 +1,143 @@
+<title>What A Run Is Worth</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:ital,wght@0,400;0,500;1,400&display=swap">
+<style>
+/* Layout: the landing section "What a run is worth". One column. The claim in a developer's units first; then the
+   calculator the run fills from its receipt and its result, with the author's own numbers in three fields and the
+   defaults named with their sources. The output is a sentence with two thresholds, not a percentage. */
+:root {
+  color-scheme: light;
+  --canvas: #f6f6f6; --surface: #ffffff; --raised: #efefef; --line: #e2e2e2;
+  --ink: #111111; --muted: #575757; --comment: #8a8a8a;
+  --accent: #4b3ff0; --moment: #b84d00; --blue: #4b3ff0; --green: #27762f; --teal: #00757c; --purple: #7444b4; --cyan: #00757c; --red: #bd1f44; --yellow: #8b6100;
+  --no: #bd1f44; --yes: #007852; --done: #007852; --note: #7a41af; --pause: #8b6100;
+  --chip-ink: #ffffff; --focus: #4b3ff0;
+  --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42;
+    --ink: #c0caf5; --muted: #a9b1d6; --comment: #8089b3;
+    --accent: #7aa2f7; --moment: #ff9e64; --blue: #7aa2f7; --green: #9ece6a; --teal: #73daca; --purple: #bb9af7; --cyan: #89ddff; --red: #f7768e; --yellow: #e0af68;
+    --no: #f7768e; --yes: #73daca; --done: #73daca; --note: #bb9af7; --pause: #e0af68;
+    --chip-ink: #1a1b26; --focus: #c0caf5;
+  }
+}
+:root[data-theme="dark"] {
+    color-scheme: dark;
+    --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42;
+    --ink: #c0caf5; --muted: #a9b1d6; --comment: #8089b3;
+    --accent: #7aa2f7; --moment: #ff9e64; --blue: #7aa2f7; --green: #9ece6a; --teal: #73daca; --purple: #bb9af7; --cyan: #89ddff; --red: #f7768e; --yellow: #e0af68;
+    --no: #f7768e; --yes: #73daca; --done: #73daca; --note: #bb9af7; --pause: #e0af68;
+    --chip-ink: #1a1b26; --focus: #c0caf5;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html { background: var(--canvas); }
+body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 15px/1.55 var(--sans); -webkit-font-smoothing: antialiased;
+  padding-block: 40px 72px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); overflow-x: hidden; }
+h1, h2, h3, h4, p, ol, ul, dl, dd, figure, pre, blockquote { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+button { font: inherit; color: inherit; background: none; border: 0; padding: 0; cursor: pointer; text-align: left; }
+code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+a { color: inherit; text-decoration: underline; text-decoration-color: var(--comment); text-underline-offset: 3px; }
+a:hover { text-decoration-color: var(--ink); }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
+.page { max-width: 1248px; margin: 0 auto; display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; }
+.page > .right { display: grid; gap: 28px; min-width: 0; }
+@media (max-width: 900px) { .page { grid-template-columns: 1fr; gap: 16px; } }
+p { text-wrap: pretty; }
+
+/* Section head */
+.head { display: grid; gap: 14px; }
+h1 { font: 500 30px/1.15 var(--sans); letter-spacing: -.015em; text-wrap: balance; }
+.right > p { color: var(--muted); max-width: 64ch; }
+
+/* The claim: developer units, one number */
+.claim { display: grid; gap: 14px; }
+.claim p { font: 400 23px/1.4 var(--sans); letter-spacing: -.005em; text-wrap: balance; }
+.claim p b { font-weight: 500; }
+.claim p .u { color: var(--moment); font-weight: 500; }
+.claim footer { font-size: 13px; color: var(--muted); max-width: 68ch; text-wrap: pretty; }
+.claim footer code { color: var(--ink); font-size: 12.5px; }
+.claim footer .srcs { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
+
+/* Calculator */
+.calc { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.calc > * { padding: 22px 24px; }
+.calc > * + * { border-top: 1px solid var(--line); }
+.calc h2 { font: 500 18px/1.3 var(--sans); letter-spacing: -.01em; }
+.calc .intro { display: grid; gap: 6px; }
+.calc .intro p { color: var(--muted); font-size: 14px; max-width: 62ch; }
+
+/* From the run: the three things the receipt and the report already know */
+.from { display: grid; gap: 12px; }
+.lbl { font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--comment); }
+.fields { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; }
+.field { display: grid; gap: 6px; min-width: 0; }
+.field label { font-size: 13px; color: var(--ink); }
+.field .hint { font-size: 12px; color: var(--comment); line-height: 1.4; }
+.ctl { display: flex; align-items: center; height: 38px; border: 1px solid var(--line); border-radius: 7px; background: var(--canvas); padding: 0 10px; gap: 6px; font: 400 15px/1 var(--mono); color: var(--ink); }
+.ctl:focus-within { border-color: var(--focus); box-shadow: 0 0 0 2px color-mix(in oklab, var(--focus) 20%, transparent); }
+.ctl input { all: unset; min-width: 0; width: 100%; font: inherit; color: inherit; font-variant-numeric: tabular-nums; }
+.ctl input[type=number]::-webkit-inner-spin-button { opacity: .5; }
+.ctl .unit { color: var(--comment); font: 400 13px/1 var(--sans); white-space: nowrap; }
+.ctl .unit.pre { margin-right: 0; }
+.ctl.pair input { width: 2.2em; text-align: center; }
+.ctl.pair .of { color: var(--comment); font-family: var(--sans); font-size: 13px; }
+.ctl.text { font-family: var(--mono); font-size: 14px; }
+.fill { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: var(--teal); }
+.fill i { width: 7px; height: 7px; border-radius: 50%; background: var(--teal); }
+
+/* Yours */
+.yours { display: grid; gap: 12px; }
+
+/* Defaults with sources */
+.defaults { display: grid; gap: 12px; }
+.seg { display: inline-grid; grid-auto-flow: column; height: 38px; border: 1px solid var(--line); border-radius: 7px; background: var(--canvas); overflow: hidden; }
+.seg button { padding: 0 14px; font-size: 14px; color: var(--muted); display: grid; place-items: center; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--canvas); }
+.seg button + button { border-left: 1px solid var(--line); }
+
+/* The sentence */
+.out { background: var(--raised); display: grid; gap: 14px; }
+.out p.say { font: 400 21px/1.4 var(--sans); letter-spacing: -.005em; text-wrap: balance; }
+.out p.say b { font-weight: 500; }
+.out p.say .u { color: var(--moment); font-weight: 500; white-space: nowrap; }
+.out .work { display: grid; gap: 4px; font: 400 13px/1.5 var(--mono); color: var(--muted); }
+.out .work span { color: var(--comment); font-family: var(--sans); margin-right: 8px; }
+.out .caveat { font-size: 13px; color: var(--muted); max-width: 66ch; }
+.out .caveat b { font-weight: 500; color: var(--ink); }
+
+/* Sources */
+.sources { display: grid; gap: 8px; font-size: 13px; color: var(--muted); counter-reset: s; }
+.sources li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; }
+.sources li::before { counter-increment: s; content: counter(s); font: 400 12px/1.7 var(--mono); color: var(--comment); }
+.srcblock { display: grid; gap: 12px; }
+.sources li span { min-width: 0; }
+
+@media (max-width: 720px) {
+  body { padding-block: 28px 56px; }
+  .fields { grid-template-columns: 1fr; }
+  .calc > * { padding: 18px 16px; }
+  .claim p { font-size: 20px; }
+  .out p.say { font-size: 19px; }
+  .head h1 { font-size: 26px; }
+}
+</style>
+
+<section class="page" aria-labelledby="roi-h">
+  <h1 id="roi-h">What a run is worth.</h1>
+  <div class="right">
+    <p>The price is a number on a receipt. The case for it is a comparison with what one problem costs once it reaches people. Here is that comparison in a developer's units.</p>
+    <blockquote class="claim">
+    <p>Five people cost about <b>$55</b>, about <span class="u">35&nbsp;minutes</span> of a US developer's time. If one problem they show you would have taken longer than that to find from bug reports, reproduce and fix after release, the run has paid for itself.</p>
+    <footer>
+      The arithmetic: <code>$135,980 ÷ 2,080 h = $65</code> an hour in wages. Wages are 70% of what employers pay, so about <code>$93</code> an hour. <code>$55 ÷ $93 = 0.59 h</code>, about 35&nbsp;minutes.
+      <div class="srcs"><a href="https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm">BLS, software developers, May 2025</a> <a href="https://www.bls.gov/news.release/archives/ecec_03202026.htm">BLS, employer costs, March 2026</a></div>
+    </footer>
+  </blockquote>
+  </div>
+</section>
