@@ -1,0 +1,72 @@
+<title>One Command, No Repo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@400;500&display=swap">
+<style>
+/* Layout: the landing section "No repo to put it in? One command." on the page grid. Head 5/7. Three pieces across twelve
+   columns: the command and what it deploys, the line it prints, the dashboard it serves. */
+:root {
+  color-scheme: light;
+  --canvas: #f6f6f6; --surface: #ffffff; --raised: #efefef; --line: #e2e2e2; --ink: #111111; --muted: #575757;
+  --comment: #8a8a8a; --accent: #4b3ff0; --moment: #b84d00; --blue: #4b3ff0; --green: #27762f; --teal: #00757c;
+  --purple: #7444b4; --cyan: #00757c; --red: #bd1f44; --yellow: #8b6100; --no: #bd1f44; --yes: #007852;
+  --done: #007852; --note: #7a41af; --pause: #8b6100; --deviation: #4b3ff0; --dead: #bd1f44; --correct: #007852;
+  --incorrect: #bd1f44; --chip-ink: #ffffff; --focus: #4b3ff0;
+  --host-bg: #e9eaef; --host-panel: #f4f5f8; --host-line: #cfd3de; --host-ink: #2c3353; --host-dim: #4b5a94;
+  --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225,226,231,.68); --ch-hair: rgba(225,226,231,.16); --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px;
+  --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
+}
+*,*::before,*::after{box-sizing:border-box} html{background:var(--canvas)}
+body{margin:0;background:var(--canvas);color:var(--ink);font:400 15px/1.55 var(--sans);-webkit-font-smoothing:antialiased;padding-block:40px 72px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow-x:hidden}
+h1,h2,p,ul,ol{margin:0} ul,ol{padding:0;list-style:none} code,.mono{font-family:var(--mono);font-variant-numeric:tabular-nums} p{text-wrap:pretty}
+.page{max-width:1248px;margin:0 auto;display:grid;gap:48px}
+.head{display:grid;grid-template-columns:5fr 7fr;gap:24px;align-items:start}
+.head h1{font:500 30px/1.15 var(--sans);letter-spacing:-.015em;text-wrap:balance}
+.head p{color:var(--muted);max-width:64ch;justify-self:end}
+.head p code{color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 6px;font-size:13px}
+.piece{display:grid;gap:18px}
+.piece .intro{display:grid;gap:8px;max-width:64ch}
+.piece .intro h2{font:500 20px/1.25 var(--sans);letter-spacing:-.01em}
+.piece .intro p{color:var(--muted);font-size:15px;line-height:1.6}
+.window{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.window .tab{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font:400 12px/1 var(--mono);color:var(--muted)}
+.term{padding:18px 20px;font:400 13.5px/1.75 var(--mono);white-space:pre-wrap}
+.term .p{color:var(--comment)} .term .a{color:var(--green)} .term .u{color:var(--blue)} .term .k{color:var(--muted)} .term b{font-weight:500;color:var(--ink)}
+.snip{padding:16px 20px;font:400 14px/1.6 var(--mono)} .snip .t{color:var(--purple)} .snip .at{color:var(--teal)} .snip .s{color:var(--green)}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font:400 12px/1 var(--mono);color:var(--muted);text-align:left;padding:12px 16px;border-bottom:1px solid var(--line)}
+td{padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr:last-child td{border-bottom:0}
+td.n{font-family:var(--mono);color:var(--muted)} td b{font-weight:500}
+.chip{font:500 11px/1 var(--mono);border:1px solid var(--line);border-radius:4px;padding:4px 7px;color:var(--muted);background:var(--canvas)}
+.chip.run{color:var(--accent);border-color:color-mix(in oklab,var(--accent) 40%,var(--line))}
+.chip.great{color:var(--done)} .chip.check{color:var(--moment)}
+.bar{display:inline-block;width:60px;height:3px;background:var(--line);border-radius:2px;vertical-align:middle;margin-left:8px;position:relative;overflow:hidden}
+.bar i{position:absolute;inset:0;width:var(--w);background:var(--accent)}
+.closing{color:var(--muted);font-size:14px}
+@media (max-width:900px){.head{grid-template-columns:1fr;gap:12px} .page{gap:36px} .cols{display:none}}
+</style>
+<section class="page" aria-labelledby="host-h">
+  <header class="head">
+    <h1 id="host-h">No repo to put it in? One command.</h1>
+    <p><code>npx ui-tests host</code> puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.</p>
+  </header>
+
+  <section class="piece">
+    <div class="intro"><h2>The command</h2><p>Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.</p></div>
+    <div class="window"><div class="tab"><span>Terminal</span><span>Example</span></div><div class="term"><span class="p">$</span> npx ui-tests <span class="a">host</span>
+<span class="k">Deploying to your account…</span>
+  collector   <span class="u">https://ui-tests.weekboard.workers.dev</span>
+  player      <span class="u">https://ui-tests.weekboard.workers.dev/t</span>
+  store       <b>weekboard-ui-tests</b>, your bucket, 0 recordings
+  panel       no key yet · <span class="k">add one with</span> <span class="a">ui-tests host --panel prolific</span></div></div>
+  </section>
+
+  <section class="piece">
+    <div class="intro"><h2>The line</h2><p>One script tag, pointing at your deploy. It records only while a run is open and a person has said yes; the rest of the time it is forty lines that do nothing.</p></div>
+    <div class="window"><div class="tab"><span>index.html</span><span>or your tag manager</span></div><div class="snip"><span class="t">&lt;script</span> <span class="at">src</span>=<span class="s">"https://ui-tests.weekboard.workers.dev/s.js"</span> <span class="at">async</span><span class="t">&gt;&lt;/script&gt;</span></div></div>
+  </section>
+
+  <p class="closing">Same test, same report, on a box you own.</p>
+
+</section>
