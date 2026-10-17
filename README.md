@@ -164,7 +164,7 @@ archive a finished board
 
 What you write, what they see.
 
-Every screen a person meets, in the order they meet it, beside the lines of your test that produce it, and what comes back from each. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.
+Every screen a person meets, in the order they meet it, and what comes back from each, then the whole test that produces them. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.
 
 npm install -D ui-tests
 

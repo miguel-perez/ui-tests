@@ -109,7 +109,7 @@ Since the composition round (issue #46) the six screens below are tabs under the
 
 **Heading.** What you write, what they see.
 
-**Lead.** Every screen a person meets, in the order they meet it, beside the lines of your test that produce it, and what comes back from each. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.
+**Lead.** Every screen a person meets, in the order they meet it, and what comes back from each, then the whole test that produces them. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.
 
 **Commands.** Three cards in one row, each a command and what it does.
 

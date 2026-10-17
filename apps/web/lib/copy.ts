@@ -38,7 +38,7 @@ export const inviteFile = exampleFileName
  */
 export const compilation = {
   heading: 'What you write, what they see.',
-  lead: 'Every screen a person meets, in the order they meet it, beside the lines of your test that produce it, and what comes back from each. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.',
+  lead: 'Every screen a person meets, in the order they meet it, and what comes back from each, then the whole test that produces them. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.',
   commands: [
     { command: 'npm install -D ui-tests', does: 'Adds the package.', strong: '' },
     { command: 'npx ui-tests init', does: 'Creates the file below, with the example filled in.', strong: 'the file' },
