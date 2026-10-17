@@ -80,11 +80,14 @@ it('regenerates every committed HTML frame from Ink and keeps CLI/report/README 
   const dom = parseHTML(`<html><body><pre>${html}</pre></body></html>`)
   expect(dom.document.querySelector('pre')!.textContent?.trimEnd()).toBe(stripVTControlCharacters(cli).trimEnd())
   const lines = stripVTControlCharacters(cli).trimEnd().split('\n')
-  expect(lines).toHaveLength(7)
+  expect(lines).toHaveLength(8)
   expect(lines.every(line => line.length <= 80)).toBe(true)
+  // Issue #35, item 4: the result line says across how many people, and a checked goal says the check failed, not "wrong and sure".
+  expect(lines[0]).toBe('● Problems found: 4, seen across all 5 people.')
   expect(lines[1]).toBe('  Reached the goal: 2 of 5.')
-  expect(lines[3]).toContain('pressed it again')
-  const rows = lines.slice(3)
+  expect(lines[2]).toBe('  Pressed Done, but your check failed: 2 of 5.')
+  expect(lines[4]).toContain('pressed it again')
+  const rows = lines.slice(4)
   expect(rows.map(line => line.indexOf('of 5'))).toEqual(rows.map(() => rows[0].indexOf('of 5')))
   // Rank, count and impact first, padded and right-aligned; the problem text last, starting in one column. Ranked by impact, then people.
   expect(rows.map(line => line.slice(0, 20))).toEqual(['▏1  2 of 5  blocked ', ' 2  1 of 5  blocked ', ' 3  4 of 5  slowed  ', ' 4  2 of 5  confused'])
@@ -94,7 +97,7 @@ it('regenerates every committed HTML frame from Ink and keeps CLI/report/README 
   const { stdout: coloured } = await exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'report', 'apps/web/generated/example-report.json'], { env: { ...process.env, FORCE_COLOR: '3', NO_COLOR: '' }, encoding: 'utf8', timeout: 10000 })
   expect(coloured).toMatch(/\x1b\[38;2;/)
   expect(colourRuns(ansiToHtml(coloured.trimEnd()))).toEqual(colourRuns(html))
-  expect(colourRuns(html)).toEqual(expect.arrayContaining([['2 of 5', 'moment'], ['blocked', 'red'], ['4 of 5  slowed', 'moment'], ['confused', 'yellow'], ['1', 'muted'], ['Problems found: 4 across 5 people.', 'ink']]))
+  expect(colourRuns(html)).toEqual(expect.arrayContaining([['2 of 5', 'moment'], ['blocked', 'red'], ['4 of 5  slowed', 'moment'], ['confused', 'yellow'], ['1', 'muted'], ['Problems found: 4, seen across all 5 people.', 'ink'], ['2 of 5', 'red']]))
   const { stdout: json } = await exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'report', 'apps/web/generated/example-report.json', '--json'], { encoding: 'utf8', timeout: 10000 })
   expect(JSON.parse(json).people).toBe(5)
 }, 30000)
@@ -107,6 +110,8 @@ it.each([
   { people: 0, problems: [] },
   { people: 5, problems: [{ title: 'Problem', people: 6 }] },
   { people: 5, reached: 5, wrongAndSure: 1, problems: [] },
+  { people: 5, reached: 4, pressedDoneFailed: 2, problems: [] },
+  { people: 5, seenBy: 6, problems: [] },
 ])('rejects malformed report input with the CLI error: %j', async report => {
   const directory = await mkdtemp(join(tmpdir(), 'ui-tests-report-'))
   try {

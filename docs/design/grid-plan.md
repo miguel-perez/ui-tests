@@ -174,34 +174,50 @@ At 375:
 |   picture (frame fits its sheet; the fill stacks)  |
 ```
 
-### L5 · Section + ChecksBox + FindingsList
+### L5 · PullRequest: in the pull request
 
-**Rule.** Both 12 columns, so any caption goes underneath. The findings list follows rule 12: rank, count (right-aligned), the impact, the Person 1-5 evidence cells, then the problem as the one free-text field; rows are ranked by impact, then by count. The expanded row splits 4 (reel thumbnail) and 8 (quote, moments, change). The result line is the footer.
+**Rule** (issue #35; `design/artefacts/pr-section.html`). One column on 10 of the 12 columns (columns 2–11, 1036 px, centred), like the compilation's reading column but wide enough for the report's 5 / 7 viewer. The heading and the lead stacked, the lead at most 70ch. Three pieces, each a numbered intro (at most 64ch) over its artefact, hairlines between them, 40 above and 48 below each. The merge box and the check page are GitHub's chrome in the site's neutrals; inside the check page a 220 px side list and the page. The report is the same `RunReport` as `/r/<run>`, with an address bar: the result line and the person line across, then the list in 5 of its 12 and the evidence pane in 7, the pane sticky 16 px from the top while the list scrolls, the closing line across. No caption: the intros carry the words. Empty area: the intros leave the right of the column free (about 400 px beside 64ch), and the pane is taller than the five rows, so the list column has a band under it; both are far smaller than the three artefacts.
 
 At 1440:
 
 ```text
-   1       2       3       4       5       6       7       8       9      10      11      12   
-[Section heading                      ] [lead                                                 ]  head
-[ChecksBox: three CheckRows in GitHub chrome                                                  ]  checks · 176
-[FindingsList head: rank · count · impact · Person 1-5 · problem                              ]  32
-[ReelFrame (expanded row)     ] [quote, evidence moments, what to change                      ]  expanded · 300
-[FindingRow × 3 collapsed, result line footer                                                 ]  3 × 56 + 48
-[Caption under                                                                                ]  32
+   1       2       3       4       5       6       7       8       9      10      11      12
+        [Section heading                    ]                                                  head · 96 above
+        [lead, 70ch                                         ]                                  lead · 150, then 36
+        ----------------------------------------------------------------------------------    hairline
+        [1 The check: intro, 64ch                           ]                                  intro · 60
+        [merge box: heading · ui-tests (neutral) · preview · tests             Example run]    box · 160
+        ----------------------------------------------------------------------------------    hairline
+        [2 Its details, on GitHub: intro                    ]                                  intro · 80
+        [side 220 |title · sentence · table of three · legend · links · footer             ]   page · 380
+        ----------------------------------------------------------------------------------    hairline
+        [3 The report: intro                                ]                                  intro · 170
+        [address bar                                                          Example run ]    34
+        [crumb · result line (goal · reached · problems, seen across · pressed Done)     ]     80
+        [person line: Person 1-5, reached, time, ease, each a link                        ]    50
+        [legend; rows 1-4, what worked (5/12)] [pane, sticky: clip 16:10, quote, where,     ]  viewer · 590
+        [                                    ] [moments, suggested change, copy (7/12)      ]
+        [closing line: after the goal · First look · Who took part · environment · caveat ]    60
 ```
 
 At 375:
 
 ```text
 |----------------------------------------------------| 327 px, one column
-| Section heading, lead                              |
-| ChecksBox                                          |
-| FindingRow 1 expanded: rank · count · cells, proble|
-| ReelFrame                                          |
-| quote, moments, change                             |
-| FindingRow 2-4                                     |
-| result line                                        |
-| Caption                                            |
+| Section heading                                    |
+| lead                                               |
+| 1 The check: intro                                 |
+| merge box (the check line wraps)                   |
+| 2 Its details: intro                               |
+| side list above the page                           |
+| title, sentence, table (scrolls sideways), legend, |
+| links, footer                                      |
+| 3 The report: intro                                |
+| address bar, crumb, result line                    |
+| person line (wraps)                                |
+| legend, rows 1-4, what worked                      |
+| pane, under the list, not sticky                   |
+| closing line                                       |
 ```
 
 ### L6 · Section + AgentRun
@@ -298,6 +314,35 @@ At 1440:
 [type: Snippet CodeWindow                     ] [see: Caption (markup)                        ]  pair · 120
 [number and title                                                                             ]  72
 [type: HostedForm (with screen fields)       ] [see: Dashboard with the new run              ]  pair · 560
+```
+
+## Report page
+
+### R1 · RunReport at /r/<run>
+
+**Rule** (issue #35; `design/artefacts/run-report.html`). The same 1036 px column, centred, under the site header; the share line (what the signed link shows, and the Share control) above the report. The report as in L5 without its address bar, its result line the page's h1. Each person links to `/r/<run>/p<n>`, the attempt view in the same column. The signed share link renders the same block without the site header.
+
+At 1440:
+
+```text
+   1       2       3       4       5       6       7       8       9      10      11      12
+        [share line                                                              Share ]       24
+        [crumb · result line                                                  Example run ]    80
+        [person line                                                                      ]    50
+        [legend; rows 1-4, what worked (5/12)] [pane, sticky (7/12)                       ]    viewer · 590
+        [closing line                                                                     ]    60
+```
+
+At 375:
+
+```text
+|----------------------------------------------------| 327 px, one column
+| share line, Share                                  |
+| crumb, result line                                 |
+| person line                                        |
+| legend, rows                                       |
+| pane                                               |
+| closing line                                       |
 ```
 
 ## What is measured

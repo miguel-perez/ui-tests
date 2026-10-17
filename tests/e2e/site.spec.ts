@@ -5,7 +5,7 @@ import { inviteExample, inviteFile, compilation, promise, intro, landing, guide,
 import { shown, offences } from '../vocabulary'
 
 /** Every content type's component on the landing page (docs/design/site-schema.md). */
-const artefacts = ['terminal-window', 'code-window', 'attempt-view', 'compilation', 'sources', 'checks-box', 'findings-list', 'reel-frame', 'dashboard']
+const artefacts = ['terminal-window', 'code-window', 'attempt-view', 'compilation', 'sources', 'pull-request', 'merge-box', 'check-page', 'run-report', 'dashboard']
 /** Relative luminance of a computed rgb() colour. */
 const luminance = (rgb: string) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return r * .2126 + g * .7152 + b * .0722 }
 /** The distinct colours of the text inside each matched element. */
@@ -49,7 +49,7 @@ for (const width of [1440, 375]) {
       expect(dots.length).toBeGreaterThan(0)
       expect(dots.every(Boolean)).toBe(true)
       // The theme rules (design/artefacts/README.md): the site's own surfaces are white windows on the canvas with the line colour as their edge.
-      for (const selector of ['.attempt-view', '.findings-list', '.dashboard', '.reel-frame', '.checks-box', '.hosted-form', '.src-row[aria-expanded="true"]', '.src-well:not([hidden])', '.terminal-window', '.code-window']) {
+      for (const selector of ['.attempt-view', '.run-report', '.dashboard', '.pr-gh', '.hosted-form', '.src-row[aria-expanded="true"]', '.src-well:not([hidden])', '.terminal-window', '.code-window']) {
         for (const surface of await page.locator(selector).evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(surface, `${selector} is white`).toBe('rgb(255, 255, 255)')
       }
       for (const edge of await page.locator('.window').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).borderTopColor))) expect(edge).toBe('rgb(226, 226, 226)')
@@ -68,6 +68,8 @@ for (const width of [1440, 375]) {
       // The frames are the light Weekboard page in its own grey, unchanged on the light site.
       for (const frame of await page.locator('.compile-frame, .src-frame').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(frame).toBe('rgb(225, 226, 231)')
       for (const accent of await page.locator('.ch-btn.pri, .ch-pill .done, .sources .uit-primary').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(accent).toBe('rgb(95, 227, 192)')
+      // Issue #35, item 6: the label on the mint takes the chrome's accent ink, #14251f, as the artefacts draw it, in the real player too.
+      for (const ink of await page.locator('.ch-btn.pri, .ch-pill .done, .sources .uit-primary').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).color))) expect(ink).toBe('rgb(20, 37, 31)')
       // Terminal and code windows: white with black type.
       for (const ink of await page.locator('.terminal-body, .code-body').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).color))) expect(luminance(ink)).toBeLessThan(.01)
       // Every component that owns chrome carries "Example run" at most once.
@@ -99,11 +101,14 @@ for (const width of [1440, 375]) {
         await expect(comesBack.locator('[data-artefact="attempt-view"]')).toHaveCount(1)
         // Issue #22: nothing on the attempt view or in the report rows, the check, the dashboard or the terminals uses the old words.
         expect(offences(await comesBack.innerText(), shown)).toEqual([])
-        for (const selector of ['.findings-list', '.checks-box', '.dashboard', '.terminal-window']) for (const text of await page.locator(selector).allInnerTexts()) expect(offences(text, shown), selector).toEqual([])
-        await expect(page.locator('section[aria-labelledby="pull-request"] [data-artefact="findings-list"]')).toHaveCount(1)
+        for (const selector of ['.pr-section', '.dashboard', '.terminal-window']) for (const text of await page.locator(selector).allInnerTexts()) expect(offences(text, shown), selector).toEqual([])
+        // Issue #35: the three-piece section in place of the checks box and the findings list.
+        const pr = page.locator('section[aria-labelledby="pull-request"]')
+        for (const piece of ['merge-box', 'check-page', 'run-report']) await expect(pr.locator(`[data-artefact="${piece}"]`)).toHaveCount(1)
+        await expect(page.locator('.checks-box, .findings-list, [data-artefact="checks-box"], [data-artefact="findings-list"]')).toHaveCount(0)
         // Item 3: the hosted block shows the snippet and a dashboard of several runs; no reels repeated.
         const hostedBlock = page.locator('section[aria-labelledby="hosted"]')
-        await expect(hostedBlock.locator('video, [data-artefact="reel-frame"], [data-artefact="attempt-view"], [data-artefact="findings-list"]')).toHaveCount(0)
+        await expect(hostedBlock.locator('video, [data-artefact="attempt-view"], [data-artefact="run-report"]')).toHaveCount(0)
         await expect(hostedBlock.locator('.dashboard tbody tr')).toHaveCount(runs.length)
         // Round seven: the sources table in place of the three cards, its copy the artefact's, in the order link, visitors, paid panel.
         const people = page.locator('section[aria-labelledby="people"]')
@@ -119,7 +124,7 @@ for (const width of [1440, 375]) {
         await expect(page.getByRole('link', { name: 'Get started', exact: true }).first()).toHaveAttribute('href', '/docs/getting-started')
       } else {
         await expect(page.locator('.step')).toHaveCount(8)
-        await expect(page.locator('[data-artefact="findings-list"], [data-artefact="attempt-view"]')).toHaveCount(0)
+        await expect(page.locator('[data-artefact="run-report"], [data-artefact="attempt-view"]')).toHaveCount(0)
         // Item 5: the guide's first step offers both ways in.
         await expect(page.locator('#install')).toContainText('On any other site, paste one line instead')
         await expect(page.locator('.guide-head')).toContainText(guide.requirement)
@@ -210,24 +215,14 @@ for (const width of [1440, 375]) {
     // Under reduced motion nothing in the view transitions.
     expect(await view.locator('*').evaluateAll(nodes => nodes.every(node => getComputedStyle(node).transitionDuration.split(', ').every(duration => duration === '0s')))).toBe(true)
 
-    // The findings list: rows expand, reels play on their control, each evidence cell opens that person at that moment.
-    const findings = page.locator('.findings-list')
-    for (let i = 0; i < 4; i++) {
-      if (i > 0) await findings.locator('.finding-toggle').nth(i).click()
-      const reel = findings.locator('video')
-      expect(await reel.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
-      await findings.getByRole('button', { name: 'Play problem moment', exact: true }).click()
-      await expect.poll(() => reel.evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThan(0)
-      await findings.getByRole('button', { name: 'Pause problem moment', exact: true }).click()
-    }
-    await page.emulateMedia({ reducedMotion: 'no-preference' })
-    for (const [person, at, row] of [[1, 4, 3], [2, 6, 3], [4, 41, 1], [5, 9, 3]] as const) {
-      await findings.getByRole('button', { name: `Watch Person ${person} at 00:${String(at).padStart(2, '0')}, problem ${row}` }).click()
-      await expect(findings.locator('video')).toHaveAttribute('src', `/sessions/p${person}.webm`)
-      await expect.poll(() => findings.locator('video').evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThanOrEqual(at)
-    }
+    // The report in the section: one clip at a time, played on its control from its start second, under reduced motion too.
+    const report = page.locator('section[aria-labelledby="pull-request"] .run-report')
+    const clipVideo = report.locator('.rr-clip video')
+    expect(await clipVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
+    await report.getByRole('button', { name: /^Play Person 3 · 00:58/ }).click()
+    await expect.poll(() => clipVideo.evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThan(58)
+    await report.getByRole('button', { name: /^Pause Person 3 · 00:58/ }).click()
     // Item 12: fixed-width fields first and the free text last, numbers right-aligned, in every page table.
-    expect(await findings.locator('.finding-line').first().evaluate(row => [...row.children].map(child => child.className))).toEqual(['num rank', 'num count', 'finding-impact', 'cells', 'finding-toggle'])
     const dashboard = page.locator('.dashboard')
     expect(await dashboard.locator('thead th').allTextContents()).toEqual(['Date', 'People', 'Status', 'Result', 'Run'])
     await expect(dashboard.locator('td.num').first()).toHaveCSS('text-align', 'right')
@@ -392,7 +387,7 @@ for (const width of [1440, 375]) test(`hover, focus and active never move anythi
     await row.hover()
     expect(await row.boundingBox(), `flow row ${i + 1} hover`).toEqual(before)
   }
-  const targets = ['.moment-press', '.attempt-index a', '.attempt-fold summary', '.finding-toggle', '.cell.hit', '.watch-moment', '.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.check-row a', '.nav-links a', '.stepper .nextb', '.dashboard tbody tr']
+  const targets = ['.moment-press', '.attempt-index a', '.attempt-fold summary', '.rr-row:not(.is-sel)', '.rr-chip', '.rr-copy', '.rr-play', '.rr-people a', '.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.pr-chk a', '.nav-links a', '.stepper .nextb', '.dashboard tbody tr']
   for (const selector of targets) {
     const target = page.locator(selector).first()
     await target.scrollIntoViewIfNeeded()
@@ -456,8 +451,8 @@ test('failed playback restores the attempt clip and reel play controls without a
   })
   await page.goto('/')
   const view = page.locator('.attempt-view')
-  const findings = page.locator('.findings-list')
-  for (const [container, play, pause] of [[view, /^Play 00:03 to 00:19/, /^Pause 00:03 to 00:19/], [findings, /^Play problem moment$/, /^Pause problem moment$/]] as const) {
+  const report = page.locator('.run-report')
+  for (const [container, play, pause] of [[view, /^Play 00:03 to 00:19/, /^Pause 00:03 to 00:19/], [report, /^Play Person 3 · 00:58/, /^Pause Person 3 · 00:58/]] as const) {
     await container.getByRole('button', { name: play }).click()
     await expect(container.getByRole('button', { name: pause })).toBeVisible()
     const video = container.locator('video').first()
@@ -465,11 +460,12 @@ test('failed playback restores the attempt clip and reel play controls without a
     await video.evaluate((element: HTMLVideoElement & { rejectPlay: () => void }) => element.rejectPlay())
     await expect(container.getByRole('button', { name: play })).toBeVisible()
   }
-  // Exercise the effect-driven playback handler as well as both button handlers.
-  await page.emulateMedia({ reducedMotion: 'no-preference' })
-  await findings.locator('.finding-toggle').nth(1).click()
-  await expect(findings.getByRole('button', { name: 'Pause problem moment', exact: true })).toBeVisible()
-  await findings.locator('video').evaluate((video: HTMLVideoElement & { rejectPlay: () => void }) => video.rejectPlay())
-  await expect(findings.getByRole('button', { name: 'Play problem moment', exact: true })).toBeVisible()
+  // A moment chip swaps the clip; its play control recovers from a refused play too.
+  await report.getByRole('button', { name: 'Person 4 · 00:41', exact: true }).click()
+  await report.getByRole('button', { name: /^Play Person 4 · 00:41/ }).click()
+  await expect(report.getByRole('button', { name: /^Pause Person 4 · 00:41/ })).toBeVisible()
+  await expect.poll(() => report.locator('.rr-clip video').evaluate(element => 'rejectPlay' in element)).toBe(true)
+  await report.locator('.rr-clip video').evaluate((video: HTMLVideoElement & { rejectPlay: () => void }) => video.rejectPlay())
+  await expect(report.getByRole('button', { name: /^Play Person 4 · 00:41/ })).toBeVisible()
   expect(errors).toEqual([])
 })

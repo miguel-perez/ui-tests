@@ -19,6 +19,10 @@ export const was: [string, RegExp][] = [
   // Issue #25, item 2: the bar says "Done" and "I couldn't do this".
   ["Can't do it / I can't do this", /can(?:['’]|&#39;|&apos;|\\u2019)?t do (?:it|this)/i],
   ["I'm done", /\bI(?:['’]|&#39;|&apos;)m done\b/i],
+  // Issue #35, item 4: "Moments" not a "Watch" column, "Suggested change" not "What to change", and the result line says "seen".
+  ['Watch as a label', /(?:^|[>|'"`]\s*)Watch(?:\s*[<|'"`:]|\s*$)|\bWatch Person\b/m],
+  ['What to change', /What to change/],
+  ['across n people without seen', /(?<!seen )\bacross \d+ people/i],
 ]
 /** On a rendered surface every word of the table is out, including the ones code may still use for something else. */
 export const shown: [string, RegExp][] = [

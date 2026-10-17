@@ -35,7 +35,7 @@ it('keeps the actual rehearsal sentence and the approved nav mark', async () => 
   expect(demo).toContain('noindex, nofollow')
 })
 
-it('ships all five real attempts, four small playable reels and the card posters, with the approved Watch moments', async () => {
+it('ships all five real attempts, four small playable reels and the card posters, with the approved moments', async () => {
   expect(sessions.attempts.map(a => a.id).sort()).toEqual(['p1', 'p2', 'p3', 'p4', 'p5'])
   for (const attempt of sessions.attempts) {
     expect((await stat(`apps/web/public${attempt.video}`)).size).toBeLessThan(2 * 1024 * 1024)

@@ -32,5 +32,6 @@ export const configFile = `import { defineConfig } from 'ui-tests'
 // Every attempt records what the person does on your page: where they click, what they type (never its value), which pages they open.
 // Add \`video: true\` to a context to record their screen as a video too: the browser asks them first, and the incentive is 1.5×.
 // To add the paid panel (Prolific and CloudResearch Connect), set a cap per run: budget: { max: 70, currency: 'USD' } holds five people and the reserve.
+// In CI, \`npx ui-tests check\` puts a neutral check on the pull request. check: { block_on: 'problems' } makes it fail when problems are found; check: { comment: false } turns off its one comment.
 export default defineConfig({ target: { url: process.env.PREVIEW_URL ?? 'http://localhost:3000' } })
 `

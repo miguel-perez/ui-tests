@@ -45,6 +45,9 @@ it('draws the participant chrome as the inverse of its host, with every rendered
   // Weekboard: dark chrome on the light app, the mint accent its author sets, never the app's orange.
   const weekboard = chromeTheme(weekboardChrome)
   expect(weekboard).toMatchObject({ surface: '#2c3353', ink: '#e1e2e7', accent: '#5fe3c0', step: '#5fe3c0' })
+  // Issue #35, item 6: the label on the mint button is the chrome's accent ink, never black.
+  expect(weekboard.accentInk).toBe('#14251f')
+  expect(css).toContain('--ch-accent-ink: #14251f')
   // The site itself, as a host: dark chrome on the light page; without an accent, the chrome's own text colour.
   const site = chromeTheme({ hostInk: 'rgb(17, 17, 17)', hostBackground: 'rgb(246, 246, 246)' })
   expect(site).toMatchObject({ surface: '#111111', ink: '#f6f6f6', accent: '#f6f6f6' })

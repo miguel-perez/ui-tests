@@ -1,32 +1,35 @@
 'use client'
 import { useRef, useState, type CSSProperties } from 'react'
 import { Icon } from '../icon'
-import { run, attempt, reachedLabel, endedLabel, wrongAndSure, clock, short, spoken, signal, impactLabel, type Blocker, type Moment } from '../../lib/attempts'
+import { run, attempt, reachedLabel, endedLabel, wrongAndSure, clock, short, spoken, signal, impactLabel, type Attempt, type Blocker, type Moment } from '../../lib/attempts'
+import { panelOf } from '../../lib/pull-request'
 
-const shown = attempt('p3')
-const blockers = shown.blockers ?? []
-const ended = shown.moments.at(-1)!
-/** The moments a card tells: every moment inside its clip, never the last row, which is how it ended. */
-const steps = (blocker: Blocker) => shown.moments.filter(moment => moment !== ended && moment.seconds >= blocker.from && moment.seconds <= blocker.to)
-/** The minute in order: routine moments as rows, each problem moment as its card at its own time, then how it ended. */
-const flow: ({ row: Moment } | { card: Blocker; index: number })[] = []
-for (const moment of shown.moments.slice(0, -1)) {
-  const card = blockers.find(blocker => blocker.from === moment.seconds)
-  if (card) flow.push({ card, index: blockers.indexOf(card) })
-  else if (!blockers.some(blocker => moment.seconds >= blocker.from && moment.seconds <= blocker.to)) flow.push({ row: moment })
+/** Everything the view derives from one attempt: its moment cards, the flow, the other people's times and the path. */
+function derive(shown: Attempt) {
+  const blockers = shown.blockers ?? []
+  const ended = shown.moments.at(-1)!
+  /** The moments a card tells: every moment inside its clip, never the last row, which is how it ended. */
+  const steps = (blocker: Blocker) => shown.moments.filter(moment => moment !== ended && moment.seconds >= blocker.from && moment.seconds <= blocker.to)
+  /** The minute in order: routine moments as rows, each problem moment as its card at its own time, then how it ended. */
+  const flow: ({ row: Moment } | { card: Blocker; index: number })[] = []
+  for (const moment of shown.moments.slice(0, -1)) {
+    const card = blockers.find(blocker => blocker.from === moment.seconds)
+    if (card) flow.push({ card, index: blockers.indexOf(card) })
+    else if (!blockers.some(blocker => moment.seconds >= blocker.from && moment.seconds <= blocker.to)) flow.push({ row: moment })
+  }
+  const others = run.attempts.filter(entry => entry !== shown).map(entry => entry.time)
+  /** Their path: each page once per visit, marked when it is on your path the first time, or off it when they went off your path to reach it. */
+  const visits = shown.moments.reduce<{ route: string; off: boolean }[]>((found, moment) => moment.route && moment.route !== found.at(-1)?.route ? [...found, { route: moment.route, off: moment.kind === 'off-path' }] : found, [])
+  const onPath = run.yourPath.filter(route => visits.some(visit => visit.route === route)).length
+  return { blockers, ended, steps, flow, others, visits, onPath }
 }
-const others = run.attempts.filter(entry => entry !== shown).map(entry => entry.time)
-/** Their path: each page once per visit, marked when it is on your path the first time, or off it when they went off your path to reach it. */
-const visits = shown.moments.reduce<{ route: string; off: boolean }[]>((found, moment) => moment.route && moment.route !== found.at(-1)?.route ? [...found, { route: moment.route, off: moment.kind === 'off-path' }] : found, [])
-const onPath = run.yourPath.filter(route => visits.some(visit => visit.route === route)).length
 
 function What({ moment }: { moment: Moment }) {
   return <><span className="what" data-signal={signal[moment.kind]}>{moment.what}</span>{moment.rest}</>
 }
 
 /** One moment card: the clip on the left (7 of 12), playing the real recording in place; the text on the right (5 of 12). */
-function MomentCard({ blocker, playing, now, onPress, onTime, onPause, video }: { blocker: Blocker; playing: boolean; now: number; onPress: () => void; onTime: () => void; onPause: () => void; video: (node: HTMLVideoElement | null) => void }) {
-  const list = steps(blocker)
+function MomentCard({ shown, list, blocker, playing, now, onPress, onTime, onPause, video }: { shown: Attempt; list: Moment[]; blocker: Blocker; playing: boolean; now: number; onPress: () => void; onTime: () => void; onPause: () => void; video: (node: HTMLVideoElement | null) => void }) {
   const current = list.reduce((found, moment, index) => moment.seconds <= now ? index : found, 0)
   const length = blocker.to - blocker.from
   const progress = `${Math.min(100, Math.max(0, (now - blocker.from) / length * 100))}%`
@@ -62,7 +65,9 @@ function MomentCard({ blocker, playing, now, onPress, onTime, onPause, video }: 
  * with the moments that got in the way set into it as cards whose clips play the real recording in place, then how it felt,
  * the mechanics folded, and the context as a footer. A white window on the site tokens, as every product surface; the Weekboard recording in the clips keeps its own grey.
  */
-export function AttemptView() {
+export function AttemptView({ id = 'p3' }: { id?: string }) {
+  const shown = attempt(id)
+  const { blockers, ended, steps, flow, others, visits, onPath } = derive(shown)
   const videos = useRef<(HTMLVideoElement | null)[]>([])
   const [playing, setPlaying] = useState<number | null>(null)
   const [now, setNow] = useState<number[]>(() => blockers.map(blocker => blocker.from))
@@ -92,7 +97,8 @@ export function AttemptView() {
     if (video.currentTime >= blocker.to) { stop(index); at(index, blocker.to); return }
     at(index, Math.max(blocker.from, video.currentTime))
   }
-  const sure = wrongAndSure(shown)
+  // "Wrong, and sure" belongs to goals without a check; a checked goal says the check failed.
+  const sure = !run.check && wrongAndSure(shown)
   return <figure className="window attempt-view" data-artefact="attempt-view" aria-label={`${shown.person}, ${run.goal}`}>
     <figcaption className="window-chrome attempt-crumb">
       <span>Run <b className="mono">{run.run}</b></span><span className="sep" aria-hidden="true">/</span>
@@ -119,14 +125,15 @@ export function AttemptView() {
       <section className="attempt-blockers" aria-labelledby="attempt-blockers">
         <div className="attempt-sec">
           <h3 id="attempt-blockers">What got in the way</h3>
-          <ol className="attempt-index" aria-label={`The ${blockers.length} moments, worst first`}>{blockers.map(blocker => <li key={blocker.n}>
+          {blockers.length === 0 && <p className="attempt-none">No moment of this attempt is set out as a card; every moment is in the flow below, and the problems it shows are on the report.</p>}
+          {blockers.length > 0 && <ol className="attempt-index" aria-label={`The ${blockers.length} moments, worst first`}>{blockers.map(blocker => <li key={blocker.n}>
             <a href={`#moment-${blocker.n}`}><span className="n" data-impact={blocker.impact} aria-hidden="true">{blocker.n}</span><b>{impactLabel(blocker)}</b> at {clock(blocker.from)}</a>
-          </li>)}</ol>
+          </li>)}</ol>}
         </div>
         <ol className="attempt-flow" aria-label="The whole minute, in order">
           {flow.map(entry => 'card' in entry
             ? <li key={`card-${entry.card.n}`} className="flow-moment" id={`moment-${entry.card.n}`} data-n={entry.card.n} data-impact={entry.card.impact}>
-              <MomentCard blocker={entry.card} playing={playing === entry.index} now={now[entry.index]} onPress={() => press(entry.index)} onTime={() => tick(entry.index)}
+              <MomentCard shown={shown} list={steps(entry.card)} blocker={entry.card} playing={playing === entry.index} now={now[entry.index]} onPress={() => press(entry.index)} onTime={() => tick(entry.index)}
                 onPause={() => setPlaying(current => current === entry.index ? null : current)} video={node => { videos.current[entry.index] = node }} />
             </li>
             : <li key={entry.row.seconds} className="flow-row" data-signal={signal[entry.row.kind]}><time>{clock(entry.row.seconds)}</time><span className="flow-what"><What moment={entry.row} /></span><span className="url">{entry.row.route}</span></li>)}
@@ -164,7 +171,7 @@ export function AttemptView() {
       </details>
 
       <footer className="attempt-foot">
-        <span><b>{shown.person}</b> of {run.people} · {shown.source}</span>
+        <span><b>{shown.person}</b> of {run.people} · {shown.source} ({panelOf(shown)})</span>
         <span>Uses {shown.today} for this today</span>
         <span>{shown.device} · {shown.browser} · window {shown.window}</span>
         <span>{run.date}</span>

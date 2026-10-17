@@ -114,7 +114,7 @@ const screens: Record<string, ReactNode> = {
       <dl>{compilation.sample.map(([term, value]) => <div key={term}><dt>{term}</dt><dd><Prose text={value} /></dd></div>)}</dl>
     </div>
   </>,
-  impression: <Board label="First impression question over the flashed page">
+  impression: <Board label="First look question over the flashed page">
     <Sheet step="You saw a page for half a second" title="What was that page for?">
       <div className="ch-box">In your own words. There is no right answer.</div>
       <div className="ch-actions"><Talk /><button className="ch-btn pri" type="button">Next</button></div>

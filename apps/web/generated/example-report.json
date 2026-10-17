@@ -1,7 +1,8 @@
 {
   "people": 5,
   "reached": 2,
-  "wrongAndSure": 0,
+  "pressedDoneFailed": 2,
+  "seenBy": 5,
   "selectedRank": 1,
   "problems": [
     {
@@ -10,7 +11,7 @@
       "impact": "blocked"
     },
     {
-      "title": "Stopped at a grey Add, pressed I couldn't do this",
+      "title": "Add looked switched off; pressed I couldn't do this",
       "people": 1,
       "impact": "blocked"
     },
@@ -20,7 +21,7 @@
       "impact": "slowed"
     },
     {
-      "title": "Typed the colleague's email into the board search",
+      "title": "Typed Sam's email into the board search",
       "people": 2,
       "impact": "confused"
     }
