@@ -1,6 +1,6 @@
 {
   "landing-1440": {
-    "height": 8016,
+    "height": 6601,
     "sections": [
       {
         "section": "what-comes-back",
@@ -11,6 +11,7 @@
         "figures": [
           "96+1248",
           "96+1248",
+          "630+714",
           "96+1248"
         ]
       },
@@ -68,13 +69,14 @@
     ]
   },
   "landing-375": {
-    "height": 13781,
+    "height": 10966,
     "sections": [
       {
         "section": "what-comes-back",
         "heading": 16,
         "lead": null,
         "figures": [
+          "16+343",
           "16+343",
           "16+343",
           "16+343"
@@ -124,7 +126,7 @@
     ]
   },
   "guide-1440": {
-    "height": 5506,
+    "height": 5504,
     "sections": [
       {
         "section": "guide",
@@ -211,7 +213,7 @@
     ]
   },
   "guide-375": {
-    "height": 6805,
+    "height": 6803,
     "sections": [
       {
         "section": "guide",

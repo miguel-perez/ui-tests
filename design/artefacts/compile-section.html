@@ -170,17 +170,6 @@ img { display: block; max-width: 100%; }
 .pill .grip { width: 8px; height: 16px; margin-right: 10px; background: radial-gradient(circle, var(--ch-dim) 1px, transparent 1.3px) 0 0/4px 4px; opacity: .6; }
 .pill .task:hover { text-decoration: underline; text-decoration-color: var(--ch-hair); text-underline-offset: 3px; }
 
-/* The check: no frame */
-.main .check { margin-top: 14px; }
-.check { border: 1px dashed var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 10px; background: transparent; }
-.check .who { font: 500 11px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--red); }
-.check pre { font: 400 13px/1.6 var(--mono); white-space: pre-wrap; }
-.check .res { display: grid; grid-template-columns: auto 1fr; gap: 6px 18px; font-size: 14px; margin: 0; }
-.check .res dd { margin: 0; }
-.check .res dd code { color: var(--ink); }
-.check .res dt { color: var(--muted); }
-.check .res dd .no { color: var(--red); font-weight: 500; }
-.check .res dd .yes { color: var(--teal); font-weight: 500; }
 
 /* Footer line */
 .after { border-top: 1px solid var(--line); margin-top: 40px; padding-top: 18px; display: grid; grid-template-columns: 5fr 7fr; gap: 24px; }
@@ -435,14 +424,6 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
             </div>
           </figure>
           <div class="stepper" aria-label="Step through the six questions"><button type="button" class="prev" aria-label="Previous question">‹</button><span class="where"><b>1</b> of 6</span><button type="button" class="nextb" aria-label="Next question">›</button><span class="dots" aria-hidden="true"></span></div>
-          <div class="check" aria-label="The sample, worked out on your side">
-            <span class="who">Worked out on your side</span>
-            <dl class="res">
-              <dt>People</dt><dd>5 from the panel, matched to <code>users</code></dd>
-              <dt>Chance of seeing a 1-in-3 problem</dt><dd>87%</dd>
-              <dt>Cost</dt><dd>from $60 · cap $70 · first people within minutes, usually all five within a few hours</dd>
-            </dl>
-          </div>
           <p class="back-line"><span>Comes back</span>screened 20 · matched 5 · who took part: 3 of 5 had the need this month · how they do it today, in their words</p>
         </div>
       </li>

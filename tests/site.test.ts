@@ -108,6 +108,14 @@ it('shows the file init writes, verbatim, in the artefact, the landing copy, the
   expect(artefact.querySelector('.stepnav')!.nextElementSibling!.matches('section.whole-top.after-steps')).toBe(true)
   expect(artefact.querySelectorAll('.pair .excerpt, .pair .window, .pair .lines-note, .pair pre').length).toBe(0)
   expect(artefact.querySelector('#rows')!.textContent).not.toContain('After Done')
+  // Issue #62, item 4: step 2 keeps its text, its screen and its "Comes back" line, and loses the worked-out box, its CSS and its copy.
+  expect(artefact.querySelectorAll('.pair .check, .pair dl.res').length).toBe(0)
+  expect(artefact.querySelector('#rows')!.textContent).not.toMatch(/Worked out on your side|Chance of seeing a 1-in-3 problem/)
+  expect(await readFile('design/artefacts/compile-section.html', 'utf8')).not.toMatch(/^\.check\b/m)
+  const step2 = pieces.find(p => p.getAttribute('data-name') === 'Screener')!
+  expect([!!step2.querySelector('.intro .from'), !!step2.querySelector('.frame'), !!step2.querySelector('.back-line')]).toEqual([true, true, true])
+  expect('sample' in compilation).toBe(false)
+  expect(await readFile('apps/web/app/globals.css', 'utf8')).not.toContain('.compile-check')
   expect(compilation.pieces.every(p => !('lines' in p) && !('fields' in p))).toBe(true)
   expect('check' in compilation).toBe(false)
   // Each step's text, against the artefact, in participant order.

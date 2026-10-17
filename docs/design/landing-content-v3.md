@@ -75,7 +75,7 @@ Pressed Done, but your check failed: 2 of 5.
 
 Rebuilt in the composition round (issue #46) from [`../../design/artefacts/what-comes-back.html`](../../design/artefacts/what-comes-back.html), in place of this block's one-person attempt and of block 5, "In the pull request"; the words below are the artefact's, verbatim. The one-person attempt view is no longer on the landing: it is the page `/r/k2m9/p<n>` behind each name in the report's people line. Frame label: Example run.
 
-**Heading.** How it works. (Issue #49: "What comes back." until then. No lead: the three pieces follow the hairline directly.)
+**Heading.** How it works. (Issue #49: "What comes back." until then. No lead; since issue #62 the three pieces have no rule between them.)
 
 1. **The check.** One line in the merge box, next to your other checks. Its mark is neutral, never red or green: there is no pass to give, and it never blocks a merge unless you ask it to.
 
@@ -95,11 +95,9 @@ The page: "5 people tried *invite a colleague* on this preview. 2 of 5 reached t
 
 Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect. Open the report · +1 more problem · What worked. Footer: 5 people · paid panel (Prolific, CloudResearch Connect) · the preview · the commit · the date.
 
-3. **The report.** The page the check links to, and the one you can send as a link. One line says whether it worked. Then each problem as one card, worst first, with its evidence inline: who hit it, where, the clip, their words and the smallest change. The five people in a strip, each linking to their attempt. One line closes the page.
+3. **The replay.** Every problem in the report comes with the moment it happened: the person's minute as a rail, the moments that got in the way as stops, and at each stop the clip, what they did, what they said afterwards, and the smallest change that would have fixed it.
 
-The report (`/r/k2m9`; `design/artefacts/run-report-list.html`, the list, since issue #49): "invite a colleague · Reached the goal: 2 of 5 · Problems found: 4, seen across all 5 people · Pressed Done, but your check failed: 2 of 5". Then one card per problem in the run's rank (rank, impact, the sentence, page · locator, the five person marks and x of n, the words and who said them, the moments as play chips, the suggested change, the clip on the right), then "Found Settings, then Members, on their own" (5 of 5) as the last card, what worked; the five people in a strip, each "Reached the goal" or "Did not reach it" with time, ease and how it ended, linking to `/r/k2m9/p1` to `p5`. The closing line ends: "Found automatically from what people did; it can miss problems. Watch the clips."
-
-**Closing line.** A run reports the problems it found, or that it found none this time. There is no score and no pass.
+Since the replay round (issue #62), in place of the report as the list, which stays at `/r/k2m9` (`design/artefacts/run-report-list.html`) and which the check page's links open. An illustration with nothing to press. The card: Person 3's screen at 00:58, "00:58 → 01:04". "Person 3 · 00:58 · Blocked". "Pressed Add, saw nothing change, pressed it again." "I wasn't sure the first Add did anything, so I pressed it again." Smallest change: On press, change the button to "Invited sam@acme.co" and disable it. The rail: the attempt's thirteen events at 00:00, 00:03, 00:05, 00:12, 00:19, 00:23, 00:27, 00:36, 00:41, 00:46, 00:58, 01:01 and 01:03; the moments 00:03 Slowed, 00:23 Confused and 00:58 Blocked; the ends "00:00 Started on /board" and "01:03 Pressed Done · the check failed". The closing line under the report is off the landing with it.
 
 ---
 
@@ -172,8 +170,6 @@ context({
 The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost from $60, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
 
 **Screens.** Six, one per screen, each with Next. "A few questions first · n of 6". (1) When did you last sign up for a tool to plan work with a team? In the past week · In the past month · Earlier this year · I haven't. (2) Which of these do you use to plan work? Pick all that apply. Trello · Asana · Notion · Linear · Basecamp · None of these. (3) Which of these have you done? Pick all that apply. Managed a team of more than five · Used Weekboard · Taken a course on planning or project management · None of these. (4) When did you last need to plan a week with other people? This week · This month · Earlier this year · I don't. (5) How do you do it today? A shared document or spreadsheet · A planning tool · Chat and email · In my head. (6) How much does it matter to you to get this right? A lot: it costs me time every week · Some · Not much.
-
-**Worked out on your side.** People: 5 from the paid panel, matched to `users` · Chance of seeing a 1-in-3 problem: 87% · Cost: from $60 · cap $70 · first people within minutes, usually all five within a few hours.
 
 **Comes back.** screened 20 · matched 5 · who took part: 3 of 5 had the need this month · how they do it today, in their words
 
