@@ -434,7 +434,7 @@ Person 5 · CloudResearch Connect
 Paid $55 of the $70 cap · $15 back
 ```
 
-**6. Read what came back**
+**Read what came back**
 
 You type, once the attempts are in:
 
