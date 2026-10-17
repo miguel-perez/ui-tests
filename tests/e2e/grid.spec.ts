@@ -1,10 +1,12 @@
 import { test, expect, type Page } from '@playwright/test'
 import { writeFile, mkdir } from 'node:fs/promises'
+import { pathToFileURL } from 'node:url'
 
 /**
  * The page grid (design/artefacts/README.md, "The page grid, in one place"; issue #46, item 1). Every landing and guide section sits on
- * the 1248px container: at 1440 its heading starts at 96, its lead at 630 where it has one (or, in the host section, ends flush with the
- * container at 1344 inside the right seven; issue #56), and every figure takes all twelve columns
+ * the 1248px container: at 1440 its heading starts at 96; a landing section's lead, where it has one, keeps to 64ch inside the right
+ * seven and ends flush with the container at 1344 (the host section's rule since issue #56, every section's since issue #65), and a
+ * guide step's lead starts at 630 over the figures it introduces in the right seven; every figure takes all twelve columns
  * (96, 1248 wide) or the right seven (630, 714 wide), so the widest is 1248 or 714; at 375 everything is one 343px column, 16px in,
  * with no horizontal scroll. A section is a `[data-section]`; its heading, lead and figures are the `[data-heading]`, `[data-lead]`
  * and outermost `[data-figure]` that belong to it and not to a section inside it.
@@ -26,7 +28,7 @@ const near = (value: number, target: number) => Math.abs(value - target) <= 2
 const readings: Record<string, unknown> = {}
 
 for (const [name, route, count] of [['landing', '/', 6], ['guide', '/docs/getting-started', 8]] as const) {
-  test(`the ${name} sits on one grid at 1440: headings at 96, leads at 630, figures 1248 or 714`, async ({ page }) => {
+  test(`the ${name} sits on one grid at 1440: headings at 96, leads ${name === 'landing' ? 'ending at 1344' : 'at 630'}, figures 1248 or 714`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 })
     await page.goto(route)
     await page.evaluate(() => document.fonts.ready)
@@ -35,8 +37,8 @@ for (const [name, route, count] of [['landing', '/', 6], ['guide', '/docs/gettin
     for (const { section, heading, lead, figures } of sections) {
       expect(near(heading.x, 96), `${section} heading at ${heading.x}`).toBe(true)
       expect(heading.width, `${section} heading in the first five columns`).toBeLessThanOrEqual(512)
-      if (lead && section === 'hosted') {
-        // Issue #56: the host section's lead keeps to 64ch in the right seven and ends flush with the container's right edge.
+      if (lead && name === 'landing') {
+        // Issue #65, item 3: every lead keeps to 64ch in the right seven and ends flush with the container's right edge.
         expect(near(lead.x + lead.width, 1344), `${section} lead ends at ${lead.x + lead.width}`).toBe(true)
         expect(lead.x, `${section} lead in the right seven`).toBeGreaterThanOrEqual(630 - 2)
       } else if (lead) expect(near(lead.x, 630), `${section} lead at ${lead.x}`).toBe(true)
@@ -48,6 +50,8 @@ for (const [name, route, count] of [['landing', '/', 6], ['guide', '/docs/gettin
       // Seven sections in order (the hero, then these six; issue #53 puts what a run is worth before the agents), and the whole page no taller than 9,000px.
       expect(sections.map(section => section.section)).toEqual(['what-comes-back', 'compilation', 'sources', 'worth', 'agents', 'hosted'])
       expect(height).toBeLessThanOrEqual(9000)
+      // Every section but "How it works." has a lead, and each was held to 1344 above.
+      expect(sections.filter(section => section.lead).map(section => section.section)).toEqual(['compilation', 'sources', 'worth', 'agents', 'hosted'])
     }
     readings[`${name}-1440`] = { height, sections: sections.map(({ section, heading, lead, figures }) => ({ section, heading: heading.x, lead: lead?.x ?? null, leadRight: lead ? Math.round(lead.x + lead.width) : null, widest: figures.length ? Math.max(...figures.map(figure => figure.width)) : null, figures: figures.map(figure => `${figure.x}+${figure.width}`) })) }
   })
@@ -69,6 +73,27 @@ for (const [name, route, count] of [['landing', '/', 6], ['guide', '/docs/gettin
     readings[`${name}-375`] = { height: await page.evaluate(() => document.documentElement.scrollHeight), sections: sections.map(({ section, heading, lead, figures }) => ({ section, heading: heading.x, lead: lead?.x ?? null, figures: figures.map(figure => `${figure.x}+${figure.width}`) })) }
   })
 }
+
+// Issue #65, item 3: the artefacts agree with the page. In each section artefact with a lead, the lead keeps to 64ch inside the right
+// seven and ends flush with the container at 1344 at 1440; at 375 it is left-aligned in the one column, under the heading.
+for (const artefact of ['compile-section', 'sources-section', 'agents-section', 'hosted-section']) test(`the lead of ${artefact}.html ends at 1344 at 1440 and starts at 16 at 375`, async ({ page }) => {
+  for (const width of [1440, 375]) {
+    await page.setViewportSize({ width, height: 1000 })
+    await page.goto(pathToFileURL(`design/artefacts/${artefact}.html`).href)
+    const { heading, lead } = await page.locator('.head').first().evaluate(head => {
+      const box = (node: Element) => { const r = node.getBoundingClientRect(); return { x: r.x, right: r.right, y: r.y, bottom: r.bottom } }
+      return { heading: box(head.querySelector('h1, h2')!), lead: box(head.querySelector(':scope > p')!) }
+    })
+    if (width === 1440) {
+      expect(near(heading.x, 96), `${artefact} heading at ${heading.x}`).toBe(true)
+      expect(near(lead.right, 1344), `${artefact} lead ends at ${lead.right}`).toBe(true)
+      expect(lead.x, `${artefact} lead in the right seven`).toBeGreaterThanOrEqual(630 - 2)
+    } else {
+      expect(near(lead.x, 16), `${artefact} lead at ${lead.x}`).toBe(true)
+      expect(lead.y, `${artefact} lead under its heading`).toBeGreaterThanOrEqual(heading.bottom)
+    }
+  }
+})
 
 // Issue #51, item 3: no separators and one rhythm in three steps, --space-1 24, --space-2 48 and --space-3 96, which on a phone are
 // 24, 36 and 64. Every section opens with --space-3; a head is followed by --space-2; nothing else spaces a section's top-level

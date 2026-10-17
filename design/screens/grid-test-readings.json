@@ -1,6 +1,6 @@
 {
   "landing-1440": {
-    "height": 6601,
+    "height": 6621,
     "sections": [
       {
         "section": "what-comes-back",
@@ -18,8 +18,8 @@
       {
         "section": "compilation",
         "heading": 96,
-        "lead": 630,
-        "leadRight": 1273,
+        "lead": 701.2,
+        "leadRight": 1344,
         "widest": 1248,
         "figures": [
           "96+1248",
@@ -30,8 +30,8 @@
       {
         "section": "sources",
         "heading": 96,
-        "lead": 630,
-        "leadRight": 1273,
+        "lead": 701.2,
+        "leadRight": 1344,
         "widest": 1248,
         "figures": [
           "96+1248"
@@ -48,8 +48,8 @@
       {
         "section": "agents",
         "heading": 96,
-        "lead": 630,
-        "leadRight": 1273,
+        "lead": 701.2,
+        "leadRight": 1344,
         "widest": 1248,
         "figures": [
           "96+1248"
@@ -126,7 +126,7 @@
     ]
   },
   "guide-1440": {
-    "height": 5504,
+    "height": 5552,
     "sections": [
       {
         "section": "guide",

@@ -47,7 +47,7 @@ export const compilation = {
   ],
   note: '`npx ui-tests` on its own runs every screen on you first, so you see the card, the bar and your own trace before anyone else does.',
   pieces: [
-    { n: 1, id: 'consent', tab: 'Consent', name: 'Consent', sub: 'before anything loads', notes: ['What the person does on the page is always recorded, and the consent says so in plain words. `video: true` adds the screen as a video, which is what needs the browser\'s prompt; without that line the first line of the list is all there is. Voice and camera are always the person\'s choice. The incentive and the purposes are filled in from the run. The colours are Weekboard\'s: the chrome inverts their page and takes the one accent they set.'], returns: 'recorded: actions, screen, voice · camera: declined' },
+    { n: 1, id: 'consent', tab: 'Consent', name: 'Consent', sub: 'before anything loads', notes: ['What the person does on the page is always recorded, and the consent says so in plain words. `video: true` adds the screen as a video, which is what needs the browser\'s prompt; without that line the first line of the list is all there is. Voice and camera are always the person\'s choice. The incentive and the purposes are filled in from the run. The colours are Weekboard\'s: the chrome inverts their page and takes the one accent they\u00a0set.'], returns: 'recorded: actions, screen, voice · camera: declined' },
     { n: 2, id: 'screener', tab: 'Screener', name: 'Who gets in, and how many', sub: 'the sample', notes: ['Six questions, one per screen; press Next to see them all. The first three come from `users`: `did` and `within` become a recency question with bands, `uses` a multi-select with one decoy, `not` an item among neutral ones, so nobody can tell what disqualifies. The last three come from `purpose`: when they last needed it, how they do it today, how much it matters. Write `users` as the sentence alone and the first three are drafted from it.', 'The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost from $60, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.'], returns: 'screened 20 · matched 5 · who took part: 3 of 5 had the need this month · how they do it today, in their words' },
     { n: 3, id: 'impression', tab: 'First look', name: 'First look', sub: 'on by default', notes: ['The page the task starts on is flashed for 500 ms, then one open question. The start is the first page of the `happyPath` unless the goal names a `start`; name another page for the flash with `impression: { page }` when the task begins behind a login and the purpose lives on the public page. The answers are read against the `purpose`, which the person never sees, and you can re-read any of them. Then the page comes back for one click.'], returns: 'named the purpose: 4 of 5, with their words · first click on your path: 3 of 5' },
     { n: 4, id: 'card', tab: 'Scenario card', name: 'Scenario card', sub: 'from the goal, never the path', notes: ['The situation from `users.are` and `purpose`, the action from the goal\'s name, the name and email from `beforeEach`. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with `scenario`.'], returns: 'the exact card text, kept with the run' },
@@ -154,7 +154,7 @@ export const guide = {
   installIntro: 'In a Next.js app, install the package. With no repository, run one command instead: Without a repository.',
   install: 'You see "ui-tests" in `devDependencies`.',
   try: 'You see a link in the terminal, then in your browser the consent, a few questions, the first look, the scenario card, your own page with the bar over it, and the questions after the task, one at a time. Press "Done". The terminal prints:',
-  write: 'You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in, and change it to your own site:',
+  write: 'You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in, and change it to your own\u00a0site:',
   next: 'You see, on the next `npx ui-tests`, the card reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam\'s email is sam@acme.co. When you think you\'ve finished, press Done. If you get stuck, press I couldn\'t do this." It is written from `users`, `purpose`, the goal and `beforeEach`, never from the path; pin your own wording with `scenario`. Write `users` as the sentence alone and `ui-tests lint` prints the screener it drafted from it, and the plan names the recording level: event replay, or screen video with `video: true`.',
   agent: 'You type, in the same file or a new one:',
   agentSee: 'You see a separate agent report:',
@@ -213,8 +213,8 @@ export const worth = {
  */
 export const hosted = {
   heading: 'No repo to put it in? One command.',
-  lead: '`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.',
-  command: { name: 'The command', intro: 'Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.', tab: ['Terminal', 'Example'] },
+  lead: '`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.',
+  command: { name: 'The command', intro: 'Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.', tab: ['Terminal', 'Example'] },
   terminal: `$ npx ui-tests host
 Deploying to your account…
   collector   https://ui-tests.weekboard.workers.dev
@@ -224,7 +224,7 @@ Deploying to your account…
   line: { name: 'The line', intro: 'One script tag, pointing at your deploy. It records only while a run is open and a person has said yes; the rest of the time it is forty lines that do nothing.', tab: ['index.html', 'or your tag manager'] },
   snippet: '<script src="https://ui-tests.weekboard.workers.dev/s.js" async></script>',
   closing: 'Same test, same report, on a box you own.',
-  guide: 'No repository? `npx ui-tests host` deploys the collector, the player and the store to a free tier in an account you own, Cloudflare Workers first, and prints the one line to paste on your live site, through your tag manager if that is how you ship. Then the same test in a form on your deploy instead of a file; the recordings stay in your bucket. Run it again to update.',
+  guide: 'No repository? `npx ui-tests host` deploys the collector, the player and the store to a free tier in an account you own, Cloudflare Workers first, and prints the one line to paste on your live site, through your tag manager if that is how you ship. Then the same test in a form on your deploy instead of a file; the recordings stay in your bucket. Run it again to update.',
   caveat: hostCaveat,
   issue: hostIssue,
 }

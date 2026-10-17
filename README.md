@@ -76,11 +76,11 @@ sent the email in the query string, 400
 
 No repo to put it in? One command.
 
-`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.
+`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.
 
 The command
 
-Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.
+Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.
 
 Terminal
 
@@ -109,7 +109,7 @@ or your tag manager
 
 Same test, same report, on a box you own.
 
-No repository? `npx ui-tests host` deploys the collector, the player and the store to a free tier in an account you own, Cloudflare Workers first, and prints the one line to paste on your live site, through your tag manager if that is how you ship. Then the same test in a form on your deploy instead of a file; the recordings stay in your bucket. Run it again to update.
+No repository? `npx ui-tests host` deploys the collector, the player and the store to a free tier in an account you own, Cloudflare Workers first, and prints the one line to paste on your live site, through your tag manager if that is how you ship. Then the same test in a form on your deploy instead of a file; the recordings stay in your bucket. Run it again to update.
 
 host: not shipped yet; see https://github.com/miguel-perez/ui-tests/issues/59
 
@@ -145,7 +145,7 @@ Consent
 
 before anything loads
 
-What the person does on the page is always recorded, and the consent says so in plain words. `video: true` adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.
+What the person does on the page is always recorded, and the consent says so in plain words. `video: true` adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.
 
 recorded: actions, screen, voice · camera: declined
 
@@ -612,7 +612,7 @@ You see "ui-tests" in `devDependencies`.
 
 You see a link in the terminal, then in your browser the consent, a few questions, the first look, the scenario card, your own page with the bar over it, and the questions after the task, one at a time. Press "Done". The terminal prints:
 
-You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in, and change it to your own site:
+You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in, and change it to your own site:
 
 You see, on the next `npx ui-tests`, the card reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co. When you think you've finished, press Done. If you get stuck, press I couldn't do this." It is written from `users`, `purpose`, the goal and `beforeEach`, never from the path; pin your own wording with `scenario`. Write `users` as the sentence alone and `ui-tests lint` prints the screener it drafted from it, and the plan names the recording level: event replay, or screen video with `video: true`.
 
