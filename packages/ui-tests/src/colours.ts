@@ -1,5 +1,5 @@
 /** The CLI's colour roles and its line tokenizer, without Ink, so the site can colour inline shell fragments exactly as the terminal does. */
-/** Tokyo Night roles, the same hexes as the site's tokens, so the HTML fragment carries the CLI's colours. */
+/** The CLI's colours in a real terminal: Tokyo Night's hues, the site's dark alternate. On the site each maps to its role (`roles`). */
 export const colours = {
   ink: '#c0caf5',
   // The comment role. Tokyo Night's comment hue (#565f89) fails AA on the terminal surface, so readable comment-role text uses muted, as the code windows do.
@@ -13,6 +13,26 @@ export const colours = {
 } as const
 type Colour = (typeof colours)[keyof typeof colours]
 export type Segment = { text: string; color: Colour }
+/**
+ * Each CLI colour's role among the site's tokens (design/artefacts/tokens.css): the terminal and code windows on the site draw the
+ * CLI's output in these, so a light terminal carries the light code roles and the dark alternate Tokyo Night's own hues.
+ */
+export const roles: Record<Colour, string> = {
+  [colours.ink]: 'ink',
+  [colours.comment]: 'muted',
+  [colours.moment]: 'moment',
+  [colours.string]: 'green',
+  [colours.url]: 'blue',
+  [colours.flag]: 'yellow',
+  [colours.dead]: 'red',
+  [colours.done]: 'done',
+}
+/** The site token a CLI colour is drawn in, as a CSS value; a colour without a role is an error, never a literal on the page. */
+export function role(colour: string) {
+  const name = roles[colour as Colour]
+  if (!name) throw new Error(`No site role for the CLI colour ${colour}`)
+  return `var(--${name})`
+}
 
 /** Subcommands that belong to the command itself rather than being its arguments. */
 const subcommands = new Set(['install', 'init', 'run', 'report', 'lint', 'verify', 'status', 'trace', 'estimate', 'dev'])

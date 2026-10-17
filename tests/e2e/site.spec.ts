@@ -27,24 +27,37 @@ for (const width of [1440, 375]) {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+      // Issue #38: the light theme by default, the Tokyo Night alternate under the system setting and under data-theme, axe clean in both.
+      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(246, 246, 246)')
+      await expect(page.locator('body')).toHaveCSS('color', 'rgb(17, 17, 17)')
+      await page.emulateMedia({ colorScheme: 'dark' })
+      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(26, 27, 38)')
+      expect((await new AxeBuilder({ page }).analyze()).violations, 'dark alternate').toEqual([])
+      await page.evaluate(() => { document.documentElement.dataset.theme = 'light' })
+      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(246, 246, 246)')
+      await page.emulateMedia({ colorScheme: 'light' })
+      await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
+      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(26, 27, 38)')
+      await page.evaluate(() => { delete document.documentElement.dataset.theme })
+      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(246, 246, 246)')
       const fonts = await page.locator('body *').evaluateAll(nodes => [...new Set(nodes.filter(node => node.getBoundingClientRect().width && [...node.childNodes].some(child => child.nodeType === Node.TEXT_NODE && child.textContent?.trim())).map(node => getComputedStyle(node).fontFamily))])
       for (const font of fonts) expect(font).toMatch(/^['"]?(?:__)?Fira[_ ](?:Sans|Code)/)
       await expect(page.locator('pre').first()).toHaveCSS('font-family', /Fira[_ ]Code/)
-      const background = await page.locator('body').evaluate(node => getComputedStyle(node).backgroundColor)
-      await page.emulateMedia({ colorScheme: 'light' })
-      await expect(page.locator('body')).toHaveCSS('background-color', background)
 
       // Item 2: only the terminal carries terminal chrome.
       const dots = await page.locator('.window-dots').evaluateAll(nodes => nodes.map(node => !!node.closest('[data-artefact="terminal-window"]')))
       expect(dots.length).toBeGreaterThan(0)
       expect(dots.every(Boolean)).toBe(true)
-      // The theme rules (design/artefacts/README.md): product surfaces dark on the dark page, terminals and code windows dark.
-      for (const selector of ['.attempt-view', '.findings-list', '.dashboard', '.reel-frame', '.src-fill', '.hosted-form', '.src-row[aria-expanded="true"]', '.src-well:not([hidden])']) {
-        for (const surface of await page.locator(selector).evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(luminance(surface), `${selector} is dark`).toBeLessThan(.05)
+      // The theme rules (design/artefacts/README.md): the site's own surfaces are white windows on the canvas with the line colour as their edge.
+      for (const selector of ['.attempt-view', '.findings-list', '.dashboard', '.reel-frame', '.checks-box', '.hosted-form', '.src-row[aria-expanded="true"]', '.src-well:not([hidden])', '.terminal-window', '.code-window']) {
+        for (const surface of await page.locator(selector).evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(surface, `${selector} is white`).toBe('rgb(255, 255, 255)')
       }
+      for (const edge of await page.locator('.window').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).borderTopColor))) expect(edge).toBe('rgb(226, 226, 226)')
+      // Insets inside a window take the raised grey, as the artefacts draw them.
+      for (const surface of await page.locator('.src-fill, .attempt-diff').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(surface).toBe('rgb(239, 239, 239)')
       expect(await page.locator('.theme-light').count()).toBe(0)
       // The participant chrome over the light Weekboard is its inverse: Weekboard's ink, opaque, never a panel colour of the page or the app.
-      const panels = new Set(['rgb(26, 27, 38)', 'rgb(31, 35, 53)', 'rgb(225, 226, 231)', 'rgb(238, 240, 245)'])
+      const panels = new Set(['rgb(246, 246, 246)', 'rgb(255, 255, 255)', 'rgb(239, 239, 239)', 'rgb(225, 226, 231)', 'rgb(238, 240, 245)'])
       for (const selector of ['.ch-sheet', '.ch-pill', '.sources .uit-join', '.sources .uit-invite']) {
         for (const surface of await page.locator(selector).evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) {
           expect(surface, `${selector} is the inverse of Weekboard`).toBe('rgb(44, 51, 83)')
@@ -52,14 +65,15 @@ for (const width of [1440, 375]) {
         }
       }
       // The one accent Weekboard's author sets, mint, never the app's orange.
-      // The frames are the light Weekboard page, constant in the dark section.
+      // The frames are the light Weekboard page in its own grey, unchanged on the light site.
       for (const frame of await page.locator('.compile-frame, .src-frame').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(frame).toBe('rgb(225, 226, 231)')
       for (const accent of await page.locator('.ch-btn.pri, .ch-pill .done, .sources .uit-primary').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(accent).toBe('rgb(95, 227, 192)')
-      for (const surface of await page.locator('.terminal-window, .code-window').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(luminance(surface)).toBeLessThan(.05)
+      // Terminal and code windows: white with black type.
+      for (const ink of await page.locator('.terminal-body, .code-body').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).color))) expect(luminance(ink)).toBeLessThan(.01)
       // Every component that owns chrome carries "Example run" at most once.
       for (const count of await page.locator('[data-artefact]').evaluateAll(nodes => nodes.map(node => [...node.querySelectorAll('.example-label')].filter(label => label.closest('[data-artefact]') === node).length))) expect(count).toBeLessThanOrEqual(1)
       // Item 10: no code, shell block or terminal output is monochrome.
-      const ink = 'rgb(192, 202, 245)'
+      const ink = 'rgb(17, 17, 17)'
       for (const fragment of await textColours(page, '.code-inline')) expect(fragment.colours.some(colour => colour !== ink), `inline ${fragment.text}`).toBe(true)
       for (const fragment of await textColours(page, '.terminal-body pre')) expect(fragment.colours.length, `terminal ${fragment.text}`).toBeGreaterThanOrEqual(2)
       for (const fragment of await textColours(page, '.code-body .shiki')) expect(fragment.colours.length, `code ${fragment.text}`).toBeGreaterThanOrEqual(3)
@@ -74,10 +88,9 @@ for (const width of [1440, 375]) {
         await expect(page.getByRole('heading', { name: 'Three commands.' })).toHaveCount(0)
         await expect(page.locator('h1')).toHaveCSS('font-size', width === 1440 ? '72px' : '44px')
         for (const artefact of artefacts) await expect(page.locator(`[data-artefact="${artefact}"]`).first(), artefact).toBeVisible()
-        // Item 1: the faded session is back with its poster; no labelled gestures, no replay or pause controls.
-        await expect(page.locator('.hero video')).toHaveAttribute('poster', '/sessions/p3.jpg')
-        await expect(page.locator('.hero-backdrop figcaption, .hero-backdrop .gesture-scene, .hero-backdrop button')).toHaveCount(0)
-        // Nothing behind the hero is written: the sensors and gestures carry no labels.
+        // Issue #38, item 2: the hero has no session behind it: no recording, no gestures, no sensors; only the texture.
+        await expect(page.locator('.hero video, .hero-session, .hero .sensor, .hero-backdrop figcaption, .hero-backdrop .gesture-scene, .hero-backdrop button')).toHaveCount(0)
+        expect(await page.locator('.hero-backdrop > *').evaluateAll(nodes => nodes.map(node => node.className))).toEqual(['trace-texture'])
         await expect(page.locator('.hero-backdrop')).toHaveText('')
         await expect(page.getByRole('button', { name: /frustration gestures|texture/i })).toHaveCount(0)
         // Item 2: block 2 shows one results artefact, the attempt view; the report views live in the pull-request example.
@@ -118,7 +131,7 @@ for (const width of [1440, 375]) {
         await expect(page.locator('#real-people h2')).toBeInViewport()
       }
       if (process.env.CAPTURE_SITE === '1') {
-        await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'dark' })
+        await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' })
         await page.goto(route)
         await page.evaluate(() => document.fonts.ready)
         await mkdir('design/screens', { recursive: true })
@@ -137,10 +150,8 @@ for (const width of [1440, 375]) {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/')
     await page.waitForTimeout(1500)
-    // Item 1: under reduced motion the session is its poster with that frame's sensor, and the texture holds still.
+    // Under reduced motion the texture's waves hold one still frame.
     await expect(page.locator('.hero-backdrop')).toHaveAttribute('data-motion', 'still')
-    expect(await page.locator('.hero video').evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
-    await expect(page.locator('.hero .sensor.poster')).toHaveCSS('opacity', '1')
     expect(await page.evaluate(() => document.getAnimations().length)).toBe(0)
     const still = await page.locator('.trace-texture').evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())
     await page.waitForTimeout(250)
@@ -224,24 +235,30 @@ for (const width of [1440, 375]) {
   })
 }
 
-test('the hero session plays dim and slow with in-context sensors only, and the texture moves', async ({ page }) => {
+test('the texture behind the hero moves slowly and continuously in the line colour, and follows the theme', async ({ page }) => {
   await page.goto('/')
-  const video = page.locator('.hero video')
-  await expect.poll(() => video.evaluate((element: HTMLVideoElement) => !element.paused), { timeout: 10_000 }).toBe(true)
-  expect(await video.evaluate((element: HTMLVideoElement) => element.playbackRate)).toBe(.6)
-  expect(Number(await page.locator('.hero-session').evaluate(node => getComputedStyle(node).opacity))).toBeLessThanOrEqual(.25)
-  // A sensor pulses where the system detects a moment: a small mark in the moment hue, nothing written.
-  const backdrop = page.locator('.hero-backdrop')
-  const markup = await backdrop.evaluate(node => node.outerHTML)
-  await expect.poll(() => page.locator('.hero .sensor').evaluateAll(nodes => nodes.some(node => node.getAnimations().length > 0)), { timeout: 15_000 }).toBe(true)
-  await expect(page.locator('.hero .sensor').first()).toHaveText('')
-  await expect(page.locator('.hero .sensor').first()).toHaveCSS('border-color', 'rgb(255, 158, 100)')
-  // The pulse is an animation, not new markup, so a recorder still sees a dead click on this page as dead.
-  expect(await backdrop.evaluate(node => node.outerHTML)).toBe(markup)
   const texture = page.locator('.trace-texture')
-  const image = await texture.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())
-  await expect.poll(() => texture.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())).not.toBe(image)
-  await expect(page.locator('.wordmark svg')).toHaveCSS('color', 'rgb(255, 158, 100)')
+  await expect(page.locator('.hero-backdrop')).toHaveAttribute('data-motion', 'running')
+  // The waves are drawn in the line colour: on the light ground, #e2e2e2. Every strongly painted pixel is that colour, give or take rounding.
+  const offLine = (target: number[]) => texture.evaluate((canvas: HTMLCanvasElement, line) => {
+    const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height)
+    let painted = 0, worst = 0
+    for (let i = 0; i < data.length; i += 4) if (data[i + 3] > 200) { painted++; worst = Math.max(worst, ...line.map((value, c) => Math.abs(data[i + c] - value))) }
+    return painted > 1000 ? worst : Infinity
+  }, target)
+  expect(await offLine([226, 226, 226])).toBeLessThanOrEqual(2)
+  // It keeps moving: three frames a second apart all differ.
+  const frames: string[] = []
+  for (let i = 0; i < 3; i++) { frames.push(await texture.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())); await page.waitForTimeout(1000) }
+  expect(new Set(frames).size).toBe(3)
+  // On the dark alternate the waves take its line colour.
+  await page.emulateMedia({ colorScheme: 'dark' })
+  await expect.poll(() => offLine([41, 46, 66])).toBeLessThanOrEqual(2)
+  await page.emulateMedia({ colorScheme: 'light' })
+  await expect(page.locator('.wordmark svg')).toHaveCSS('color', 'rgb(75, 63, 240)')
+  // The header's wordmark is the mark and the name on one line, never painted over by the source logos' masked rule.
+  await expect(page.locator('.site-header .wordmark')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
+  await expect(page.locator('.site-header .wordmark')).toHaveCSS('display', 'flex')
 })
 
 for (const width of [1440, 375]) test(`what you write, what they see: one column, the file, six pieces, stepped frames of one height, no console errors at ${width}px`, async ({ page }) => {

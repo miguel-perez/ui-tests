@@ -1,2 +1,5 @@
-/** The background texture's ink. Text contrast is checked against the strongest blend in tests/palette.test.ts. */
-export const texture = { stroke: '#7aa2f7', maxAlpha: 0.2, rows: 26, frameMs: 40 }
+/**
+ * The background texture: its waves are drawn in the line token of the current theme, read from the page, so it follows the theme.
+ * Text contrast over its strongest pixel is checked in tests/palette.test.ts.
+ */
+export const texture = { token: '--line', maxAlpha: 1, lineWidth: 1, rows: 26, frameMs: 40, speed: 0.11 }

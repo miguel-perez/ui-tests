@@ -7,17 +7,17 @@ import { promisify, stripVTControlCharacters } from 'node:util'
 import { parseHTML } from 'linkedom'
 
 const exec = promisify(execFile)
-/** The coloured runs of an HTML fragment: each piece of text with the colour of its closest styled span, adjacent runs of one colour merged. */
+/** The coloured runs of an HTML fragment: each piece of text with the code role of its closest styled span (`var(--green)` reads `green`), adjacent runs of one role merged. */
 function colourRuns(html: string) {
   const { document } = parseHTML(`<html><body><pre>${html}</pre></body></html>`)
   const runs: [string, string][] = []
   const walk = (node: Node, colour: string) => {
     for (const child of Array.from(node.childNodes)) {
       if (child.nodeType === 3) { const text = child.textContent ?? ''; if (!text) continue; const last = runs.at(-1); if (last && last[1] === colour) last[0] += text; else runs.push([text, colour]) }
-      else walk(child, /color:(#[\da-f]{6})/.exec((child as Element).getAttribute?.('style') ?? '')?.[1] ?? colour)
+      else walk(child, /color:var\(--([\w-]+)\)/.exec((child as Element).getAttribute?.('style') ?? '')?.[1] ?? colour)
     }
   }
-  walk(document.querySelector('pre')!, 'ink')
+  walk(document.querySelector('pre')!, 'none')
   // Whitespace carries no colour a reader can see.
   return runs.filter(([text]) => text.trim()).map(([text, colour]) => [text.trim(), colour])
 }
@@ -44,7 +44,7 @@ it('renders agent trials separately even when a people report is supplied', asyn
   expect(stdout).not.toMatch(/people|Problems found/)
   const html = await readFile('apps/web/generated/terminal-agent.html', 'utf8')
   expect(parseHTML(`<pre>${html}</pre>`).document.querySelector('pre')!.textContent?.trim()).toBe(stdout.trim())
-  // Stop reasons in the dead colour, counts in the moment hue, the URL in blue, trial numbers in the comment role.
+  // Stop reasons in red, counts in the moment hue, the URL in blue (the accent), trial numbers in muted.
   const { stdout: ansi } = await exec(process.execPath, ['--import', 'tsx', '--input-type=module', '-e', `
     import React from 'react';
     import { renderToString } from 'ink';
@@ -54,17 +54,17 @@ it('renders agent trials separately even when a people report is supplied', asyn
   `], { env: { ...process.env, FORCE_COLOR: '3' }, timeout: 10000 })
   const { ansiToHtml } = await import('../apps/web/scripts/render-terminal.mjs')
   expect(colourRuns(ansiToHtml(ansi.trimEnd()))).toEqual(colourRuns(html))
-  expect(colourRuns(html)).toEqual(expect.arrayContaining([['stopped: called POST /invites, which does not exist', '#f7768e'], ['3 of 5', '#ff9e64'], ['https://ui-tests.com/r/k2m9-agent', '#7aa2f7'], ['2', '#a9b1d6']]))
+  expect(colourRuns(html)).toEqual(expect.arrayContaining([['stopped: called POST /invites, which does not exist', 'red'], ['3 of 5', 'moment'], ['https://ui-tests.com/r/k2m9-agent', 'blue'], ['2', 'muted']]))
 }, 20000)
 
 it('colours shell blocks and init output: prompt in the comment role, command in ink, flags yellow, arguments and created files green', async () => {
   const runs = colourRuns(await readFile('apps/web/generated/terminal-commands.html', 'utf8'))
-  expect(runs.slice(0, 6)).toEqual([['$', '#a9b1d6'], ['npm', '#a9b1d6'], ['install', '#c0caf5'], ['-D', '#e0af68'], ['ui-tests', '#9ece6a'], ['$', '#a9b1d6']])
-  expect(runs).toEqual(expect.arrayContaining([['Created', '#c0caf5'], ['ui-tests.config.ts', '#9ece6a']]))
+  expect(runs.slice(0, 6)).toEqual([['$', 'muted'], ['npm', 'muted'], ['install', 'ink'], ['-D', 'yellow'], ['ui-tests', 'green'], ['$', 'muted']])
+  expect(runs).toEqual(expect.arrayContaining([['Created', 'ink'], ['ui-tests.config.ts', 'green']]))
   const agent = colourRuns(await readFile('apps/web/generated/terminal-agentCommand.html', 'utf8'))
-  expect(agent).toEqual([['$', '#a9b1d6'], ['npx', '#a9b1d6'], ['ui-tests run', '#c0caf5'], ['--actor', '#e0af68'], ['agent', '#9ece6a']])
+  expect(agent).toEqual([['$', 'muted'], ['npx', 'muted'], ['ui-tests run', 'ink'], ['--actor', 'yellow'], ['agent', 'green']])
   const run = colourRuns(await readFile('apps/web/generated/terminal-run.html', 'utf8'))
-  expect(run).toEqual(expect.arrayContaining([['https://ui-tests.com/t/k2m9', '#7aa2f7']]))
+  expect(run).toEqual(expect.arrayContaining([['https://ui-tests.com/t/k2m9', 'blue']]))
 }, 15000)
 
 // Three cold Node/tsx subprocesses exceed the default five seconds on CI.
@@ -89,12 +89,12 @@ it('regenerates every committed HTML frame from Ink and keeps CLI/report/README 
   // Rank, count and impact first, padded and right-aligned; the problem text last, starting in one column. Ranked by impact, then people.
   expect(rows.map(line => line.slice(0, 20))).toEqual(['▏1  2 of 5  blocked ', ' 2  1 of 5  blocked ', ' 3  4 of 5  slowed  ', ' 4  2 of 5  confused'])
   expect(new Set(rows.map(line => line.search(/[A-Z]/)))).toEqual(new Set([22]))
-  // The page carries the CLI's colours, not only its text: the coloured runs of the CLI's ANSI frame equal the committed fragment's.
+  // The page carries the CLI's colours, not only its text: the coloured runs of the CLI's ANSI frame, mapped to their code roles, equal the committed fragment's.
   const { ansiToHtml } = await import('../apps/web/scripts/render-terminal.mjs')
   const { stdout: coloured } = await exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'report', 'apps/web/generated/example-report.json'], { env: { ...process.env, FORCE_COLOR: '3', NO_COLOR: '' }, encoding: 'utf8', timeout: 10000 })
   expect(coloured).toMatch(/\x1b\[38;2;/)
   expect(colourRuns(ansiToHtml(coloured.trimEnd()))).toEqual(colourRuns(html))
-  expect(colourRuns(html)).toEqual(expect.arrayContaining([['2 of 5', '#ff9e64'], ['blocked', '#f7768e'], ['4 of 5  slowed', '#ff9e64'], ['confused', '#e0af68'], ['1', '#a9b1d6'], ['Problems found: 4 across 5 people.', '#c0caf5']]))
+  expect(colourRuns(html)).toEqual(expect.arrayContaining([['2 of 5', 'moment'], ['blocked', 'red'], ['4 of 5  slowed', 'moment'], ['confused', 'yellow'], ['1', 'muted'], ['Problems found: 4 across 5 people.', 'ink']]))
   const { stdout: json } = await exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'report', 'apps/web/generated/example-report.json', '--json'], { encoding: 'utf8', timeout: 10000 })
   expect(JSON.parse(json).people).toBe(5)
 }, 30000)

@@ -5,6 +5,7 @@ import { mkdir, writeFile, readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 import { stripVTControlCharacters } from 'node:util'
 import { TerminalOutput } from '../../../packages/ui-tests/src/report.tsx'
+import { role } from '../../../packages/ui-tests/src/colours.ts'
 import { agent, commands, problems, rehearsal } from '../lib/copy.ts'
 import { deadlineSentence, timeStatement } from '../../../packages/ui-tests/src/compiler.ts'
 import metadata from '../public/sessions/sessions.json' with { type: 'json' }
@@ -54,10 +55,11 @@ function runs(frame) {
   }
   return found
 }
-const html = found => found.map(run => run.colour ? `<span style="color:${run.colour}">${escape(run.text)}</span>` : escape(run.text)).join('')
+const html = found => found.map(run => run.colour ? `<span style="color:${role(run.colour)}">${escape(run.text)}</span>` : escape(run.text)).join('')
 /**
- * ANSI to HTML for the frames Ink prints: one flat span per coloured run, the colour as the hex Ink emitted,
- * so the page carries exactly the CLI's colours. Uncoloured text stays bare and inherits the window's ink.
+ * ANSI to HTML for the frames Ink prints: one flat span per coloured run, the hex Ink emitted mapped to its code role among the
+ * site's tokens (`roles` in colours.ts), so a light terminal carries the light code roles and the dark alternate Tokyo Night's.
+ * A colour without a role fails the render. Uncoloured text stays bare and inherits the window's ink.
  */
 export function ansiToHtml(frame) { return html(runs(frame)) }
 /** The runs between two visible character positions. */

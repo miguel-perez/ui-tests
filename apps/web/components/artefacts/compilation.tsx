@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { segments } from 'ui-tests/colours'
+import { role, segments } from 'ui-tests/colours'
 import { highlight } from '../../lib/highlight'
 import { compilation, inviteExample, inviteFile, landing } from '../../lib/copy'
 import { Prose } from '../site/code'
@@ -22,7 +22,7 @@ export async function Compilation() {
       <header className="compile-head"><h2 id="what-you-write">{compilation.heading}</h2><p>{compilation.lead}</p></header>
       <div className="compile-commands" role="list" aria-label="Three commands">
         {compilation.commands.map(({ command, does, strong }) => <div className="compile-command" role="listitem" key={command}>
-          <code>{segments(`$ ${command}`).map((part, i) => <span key={i} style={{ color: part.color }}>{part.text}</span>)}</code>
+          <code>{segments(`$ ${command}`).map((part, i) => <span key={i} style={{ color: role(part.color) }}>{part.text}</span>)}</code>
           <span>{strong ? <>{does.slice(0, does.indexOf(strong))}<b>{strong}</b>{does.slice(does.indexOf(strong) + strong.length)}</> : does}</span>
         </div>)}
       </div>
