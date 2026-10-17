@@ -10,19 +10,11 @@ Open source. Nothing to sign up for. Runs on your preview or your live site.
 
 Each line opens to the moment to watch, the person's words, and the smallest change that would fix it.
 
-What comes back.
-
-Here is one person’s attempt at one goal as it comes back: whether they reached it, the moments that got in the way, each playing in place, and how it felt.
-
 If you have written a Playwright test, you have written this.
 
 A run reports the problems it found, or that it found none this time. There is no score and no pass.
 
 You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.
-
-In the pull request.
-
-Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request. It never fails your build. Its details are the worst problems with the moment to watch, and the full report opens for you, or for anyone you send a link to. Your other tests prove the code works. This one shows whether a person can use it.
 
 ## Agent runs
 
@@ -172,6 +164,8 @@ consent
 
 Consent
 
+Consent
+
 before anything loads
 
 video
@@ -181,6 +175,8 @@ What the person does on the page is always recorded, and the consent says so in 
 recorded: actions, screen, voice · camera: declined
 
 screener
+
+Screener
 
 Who gets in, and how many
 
@@ -198,6 +194,8 @@ impression
 
 First look
 
+First look
+
 on by default
 
 purpose · happyPath
@@ -210,6 +208,8 @@ card
 
 Scenario card
 
+Scenario card
+
 from the goal, never the path
 
 users · purpose · beforeEach · goal
@@ -219,6 +219,8 @@ The situation from `users.are` and `purpose`, the action from the goal's name, t
 the exact card text, kept with the run
 
 bar
+
+Your page, with the bar
 
 Your page, with the bar, then the check
 
@@ -233,6 +235,8 @@ When they press Done, the `outcome` runs against the page as they left it. What 
 time on this goal · every moment · their path against yours · how it ended · reached the goal: yes / no / couldn't tell, with the diff
 
 after
+
+After the task
 
 After the task
 
@@ -372,25 +376,17 @@ tab "Members"
 
 getByRole('link', { name: 'Members' })
 
-## In the pull request
+## What comes back
+
+What comes back.
+
+Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request, and behind it the report: whether people reached the goal, the problems they hit, worst first, and for each one the clip, their words, the moment to watch and the smallest change. The check never fails your build. Your other tests prove the code works. This one shows whether a person can use it.
 
 the-check
 
 The check
 
 One line in the merge box, next to your other checks. Its mark is neutral, never red or green: there is no pass to give, and it never blocks a merge unless you ask it to.
-
-check-page
-
-Its details, on GitHub
-
-Press Details and GitHub shows the check's own page: the sentence, the three problems to fix first with where they are and a link to the moment, and a link to the report. One screen, no pictures, no scrolling.
-
-the-report
-
-The report
-
-The page the check links to, and the one you can share with a link. One line says whether it worked. The five people sit in one line under it, each with their outcome. Then the problems on the left, worst first, each with its impact, where, who hit it and how many; and on the right the evidence of the one you selected, which stays put while the list scrolls: the clip, the words, where as a locator you can paste, the moments, the smallest change, and a copy as an issue. One line closes the page. Everything about one person is on their attempt.
 
 All checks have passed
 
@@ -403,6 +399,20 @@ Deployment ready
 tests
 
 212 passed
+
+check-page
+
+Its details, on GitHub
+
+Press Details and GitHub shows the check's own page: the sentence, the three problems to fix first with where they are and a link to the moment, and a link to the report. One screen, no pictures, no scrolling.
+
+the-report
+
+The report
+
+The page the check links to, and the one you can send as a link. One line says whether it worked. The five people sit under it, each with their outcome and a link to their attempt. Then the problems on the left, worst first, with impact, where, who hit it and how many; on the right the evidence for the one selected, which stays put while the list scrolls: the clip, the words, where as a locator you can paste, the moments, the smallest change, and a copy as an issue. One line closes the page.
+
+## The example run
 
 Weekboard
 

@@ -3,6 +3,7 @@ import { Invitation, JoinSheet, weekboardChrome } from 'ui-tests/next'
 import { sources } from '../../lib/copy'
 import { Icon } from '../icon'
 import { Prose } from '../site/code'
+import { SectionHead } from '../site/section-head'
 import { SourcesTable } from './sources-table'
 
 type Row = (typeof sources.rows)[number]
@@ -49,8 +50,8 @@ function Cell({ k, value, note }: { k: string; value: string; note?: string }) {
 }
 
 /**
- * Sources (docs/design/site-schema.md; design/artefacts/sources-section.html): where the people come from. The heading and lead
- * stacked, then a table of the three sources (Source, Who, Cost, Time, Good for), one row open at a time; the open row and its well
+ * Sources (docs/design/site-schema.md; design/artefacts/sources-section.html): where the people come from. The heading in five
+ * columns and the lead in seven, then a table of the three sources (Source, Who, Cost, Time, Good for), one row open at a time; the open row and its well
  * take the surface token edge to edge. The well is 5/7: how it works and the caveat under the name column, the picture on the right.
  */
 export function Sources() {
@@ -75,8 +76,8 @@ export function Sources() {
       <div className="src-show">{pictures[row.picture]}</div>
     </>,
   }))
-  return <section className="block sources" aria-labelledby="people">
-    <header className="src-head"><h2 id="people">{sources.heading}</h2><p>{sources.lead}</p></header>
+  return <section className="block sources" aria-labelledby="people" data-section="sources">
+    <SectionHead id="people" heading={sources.heading} lead={sources.lead} />
     <SourcesTable columns={sources.columns} rows={rows} />
   </section>
 }

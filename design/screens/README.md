@@ -10,6 +10,11 @@ PLAYWRIGHT_BROWSERS_PATH=0 CAPTURE_SITE=1 npm run test:e2e
 
 [Landing at 1440](landing-1440.jpg) · [landing at 375](landing-375.jpg) · [guide at 1440](guide-1440.jpg) · [guide at 375](guide-375.jpg)
 
+The four full routes were retaken in the composition round (issue #46), with every section on one grid. The grid test
+(`tests/e2e/grid.spec.ts`) writes its readings to `test-results/grid-readings.json`; the issue #46 run is kept as
+[`grid-test-readings.json`](grid-test-readings.json): each section's heading and lead left edges and its figures' left edges and widths
+at 1440 and 375, and the page heights. The block captures and the ui-harness readings below predate issue #46.
+
 Every block of the landing, the guide and the report page (`/r/k2m9`, issue #35) at both widths, measured against [`docs/design/grid-plan.md`](../../docs/design/grid-plan.md),
 with a running site on port 3000:
 

@@ -3,45 +3,49 @@ import { role, segments } from 'ui-tests/colours'
 import { highlight } from '../../lib/highlight'
 import { compilation, inviteExample, inviteFile, landing } from '../../lib/copy'
 import { Prose } from '../site/code'
+import { SectionHead } from '../site/section-head'
+import { CompileSteps } from './compile-steps'
 import { CopyControl } from './copy-control'
 import { Stepped } from './stepped'
 
 /**
- * Compilation (docs/design/site-schema.md; design/artefacts/compile-section.html): what you write, what they see. One 800px reading
- * column: the heading and lead, the three commands as cards, the whole file, then each piece a person meets in order, with only the
- * lines that produce it (original numbers kept, skipped lines as a dots row), the screen in a constant light frame with the chrome
- * at real size, and what comes back. The chrome is drawn as the inverse of the light Weekboard page with its mint accent.
+ * Compilation (docs/design/site-schema.md; design/artefacts/compile-section.html): what you write, what they see, on the page grid.
+ * The heading in five columns and the lead in seven; the three commands as cards and the whole file across all twelve; then the
+ * six pieces a person meets as tabs, one step visible at a time (`CompileSteps`). Each step is a 5/7 pair: its number, name and note
+ * with only the lines that produce it (original numbers kept, skipped lines as a dots row) on the left, sticky; the screen in a
+ * constant light frame with the chrome at real size, the worked-out box and what comes back on the right. The chrome is drawn as
+ * the inverse of the light Weekboard page with its mint accent.
  */
 export async function Compilation() {
   const html = await highlight(inviteExample)
   // Shiki writes one `<span class="line">` per source line inside `<code>`, separated by newlines.
   const lines = /<code>([\s\S]*)<\/code>/.exec(html)![1].split('\n')
   const all = lines.map((line, i) => ({ n: i + 1, html: line }))
-  return <section className="block compilation" aria-labelledby="what-you-write">
-    <div className="compile-column" data-artefact="compilation">
-      <header className="compile-head"><h2 id="what-you-write">{compilation.heading}</h2><p>{compilation.lead}</p></header>
-      <div className="compile-commands" role="list" aria-label="Three commands">
-        {compilation.commands.map(({ command, does, strong }) => <div className="compile-command" role="listitem" key={command}>
-          <code>{segments(`$ ${command}`).map((part, i) => <span key={i} style={{ color: role(part.color) }}>{part.text}</span>)}</code>
-          <span>{strong ? <>{does.slice(0, does.indexOf(strong))}<b>{strong}</b>{does.slice(does.indexOf(strong) + strong.length)}</> : does}</span>
-        </div>)}
-      </div>
-      <p className="compile-note"><Prose text={compilation.note} /></p>
-      <LinesWindow title={inviteFile} legend={`${lines.length} lines`} rows={all} copy={inviteExample} label={inviteFile} />
-      <ol className="compile-pieces">
-        {compilation.pieces.map(piece => <li className="compile-piece" id={`piece-${piece.id}`} key={piece.id}>
+  return <section className="block compilation" aria-labelledby="what-you-write" data-artefact="compilation" data-section="compilation">
+    <SectionHead id="what-you-write" heading={compilation.heading} lead={compilation.lead} />
+    <div className="compile-commands" role="list" aria-label="Three commands" data-figure>
+      {compilation.commands.map(({ command, does, strong }) => <div className="compile-command" role="listitem" key={command}>
+        <code>{segments(`$ ${command}`).map((part, i) => <span key={i} style={{ color: role(part.color) }}>{part.text}</span>)}</code>
+        <span>{strong ? <>{does.slice(0, does.indexOf(strong))}<b>{strong}</b>{does.slice(does.indexOf(strong) + strong.length)}</> : does}</span>
+      </div>)}
+    </div>
+    <p className="compile-note"><Prose text={compilation.note} /></p>
+    <LinesWindow title={inviteFile} legend={`${lines.length} lines`} rows={all} copy={inviteExample} label={inviteFile} figure />
+    <CompileSteps label="The screens, one at a time" steps={compilation.pieces.map(piece => ({ n: piece.n, name: piece.tab }))}>
+      {compilation.pieces.map(piece => <div className="compile-pair" id={`piece-${piece.id}`} key={piece.id}>
+        <div className="compile-left">
           <div className="compile-intro">
             <h3><span className="compile-n">{piece.n}</span>{piece.name} <span>· {piece.sub}</span></h3>
             {piece.notes.map(note => <p key={note}><Prose text={note} /></p>)}
           </div>
           {piece.lines.length > 0 && <LinesWindow title={inviteFile} legend={piece.fields} rows={excerpt(all, piece.lines)} label={`The lines that produce ${piece.name.toLowerCase()}`} />}
-          <div className="compile-main">
-            {screens[piece.id]}
-            <p className="compile-back"><span>Comes back</span>{piece.returns}</p>
-          </div>
-        </li>)}
-      </ol>
-    </div>
+        </div>
+        <div className="compile-main">
+          {screens[piece.id]}
+          <p className="compile-back"><span>Comes back</span>{piece.returns}</p>
+        </div>
+      </div>)}
+    </CompileSteps>
   </section>
 }
 
@@ -58,8 +62,8 @@ function excerpt(all: Row[], numbers: number[]) {
 }
 
 /** A code window of numbered lines: the whole file with its copy control, or one piece's lines with the fields they name. At 375 the lines wrap. */
-function LinesWindow({ title, legend, rows, copy, label }: { title: string; legend?: string; rows: Row[]; copy?: string; label: string }) {
-  return <figure className="window lines-window">
+function LinesWindow({ title, legend, rows, copy, label, figure = false }: { title: string; legend?: string; rows: Row[]; copy?: string; label: string; figure?: boolean }) {
+  return <figure className="window lines-window" data-figure={figure || undefined}>
     <figcaption className="window-chrome"><span className="code-tab">{title}</span>{legend && <span className="lines-legend">{legend}</span>}{copy && <CopyControl text={copy} label={title} />}</figcaption>
     <div className="lines-body" tabIndex={0} role="region" aria-label={label}>
       <ol className="shiki">{rows.map((row, i) => <li key={i} className={row.n ? undefined : 'gap'}><span className="ln" aria-hidden="true">{row.n ?? ''}</span><code dangerouslySetInnerHTML={{ __html: row.html }} /></li>)}</ol>
@@ -71,7 +75,7 @@ function LinesWindow({ title, legend, rows, copy, label }: { title: string; lege
 function Address({ url }: { url: string }) { return <div className="frame-addr" aria-hidden="true"><i /><i /><i /><span>{url}</span></div> }
 /** A frame over the Weekboard board: the board as the participant sees it, dimmed under a sheet when one is open. */
 function Board({ label, dim = true, children }: { label: string; dim?: boolean; children: ReactNode }) {
-  return <figure className="compile-frame" aria-label={label}>
+  return <figure className="compile-frame" aria-label={label} data-figure>
     {/* The board is the light demo app; the sheet over it carries the words. */}
     <img className="frame-shot" src="/sessions/board.jpg" alt="" />
     {dim && <div className="frame-dim" />}
@@ -87,7 +91,7 @@ const agreement = (chosen: number) => ['Strongly disagree', 'Disagree', 'Neither
 
 /** Each piece's screen, drawn as player-chrome.html draws it; the stepped ones keep one height while you step through them. */
 const screens: Record<string, ReactNode> = {
-  consent: <figure className="compile-frame auto" aria-label="Consent screen">
+  consent: <figure className="compile-frame auto" aria-label="Consent screen" data-figure>
     <Address url="ui-tests.com/t/k2m9" />
     <Sheet step="Weekboard · before you start" title="Weekboard would like to watch you try something on their site.">
       <ul className="ch-list">

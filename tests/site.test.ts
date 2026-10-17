@@ -108,6 +108,8 @@ it('shows the file init writes, verbatim, in the artefact, the landing copy, the
   expect(compilation.pieces.map(p => p.lines.join(' '))).toEqual(pieces.map(p => p.getAttribute('data-lines')))
   expect(compilation.pieces.map(p => p.notes.join(' ').replaceAll('`', ''))).toEqual(pieces.map(p => [...p.querySelectorAll('.intro .from')].map(from => from.textContent).join(' ').replace("the ones that gave up", "the ones that ended with I couldn't do this")))
   expect(compilation.pieces.map(p => p.returns)).toEqual(pieces.map(p => p.querySelector('.back-line')!.textContent!.replace(/^Comes back/, '')))
+  // Issue #46, item 3: the tabs carry the names the artefact gives its steps, 1 Consent to 6 After the task.
+  expect(compilation.pieces.map(p => p.tab)).toEqual(pieces.map(p => p.getAttribute('data-name')))
 })
 
 it('carries the contract changes in the PRDs and the taskbar sentence in PRD 06', async () => {
