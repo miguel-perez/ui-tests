@@ -1,4 +1,4 @@
-<!-- Colours mapped onto the site's Tokyo Night tokens (canvas #1a1b26, surface #1f2335, line #292e42, ink #c0caf5, muted #a9b1d6, moment #ff9e64); see design/artefacts/README.md for the theme rules. -->
+<!-- Colours mapped onto the site's Tokyo Night tokens (canvas #ffffff, surface #ffffff, line #e2e2e2, ink #4b3ff0, muted #575757, moment #b84d00); see design/artefacts/README.md for the theme rules. -->
 <!DOCTYPE html><html lang="en"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,13 +9,13 @@
   <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
   <style>
     :root {
-      --canvas: #1a1b26;
-      --chrome: #1f2335;
-      --accent: #ff9e64;
-      --text-primary: #c0caf5;
-      --text-muted: #a9b1d6;
-      --border: #292e42;
-      --string: #9ece6a;
+      --canvas: #ffffff;
+      --chrome: #ffffff;
+      --accent: #b84d00;
+      --text-primary: #4b3ff0;
+      --text-muted: #575757;
+      --border: #e2e2e2;
+      --string: #27762f;
     }
     body {
       margin: 0;
@@ -30,22 +30,22 @@
     .syntax-keyword { color: var(--text-primary); font-weight: 500; }
     .syntax-string { color: var(--string); }
     .syntax-punctuation { color: var(--text-muted); }
-    .line-number { color: #8089b3; text-align: right; user-select: none; }
+    .line-number { color: #8a8a8a; text-align: right; user-select: none; }
   </style>
 </head>
 <body>
   <div class="w-[860px] h-[460px] flex items-center justify-center" data-sd-id="1">
-    <div class="w-[800px] bg-[#1a1b26] rounded-lg border border-[#292e42] overflow-hidden shadow-2xl" data-sd-id="2">
+    <div class="w-[800px] bg-[#ffffff] rounded-lg border border-[#e2e2e2] overflow-hidden shadow-2xl" data-sd-id="2">
       <!-- Chrome Row -->
-      <header class="bg-[#1f2335] border-b border-[#292e42] h-10 flex items-center justify-between px-4" data-sd-id="3">
+      <header class="bg-[#ffffff] border-b border-[#e2e2e2] h-10 flex items-center justify-between px-4" data-sd-id="3">
         <div class="flex items-center gap-2" data-sd-id="4">
-          <div class="px-3 py-2 border-b-2 border-[#ff9e64] h-10 flex items-center" data-sd-id="5">
-            <span class="code-font text-[13px] text-[#c0caf5]" data-sd-id="6">invite-colleague.ui.test.ts</span>
+          <div class="px-3 py-2 border-b-2 border-[#b84d00] h-10 flex items-center" data-sd-id="5">
+            <span class="code-font text-[13px] text-[#4b3ff0]" data-sd-id="6">invite-colleague.ui.test.ts</span>
           </div>
         </div>
         <div class="flex items-center gap-4" data-sd-id="7">
-          <span class="code-font text-[11px] text-[#a9b1d6] uppercase tracking-wider" data-sd-id="8">Example run</span>
-          <button id="copy-button" class="flex items-center gap-1.5 text-[#a9b1d6] hover:text-[#c0caf5] transition-colors" data-sd-id="9">
+          <span class="code-font text-[11px] text-[#575757] uppercase tracking-wider" data-sd-id="8">Example run</span>
+          <button id="copy-button" class="flex items-center gap-1.5 text-[#575757] hover:text-[#4b3ff0] transition-colors" data-sd-id="9">
             <iconify-icon icon="lucide:copy" class="text-sm"></iconify-icon>
             <span class="code-font text-[11px]" data-sd-id="10">Copy</span>
           </button>
@@ -56,14 +56,14 @@
       <div class="p-4 code-font text-[13.5px] leading-[1.6] overflow-x-auto" data-sd-id="11">
         <div class="flex" data-sd-id="12">
           <!-- Gutter -->
-          <div class="flex flex-col pr-4 border-r border-[#292e42] line-number w-8 shrink-0" data-sd-id="13">
+          <div class="flex flex-col pr-4 border-r border-[#e2e2e2] line-number w-8 shrink-0" data-sd-id="13">
             <span data-sd-id="14">1</span>
             <span data-sd-id="15">2</span>
             <span data-sd-id="16">3</span>
             <span data-sd-id="17">4</span>
             <span data-sd-id="18">5</span>
             <span data-sd-id="19">6</span>
-            <span class="text-[#ff9e64]/50" data-sd-id="20">7</span>
+            <span class="text-[#b84d00]/50" data-sd-id="20">7</span>
             <span data-sd-id="21">8</span>
             <span data-sd-id="22">9</span>
             <span data-sd-id="23">10</span>
@@ -90,7 +90,7 @@
             </div>
             <div class="relative" data-sd-id="54">
               <!-- Moment Hue Bar -->
-              <div class="absolute -left-4 top-0 bottom-0 w-[1px] bg-[#ff9e64]" data-sd-id="55"></div>
+              <div class="absolute -left-4 top-0 bottom-0 w-[1px] bg-[#b84d00]" data-sd-id="55"></div>
               <span class="syntax-keyword" data-sd-id="56">goal</span><span class="syntax-punctuation" data-sd-id="57">(</span><span class="syntax-string" data-sd-id="58">'invite a colleague'</span><span class="syntax-punctuation" data-sd-id="59">,</span> <span class="syntax-punctuation" data-sd-id="60">{</span> happyPath<span class="syntax-punctuation" data-sd-id="61">:</span> <span class="syntax-punctuation" data-sd-id="62">[</span><span class="syntax-string" data-sd-id="63">'/board'</span><span class="syntax-punctuation" data-sd-id="64">,</span> <span class="syntax-string" data-sd-id="65">'/settings/members'</span><span class="syntax-punctuation" data-sd-id="66">]</span> <span class="syntax-punctuation" data-sd-id="67">},</span> <span class="syntax-punctuation" data-sd-id="68">()</span> <span class="syntax-keyword" data-sd-id="69">=&gt;</span> <span class="syntax-punctuation" data-sd-id="70">{</span>
             </div>
             <div class="pl-4 text-primary" data-sd-id="71">

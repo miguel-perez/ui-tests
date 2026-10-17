@@ -14,29 +14,33 @@
 /* Layout: one 1200px column on the site's 12-col grid. The headline states the result; the three moments that
    caused it are the visual centre, each a clip that plays in place; ratings and words follow; mechanics fold; context foots. */
 :root {
-  color-scheme: dark;
-  --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42;
-  --ink: #c0caf5; --muted: #a9b1d6; --comment: #8089b3;
-  --moment: #ff9e64; --deviation: #7aa2f7; --dead: #f7768e; --pause: #e0af68; --done: #73daca; --note: #bb9af7;
-  --no: #f7768e; --yes: #73daca;
-  --chip-ink: #1a1b26; --focus: #c0caf5;
+  color-scheme: light;
+  --canvas: #f6f6f6; --surface: #ffffff; --raised: #efefef; --line: #e2e2e2; --ink: #111111; --muted: #575757;
+  --comment: #8a8a8a; --accent: #4b3ff0; --moment: #b84d00; --blue: #4b3ff0; --green: #27762f; --teal: #00757c;
+  --purple: #7444b4; --cyan: #00757c; --red: #bd1f44; --yellow: #8b6100; --no: #bd1f44; --yes: #007852;
+  --done: #007852; --note: #7a41af; --pause: #8b6100; --deviation: #4b3ff0; --dead: #bd1f44; --correct: #007852;
+  --incorrect: #bd1f44; --chip-ink: #ffffff; --focus: #4b3ff0;
+  --host-bg: #e9eaef; --host-panel: #f4f5f8; --host-line: #cfd3de; --host-ink: #2c3353; --host-dim: #4b5a94;
+  --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225,226,231,.68); --ch-hair: rgba(225,226,231,.16); --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px;
   --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
 }
-@media (prefers-color-scheme: light) {
-  :root:not([data-theme="dark"]) {
-    color-scheme: light;
-    --canvas: #f6f7fb; --surface: #ffffff; --raised: #eef0f7; --line: #d5d9e6;
-    --ink: #1f2335; --muted: #4c5374; --comment: #5c6487;
-    --moment: #a64d00; --deviation: #2f5bcc; --dead: #c0244b; --pause: #7d5600; --done: #00726a; --note: #7536c4;
-    --no: #c0244b; --yes: #00726a; --chip-ink: #ffffff; --focus: #2f5bcc;
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42; --ink: #c0caf5; --muted: #a9b1d6;
+    --comment: #8089b3; --accent: #7aa2f7; --moment: #ff9e64; --blue: #7aa2f7; --green: #9ece6a; --teal: #73daca;
+    --purple: #bb9af7; --cyan: #89ddff; --red: #f7768e; --yellow: #e0af68; --no: #f7768e; --yes: #73daca;
+    --done: #73daca; --note: #bb9af7; --pause: #e0af68; --deviation: #7aa2f7; --dead: #f7768e; --correct: #73daca;
+    --incorrect: #f7768e; --chip-ink: #1a1b26; --focus: #c0caf5;
   }
 }
-:root[data-theme="light"] {
-  color-scheme: light;
-  --canvas: #f6f7fb; --surface: #ffffff; --raised: #eef0f7; --line: #d5d9e6;
-  --ink: #1f2335; --muted: #4c5374; --comment: #5c6487;
-  --moment: #a64d00; --deviation: #2f5bcc; --dead: #c0244b; --pause: #7d5600; --done: #00726a; --note: #7536c4;
-  --no: #c0244b; --yes: #00726a; --chip-ink: #ffffff; --focus: #2f5bcc;
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42; --ink: #c0caf5; --muted: #a9b1d6;
+  --comment: #8089b3; --accent: #7aa2f7; --moment: #ff9e64; --blue: #7aa2f7; --green: #9ece6a; --teal: #73daca;
+  --purple: #bb9af7; --cyan: #89ddff; --red: #f7768e; --yellow: #e0af68; --no: #f7768e; --yes: #73daca;
+  --done: #73daca; --note: #bb9af7; --pause: #e0af68; --deviation: #7aa2f7; --dead: #f7768e; --correct: #73daca;
+  --incorrect: #f7768e; --chip-ink: #1a1b26; --focus: #c0caf5;
 }
 *, *::before, *::after { box-sizing: border-box; }
 html { background: var(--canvas); }
