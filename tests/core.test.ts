@@ -300,7 +300,8 @@ describe('storage, verification and participant boundary', () => {
       const run = store.create(compile(authored())[0])
       const view = participantView(run)
       assert(view.screener.map(s => s.question)).toContain('When did you last need to find out whether people can use what I built?')
-      assert(view.impression).toEqual({ page: '/', flashMs: 500, question: 'What was that page for?' })
+      // The first click is asked toward the first goal in its own words; the purpose never crosses.
+      assert(view.impression).toEqual({ page: '/', flashMs: 500, question: 'What was that page for?', goal: 'start trying this tool' })
       assert(view).toMatchObject({ start: '/', video: false, screened: false, impressed: false })
       const handler = createCollector(() => store)
       const post = (body: unknown) => handler(new Request('http://localhost/api/ui-tests', { method: 'POST', headers: { origin: 'http://localhost', cookie: `ui-tests-run=${run.id}.${run.token}` }, body: JSON.stringify(body) }))
@@ -496,7 +497,8 @@ it('keeps README, landing context and rendered copy word-for-word aligned', asyn
   const readme = await readFile('README.md', 'utf8')
   function strings(value: unknown): string[] {
     if (typeof value === 'string') return [value]
-    return Object.values(value as Record<string, unknown>).flatMap(strings)
+    // A source's icon and picture name a drawing, not words; render-readme.mjs leaves them out too.
+    return Object.entries(value as Record<string, unknown>).filter(([key]) => !['icon', 'picture'].includes(key)).flatMap(([, item]) => strings(item))
   }
   for (const text of strings(siteCopy)) assert(readme).toContain(text)
   assert((await readFile('apps/web/landing.ui.test.ts', 'utf8')).trim()).toBe(siteCopy.example)

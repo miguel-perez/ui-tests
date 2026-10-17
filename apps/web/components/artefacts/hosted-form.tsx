@@ -25,7 +25,7 @@ export function HostedForm() {
       <div className="hosted-field"><label htmlFor={`${id}-evidence`}>{method === 'Page reached' ? 'Page path' : method === 'Element seen' ? 'Element' : 'Expected answer'}</label><input id={`${id}-evidence`} required value={evidence[method] ?? ''} onChange={event => setEvidence({ ...evidence, [method]: event.target.value })} /></div>
       <fieldset className="hosted-sources wide"><legend>Where people come from</legend>
         <label className="source-toggle"><input type="checkbox" role="switch" defaultChecked /><Icon name="link" size={16} />Your link</label>
-        <div className="source-toggle"><label><input type="checkbox" role="switch" /><Icon name="users" size={16} />A paid panel</label><label className="source-cap">cap <span aria-hidden="true">$</span><input aria-label="Paid panel cap in dollars" type="number" min="0" defaultValue="60" /></label></div>
+        <div className="source-toggle"><label><input type="checkbox" role="switch" /><Icon name="users" size={16} />A paid panel</label><label className="source-cap">cap <span aria-hidden="true">$</span><input aria-label="Paid panel cap in dollars" type="number" min="0" defaultValue="70" /></label></div>
         <label className="source-toggle"><input type="checkbox" role="switch" defaultChecked /><Icon name="cursor" size={16} />Your visitors</label>
       </fieldset>
       <div className="hosted-submit wide"><button type="submit" className="button primary">Start the run<Icon name="arrow" /></button><p role="status" className="hosted-status">{started ? 'Example run ready · ui-tests.com/r/k2m9 · No live run started.' : 'Example form · explore without starting a live run.'}</p></div>

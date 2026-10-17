@@ -4,7 +4,7 @@ import { mkdirSync, existsSync } from 'node:fs'
 import path from 'node:path'
 import type { CompiledContext } from './compiler.ts'
 import type { Snapshot } from './index.ts'
-import type { ImpressionCode } from './impression.ts'
+import type { FirstClick, FirstClickCode, ImpressionCode } from './impression.ts'
 
 /** A recorder event: clicks with whether anything changed, URL changes, scroll, masked input, pauses and task-step snapshots. */
 export type Event = { type: 'click' | 'url' | 'scroll' | 'input' | 'pause' | 'step'; at: number; url: string; target?: string; changed?: boolean; stoppedMs?: number; step?: number; snapshot?: Snapshot }
@@ -14,10 +14,10 @@ export type Reason = 'done' | "couldn't do this" | 'abandoned early' | 'ran out 
 export type VoiceAnswer = { question: 'impression' | 'difficulty' | 'words'; transcript: string; recording: string; mime: string; seconds: number }
 /** What is captured for an attempt, each with the consent behind it. Interaction events are always recorded; voice only once the person chooses to talk. */
 export type Recording = { events: true; screen: boolean; voice: boolean; webcam: boolean }
-/** The open impression answer: the words, how it was given, and the code proposed against the purpose (set by the CLI, changeable in the trace). */
-export type ImpressionAnswer = { answer: string; spoken: boolean; code: ImpressionCode }
+/** The first look: the open answer's words, how it was given and the code proposed against the purpose; the appeal rating (1 to 9); the first click and where it led against the happy path. Codes are proposed by the collector and changeable in the trace. */
+export type ImpressionAnswer = { answer: string; spoken: boolean; code: ImpressionCode; appeal?: number; firstClick?: (FirstClick & { code: FirstClickCode }) | null }
 /** A run and its single rehearsal attempt: status, timings, terminal reason, answers, end-state snapshot and hook result. */
-export type Run = { id: string; token: string; context: CompiledContext; goalIndex: number; sequence?: { index: number; total: number }; hooksBundle?: string; authoredContextIndex?: number; status: 'created' | 'consented' | 'active' | 'questions' | 'finished'; startedAt: number; endedAt?: number; extendedSeconds?: number; withdrawnAt?: number; reason?: Reason; seq?: number; difficulty?: string; confidence?: number; afterGoal?: { ease: number; usefulness: number }; words?: string; voice?: VoiceAnswer[]; recording?: Recording; snapshot?: Snapshot; result?: unknown; answers?: Record<string, string>; screener?: string[][]; impression?: ImpressionAnswer }
+export type Run = { id: string; token: string; source?: 'link' | 'prolific' | 'connect' | 'intercept'; context: CompiledContext; goalIndex: number; sequence?: { index: number; total: number }; hooksBundle?: string; authoredContextIndex?: number; status: 'created' | 'consented' | 'active' | 'questions' | 'finished'; startedAt: number; endedAt?: number; extendedSeconds?: number; withdrawnAt?: number; reason?: Reason; seq?: number; difficulty?: string; confidence?: number; afterGoal?: { ease: number; usefulness: number }; words?: string; voice?: VoiceAnswer[]; recording?: Recording; snapshot?: Snapshot; result?: unknown; answers?: Record<string, string>; screener?: string[][]; impression?: ImpressionAnswer }
 /** Storage behind the collector and the CLI. The SQLite adapter is the development implementation. */
 export interface StorageAdapter {
   create(context: CompiledContext, goalIndex?: number): Run

@@ -220,6 +220,50 @@ body.scenario .player { display: contents; }
 @media (pointer: coarse) { .pill .rec .pause::before, .pill .done::before, .pill .cant::before { width: max(100%, 44px); height: 44px; } }
 .task-sheet { position: absolute; right: 0; bottom: 52px; width: 400px; }
 .task-sheet[hidden] { display: none; }
+/* The study flow (?study) and the invitation (?invite), as player-chrome.html and sources-section.html draw them. */
+body.study .player, body.inviting .player { display: contents; }
+.sheet h2 { margin: 0; font-size: 19px; line-height: 1.3; font-weight: 500; text-wrap: pretty; }
+.sheet .q { margin: 0; font-size: 17px; line-height: 1.35; font-weight: 500; }
+.sheet .actions.split { justify-content: space-between; align-items: center; gap: 12px; }
+.sheet .hint { font-size: 13px; color: var(--ch-dim); }
+.sheet .quiet { height: 36px; padding: 0 6px; color: var(--ch-dim); font-size: 14px; }
+.sheet .pri:disabled { opacity: .55; cursor: default; }
+.sheet .list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; font-size: 14px; }
+.sheet .list li { display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; align-items: baseline; }
+.sheet .list i { width: 8px; height: 8px; border-radius: 50%; background: var(--ch-accent); display: inline-block; justify-self: center; }
+.sheet .list i.off { background: none; box-shadow: inset 0 0 0 1px var(--ch-dim); }
+.sheet .list em { font-style: normal; font-size: 13px; color: var(--ch-dim); }
+.opts { display: grid; gap: 4px; margin: 0; padding: 0; border: 0; }
+.opts label { position: relative; display: flex; gap: 10px; align-items: center; padding: 7px 11px; border-radius: var(--ch-radius); box-shadow: inset 0 0 0 1px var(--ch-hair); font-size: 14px; cursor: pointer; }
+.opts label::before { content: ""; width: 14px; height: 14px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--ch-dim); }
+.opts.multi label::before { border-radius: 3px; }
+.opts input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.opts label:has(input:checked) { box-shadow: inset 0 0 0 1px var(--ch-accent); }
+.opts label:has(input:checked)::before { box-shadow: inset 0 0 0 4px var(--ch-accent); }
+.opts label:has(input:focus-visible) { outline: 2px solid var(--ch-ink); outline-offset: 2px; }
+.scale { display: grid; grid-template-columns: repeat(var(--points, 7), 1fr); gap: 4px; margin: 0; padding: 0; border: 0; }
+.scale label { position: relative; height: 40px; display: grid; place-items: center; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--ch-hair); font: 500 15px/1 "Fira Code", monospace; cursor: pointer; }
+.scale input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+.scale label:has(input:checked) { background: var(--ch-accent); color: var(--ch-accent-ink); box-shadow: none; }
+.scale label:has(input:focus-visible) { outline: 2px solid var(--ch-ink); outline-offset: 2px; }
+.anchors { display: flex; justify-content: space-between; font-size: 12px; color: var(--ch-dim); margin-top: -4px; }
+.sheet textarea { display: block; width: 100%; min-height: 84px; padding: 10px 12px; border: 0; border-radius: var(--ch-radius); box-shadow: inset 0 0 0 1px var(--ch-hair); background: transparent; color: var(--ch-ink); font: 15px/1.5 "Fira Sans", sans-serif; resize: vertical; }
+.sheet textarea::placeholder { color: var(--ch-dim); }
+.sheet [hidden], .sheet[hidden] { display: none !important; }
+/* The flash: the page alone for half a second, then covered again by the host's own background. */
+.cover { position: fixed; inset: 0; z-index: 49; background: var(--wb-bg); }
+.cover[hidden] { display: none; }
+.dock { position: fixed; left: 50%; bottom: 16px; translate: -50% 0; z-index: 50; }
+.dock[hidden] { display: none; }
+/* The invitation: a small card bottom right on the chrome's surface. */
+.invite-card { position: fixed; right: 16px; bottom: 16px; z-index: 50; width: 320px; padding: 14px 16px; display: grid; gap: 8px; background: var(--ch-surface); border-radius: calc(var(--ch-radius) + 4px); box-shadow: 0 0 0 1px var(--ch-hair), 0 10px 28px rgba(21,26,33,.3); }
+.invite-card[hidden] { display: none; }
+.invite-card h2 { margin: 0; font-size: 15px; line-height: 1.35; font-weight: 500; }
+.invite-card p { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ch-dim); }
+.invite-card .acts { display: flex; gap: 8px; margin-top: 2px; }
+.invite-card .acts button { height: 32px; padding: 0 14px; border-radius: var(--ch-radius); font-size: 13px; font-weight: 500; }
+.invite-card .acts .yes { background: var(--ch-accent); color: var(--ch-accent-ink); }
+.invite-card .acts .no { box-shadow: inset 0 0 0 1px var(--ch-hair); }
 </style>
 </head>
 <body>
@@ -359,6 +403,70 @@ body.scenario .player { display: contents; }
 
 <!-- ui-tests player surfaces, only in scenario mode -->
 <div class="player">
+  <!-- The study flow (?study): consent, the screener, the first look, then the card above; after the task, the five questions. -->
+  <div class="cover" id="cover" hidden></div>
+  <div class="scrim" id="study" hidden>
+    <section class="sheet ch" id="consentSheet" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
+      <span class="step">Weekboard · before you start</span>
+      <h2 id="consentTitle">Weekboard would like to watch you try something on their site.</h2>
+      <ul class="list" aria-label="What is recorded">
+        <li><i aria-hidden="true"></i><span>What you do on their page: where you click, what you type, which pages you open</span><em>always</em></li>
+        <li><i aria-hidden="true"></i><span>Your screen, as a video, while you try it</span><em>needed</em></li>
+        <li><i class="off" aria-hidden="true"></i><span>Your voice, only if you choose to talk later</span><em>optional</em></li>
+        <li><i class="off" aria-hidden="true"></i><span>Your camera</span><em>off</em></li>
+      </ul>
+      <p class="small">The website is being tested, not you. You can stop at any time and still be paid $9.</p>
+      <p class="small" id="recorded" hidden>Typing is kept as the fact that you typed, never what you typed. The screen video starts with the task and your browser asks first. Your voice is recorded only if you choose to talk.</p>
+      <div class="actions split"><button class="quiet" id="whatRecorded" type="button" aria-expanded="false" aria-controls="recorded">What is recorded?</button><button class="pri" id="consentContinue" type="button">Continue</button></div>
+    </section>
+    <form class="sheet ch" id="screenerSheet" role="dialog" aria-modal="true" aria-labelledby="screenerQ" hidden>
+      <span class="step" id="screenerStep" aria-live="polite">A few questions first · 1 of 6</span>
+      <fieldset class="opts" data-step="1"><legend class="q" id="screenerQ">When did you last sign up for a tool to plan work with a team?</legend><label><input type="radio" name="s1">In the past week</label><label><input type="radio" name="s1">In the past month</label><label><input type="radio" name="s1">Earlier this year</label><label><input type="radio" name="s1">I haven't</label></fieldset>
+      <fieldset class="opts multi" data-step="2" hidden><legend class="q">Which of these do you use to plan work? Pick all that apply.</legend><label><input type="checkbox" name="s2">Trello</label><label><input type="checkbox" name="s2">Asana</label><label><input type="checkbox" name="s2">Notion</label><label><input type="checkbox" name="s2">Linear</label><label><input type="checkbox" name="s2">Basecamp</label><label><input type="checkbox" name="s2">None of these</label></fieldset>
+      <fieldset class="opts multi" data-step="3" hidden><legend class="q">Which of these have you done? Pick all that apply.</legend><label><input type="checkbox" name="s3">Managed a team of more than five</label><label><input type="checkbox" name="s3">Used Weekboard</label><label><input type="checkbox" name="s3">Taken a course on planning or project management</label><label><input type="checkbox" name="s3">None of these</label></fieldset>
+      <fieldset class="opts" data-step="4" hidden><legend class="q">When did you last need to plan a week with other people?</legend><label><input type="radio" name="s4">This week</label><label><input type="radio" name="s4">This month</label><label><input type="radio" name="s4">Earlier this year</label><label><input type="radio" name="s4">I don't</label></fieldset>
+      <fieldset class="opts" data-step="5" hidden><legend class="q">How do you do it today?</legend><label><input type="radio" name="s5">A shared document or spreadsheet</label><label><input type="radio" name="s5">A planning tool</label><label><input type="radio" name="s5">Chat and email</label><label><input type="radio" name="s5">In my head</label></fieldset>
+      <fieldset class="opts" data-step="6" hidden><legend class="q">How much does it matter to you to get this right?</legend><label><input type="radio" name="s6">A lot: it costs me time every week</label><label><input type="radio" name="s6">Some</label><label><input type="radio" name="s6">Not much</label></fieldset>
+      <div class="actions split"><span class="hint" id="screenerHint">Pick one.</span><button class="pri" id="screenerNext" type="submit" disabled>Next</button></div>
+    </form>
+    <section class="sheet ch" id="lookReady" role="dialog" aria-modal="true" aria-labelledby="lookReadyTitle" hidden>
+      <span class="step">First impression</span>
+      <h2 id="lookReadyTitle">You will see a page for half a second, then a few questions about it.</h2>
+      <div class="actions split"><span class="hint">There is no right answer.</span><button class="pri" id="lookShow" type="button">Show the page</button></div>
+    </section>
+    <form class="sheet ch" id="appealSheet" role="dialog" aria-modal="true" aria-labelledby="appealQ" hidden>
+      <span class="step">You saw a page for half a second</span>
+      <fieldset class="scale" style="--points: 9"><legend class="q" id="appealQ" style="grid-column: 1 / -1; margin-bottom: 8px">How appealing did that page look?</legend><label><input type="radio" name="appeal" value="1" aria-label="1 Not at all appealing">1</label><label><input type="radio" name="appeal" value="2">2</label><label><input type="radio" name="appeal" value="3">3</label><label><input type="radio" name="appeal" value="4">4</label><label><input type="radio" name="appeal" value="5">5</label><label><input type="radio" name="appeal" value="6">6</label><label><input type="radio" name="appeal" value="7">7</label><label><input type="radio" name="appeal" value="8">8</label><label><input type="radio" name="appeal" value="9" aria-label="9 Very appealing">9</label></fieldset>
+      <div class="anchors" aria-hidden="true"><span>Not at all appealing</span><span>Very appealing</span></div>
+      <div class="actions split"><span class="hint">Press a number key, or tap.</span><button class="pri" id="appealNext" type="submit" disabled>Next</button></div>
+    </form>
+    <form class="sheet ch" id="lookSheet" role="dialog" aria-modal="true" aria-labelledby="lookQ" hidden>
+      <span class="step">You saw a page for half a second</span>
+      <label class="q" id="lookQ" for="lookAnswer">What was that page for?</label>
+      <textarea id="lookAnswer" rows="3" placeholder="In your own words. There is no right answer."></textarea>
+      <div class="actions"><button class="pri" id="lookNext" type="submit">Next</button></div>
+    </form>
+    <form class="sheet ch" id="afterSheet" role="dialog" aria-modal="true" aria-labelledby="afterStep" hidden>
+      <span class="step" id="afterStep" aria-live="polite">After the task · 1 of 2</span>
+      <div data-after="ease"><fieldset class="scale"><legend class="q" style="grid-column: 1 / -1; margin-bottom: 8px">Overall, how difficult or easy did you find this task?</legend><label><input type="radio" name="ease" value="1" aria-label="1 Very difficult">1</label><label><input type="radio" name="ease" value="2">2</label><label><input type="radio" name="ease" value="3">3</label><label><input type="radio" name="ease" value="4">4</label><label><input type="radio" name="ease" value="5">5</label><label><input type="radio" name="ease" value="6">6</label><label><input type="radio" name="ease" value="7" aria-label="7 Very easy">7</label></fieldset><div class="anchors" aria-hidden="true" style="margin-top: 6px"><span>Very difficult</span><span>Very easy</span></div></div>
+      <div data-after="difficult" hidden><label class="q" for="difficult">What made it difficult?</label><textarea id="difficult" rows="3" placeholder="In your own words."></textarea></div>
+      <fieldset class="opts" data-after="useful" hidden><legend class="q">Would Weekboard be useful to you?</legend><label><input type="radio" name="useful">Strongly disagree</label><label><input type="radio" name="useful">Disagree</label><label><input type="radio" name="useful">Neither</label><label><input type="radio" name="useful">Agree</label><label><input type="radio" name="useful">Strongly agree</label></fieldset>
+      <fieldset class="opts" data-after="easy" hidden><legend class="q">Weekboard is easy to use.</legend><label><input type="radio" name="easy">Strongly disagree</label><label><input type="radio" name="easy">Disagree</label><label><input type="radio" name="easy">Neither</label><label><input type="radio" name="easy">Agree</label><label><input type="radio" name="easy">Strongly agree</label></fieldset>
+      <div data-after="words" hidden><label class="q" for="words">Anything you want to tell Weekboard?</label><textarea id="words" rows="3" placeholder="Type here, or talk."></textarea></div>
+      <div class="actions split"><span class="hint" id="afterHint">Press a number key, or tap.</span><button class="pri" id="afterNext" type="submit" disabled>Next</button></div>
+    </form>
+  </div>
+  <section class="sheet ch dock" id="clickSheet" aria-labelledby="clickQ" hidden>
+    <span class="step">The page is back</span>
+    <h2 id="clickQ">Where would you click first to invite a colleague?</h2>
+    <div class="actions split"><span class="hint">Click once on the page.</span><button class="quiet" id="noClick" type="button">I wouldn't click anything</button></div>
+  </section>
+  <!-- The invitation (?invite): one string with PRD 03 and the player. -->
+  <section class="invite-card ch" id="invitation" role="dialog" aria-label="Invitation from Weekboard" aria-describedby="invitationBody" hidden>
+    <h2>This page seems to be giving you trouble.</h2>
+    <p id="invitationBody">Would you show us where? Five minutes, paid, in your own words. The site is being tested, not you.</p>
+    <div class="acts"><button class="yes" id="inviteSure" type="button">Sure</button><button class="no" id="inviteNo" type="button">No thanks</button></div>
+  </section>
   <div class="scrim" id="scenario">
     <div class="sheet ch" role="dialog" aria-labelledby="scenarioStep" aria-describedby="scenarioText">
       <span class="step" id="scenarioStep">Task 1 of 1</span>
@@ -468,14 +576,113 @@ body.scenario .player { display: contents; }
     pending.textContent = invites === 1 ? '1 invitation pending' : invites + ' invitations pending';
   });
 
+  /* The study flow before the card (?study) and the invitation (?invite): player-chrome.html's screens, in the player's order. */
+  const study = /[?&]study/.test(location.search), inviting = /[?&]invite/.test(location.search);
+  const page = [document.querySelector('header.top'), document.querySelector('main')].filter(Boolean);
+  const show = (el) => { $$('#study > .sheet').forEach(sheet => { sheet.hidden = sheet !== el; }); const first = el.querySelector('legend, h2, label.q'); if (first) { first.tabIndex = -1; first.focus(); } };
+  function beginStudy() {
+    document.body.classList.add('study');
+    page.forEach(el => { el.inert = true; });
+    $('#scenario').hidden = true;
+    $('#study').hidden = false;
+    show($('#consentSheet'));
+    $('#consentContinue').focus();
+  }
+  $('#whatRecorded').addEventListener('click', () => { const open = $('#recorded').hidden; $('#recorded').hidden = !open; $('#whatRecorded').setAttribute('aria-expanded', String(open)); });
+  $('#consentContinue').addEventListener('click', () => { show($('#screenerSheet')); });
+  // The screener: one question per screen, nothing preselected, Next once something is chosen.
+  let screen = 1;
+  const screenerStep = () => $(`#screenerSheet [data-step="${screen}"]`);
+  $('#screenerSheet').addEventListener('change', () => { $('#screenerNext').disabled = !screenerStep().querySelector('input:checked'); });
+  $('#screenerSheet').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!screenerStep().querySelector('input:checked')) return;
+    if (screen === 6) { show($('#lookReady')); return; }
+    screenerStep().hidden = true; screen += 1; screenerStep().hidden = false;
+    $('#screenerStep').textContent = `A few questions first · ${screen} of 6`;
+    $('#screenerHint').textContent = screenerStep().classList.contains('multi') ? 'Pick all that apply.' : 'Pick one.';
+    $('#screenerNext').disabled = true;
+    screenerStep().querySelector('legend').tabIndex = -1; screenerStep().querySelector('legend').focus();
+  });
+  // The first look: the board alone for 500 ms, an appeal rating from 1 to 9, the open question, then the page back for one first click.
+  $('#lookShow').addEventListener('click', () => {
+    $('#study').hidden = true;
+    setTimeout(() => { $('#cover').hidden = false; $('#study').hidden = false; show($('#appealSheet')); }, 500);
+  });
+  const keys = (form, name, points) => form.addEventListener('keydown', (e) => { const n = Number(e.key); if (e.target.tagName !== 'TEXTAREA' && n >= 1 && n <= points) { e.preventDefault(); const input = form.querySelector(`input[name="${name}"][value="${n}"]`); if (input) { input.checked = true; input.focus(); input.dispatchEvent(new Event('change', { bubbles: true })); } } });
+  keys($('#appealSheet'), 'appeal', 9);
+  $('#appealSheet').addEventListener('change', () => { $('#appealNext').disabled = !$('#appealSheet input:checked'); });
+  $('#appealSheet').addEventListener('submit', (e) => { e.preventDefault(); if ($('#appealSheet input:checked')) show($('#lookSheet')); });
+  $('#lookSheet').addEventListener('submit', (e) => {
+    e.preventDefault();
+    $('#study').hidden = true; $('#cover').hidden = true;
+    page.forEach(el => { el.inert = false; });
+    $('#clickSheet').hidden = false; $('#clickQ').tabIndex = -1; $('#clickQ').focus();
+    // The first click is read and kept; the page does not act on it, and the card comes next.
+    const first = (e) => {
+      if (e.target.closest('.player')) return;
+      e.preventDefault(); e.stopPropagation();
+      document.removeEventListener('click', first, true);
+      toCard();
+    };
+    document.addEventListener('click', first, true);
+    $('#noClick').onclick = () => { document.removeEventListener('click', first, true); toCard(); };
+  });
+  function toCard() {
+    $('#clickSheet').hidden = true;
+    page.forEach(el => { el.inert = true; });
+    $('#scenario').hidden = false;
+    $('#scenarioStart').focus();
+  }
+  // After the task: ease, then what made it difficult at 4 or below, then the three after all goals; the last button is Finish.
+  let after = [], at = 0;
+  const afterNames = { ease: 'After the task', difficult: 'After the task', useful: 'After all goals', easy: 'After all goals', words: 'After all goals' };
+  function afterStep() {
+    const name = after[at], group = after.filter(n => afterNames[n] === afterNames[name]);
+    $$('#afterSheet [data-after]').forEach(el => { el.hidden = el.dataset.after !== name; });
+    $('#afterStep').textContent = `${afterNames[name]} · ${group.indexOf(name) + 1} of ${group.length}`;
+    const words = name === 'difficult' || name === 'words';
+    $('#afterHint').textContent = name === 'ease' ? 'Press a number key, or tap.' : words ? '' : 'Pick one.';
+    $('#afterNext').textContent = at === after.length - 1 ? 'Finish' : 'Next';
+    $('#afterNext').disabled = !words && !$(`#afterSheet [data-after="${name}"] input:checked`);
+    const first = $(`#afterSheet [data-after="${name}"]`).querySelector('legend, label.q'); first.tabIndex = -1; first.focus();
+  }
+  window.afterTask = () => {
+    page.forEach(el => { el.inert = true; });
+    after = ['ease', 'useful', 'easy', 'words']; at = 0;
+    $('#study').hidden = false; show($('#afterSheet')); afterStep();
+  };
+  keys($('#afterSheet'), 'ease', 7);
+  $('#afterSheet').addEventListener('change', () => {
+    const name = after[at];
+    if (name === 'ease') { const ease = Number($('#afterSheet input[name="ease"]:checked').value); after = ['ease', ...(ease <= 4 ? ['difficult'] : []), 'useful', 'easy', 'words']; afterStep(); return; }
+    $('#afterNext').disabled = !$(`#afterSheet [data-after="${name}"] input:checked`) && name !== 'difficult' && name !== 'words';
+  });
+  $('#afterSheet').addEventListener('submit', (e) => {
+    e.preventDefault();
+    if ($('#afterNext').disabled) return;
+    if (at < after.length - 1) { at += 1; afterStep(); return; }
+    // Finish: no completion screen and no auto-advance; the page is theirs again.
+    $('#study').hidden = true; page.forEach(el => { el.inert = false; });
+  });
+  if (inviting) {
+    document.body.classList.add('inviting');
+    $('#scenario').hidden = true;
+    $('#invitation').hidden = false;
+    // No thanks is not asked again this visit; Sure opens the study at the consent.
+    $('#inviteNo').addEventListener('click', () => { $('#invitation').hidden = true; });
+    $('#inviteSure').addEventListener('click', () => { $('#invitation').hidden = true; beginStudy(); });
+  }
+
   /* player surfaces (demo only) */
-  if (/[?&]scenario/.test(location.search)) {
+  if (/[?&](scenario|study|invite)/.test(location.search)) {
     document.body.classList.add('scenario');
     // The dialog owns focus until Start: the page behind it is inert and Start is focused.
     const behind = [document.querySelector('header.top'), document.querySelector('main')].filter(Boolean);
-    behind.forEach(el => { el.inert = true; });
+    // The invitation sits over a page the visitor is still using; everything else starts modal.
+    if (!inviting) behind.forEach(el => { el.inert = true; });
     $('#scenario').setAttribute('aria-modal', 'true');
-    $('#scenarioStart').focus();
+    if (!inviting) $('#scenarioStart').focus();
     // The recording segment: the time recorded since Start, which stops while paused and resumes from where it stopped.
     let timer = 0, recorded = 0, since = 0, paused = false;
     const shown = () => Math.floor((recorded + (paused ? 0 : Date.now() - since)) / 1000);
@@ -503,7 +710,8 @@ body.scenario .player { display: contents; }
       $('#taskSheet').hidden = !open;
       $('#taskToggle').setAttribute('aria-expanded', String(open));
     });
-    const end = () => { clearInterval(timer); $('#bar').hidden = true; };
+    // In the study flow the questions after the task follow; with ?scenario alone the task simply ends.
+    const end = () => { clearInterval(timer); $('#bar').hidden = true; if (study || inviting) window.afterTask(); };
     // Done asks in place, no dialog; the person ends the task, never the page (no completion screen, no auto-advance).
     const confirming = on => { $('#controls').hidden = on; $('#confirm').hidden = !on; (on ? $('#doneYes') : $('#done')).focus(); };
     $('#done').addEventListener('click', () => confirming(true));
@@ -520,6 +728,7 @@ body.scenario .player { display: contents; }
     grip.addEventListener('pointerdown', e => { const bar = $('#bar'); drag = { x: e.clientX, y: e.clientY, dx: parseFloat(bar.style.getPropertyValue('--dx')) || 0, dy: parseFloat(bar.style.getPropertyValue('--dy')) || 0 }; grip.setPointerCapture(e.pointerId); });
     grip.addEventListener('pointermove', e => { if (!drag) return; $('#bar').style.setProperty('--dx', (drag.dx + e.clientX - drag.x) + 'px'); $('#bar').style.setProperty('--dy', (drag.dy + e.clientY - drag.y) + 'px'); });
     grip.addEventListener('pointerup', () => { drag = null; });
+    if (study) beginStudy();
   }
 })();
 </script>

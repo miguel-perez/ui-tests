@@ -1,11 +1,11 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { mkdir } from 'node:fs/promises'
-import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, runs } from '../../apps/web/lib/copy'
+import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, runs, sources } from '../../apps/web/lib/copy'
 import { shown, offences } from '../vocabulary'
 
 /** Every content type's component on the landing page (docs/design/site-schema.md). */
-const artefacts = ['terminal-window', 'code-window', 'attempt-view', 'compilation', 'invite-link', 'cap-control', 'visitor-invitation', 'checks-box', 'findings-list', 'reel-frame', 'dashboard']
+const artefacts = ['terminal-window', 'code-window', 'attempt-view', 'compilation', 'sources', 'checks-box', 'findings-list', 'reel-frame', 'dashboard']
 /** Relative luminance of a computed rgb() colour. */
 const luminance = (rgb: string) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return r * .2126 + g * .7152 + b * .0722 }
 /** The distinct colours of the text inside each matched element. */
@@ -39,13 +39,13 @@ for (const width of [1440, 375]) {
       expect(dots.length).toBeGreaterThan(0)
       expect(dots.every(Boolean)).toBe(true)
       // The theme rules (design/artefacts/README.md): product surfaces dark on the dark page, terminals and code windows dark.
-      for (const selector of ['.attempt-view', '.findings-list', '.dashboard', '.reel-frame', '.option-mini', '.hosted-form', '.option-card']) {
+      for (const selector of ['.attempt-view', '.findings-list', '.dashboard', '.reel-frame', '.src-fill', '.hosted-form', '.src-row[aria-expanded="true"]', '.src-well:not([hidden])']) {
         for (const surface of await page.locator(selector).evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(luminance(surface), `${selector} is dark`).toBeLessThan(.05)
       }
       expect(await page.locator('.theme-light').count()).toBe(0)
       // The participant chrome over the light Weekboard is its inverse: Weekboard's ink, opaque, never a panel colour of the page or the app.
       const panels = new Set(['rgb(26, 27, 38)', 'rgb(31, 35, 53)', 'rgb(225, 226, 231)', 'rgb(238, 240, 245)'])
-      for (const selector of ['.ch-sheet', '.ch-pill']) {
+      for (const selector of ['.ch-sheet', '.ch-pill', '.sources .uit-join', '.sources .uit-invite']) {
         for (const surface of await page.locator(selector).evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) {
           expect(surface, `${selector} is the inverse of Weekboard`).toBe('rgb(44, 51, 83)')
           expect(panels.has(surface)).toBe(false)
@@ -53,8 +53,8 @@ for (const width of [1440, 375]) {
       }
       // The one accent Weekboard's author sets, mint, never the app's orange.
       // The frames are the light Weekboard page, constant in the dark section.
-      for (const frame of await page.locator('.compile-frame').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(frame).toBe('rgb(225, 226, 231)')
-      for (const accent of await page.locator('.ch-btn.pri, .ch-pill .done').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(accent).toBe('rgb(95, 227, 192)')
+      for (const frame of await page.locator('.compile-frame, .src-frame').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(frame).toBe('rgb(225, 226, 231)')
+      for (const accent of await page.locator('.ch-btn.pri, .ch-pill .done, .sources .uit-primary').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(accent).toBe('rgb(95, 227, 192)')
       for (const surface of await page.locator('.terminal-window, .code-window').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(luminance(surface)).toBeLessThan(.05)
       // Every component that owns chrome carries "Example run" at most once.
       for (const count of await page.locator('[data-artefact]').evaluateAll(nodes => nodes.map(node => [...node.querySelectorAll('.example-label')].filter(label => label.closest('[data-artefact]') === node).length))) expect(count).toBeLessThanOrEqual(1)
@@ -92,11 +92,14 @@ for (const width of [1440, 375]) {
         const hostedBlock = page.locator('section[aria-labelledby="hosted"]')
         await expect(hostedBlock.locator('video, [data-artefact="reel-frame"], [data-artefact="attempt-view"], [data-artefact="findings-list"]')).toHaveCount(0)
         await expect(hostedBlock.locator('.dashboard tbody tr')).toHaveCount(runs.length)
-        // Item 11: the sources are three equal cards, not a table.
-        await expect(page.locator('section[aria-labelledby="people"] table')).toHaveCount(0)
-        const cards = await page.locator('.option-card').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().height))
-        expect(cards).toHaveLength(3)
-        if (width === 1440) expect(new Set(cards).size).toBe(1)
+        // Round seven: the sources table in place of the three cards, its copy the artefact's, in the order link, visitors, paid panel.
+        const people = page.locator('section[aria-labelledby="people"]')
+        await expect(people.locator('.option-card')).toHaveCount(0)
+        for (const text of [sources.heading, sources.lead]) await expect(people.getByText(text, { exact: true })).toBeVisible()
+        await expect(people.locator('.src-row .src-name b')).toHaveText(sources.rows.map(row => row.name))
+        await expect(people.locator('.src-cols')).toBeVisible({ visible: width === 1440 })
+        const heights = await people.locator('.src-row').evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().height)))
+        if (width === 1440) expect(heights.every(height => height >= 152)).toBe(true)
         // Item 6: the agent block runs against an API.
         await expect(page.locator('section[aria-labelledby="agents"]')).toContainText('Agent run · add a member through the API · 5 trials')
         await expect(page.locator('section[aria-labelledby="agents"]')).toContainText(agent.fileLine)
@@ -300,6 +303,65 @@ for (const width of [1440, 375]) test(`what you write, what they see: one column
   expect(errors).toEqual([])
 })
 
+for (const width of [1440, 375]) test(`the sources table opens one row at a time, closes on Escape and an outside click, and keeps its header at ${width}px`, async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+  page.on('pageerror', error => errors.push(String(error)))
+  await page.setViewportSize({ width, height: 900 })
+  await page.goto('/')
+  const section = page.locator('section[aria-labelledby="people"]')
+  const rows = section.locator('.src-row'), wells = section.locator('.src-well')
+  const open = async () => (await rows.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-expanded'))))
+  // The link is open on arrival; opening another closes it.
+  expect(await open()).toEqual(['true', 'false', 'false'])
+  await expect(wells.locator('visible=true')).toHaveCount(1)
+  await rows.nth(1).click()
+  expect(await open()).toEqual(['false', 'true', 'false'])
+  await expect(section.locator('#visitors-well')).toBeVisible()
+  await expect(section.locator('#link-well')).toBeHidden()
+  // The well is the real player's invitation, with the one string; a click inside it keeps the row open.
+  const { invitationText } = await import('../../packages/ui-tests/src/next')
+  const invitation = section.locator('#visitors-well .uit-invite')
+  await expect(invitation).toHaveAttribute('role', 'dialog')
+  expect((await invitation.innerText()).replace(/\s+/g, ' ')).toContain(invitationText)
+  await section.locator('#visitors-well .src-caveat').click()
+  expect(await open()).toEqual(['false', 'true', 'false'])
+  // Escape closes it, and so does a click outside the well.
+  await page.keyboard.press('Escape')
+  expect(await open()).toEqual(['false', 'false', 'false'])
+  await rows.nth(2).click()
+  await expect(section.locator('#paid-panel-well')).toBeVisible()
+  await expect(section.locator('#paid-panel-well [role="img"][aria-label="Prolific"]')).toBeVisible()
+  await expect(section.locator('#paid-panel-well [role="img"][aria-label="CloudResearch Connect"]')).toBeVisible()
+  await section.locator('.src-head h2').click()
+  expect(await open()).toEqual(['false', 'false', 'false'])
+  // The join screen is the real player's: its words, what is recorded and Start.
+  await rows.nth(0).click()
+  const join = section.locator('#link-well .uit-join')
+  await expect(join).toContainText('Weekboard asked for your help with one thing on their site.')
+  await expect(join.getByRole('button', { name: 'Start' })).toBeVisible()
+  // The open row and its well run edge to edge on the surface: their paint covers the whole window width.
+  const edge = await section.locator('#link-well').evaluate(node => { const style = getComputedStyle(node); return { clip: style.clipPath, shadow: style.boxShadow } })
+  expect(edge.clip).toContain('inset')
+  expect(edge.shadow).toMatch(/0px 0px 0px \d+px/)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  const header = section.locator('.src-cols')
+  if (width === 1440) {
+    // Scrolled past, the header sticks to the top of the window on the canvas, and the stuck state shows.
+    await rows.nth(0).click()
+    await page.evaluate(() => { const table = document.querySelector('.src-table')!; scrollTo(0, table.getBoundingClientRect().top + scrollY + 160) })
+    await expect(header).toHaveClass(/is-stuck/)
+    expect(Math.round((await header.boundingBox())!.y)).toBe(0)
+  } else {
+    // On a phone the header goes and each cell carries its column's name.
+    await expect(header).toBeHidden()
+    await expect(rows.nth(0).locator('.src-k').first()).toBeVisible()
+    await expect(rows.nth(0).locator('.src-k').first()).toHaveText('Who')
+  }
+  expect((await new AxeBuilder({ page }).include('section[aria-labelledby="people"]').analyze()).violations).toEqual([])
+  expect(errors).toEqual([])
+})
+
 for (const width of [1440, 375]) test(`hover, focus and active never move anything at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1000 })
   await page.goto('/')
@@ -313,7 +375,7 @@ for (const width of [1440, 375]) test(`hover, focus and active never move anythi
     await row.hover()
     expect(await row.boundingBox(), `flow row ${i + 1} hover`).toEqual(before)
   }
-  const targets = ['.moment-press', '.attempt-index a', '.attempt-fold summary', '.finding-toggle', '.cell.hit', '.watch-moment', '.copy-control', '.button', '.visitor-prompt button', '.check-row a', '.nav-links a', '.stepper .nextb', '.option-card', '.dashboard tbody tr']
+  const targets = ['.moment-press', '.attempt-index a', '.attempt-fold summary', '.finding-toggle', '.cell.hit', '.watch-moment', '.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.check-row a', '.nav-links a', '.stepper .nextb', '.dashboard tbody tr']
   for (const selector of targets) {
     const target = page.locator(selector).first()
     await target.scrollIntoViewIfNeeded()

@@ -14,7 +14,7 @@ export { weekboardChrome, type ChromeInput } from './player-styles.ts'
 /** What is captured for the attempt. Interactions always; screen, voice and webcam each only with consent. */
 export type RecordingState = { events: true; screen: boolean; voice: boolean; webcam: boolean }
 /** The participant view served by the collector; see `participantView` for the allowlist. */
-type Participant = { id: string; author: string; name: string; status: string; scenario: string; tasks: string[]; start: string; timeBox: number; extended: boolean; startedAt: number; sequence: { index: number; total: number }; askConfidence: boolean; video: boolean; recording: RecordingState; screener: ScreenerScreen[]; screened: boolean; impression: { page: string; flashMs: number; question: string } | null; impressed: boolean; verificationReady: boolean; validation?: { question: string; choices: string[] }; accent?: string }
+type Participant = { id: string; author: string; name: string; status: string; scenario: string; tasks: string[]; start: string; timeBox: number; extended: boolean; startedAt: number; sequence: { index: number; total: number }; askConfidence: boolean; video: boolean; recording: RecordingState; screener: ScreenerScreen[]; screened: boolean; impression: { page: string; flashMs: number; question: string; goal?: string } | null; source?: 'link' | 'prolific' | 'connect' | 'intercept'; minutes?: number; impressed: boolean; verificationReady: boolean; validation?: { question: string; choices: string[] }; accent?: string }
 /** One screener question as the participant sees it: words and choices, never labels or rules. */
 export type ScreenerScreen = { question: string; kind: 'single' | 'multi'; options: string[] }
 const endpoint = '/api/ui-tests'
@@ -88,6 +88,44 @@ export function ScenarioCard({ scenario, onStart, index = 1, total = 1, level = 
     <p className="uit-scenario">{scenario}</p>
     <Ending />
     <button className="uit-primary" disabled={busy} onClick={onStart}>Start task</button>
+  </section>
+}
+
+/**
+ * The join screen: the first thing a person sees when they open your link (design/artefacts/sources-section.html, the link's picture).
+ * Who asked and for how long, what the attempt is, that the site is tested and not them, what is recorded, then Start. The screener
+ * comes next ("A few questions about you first"), then the consent. The screen video line shows only when the run records it.
+ */
+export function JoinSheet({ name = 'this website', minutes, video = false, onStart, busy = false, level = 2, chrome, accent }: { name?: string; minutes: number; video?: boolean; onStart?: () => void; busy?: boolean; level?: 1 | 2 | 3; chrome?: ChromeInput; accent?: string }) {
+  const Heading = (['h1', 'h2', 'h3'] as const)[level - 1]
+  return <section className="uit uit-sheet uit-join" style={useChrome(chrome, accent)} data-research-taskbar aria-labelledby="uit-join-title">
+    <PlayerStyles />
+    <p className="uit-progress">{capital(name)} · about {minutes} minutes</p>
+    <Heading id="uit-join-title">{capital(name)} asked for your help with one thing on their site.</Heading>
+    <p>You&apos;ll try it the way you normally would, then answer two short questions. There are no wrong moves. The website is being tested, not you.</p>
+    <ul className="uit-list" aria-label="What is recorded">
+      <li><i aria-hidden="true" /><span>What you do on their page is recorded</span><em>always</em></li>
+      {video && <li><i aria-hidden="true" /><span>Your screen, as a video</span><em>needed</em></li>}
+      <li><i className="uit-off" aria-hidden="true" /><span>Your voice, only if you choose to talk</span><em>optional</em></li>
+    </ul>
+    <div className="uit-actions"><span className="uit-hint">A few questions about you first.</span><button type="button" className="uit-primary" disabled={busy} onClick={onStart}>Start</button></div>
+  </section>
+}
+
+/**
+ * The invitation a visitor sees on your live site when a page has given them trouble twice (PRD 03, intercept; intercept-recruiting.md):
+ * why they were asked, how long, that it is paid, and that the site is tested, not them. One string in PRD 03, this player and the demo.
+ * "No thanks" is never asked again that visit; nothing from before a yes is kept.
+ */
+export const invitation = { title: 'This page seems to be giving you trouble.', body: 'Would you show us where? Five minutes, paid, in your own words. The site is being tested, not you.', accept: 'Sure', decline: 'No thanks' } as const
+/** The invitation's words as one sentence pair, as PRD 03 and the demo carry them. */
+export const invitationText = `${invitation.title} ${invitation.body}`
+export function Invitation({ name = 'this website', onAccept, onDecline, contained = false, chrome, accent }: { name?: string; onAccept?: () => void; onDecline?: () => void; contained?: boolean; chrome?: ChromeInput; accent?: string }) {
+  return <section className={`uit uit-invite${contained ? ' uit-contained' : ''}`} style={useChrome(chrome, accent)} data-research-taskbar role="dialog" aria-label={`Invitation from ${capital(name)}`} aria-describedby="uit-invite-body">
+    <PlayerStyles />
+    <h2>{invitation.title}</h2>
+    <p id="uit-invite-body">{invitation.body}</p>
+    <div className="uit-invite-actions"><button type="button" className="uit-primary" onClick={onAccept}>{invitation.accept}</button><button type="button" onClick={onDecline}>{invitation.decline}</button></div>
   </section>
 }
 
@@ -408,43 +446,105 @@ export function Screener({ screens, onSubmit, busy = false, chrome, accent }: { 
   </form>
 }
 
+/** The first click on the page, as the player saw it: the element, a link's destination, where the page went, and where on the page. */
+export type FirstClick = { target: string; href?: string; after?: string; x: number; y: number }
+/** The first look, as the collector stores it: the words, the appeal rating and the first click (null when they chose not to click). */
+export type ImpressionAnswer = { text: string; clip?: Clip; appeal: number; firstClick: FirstClick | null }
+const appealPoints = 9
 /**
- * The first impression (PRD 02; contract-to-study-research.md): the page flashed for half a second, then one open question, typed or
- * spoken. The purpose it is read against is never shown here, as an option or a hint.
+ * The first impression (PRD 02, "The impression stage"; impression-research.md): the page flashed for half a second, one appeal item on a
+ * 1 to 9 scale (Lindgaard 2006: reliable at 500 ms), the open question, typed or spoken, then the real page back for one first click
+ * toward the first goal, unprimed by the card. The purpose it is read against is never shown here, as an option or a hint. The click is
+ * read from the page itself when it is on the author's own site; on another site only where it landed is kept, and it is coded "couldn't tell".
  */
-export function Impression({ page, flashMs = 500, question = 'What was that page for?', onSubmit, busy = false, chrome, accent }: { page: string; flashMs?: number; question?: string; onSubmit: (answer: { text: string; clip?: Clip }) => void | Promise<void>; busy?: boolean; chrome?: ChromeInput; accent?: string }) {
-  const [phase, setPhase] = useState<'ready' | 'flash' | 'question'>('ready')
+export function Impression({ page, flashMs = 500, question = 'What was that page for?', goal, onSubmit, busy = false, chrome, accent }: { page: string; flashMs?: number; question?: string; goal?: string; onSubmit: (answer: ImpressionAnswer) => void | Promise<void>; busy?: boolean; chrome?: ChromeInput; accent?: string }) {
+  const id = useId()
+  const [phase, setPhase] = useState<'ready' | 'flash' | 'appeal' | 'question' | 'click'>('ready')
   const [loaded, setLoaded] = useState(false)
+  const [appeal, setAppeal] = useState(0)
   const [text, setText] = useState('')
   const [clip, setClip] = useState<Clip>()
   const [consent, setConsent] = useState(false)
   const [live, setLive] = useState(false)
-  const heading = useRef<HTMLLabelElement>(null)
+  const heading = useRef<HTMLElement>(null)
+  const frame = useRef<HTMLIFrameElement>(null)
+  const clicked = useRef(false)
   const style = useChrome(chrome, accent)
-  useEffect(() => { if (phase !== 'flash') return; const timer = setTimeout(() => setPhase('question'), flashMs); return () => clearTimeout(timer) }, [phase, flashMs])
-  useEffect(() => { if (phase === 'question') heading.current?.focus() }, [phase])
+  useEffect(() => { if (phase !== 'flash') return; const timer = setTimeout(() => setPhase('appeal'), flashMs); return () => clearTimeout(timer) }, [phase, flashMs])
+  useEffect(() => { if (phase !== 'ready' && phase !== 'flash') heading.current?.focus() }, [phase])
+  const answer = (firstClick: FirstClick | null) => { if (!busy) void onSubmit({ text, clip: clip && { ...clip, transcript: text || clip.transcript }, appeal, firstClick }) }
+  useEffect(() => {
+    if (phase !== 'click') return
+    // The author's own page: read the element and where the page went. Another site's page cannot be read; the overlay below takes the click instead.
+    let doc: Document | null = null
+    try { doc = frame.current?.contentDocument ?? null } catch { doc = null }
+    if (!doc) return
+    const view = frame.current!.contentWindow!
+    function first(event: MouseEvent) {
+      if (clicked.current) return
+      clicked.current = true
+      // The page lives in its own window, so its elements are not this window's Element: test for the method instead.
+      const node = event.target as Element | null
+      const element = node && typeof node.closest === 'function' ? node.closest('a,button,input,select,textarea,[role=button],[role=link],[role=menuitem]') ?? node : null
+      const href = element?.closest('a')?.href || undefined
+      const x = Math.min(1, Math.max(0, event.clientX / (view.innerWidth || 1))), y = Math.min(1, Math.max(0, event.clientY / (view.innerHeight || 1)))
+      // Wait for a client-side navigation to land before reading where the page went.
+      setTimeout(() => { let after: string | undefined; try { after = view.location.href } catch { after = undefined } answer({ target: element ? targetLabel(element) || element.tagName.toLowerCase() : 'the page', href, after, x, y }) }, 600)
+    }
+    doc.addEventListener('click', first, true)
+    return () => doc?.removeEventListener('click', first, true)
+  }, [phase])
+  const scale = <div className="uit-scale" style={{ '--uit-points': appealPoints } as CSSProperties}>{Array.from({ length: appealPoints }, (_, i) => i + 1).map(n => <label key={n}><input id={`${id}-appeal-${n}`} type="radio" name="appeal" value={n} checked={appeal === n} onChange={() => setAppeal(n)} aria-label={n === 1 ? '1 Not at all appealing' : n === appealPoints ? `${n} Very appealing` : String(n)} /><span aria-hidden="true">{n}</span></label>)}</div>
   return <>
-    {phase !== 'question' && <iframe className={`uit-flash${phase === 'flash' ? ' uit-flash-on' : ''}`} title="The page, shown for half a second" src={page} tabIndex={-1} aria-hidden={phase !== 'flash'} onLoad={() => setLoaded(true)} />}
+    <iframe ref={frame} className={`uit-flash${phase === 'flash' || phase === 'click' ? ' uit-flash-on' : ''}${phase === 'click' ? ' uit-flash-live' : ''}`} title={phase === 'click' ? 'The page, back for one click' : 'The page, shown for half a second'} src={page} tabIndex={phase === 'click' ? 0 : -1} aria-hidden={phase !== 'flash' && phase !== 'click'} onLoad={() => setLoaded(true)} />
     {phase === 'ready' && <section className="uit uit-sheet uit-questions" style={style} data-research-taskbar aria-labelledby="uit-impression-ready">
       <PlayerStyles />
       <p className="uit-progress">First impression</p>
-      <h1 id="uit-impression-ready">You will see a page for half a second, then one question about it.</h1>
+      <h1 id="uit-impression-ready">You will see a page for half a second, then a few questions about it.</h1>
       <div className="uit-actions"><span className="uit-hint">There is no right answer.</span><button className="uit-primary" disabled={!loaded} onClick={() => setPhase('flash')}>Show the page</button></div>
     </section>}
-    {phase === 'question' && <form className="uit uit-sheet uit-questions" style={style} data-research-taskbar onSubmit={event => { event.preventDefault(); if (!busy && !live) void onSubmit({ text, clip: clip && { ...clip, transcript: text || clip.transcript } }) }}>
+    {phase === 'appeal' && <form className="uit uit-sheet uit-questions" style={style} data-research-taskbar onKeyDown={event => { const n = Number(event.key); if (Number.isInteger(n) && n >= 1 && n <= appealPoints && !event.metaKey && !event.ctrlKey && !event.altKey) { event.preventDefault(); setAppeal(n); document.getElementById(`${id}-appeal-${n}`)?.focus() } }} onSubmit={event => { event.preventDefault(); if (appeal) setPhase('question') }}>
+      <PlayerStyles />
+      <h1 className="uit-sr">First impression</h1>
+      <p className="uit-progress">You saw a page for half a second</p>
+      <fieldset className="uit-q">
+        <legend ref={heading as React.Ref<HTMLLegendElement>} tabIndex={-1}>How appealing did that page look?</legend>
+        {scale}
+        <div className="uit-anchors" aria-hidden="true"><span>Not at all appealing</span><span>Very appealing</span></div>
+      </fieldset>
+      <div className="uit-actions"><span className="uit-hint">Press a number key, or tap.</span><button type="submit" className="uit-primary" disabled={!appeal}>Next</button></div>
+    </form>}
+    {phase === 'question' && <form className="uit uit-sheet uit-questions" style={style} data-research-taskbar onSubmit={event => { event.preventDefault(); if (!live) setPhase('click') }}>
       <PlayerStyles />
       <h1 className="uit-sr">First impression</h1>
       <p className="uit-progress">You saw a page for half a second</p>
       <div className="uit-q">
-        <label className="uit-label" htmlFor="uit-impression" ref={heading} tabIndex={-1}>{question}</label>
+        <label className="uit-label" htmlFor="uit-impression" ref={heading as React.Ref<HTMLLabelElement>} tabIndex={-1}>{question}</label>
         <textarea id="uit-impression" maxLength={5000} rows={3} readOnly={live} placeholder="In your own words. There is no right answer." value={text} onChange={event => setText(event.target.value)} />
       </div>
       <div className="uit-actions">
         <TalkInstead consent={consent} onConsent={() => setConsent(true)} clip={clip} onClip={setClip} onTranscript={setText} onLive={setLive} />
-        <button type="submit" className="uit-primary" disabled={busy || live}>Next</button>
+        <button type="submit" className="uit-primary" disabled={live}>Next</button>
       </div>
     </form>}
+    {phase === 'click' && <>
+      {/* Another site's page cannot be read from here: a clear layer over it takes the one click and keeps only where it landed. */}
+      <FirstClickLayer frame={frame} onClick={click => { if (!clicked.current) { clicked.current = true; answer(click) } }} />
+      <section className="uit uit-sheet uit-first-click" style={style} data-research-taskbar aria-labelledby={`${id}-click`}>
+        <PlayerStyles />
+        <p className="uit-progress">The page is back</p>
+        <h1 id={`${id}-click`} ref={heading as React.Ref<HTMLHeadingElement>} tabIndex={-1}>{goal ? `Where would you click first to ${goal}?` : 'Where would you click first?'}</h1>
+        <div className="uit-actions"><span className="uit-hint">Click once on the page.</span><button type="button" className="uit-quiet" disabled={busy} onClick={() => { if (!clicked.current) { clicked.current = true; answer(null) } }}>I wouldn&apos;t click anything</button></div>
+      </section>
+    </>}
   </>
+}
+/** A clear layer over a page the player cannot read, for its first click; absent when the page is the author's own. */
+function FirstClickLayer({ frame, onClick }: { frame: React.RefObject<HTMLIFrameElement | null>; onClick: (click: FirstClick) => void }) {
+  const [readable, setReadable] = useState(true)
+  useEffect(() => { try { setReadable(!!frame.current?.contentDocument) } catch { setReadable(false) } }, [frame])
+  if (readable) return null
+  return <div className="uit-click-layer" data-research-taskbar aria-hidden="true" onClick={event => { const box = event.currentTarget.getBoundingClientRect(); onClick({ target: 'a point on the page', x: (event.clientX - box.left) / (box.width || 1), y: (event.clientY - box.top) / (box.height || 1) }) }} />
 }
 
 async function base64(blob: Blob) {
@@ -561,6 +661,9 @@ export function Player({ runId, token }: { runId: string; token?: string }) {
     }, 250)
     return () => clearInterval(timer)
   }, [stage])
+  // Someone who opens your link meets the join screen first; a rehearsal on your own machine starts at the consent.
+  const joined = useRef(false)
+  useEffect(() => { if (run?.source === 'link' && run.status === 'created' && stage === 'consent' && !joined.current) setStage('join') }, [run, stage])
   const chrome = useChrome(undefined, run?.accent)
   const recording = run ? { ...run.recording, voice: run.recording.voice || voice.recorded } : { events: true as const, screen: false, voice: false, webcam: false }
   /** Sends one stage's answers and moves on, keeping the person on the stage if it cannot be saved. */
@@ -570,7 +673,8 @@ export function Player({ runId, token }: { runId: string; token?: string }) {
   }
   const name = run?.name ?? 'this website'
   let body: ReactNode = null
-  if (stage === 'consent') body = <section className="uit-sheet uit-consent" aria-labelledby="uit-consent-title">
+  if (stage === 'join' && run) body = <JoinSheet level={1} name={run.name} minutes={run.minutes ?? 10} video={run.video} accent={run.accent} onStart={() => { joined.current = true; setStage('consent') }} />
+  else if (stage === 'consent') body = <section className="uit-sheet uit-consent" aria-labelledby="uit-consent-title">
     {/* Consent (player-chrome.html): what is always recorded first, in plain words, then the screen as video only when the author wrote
         video: true, voice the person's choice, the camera off (Maze lists required and optional; Optimal Workshop lets each be declined).
         "The website is being tested, not you" and "you can stop at any time" (Loop11; Optimal Workshop). The purpose is not shown:
@@ -588,9 +692,9 @@ export function Player({ runId, token }: { runId: string; token?: string }) {
     <div className="uit-actions"><button className="uit-quiet" aria-expanded={details} aria-controls="uit-recorded" onClick={() => setDetails(!details)}>What is recorded?</button><button className="uit-primary" disabled={!run || busy} onClick={() => save({ action: 'consent', id: runId, token }, nextStage)}>Continue</button></div>
   </section>
   else if (stage === 'screener' && run) body = <><h1 className="uit-sr">A few questions first</h1><Screener accent={run.accent} screens={run.screener} busy={busy} onSubmit={answers => save({ action: 'screener', answers }, nextStage)} /></>
-  else if (stage === 'impression' && run?.impression) body = <Impression accent={run.accent} page={run.impression.page} flashMs={run.impression.flashMs} question={run.impression.question} busy={busy} onSubmit={async ({ text, clip }) => {
+  else if (stage === 'impression' && run?.impression) body = <Impression accent={run.accent} page={run.impression.page} flashMs={run.impression.flashMs} question={run.impression.question} goal={run.impression.goal} busy={busy} onSubmit={async ({ text, clip, appeal, firstClick }) => {
     if (clip) { try { await send({ action: 'voice', question: 'impression', mime: clip.mime, audio: await base64(clip.blob), transcript: clip.transcript, seconds: clip.seconds }) } catch (err) { setError(String(err)); return } }
-    await save({ action: 'impression', answer: text, spoken: !!clip }, nextStage)
+    await save({ action: 'impression', answer: text, spoken: !!clip, appeal, firstClick }, nextStage)
   }} />
   // "Start task" opens the goal's start: where the person lands, never the path the author expects them to take.
   else if (stage === 'scenario' && run) body = <ScenarioCard level={1} accent={run.accent} scenario={run.scenario} index={run.sequence.index} total={run.sequence.total} busy={busy} onStart={async () => { setBusy(true); try { await send({ action: 'begin' }); location.assign(run.start) } catch (err) { setError(String(err)); setBusy(false) } }} />

@@ -1,7 +1,7 @@
 import { z } from 'zod'
 import { SQLiteAdapter, recordingRetentionMs, type Run, type StorageAdapter } from './storage.ts'
 import { screenerScreens } from './screener.ts'
-import { codeImpression } from './impression.ts'
+import { codeFirstClick, codeImpression } from './impression.ts'
 
 /**
  * Projects a run onto what the participant may see. An explicit allowlist: no compiler data, answers, hooks, trace or happy paths
@@ -14,9 +14,10 @@ export function participantView(run: Run) {
   const neutral = (text: string) => text.replace(/ui-tests/gi, 'this tool')
   const sequence = run.sequence ?? { index: 1, total: 1 }
   const first = sequence.index === 1
-  const impression = first && run.context.impression ? { page: run.context.impression.page, flashMs: run.context.impression.flashMs, question: run.context.impression.question } : null
+  // The first click is asked toward the first goal, in the goal's own words (never the path); the card comes after.
+  const impression = first && run.context.impression ? { page: run.context.impression.page, flashMs: run.context.impression.flashMs, question: run.context.impression.question, goal: neutral(run.context.goals[0].name) } : null
   // Confidence is asked only when the outcome cannot be verified by the end state or a validation question (MeasuringU: self-reported completion is never a success rate).
-  return { id: run.id, author: neutral(run.context.author), name: neutral(run.context.siteName ?? 'this website'), status: run.status, scenario: neutral(goal.scenario.text), tasks: goal.tasks.map(t => neutral(t.name)), start: goal.start?.path ?? '/', timeBox: goal.timeBox.seconds + (run.extendedSeconds ?? 0), extended: !!run.extendedSeconds, startedAt: run.startedAt, sequence, askConfidence: !goal.hasOutcome, video: !!run.context.recording?.video, recording: run.recording ?? { events: true, screen: false, voice: false, webcam: false }, screener: first && run.context.screener ? screenerScreens(run.context.screener).map(screen => ({ ...screen, question: neutral(screen.question), options: screen.options.map(neutral) })) : [], screened: !!run.screener, impression, impressed: !!run.impression, verificationReady: !!run.result, validation: pending ? { question: pending.question, choices: pending.choices } : undefined, accent: run.context.accent }
+  return { id: run.id, source: run.source, minutes: Math.ceil(run.context.goals.reduce((total, g) => total + g.timeBox.seconds, 0) / 60) + 5, author: neutral(run.context.author), name: neutral(run.context.siteName ?? 'this website'), status: run.status, scenario: neutral(goal.scenario.text), tasks: goal.tasks.map(t => neutral(t.name)), start: goal.start?.path ?? '/', timeBox: goal.timeBox.seconds + (run.extendedSeconds ?? 0), extended: !!run.extendedSeconds, startedAt: run.startedAt, sequence, askConfidence: !goal.hasOutcome, video: !!run.context.recording?.video, recording: run.recording ?? { events: true, screen: false, voice: false, webcam: false }, screener: first && run.context.screener ? screenerScreens(run.context.screener).map(screen => ({ ...screen, question: neutral(screen.question), options: screen.options.map(neutral) })) : [], screened: !!run.screener, impression, impressed: !!run.impression, verificationReady: !!run.result, validation: pending ? { question: pending.question, choices: pending.choices } : undefined, accent: run.context.accent }
 }
 /** Extra time granted once per attempt when the participant asks for it: half the time box, at least a minute. */
 export function extension(run: Run) { return Math.max(60, Math.round(run.context.goals[run.goalIndex].timeBox.seconds / 2)) }
@@ -27,7 +28,7 @@ const event = z.object({ type: z.enum(['click', 'url', 'scroll', 'input', 'pause
 const message = z.discriminatedUnion('action', [
   z.object({ action: z.literal('consent'), id: z.string(), token: z.string() }),
   z.object({ action: z.literal('screener'), answers: z.array(z.array(z.string().max(200)).max(12)).max(12) }),
-  z.object({ action: z.literal('impression'), answer: z.string().max(5000), spoken: z.boolean() }),
+  z.object({ action: z.literal('impression'), answer: z.string().max(5000), spoken: z.boolean(), appeal: z.number().int().min(1).max(9).optional(), firstClick: z.object({ target: z.string().max(300), href: z.string().max(2000).optional(), after: z.string().max(2000).optional(), x: z.number().min(0).max(1), y: z.number().min(0).max(1) }).strict().nullable().optional() }),
   z.object({ action: z.literal('begin') }),
   z.object({ action: z.literal('events'), events: z.array(event).max(100) }),
   z.object({ action: z.literal('end'), reason: z.enum(['done', "couldn't do this", 'abandoned early', 'ran out of time']), snapshot }),
@@ -81,8 +82,11 @@ export function createCollector(getStorage: () => StorageAdapter = () => new SQL
           if (run.status !== 'consented') return new Response('The first impression comes after consent and before the task', { status: 409 })
           // The code is proposed here, beside the words; it never goes back to the participant and a reviewer can change it in the trace.
           // Once per session, as the screener: an identical retry is accepted, a different answer refused.
-          if (!run.impression) run.impression = { answer: body.answer, spoken: body.spoken, code: codeImpression(body.answer, run.context.purpose) }
-          else if (run.impression.answer !== body.answer || run.impression.spoken !== body.spoken) return new Response('The first impression was already answered', { status: 409 })
+          // The first click is coded against the first goal's happy path from where it starts; the code, too, stays on the author's side.
+          const goal = run.context.goals[0]
+          const firstClick = body.firstClick === undefined ? undefined : body.firstClick && { ...body.firstClick, code: codeFirstClick(body.firstClick, goal.happyPath, goal.start?.path) }
+          if (!run.impression) run.impression = { answer: body.answer, spoken: body.spoken, code: codeImpression(body.answer, run.context.purpose), appeal: body.appeal, firstClick }
+          else if (run.impression.answer !== body.answer || run.impression.spoken !== body.spoken || run.impression.appeal !== body.appeal || JSON.stringify(run.impression.firstClick) !== JSON.stringify(firstClick)) return new Response('The first impression was already answered', { status: 409 })
         } else if (body.action === 'begin') {
           if (run.status !== 'consented') return new Response('Consent is required before beginning', { status: 409 })
           run.status = 'active'; run.startedAt = Date.now()

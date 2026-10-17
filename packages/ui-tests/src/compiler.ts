@@ -15,7 +15,7 @@ export const rule = {
   start: 'goal start, else the first page of happyPath, else the target root',
   timeBox: 'max(180, (happy-path length or task count or 1) × 90) seconds',
   sample: 'ceil(log(1-confidence) / log(1-prevalence))',
-  impression: 'the page flashed for 500 ms, then one open question; answers coded against the purpose, which the person never sees',
+  impression: 'the page flashed for 500 ms, one appeal rating from 1 to 9, one open question coded against the purpose, which the person never sees, then the page back for a first click toward the first goal, coded against its happyPath',
   recording: 'event replay always; video: true adds the screen as a video, the browser prompt and a 1.5× incentive',
 }
 /** Deterministic scenario text from the goal and fixture names; the happy path is never an input. The fallback when the card cannot be derived from users and purpose. */
@@ -115,7 +115,7 @@ export function compile(contexts: Context[]) {
       // The chrome's one accent and the name the participant reads, set by the author under `chrome:` in the config; never sampled from the host page.
       accent: undefined as string | undefined, siteName: undefined as string | undefined,
       recording: { video, level: video ? 'event replay and screen video' : 'event replay', incentive: video ? 1.5 : 1, line: recordingLine(video), rule: rule.recording },
-      impression: c.impression === false ? null : { page: c.impression?.page ?? startOf(c.goals[0]), flashMs: 500, question: 'What was that page for?', codedAgainst: 'purpose', rule: rule.impression },
+      impression: c.impression === false ? null : { page: c.impression?.page ?? startOf(c.goals[0]), flashMs: 500, appeal: { question: 'How appealing did that page look?', points: 9 }, question: 'What was that page for?', codedAgainst: 'purpose', firstClick: { toward: c.goals[0].name, codedAgainst: 'happyPath' }, rule: rule.impression },
       screener: draft ? deriveScreener(draft.facts, c.purpose, 'inferred', draft.inferred) : deriveScreener(usersFacts(c.users), c.purpose),
       goals: c.goals.map((g, index) => {
         const planned = sampleSize(g.options.catch?.affecting, g.options.catch?.confidence)
@@ -135,9 +135,25 @@ export function compile(contexts: Context[]) {
 }
 /** A compiled context as written to `context.json` and stored with each run. */
 export type CompiledContext = ReturnType<typeof compile>[number]
-/** The plan a run prints before anything starts: people, recording level, and each goal with where it starts. */
-export function plan(compiled: CompiledContext[]) {
-  return compiled.flatMap(c => [`${c.name}`, `  ${c.recording.line}`, ...c.goals.map(g => `  Goal: ${g.name} · starts at ${g.start.path} · ${g.sample.planned} people`)]).join('\n')
+/** Where the paid panel finds people (PRD 03, Sources): the run's router spreads invitations across both under the cap. */
+export const panels = ['Prolific', 'CloudResearch Connect'] as const
+/** The run's one deadline sentence: the default deadline, said as a deadline, never a promise of when people arrive. */
+export const deadlineSentence = 'The run closes at its deadline, 48 hours unless you set one.'
+/** How long people take, from the desk research (sources-desk-research.md, "Realistic turnaround"), never the deadline. */
+export const timeStatement = 'First people within minutes. Usually all five within a few hours; a narrow audience a day or more'
+/**
+ * Where the people come from, as `run` prints it: your link, and the paid panel on Prolific and CloudResearch Connect under the cap,
+ * each person labelled with the one they came from; then how long it takes and the deadline.
+ */
+export function peopleLines(planned: number, cap?: number) {
+  return [
+    `  People: ${planned} · your link, to anyone you send it to, or the paid panel on ${panels.join(' and ')}: invitations spread across both ${cap ? `under your $${cap} cap` : 'under the cap you set (budget: { max: 70 } holds five with the reserve)'}, each person labelled with the one they came from.`,
+    `  Time: ${timeStatement.replace('all five', `all ${planned}`)}. ${deadlineSentence}`,
+  ]
+}
+/** The plan a run prints before anything starts: recording level, each goal with where it starts, and, for `run`, where the people come from. */
+export function plan(compiled: CompiledContext[], people?: { cap?: number }) {
+  return compiled.flatMap(c => [`${c.name}`, `  ${c.recording.line}`, ...c.goals.map(g => `  Goal: ${g.name} · starts at ${g.start.path} · ${g.sample.planned} people`), ...(people ? peopleLines(Math.max(...c.goals.map(g => g.sample.planned)), people.cap) : [])]).join('\n')
 }
 /** Bundles a `*.ui.test.ts` file with esbuild, evaluates it, lints it and writes `context.json`. Returns the authored contexts, the compiled contexts, the diagnostics and the hooks bundle path the CLI later imports. */
 export async function compileFile(file: string, output: string) {

@@ -139,26 +139,39 @@ At 375:
 
 The code windows wrap at 375 rather than scroll sideways; the line numbers stay in their gutter.
 
-### L4 · Section + OptionsRow
+### L4 · Sources: where the people come from
 
-**Rule.** Three OptionCards of 4 columns each, equal height (the row stretches), no table. Each card: name with icon, the who sentence, the mini UI, then cost and timing as a two-item footer. No caption, no empty columns.
+**Rule.** Round seven (issue #31), from [`../../design/artefacts/sources-section.html`](../../design/artefacts/sources-section.html). The heading and lead stacked in one column at most 64ch wide (the lead under the heading, not beside it). Then a table across all 12 columns, built on its own track rather than the 12 columns: the icon 28 px, then Source 3fr, Who 3fr, Cost 2fr, Time 2fr, Good for 2fr, and the chevron 24 px, 24 px gutters. At 1440 that gives the icon 28, Source 265, Who 265, Cost 177, Time 177, Good for 177 and the chevron 24 (1248 in all). The header row sticks to the top on the canvas once scrolled past. Each row is at least 152 px tall with its cells centred, rows of equal height; the free-text column is the name's own line (`what`), under the name. One row is open at a time: the row and its well take the surface edge to edge (the full width of the window, drawn as a clipped shadow so nothing overflows), and the underlines next to it are hidden. The well splits 5 / 7 with a 32 px gap: how it works and the caveat on the left, starting under the name column (indented by the icon's 28 and one gutter), the picture on the right. Empty area: the open well's left column is shorter than the picture by up to about 120 px; nothing else in the block is empty, so empty < artefact.
 
 At 1440:
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
-[Section heading                      ] [lead                                                 ]  head
-[OptionCard: Your link        ] [OptionCard: A panel          ] [OptionCard: Your visitors    ]  cards · 380, equal height
+[Section heading                                    ]                                            head · 96 above
+[lead under it, 64ch                                ]                                            lead · 90, then 28
+[ic|Source        |Who           |Cost      |Time      |Good for            |v ]               header · 40, sticky
+[ic|name + what   |who           |cost+note |time+note |good for            |^ ]               row · 152 (open, surface edge to edge)
+[  |How it works: 3 steps, caveat (5/12)  ] [picture: join / invitation / fill (7/12)        ]  well · 40 + 430 + 48
+[ic|name + what   |who           |cost+note |time+note |good for            |v ]               row · 152
+[ic|name + what   |who           |cost+note |time+note |good for            |v ]               row · 152
 ```
 
 At 375:
 
 ```text
 |----------------------------------------------------| 327 px, one column
-| Section heading, lead                              |
-| OptionCard: Your link                              |
-| OptionCard: A panel                                |
-| OptionCard: Your visitors                          |
+| Section heading                                    |
+| lead                                               |
+| (no header row)                                    |
+| per source, a card:                                |
+|   ic | name, what                            | v   |
+|      | WHO · who                                   |
+|      | COST · cost, its note                       |
+|      | TIME · time, its note                       |
+|      | GOOD FOR · good for                         |
+|   open well, one column, surface edge to edge:     |
+|   How it works: 3 steps, caveat                    |
+|   picture (frame fits its sheet; the fill stacks)  |
 ```
 
 ### L5 · Section + ChecksBox + FindingsList

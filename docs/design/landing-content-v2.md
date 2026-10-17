@@ -1,6 +1,6 @@
 # Landing content, version 2
 
-**Superseded** by [`landing-content-v3.md`](landing-content-v3.md), which is the approved copy; kept for the record. The 87% sentence in this draft is dropped in version 3: the approved page states only the problems found and their counts, because a run may mix link, panel and struggle-triggered visitors, and the detection probability holds only for a sample that meets its occurrence and sampling assumptions.
+**Superseded** by [`landing-content-v3.md`](landing-content-v3.md), which is the approved copy; kept for the record. Its sources figures were corrected in round seven (issue #31), which found the old ones contradicted by the research ([`../discovery/sources-research.md`](../discovery/sources-research.md)). The 87% sentence in this draft is dropped in version 3: the approved page states only the problems found and their counts, because a run may mix link, panel and struggle-triggered visitors, and the detection probability holds only for a sample that meets its occurrence and sampling assumptions.
 
 The page as a document, block by block in reading order. Every example artefact is invented content in the product's real formats and carries the label "Example run" once in its frame.
 
@@ -188,8 +188,8 @@ Under it: Fix problem 3 first. Two people believed they had finished, and their 
 | | Who | Cost | Results |
 | --- | --- | --- | --- |
 | Your link | Anyone you send it to: customers, a community, the person at the next desk | Free | As each person finishes |
-| A panel | Five people matched to `users`, found for you | About $54 in participant pay for a five-minute task. You set the cap. | Within 48 hours, usually faster |
-| Your visitors | On the hosted version: people already on your live site, invited at the moment they are visibly struggling | Free | As each person finishes |
+| A panel | Five people matched to `users`, found for you | About $55 for five on Prolific and CloudResearch Connect, under a cap of $70 that holds the reserve. | First people within minutes; usually all five within a few hours |
+| Your visitors | On the hosted version: people already on your live site, invited when a page has given them trouble twice | Paid like the panel, under a daily cap you set | Depends on your traffic |
 
 ---
 
@@ -314,7 +314,7 @@ You see:
 ```text
 Run 7f3a started
 Share this link: https://ui-tests.com/t/7f3a
-Panel: 5 people · cap $60 · results within 48 hours
+Paid panel: 5 people · cap $70 · first people within minutes
 ```
 
 Then, when the attempts are in, `npx ui-tests report 7f3a`:

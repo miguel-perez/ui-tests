@@ -101,20 +101,20 @@ async function main() {
   const result = await compileFile(file, path.join(dataDirectory(), 'compiled'))
   for (const d of result.diagnostics) console.log(`${d.severity} [${d.rule}] ${d.source}\n  ${d.reason} Fix: ${d.fix}${d.draft ? `\n\n${d.draft.replace(/^/gm, '  ')}\n` : ''}`)
   if (result.diagnostics.some(d => d.severity === 'error')) throw new Error('Lint failed; fix the rules above before starting dev mode.')
-  // The plan: who, what is recorded and where each goal starts, before anything runs.
-  console.log(plan(result.compiled))
-  if (command === 'lint') { console.log(`Compiled ${file}: ${result.bundle.replace(/hooks-.*$/, 'context.json')}`); return }
-  if (command === 'run') throw new Error('Runs with people are not part of this slice yet. npx ui-tests rehearses the plan above on you.')
-  if (command !== 'dev') throw new Error(`Unknown command: ${command}`)
-  const store = new SQLiteAdapter()
   const configFile = path.resolve('ui-tests.config.ts')
-  let config: { target: { url: string }; author?: string; chrome?: { accent?: string; name?: string } } = { target: { url: 'http://localhost:3000' } }
-  if (await exists(configFile)) {
+  let config: { target: { url: string }; author?: string; chrome?: { accent?: string; name?: string }; budget?: { max?: number } } = { target: { url: 'http://localhost:3000' } }
+  if (command !== 'lint' && await exists(configFile)) {
     // Compile config to ESM too: host apps need not set package.json type=module.
     const configBundle = result.bundle.replace('hooks-', 'config-')
     await build({ entryPoints: [configFile], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: configBundle })
     config = (await import(pathToFileURL(configBundle).href)).default
   }
+  // The plan: who, what is recorded and where each goal starts, before anything runs; `run` adds where the people come from and the cap.
+  console.log(plan(result.compiled, command === 'run' ? { cap: config.budget?.max } : undefined))
+  if (command === 'lint') { console.log(`Compiled ${file}: ${result.bundle.replace(/hooks-.*$/, 'context.json')}`); return }
+  if (command === 'run') throw new Error('Runs with people are not part of this slice yet. npx ui-tests rehearses the plan above on you.')
+  if (command !== 'dev') throw new Error(`Unknown command: ${command}`)
+  const store = new SQLiteAdapter()
   const selectedContext = option('--context'), selectedGoal = option('--goal')
   const pending = result.compiled.flatMap((compiled, contextIndex) => compiled.goals.map((_, goalIndex) => ({ compiled, contextIndex, goalIndex })))
     .filter(entry => (selectedContext === undefined || entry.contextIndex === Number(selectedContext)) && (selectedGoal === undefined || entry.goalIndex === Number(selectedGoal)))

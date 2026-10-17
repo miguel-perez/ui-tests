@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { parseHTML } from 'linkedom'
-import { was, shown, offences } from './vocabulary'
+import { was, shown, offences, verbatim } from './vocabulary'
 
 const exec = promisify(execFile)
 
@@ -24,9 +24,16 @@ it('finds none of the old words in apps/web, packages/ui-tests/src or the genera
   const found: string[] = []
   for (const file of [...await files('apps/web'), ...await files('packages/ui-tests/src')]) {
     const text = await readFile(file, 'utf8')
-    text.split('\n').forEach((line, index) => { for (const name of offences(line, was)) found.push(`${file}:${index + 1} ${name}`) })
+    // The sources section's verbatim phrases are taken out first; everything else on the line is still checked.
+    text.split('\n').forEach((line, index) => { const rest = verbatim.reduce((left, phrase) => left.replaceAll(phrase, ''), line.replaceAll("\\'", "'")); for (const name of offences(rest, was)) found.push(`${file}:${index + 1} ${name}`) })
   }
   expect(found).toEqual([])
+})
+
+it('keeps every verbatim exception in the sources artefact, word for word', async () => {
+  // The artefact is a fragment without a body: its words are the markup with the tags taken out.
+  const artefact = (await readFile('design/artefacts/sources-section.html', 'utf8')).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')
+  for (const phrase of verbatim) expect(artefact, phrase).toContain(phrase)
 })
 
 it('renders every terminal surface and fragment in the new words only', async () => {

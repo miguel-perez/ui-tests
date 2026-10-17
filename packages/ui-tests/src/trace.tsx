@@ -55,11 +55,13 @@ export function renderTrace(run: Run, events: Event[], recordings?: Pick<Storage
     })}
     {run.context.impression && <>
       <h2>First impression</h2>
-      <p>{run.context.impression.page} was flashed for {run.context.impression.flashMs} ms, then: “{run.context.impression.question}”</p>
+      <p>{run.context.impression.page} was flashed for {run.context.impression.flashMs} ms, then one appeal rating, “{run.context.impression.question}”, and the page back for a first click.</p>
       {run.impression ? <>
         <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>Their words{run.impression.spoken ? ', spoken' : ''}: {run.impression.answer || 'none'}</p>
         <p>Read against the purpose, “{run.context.purpose}”: <select aria-label="How the answer reads against the purpose" defaultValue={run.impression.code.code}><option>named the purpose</option><option>did not name it</option><option>no answer</option></select> · words in common: {run.impression.code.matched.join(', ') || 'none'} · proposed by {run.impression.code.proposedBy}; change it here if it reads wrong.</p>
         <p>Rule: {run.impression.code.rule}</p>
+        <p>How appealing the page looked: {run.impression.appeal ? `${run.impression.appeal} of 9` : 'not asked'} (9 = very appealing). A covariate beside the problems, never a result.</p>
+        {run.impression.firstClick !== undefined && <p>First click, toward “{run.context.goals[0].name}”: {run.impression.firstClick ? <>{run.impression.firstClick.target}{run.impression.firstClick.href ? ` → ${run.impression.firstClick.href}` : ''} · <select aria-label="Where the first click led" defaultValue={run.impression.firstClick.code.code}><option>on your path</option><option>off your path</option><option>couldn&apos;t tell</option></select> · rule: {run.impression.firstClick.code.rule}</> : 'they chose not to click'}</p>}
       </> : <p>Not answered yet.</p>}
     </>}
     <h2>Their path and yours</h2><pre>{JSON.stringify({ theirs: events.filter(e => e.type === 'url').map(e => e.url), yours: goal.happyPath }, null, 2)}</pre>

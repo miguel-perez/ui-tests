@@ -50,9 +50,18 @@ async function begin(page: Page, impression = 'A way to find out whether people 
     await page.locator('.uit-choices label').first().click()
     await page.getByRole('button', { name: 'Next', exact: true }).click()
   }
-  // The first impression: the page for half a second, then one open question; the purpose is nowhere on the screen.
-  await expect(page.getByRole('heading', { name: 'You will see a page for half a second, then one question about it.' })).toBeVisible()
+  // The first impression: the page for half a second, one appeal rating from 1 to 9, one open question, then the page back for one
+  // first click toward the goal; the purpose is nowhere on the screen.
+  await expect(page.getByRole('heading', { name: 'You will see a page for half a second, then a few questions about it.' })).toBeVisible()
   await page.getByRole('button', { name: 'Show the page' }).click({ timeout: 15_000 })
+  await expect(page.getByRole('group', { name: 'How appealing did that page look?' })).toBeVisible()
+  await expect(page.locator('.uit-scale input')).toHaveCount(9)
+  await expect(page.locator('.uit-scale input:checked')).toHaveCount(0)
+  await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled()
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  await page.keyboard.press('7')
+  await expect(page.locator('.uit-scale input:checked')).toHaveValue('7')
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
   const answer = page.getByLabel('What was that page for?')
   await expect(answer).toBeVisible()
   await expect(answer).toHaveAttribute('placeholder', 'In your own words. There is no right answer.')
@@ -60,6 +69,9 @@ async function begin(page: Page, impression = 'A way to find out whether people 
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   await answer.fill(impression)
   await page.getByRole('button', { name: 'Next', exact: true }).click()
+  // The page is back for one click, asked toward the goal in its own words.
+  await expect(page.getByRole('heading', { name: /^Where would you click first to [a-z ]+\?$/ })).toBeVisible()
+  await page.frameLocator('iframe.uit-flash').getByRole('link', { name: 'Get started', exact: true }).first().click()
   await expect(page.getByRole('heading', { level: 1, name: 'Task 1 of 1' })).toBeVisible()
   await expect(page.getByText("When you think you've finished, press Done. If you get stuck, press I couldn't do this.")).toBeVisible()
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
@@ -184,6 +196,10 @@ test('keyboard rehearsal, privacy projection, a click that did nothing, off your
   expect(html).toContain('Their words: A way to find out whether people can use what I built')
   expect(html).toContain('words in common: find, out, whether, people, use, built')
   expect(html).toContain('proposed by word overlap (no model configured)')
+  // The appeal rating and the first click, coded against the happy path.
+  expect(html).toContain('How appealing the page looked: 7 of 9')
+  expect(html).toMatch(/First click, toward “start trying ui-tests”: a\S*[^·]*→ http:\/\/localhost:3000\/docs\/getting-started/)
+  expect(await (await request.get(trace)).text()).toMatch(/aria-label="Where the first click led"[^>]*>\s*<option[^>]*selected[^>]*>on your path</)
   expect(html).toContain('What made it difficult: I could not tell where people were added.')
   expect(html).toContain('After the goal: Easy to use? 2 of 5 · Would it help them? 4 of 5')
   expect(html).toContain("How sure they'd done it: not asked")
