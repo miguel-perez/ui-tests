@@ -30,7 +30,7 @@ Each map shows the 12 columns at 1440 with a ruler; a bracket spans the columns 
 
 ## Landing page
 
-Six sections, in order: L1 the hero, L2 what comes back, L3 what you write, L4 where the people come from, L5 the agent section, L6 the hosted section. At 1440 the page is about 8,250 px tall (15,385 px before issue #46; the limit is 9,000).
+Six sections, in order: L1 the hero, L2 how it works ("What comes back." until issue #49), L3 what you write, L4 where the people come from, L5 the agent section, L6 the hosted section. At 1440 the page is about 8,350 px tall (8,253 px after issue #46, 15,385 px before it; the limit is 9,000).
 
 ### L1 · Claim
 
@@ -46,15 +46,15 @@ At 1440:
 
 At 375: h1, standfirst; actions, fine print; the terminal; its caption.
 
-### L2 · WhatComesBack: what comes back
+### L2 · WhatComesBack: how it works
 
-**Rule** (issue #46; `design/artefacts/what-comes-back.html`). The heading in 5, the lead in 7. Then three pieces, hairlines between them, each a numbered intro (64ch, from column 1) over its artefact across all 12 columns: the merge box; the check's page on GitHub (a 220 px side list and the page); the report, the same `RunReport` as `/r/<run>` with an address bar (the result line and the person line across, then the list in 5 of its 12 and the evidence pane in 7, sticky 16 px from the top, the closing line across), its caption under it. Empty area: the intros leave the right of the row free beside 64ch, and the pane is taller than the five rows; both are far smaller than the three artefacts.
+**Rule** (issue #46; issue #49; `design/artefacts/what-comes-back.html`). The heading "How it works." in 5 and no lead: the three pieces follow the hairline directly, each a numbered intro (64ch, from column 1) over its artefact across all 12 columns: the merge box; the check's page on GitHub (a 220 px side list and the page); the report as the list, the same `RunReport` as `/r/<run>` with an address bar (`design/artefacts/run-report-list.html`): the result line and the legend across, then one card per problem, worst first, its text in the card's left and the clip in 300 px on its right, what worked as the last card, the five people in a strip of five, the closing line, and the caption under it. Empty area: the intros leave the right of the row free beside 64ch, and the right of the head row where a lead used to be; both far smaller than the three artefacts.
 
 At 1440:
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
-[Section heading                    ] [lead, 714 wide                                         ]  head · 96 above, 48 below
+[How it works.                      ]                                                            head · 96 above
 ----------------------------------------------------------------------------------------------    hairline
 [1 The check: intro, 64ch                           ]                                            intro · 60
 [merge box: heading · ui-tests (neutral) · preview · tests                         Example run]  box · 160
@@ -62,10 +62,13 @@ At 1440:
 [2 Its details, on GitHub: intro                    ]                                            intro · 80
 [side 220 |title · sentence · table of three · legend · links · footer                        ]  page · 380
 ----------------------------------------------------------------------------------------------    hairline
-[3 The report: intro                                ]                                            intro · 150
+[3 The report: intro                                ]                                            intro · 110
 [address bar                                                                       Example run]  34
-[crumb · result line · person line, each person a link to /r/k2m9/p<n>                        ]  130
-[legend; rows 1-4, what worked (5/12)   ] [pane, sticky: clip, quote, where, moments, change   ]  viewer · 560
+[crumb · result line · legend                                                                 ]  120
+[1 BLOCKED sentence, where        marks 2 of 5 | quote · moments · change     ] [clip 300     ]  card · 220
+[2 … 4, the same                                                                              ]  card · 220 × 3
+[  WORKED  sentence, where                                                    marks 5 of 5    ]  card · 76
+[Person 1   ][Person 2   ][Person 3   ][Person 4   ][Person 5   ]  each a link to /r/k2m9/p<n>   strip · 120
 [closing line                                                                                 ]  60
 [Caption under: no score and no pass                                                          ]  32
 ```
@@ -74,19 +77,21 @@ At 375:
 
 ```text
 |----------------------------------------------------| 343 px, one column
-| Section heading                                    |
-| lead                                               |
+| How it works.                                      |
 | 1 The check: intro; merge box                      |
 | 2 Its details: intro; side list above the page;    |
 |   title, sentence, table (scrolls sideways), links |
 | 3 The report: intro; address bar, result line,     |
-|   person line, rows, the pane under them, closing  |
+|   legend; each card: rank, impact, sentence,       |
+|   where, marks; quote, moments, change; the clip   |
+|   under; what worked; the strip in two columns;    |
+|   closing                                          |
 | Caption                                            |
 ```
 
 ### L3 · Compilation: what you write, what they see
 
-**Rule** (issue #46; `design/artefacts/compile-section.html`). The heading in 5, the lead in 7. The three commands as three equal cards across 12, the note under them, the whole file across 12. Then a tab strip across 12, 1 Consent to 6 After the task, and one step visible at a time as a 5/7 pair: on the left, sticky 24 px from the top, the step's number and name, its note (64ch) and only its lines; on the right the screen in its constant light frame (16:10 over the Weekboard page, or fitted to its sheet), the stepper for steps 2 and 6, the dashed worked-out box for steps 2 and 5, and the "Comes back" line. Previous and next under the pair, across 12. Empty area: under the sticky left column, bounded by the screen's height.
+**Rule** (issue #46; `design/artefacts/compile-section.html`). The heading in 5, the lead in 7. The three commands as three equal cards across 12, the note under them, the whole file across 12. Then a tab strip across 12, 1 Consent to 6 After the task, and one step visible at a time as a 5/7 pair: on the left, sticky 24 px from the top, the step's number and name, its note (64ch) and only its lines; on the right the screen in its constant light frame (16:10 over the Weekboard page, or fitted to its sheet), the stepper for steps 2 and 6, the dashed worked-out box for steps 2 and 5, and the "Comes back" line. Previous and next under the pair, across 12. On desktop every step shares one grid cell, so the steps keep the tallest step's height and the page does not jump when a tab changes (issue #49); on a phone each step takes its own height. Empty area: under the sticky left column, bounded by the screen's height, and under a shorter step's frame, bounded by the tallest step.
 
 At 1440:
 
@@ -117,7 +122,7 @@ At 375:
 
 ### L4 · Sources: where the people come from
 
-**Rule.** Round seven's table, unchanged inside; issue #46 moves the head to the 5/7 split. The table runs across all 12 columns on its own track: the icon 28 px, then Source 3fr, Who 3fr, Cost 2fr, Time 2fr, Good for 2fr and the chevron 24 px (icon 28, Source 265, Who 265, Cost 177, Time 177, Good for 177, chevron 24). The open row's well is the 5/7 split with one gutter: how it works and the caveat on the left, under the name column; the picture on the right, at 630 and 714 wide.
+**Rule.** Round seven's table, unchanged inside, except that no row is open on arrival (issue #49); issue #46 moves the head to the 5/7 split. The table runs across all 12 columns on its own track: the icon 28 px, then Source 3fr, Who 3fr, Cost 2fr, Time 2fr, Good for 2fr and the chevron 24 px (icon 28, Source 265, Who 265, Cost 177, Time 177, Good for 177, chevron 24). The open row's well is the 5/7 split with one gutter: how it works and the caveat on the left, under the name column; the picture on the right, at 630 and 714 wide.
 
 At 1440:
 
@@ -125,26 +130,28 @@ At 1440:
    1       2       3       4       5       6       7       8       9      10      11      12   
 [Section heading                    ] [lead, 714 wide                                         ]  head
 [ic|Source        |Who           |Cost      |Time      |Good for            |v ]               header · 40, sticky
-[ic|name + what   |who           |cost+note |time+note |good for            |^ ]               row · 152 (open)
+[ic|name + what   |who           |cost+note |time+note |good for            |^ ]               row · 152 (once opened)
 [  |How it works: 3 steps, caveat   ] [picture: join / invitation / fill (right 7)            ]  well · 520
 [ic|name + what   |who           |cost+note |time+note |good for            |v ]               row · 152 × 2
 ```
 
 At 375: heading, lead; each source a card with its cells labelled; the open well in one column.
 
-### L5 · Section + AgentRun
+### L5 · Agents: agents use some interfaces, too
 
-**Rule** (issue #46). The terminal in the right 7, the caption (the file line and the closing sentence) in the first 5 beside it, vertically centred. Empty area: the band above and below the caption, smaller than the terminal.
+**Rule** (issue #49; `design/artefacts/agents-section.html`). The heading in 5 with the command under it, the lead in 7. Then three tiles across 12, one per interface (Your API, Your MCP server, Your CLI), each 4 columns (400 px): its icon in the accent, its name and target, one sentence. No terminal, no code block, no result line. Empty area: the inside of the tiles under their sentences, smaller than the tiles' text.
 
 At 1440:
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
-[Section heading                    ] [lead, 714 wide                                         ]  head
-[Caption: file line + closing       ] [TerminalWindow: npx ui-tests run --actor agent          ]  row · 300
+[Agents use some interfaces, too.   ] [lead: three sentences, 714 wide                        ]  head
+[$ npx ui-tests run --actor agent   ]
+[icon · Your API · target: { http } ] [icon · Your MCP server        ] [icon · Your CLI           ]  tiles · 230
+[  one sentence                     ] [  one sentence                ] [  one sentence            ]
 ```
 
-At 375: heading, lead; the terminal (scrolls sideways inside its body); the caption.
+At 375: heading, the command, lead; the three tiles stacked, each 343 wide.
 
 ### L6 · Section + Snippet + Dashboard
 
@@ -199,7 +206,7 @@ At 375 (all guide blocks):
 
 ### R1 · RunReport at /r/<run>
 
-**Rule** (issue #35; `design/artefacts/run-report.html`). The report pages keep their own 1036 px reading column, centred; they are not landing or guide sections, under the site header; the share line (what the signed link shows, and the Share control) above the report. The report as in L5 without its address bar, its result line the page's h1. Each person links to `/r/<run>/p<n>`, the attempt view in the same column. The signed share link renders the same block without the site header.
+**Rule** (issue #35; issue #49; `design/artefacts/run-report-list.html`). The report pages keep their own 1036 px reading column, centred; they are not landing or guide sections, under the site header; the share line (what the signed link shows, and the Share control) above the report. The report as in L2 without its address bar, its result line the page's h1. Each person links to `/r/<run>/p<n>`, the attempt view in the same column. The signed share link renders the same block without the site header.
 
 At 1440:
 
@@ -207,8 +214,10 @@ At 1440:
    1       2       3       4       5       6       7       8       9      10      11      12
         [share line                                                              Share ]       24
         [crumb · result line                                                  Example run ]    80
-        [person line                                                                      ]    50
-        [legend; rows 1-4, what worked (5/12)] [pane, sticky (7/12)                       ]    viewer · 590
+        [legend                                                                           ]    20
+        [card 1: text                                              ] [clip 300            ]    220
+        [cards 2-4, the same; what worked, unfilled                                       ]    740
+        [Person 1 ][Person 2 ][Person 3 ][Person 4 ][Person 5 ]                                120
         [closing line                                                                     ]    60
 ```
 
@@ -217,10 +226,10 @@ At 375:
 ```text
 |----------------------------------------------------| 327 px, one column
 | share line, Share                                  |
-| crumb, result line                                 |
-| person line                                        |
-| legend, rows                                       |
-| pane                                               |
+| crumb, result line, legend                         |
+| each card: text, then its clip                     |
+| what worked                                        |
+| people strip, two columns                          |
 | closing line                                       |
 ```
 

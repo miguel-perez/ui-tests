@@ -4,6 +4,8 @@ The page written out in reading order, one block at a time. One example run (inv
 
 **The page since the composition round (issue #46).** Six sections, in this order: the promise (block 1); what comes back (block 2, which since issue #46 carries the check, its page and the report that block 5 used to carry, and no longer the one-person attempt); what you write, what they see (block 3, its six screens one at a time as tabs); where the people come from (block 4); the agent section; the hosted section. Every section sits on one grid ([`../../design/artefacts/README.md`](../../design/artefacts/README.md#the-page-grid-in-one-place)); the words of every block are unchanged except block 2's, which are [`../../design/artefacts/what-comes-back.html`](../../design/artefacts/what-comes-back.html)'s.
 
+**The agent round (issue #49).** Block 2 is "How it works." with no lead, and its report is the list ([`../../design/artefacts/run-report-list.html`](../../design/artefacts/run-report-list.html)); the sources table opens with no row open; the agent section is [`../../design/artefacts/agents-section.html`](../../design/artefacts/agents-section.html)'s, written out under "The agent section" below; the guide's steps 5 and 6 are "Run it with people" and "Test your API with an agent".
+
 ---
 
 ## The visitor
@@ -62,15 +64,13 @@ Pressed Done, but your check failed: 2 of 5.
 
 ---
 
-## 2. What comes back
+## 2. How it works
 
 *What do I actually get, and would I know what to do with it.*
 
 Rebuilt in the composition round (issue #46) from [`../../design/artefacts/what-comes-back.html`](../../design/artefacts/what-comes-back.html), in place of this block's one-person attempt and of block 5, "In the pull request"; the words below are the artefact's, verbatim. The one-person attempt view is no longer on the landing: it is the page `/r/k2m9/p<n>` behind each name in the report's people line. Frame label: Example run.
 
-**Heading.** What comes back.
-
-**Lead.** Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request, and behind it the report: whether people reached the goal, the problems they hit, worst first, and for each one the clip, their words, the moment to watch and the smallest change. The check never fails your build. Your other tests prove the code works. This one shows whether a person can use it.
+**Heading.** How it works. (Issue #49: "What comes back." until then. No lead: the three pieces follow the hairline directly.)
 
 1. **The check.** One line in the merge box, next to your other checks. Its mark is neutral, never red or green: there is no pass to give, and it never blocks a merge unless you ask it to.
 
@@ -90,9 +90,9 @@ The page: "5 people tried *invite a colleague* on this preview. 2 of 5 reached t
 
 Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect. Open the report · +1 more problem · What worked. Footer: 5 people · paid panel (Prolific, CloudResearch Connect) · the preview · the commit · the date.
 
-3. **The report.** The page the check links to, and the one you can send as a link. One line says whether it worked. The five people sit under it, each with their outcome and a link to their attempt. Then the problems on the left, worst first, with impact, where, who hit it and how many; on the right the evidence for the one selected, which stays put while the list scrolls: the clip, the words, where as a locator you can paste, the moments, the smallest change, and a copy as an issue. One line closes the page.
+3. **The report.** The page the check links to, and the one you can send as a link. One line says whether it worked. Then each problem as one card, worst first, with its evidence inline: who hit it, where, the clip, their words and the smallest change. The five people in a strip, each linking to their attempt. One line closes the page.
 
-The report (`/r/k2m9`; `design/artefacts/run-report.html`): "invite a colleague · Reached the goal: 2 of 5 · Problems found: 4, seen across all 5 people · Pressed Done, but your check failed: 2 of 5". The problems in the run's rank, then "Found Settings, then Members, on their own" (5 of 5) as what worked. The closing line ends: "Found automatically from what people did; it can miss problems. Watch the clips."
+The report (`/r/k2m9`; `design/artefacts/run-report-list.html`, the list, since issue #49): "invite a colleague · Reached the goal: 2 of 5 · Problems found: 4, seen across all 5 people · Pressed Done, but your check failed: 2 of 5". Then one card per problem in the run's rank (rank, impact, the sentence, page · locator, the five person marks and x of n, the words and who said them, the moments as play chips, the suggested change, the clip on the right), then "Found Settings, then Members, on their own" (5 of 5) as the last card, what worked; the five people in a strip, each "Reached the goal" or "Did not reach it" with time, ease and how it ended, linking to `/r/k2m9/p1` to `p5`. The closing line ends: "Found automatically from what people did; it can miss problems. Watch the clips."
 
 **Closing line.** A run reports the problems it found, or that it found none this time. There is no score and no pass.
 
@@ -289,13 +289,33 @@ Rebuilt in round seven (issue #31) from [`../../design/artefacts/sources-section
 | **Your visitors** · On the hosted version: people already on your live site, invited when a page has given them trouble twice. | Real visitors who seemed stuck and said yes, on their own device | Paid like the panel · Under a daily cap you set | Depends on your traffic · A page with trouble and a few hundred visitors a day gives one or two | Real tasks, real devices, the moment it went wrong |
 | **A paid panel** · Five strangers who match your `users` block, found for you and paid by the run. | People who say they did what `users` describes; nobody who works in UX, design or marketing | About $11 a person · Five about $55; a cap of $70 holds the reserve | First people within minutes · Usually all five within a few hours; a narrow audience a day or more | People like your users when you don't know any |
 
-One row is open at a time; each opens to how it works, the caveat and one picture.
+No row is open on arrival (issue #49); the first click opens one. One row is open at a time; each opens to how it works, the caveat and one picture.
 
 **Your link.** How it works: (1) `npx ui-tests run` prints the link. It can point at a branch preview, at your laptop through a tunnel, or at your live site. (2) You send it. Ask a friend to pass it on rather than take it themselves. (3) Whoever opens it answers the same short screener, so the report still says who they were. Each attempt lands as the person finishes. Caveat: **Friends are kind and people in tech know too much.** Send it beyond your team and beyond tech where you can, and for each problem ask whether your users would hit it too. Picture: the join screen a person sees when they open the link, from the real player: "Weekboard · about 10 minutes". "Weekboard asked for your help with one thing on their site." "You'll try it the way you normally would, then answer two short questions. There are no wrong moves. The website is being tested, not you." What you do on their page is recorded (always) · Your screen, as a video (needed) · Your voice, only if you choose to talk (optional). "A few questions about you first." [ Start ]
 
 **Your visitors.** How it works: (1) One script tag on your site. It watches for the same trouble the attempt view shows: a dead click, a rage click, a U-turn, a long pause. (2) Mark the pages it must never interrupt. Checkout, payment and a form in progress are never interrupted anyway. (3) The second sign of trouble on the same page invites the person. Nothing from before a yes is kept. Their attempt is kept beside the five, not inside. Caveat: **They show where real users get stuck, not how many do.** Treat their problems as leads, and confirm them with a link or a panel run. Picture: the invitation over the Weekboard page, in the chrome's surface, from the real player: "This page seems to be giving you trouble. Would you show us where? Five minutes, paid, in your own words. The site is being tested, not you." [ Sure ] [ No thanks ]
 
 **A paid panel.** How it works: (1) Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token. (2) `npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends. (3) People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back. Caveat: **Panel people answer screeners for money.** Read the Who took part line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not. Picture: run k2m9 filling, 5 people wanted, 2 h 10 m. Prolific (its wordmark): 3 of 3, first at 6 min; Pool: 300,000+ active participants, 300+ filters, plus the screener from `users`; Speed: First person usually within minutes; five within a few hours; a narrow audience a day or more, and the plan says so. CloudResearch Connect (its wordmark): 2 of 2, first at 11 min; Pool: Thousands of vetted, census-matched participants; profiled, screened and custom audiences; Speed: First person within minutes; five within a few hours; a narrow audience needs a prescreen project, which adds time and cost. Paid $55 of the $70 cap · $15 back · Each attempt labelled with its panel.
+
+---
+
+## The agent section
+
+*Does this only work for screens?*
+
+Rebuilt in the agent round (issue #49) from [`../../design/artefacts/agents-section.html`](../../design/artefacts/agents-section.html) and [`../discovery/agent-section-research.md`](../discovery/agent-section-research.md); the words are the artefact's, verbatim. No terminal, no code block, no result line; the agent check keeps its name `ui-tests (agent)` in the package, and the landing does not show it.
+
+**Heading.** Agents use some interfaces, too.
+
+**Under the heading.** `$ npx ui-tests run --actor agent`
+
+**Lead.** Your API, your MCP server and your CLI have a second kind of user: an agent that reads text, not pixels. Point the same file at that surface and five trials show whether it gets through. It is a capability test, not a usability one, and it never counts with people.
+
+| Tile | Target | Sentence |
+| --- | --- | --- |
+| Your API | `target: { http }` | Endpoint names, schemas and error bodies are its whole page. A `400` with no reason is a dead end. |
+| Your MCP server | `target: { mcp }` | Tool names and their descriptions are the only labels it reads. If two tools sound alike, it picks one. |
+| Your CLI | `target: { cli }` | Flags, help text and exit codes are what it sees. A `--help` that lies costs it the run. |
 
 ---
 
@@ -390,7 +410,7 @@ context({
 
 You see, on the next `npx ui-tests`, the card reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co. When you think you've finished, press Done. If you get stuck, press I couldn't do this." It is written from `users`, `purpose`, the goal and `beforeEach`, never from the path; pin your own wording with `scenario`.
 
-**5. Run it with real people**
+**5. Run it with people** (issue #49; step 6 is "Test your API with an agent")
 
 You type:
 

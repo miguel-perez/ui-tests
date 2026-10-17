@@ -18,9 +18,33 @@ You plan the week on this board and want your colleague Sam to plan it with you.
 
 ## Agent runs
 
-The same test, run by an agent.
+Agents use some interfaces, too.
 
-Point a file at your API, your MCP server or your CLI and run it with an agent instead of a person. Five trials, a trace for each, a report of its own. Agent runs are never counted with people and never described as people.
+Your API, your MCP server and your CLI have a second kind of user: an agent that reads text, not pixels. Point the same file at that surface and five trials show whether it gets through. It is a capability test, not a usability one, and it never counts with people.
+
+api
+
+Your API
+
+target: { http }
+
+Endpoint names, schemas and error bodies are its whole page. A `400` with no reason is a dead end.
+
+mcp
+
+Your MCP server
+
+target: { mcp }
+
+Tool names and their descriptions are the only labels it reads. If two tools sound alike, it picks one.
+
+cli
+
+Your CLI
+
+target: { cli }
+
+Flags, help text and exit codes are what it sees. A `--help` that lies costs it the run.
 
 One file, two actors, two reports that never mix.
 
@@ -376,11 +400,9 @@ tab "Members"
 
 getByRole('link', { name: 'Members' })
 
-## What comes back
+## How it works
 
-What comes back.
-
-Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request, and behind it the report: whether people reached the goal, the problems they hit, worst first, and for each one the clip, their words, the moment to watch and the smallest change. The check never fails your build. Your other tests prove the code works. This one shows whether a person can use it.
+How it works.
 
 the-check
 
@@ -410,7 +432,7 @@ the-report
 
 The report
 
-The page the check links to, and the one you can send as a link. One line says whether it worked. The five people sit under it, each with their outcome and a link to their attempt. Then the problems on the left, worst first, with impact, where, who hit it and how many; on the right the evidence for the one selected, which stays put while the list scrolls: the clip, the words, where as a locator you can paste, the moments, the smallest change, and a copy as an issue. One line closes the page.
+The page the check links to, and the one you can send as a link. One line says whether it worked. Then each problem as one card, worst first, with its evidence inline: who hit it, where, the clip, their words and the smallest change. The five people in a strip, each linking to their attempt. One line closes the page.
 
 ## The example run
 
@@ -435,8 +457,6 @@ CloudResearch Connect
 screened as signed up for a planning tool this week
 
 Share
-
-Copy as an issue
 
 ## Where the people come from
 
@@ -615,9 +635,9 @@ Try it on yourself
 
 Write your own
 
-Run it with real people
+Run it with people
 
-Run it with an agent
+Test your API with an agent
 
 Node 22. Paste one line on any site, or install the package in a Next.js app.
 

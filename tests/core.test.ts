@@ -503,6 +503,8 @@ it('keeps README, landing context and rendered copy word-for-word aligned', asyn
   for (const text of strings(siteCopy)) assert(readme).toContain(text)
   assert((await readFile('apps/web/landing.ui.test.ts', 'utf8')).trim()).toBe(siteCopy.example)
   assert(readme).not.toMatch(/\b(?:compliant|certified)\b|synthetic users|AI participants/i)
-  assert(readme).toContain('Agent runs are never counted with people and never described as people.')
+  // Issue #49: an agent is a second kind of user, tested for capability and never counted with people; never "instead of a person".
+  assert(readme).toContain('It is a capability test, not a usability one, and it never counts with people.')
+  assert(readme).not.toMatch(/instead of a person/i)
   assert(strings(siteCopy).join('\n')).toContain('There is no score and no pass.')
 })

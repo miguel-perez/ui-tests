@@ -19,14 +19,21 @@ async function open(page: Page, route: string, width: number) {
 }
 
 for (const width of [1440, 375]) {
-  test(`the section "What comes back.": a neutral check, its page on GitHub and the report at ${width}px`, async ({ page }) => {
+  test(`the section "How it works.": a neutral check, its page on GitHub and the report as the list at ${width}px`, async ({ page }) => {
     const errors = await open(page, '/', width)
     const pr = page.locator('section[aria-labelledby="comes-back"]')
-    await expect(pr.getByRole('heading', { level: 2 })).toHaveText('What comes back.')
-    // The artefact's words (design/artefacts/what-comes-back.html), verbatim.
+    // The artefact's words (design/artefacts/what-comes-back.html), verbatim: issue #49, item 2, the heading "How it works." and no lead.
     const { parseHTML } = await import('linkedom')
     const artefact = parseHTML(await readFile('design/artefacts/what-comes-back.html', 'utf8')).document
-    await expect(pr.locator('.section-head p')).toHaveText(artefact.querySelector('.head p')!.textContent!)
+    expect(artefact.querySelector('title')!.textContent).toBe('How It Works')
+    expect(artefact.querySelector('.head h1')!.textContent).toBe('How it works.')
+    expect(artefact.querySelectorAll('.head p')).toHaveLength(0)
+    await expect(pr.getByRole('heading', { level: 2 })).toHaveText(artefact.querySelector('.head h1')!.textContent!)
+    await expect(pr.locator('.section-head p, [data-lead]')).toHaveCount(0)
+    // Its third piece is the list, as in run-report-list.html: cards, what worked last, the people in a strip.
+    expect(artefact.querySelectorAll('#report .pcard')).toHaveLength(5)
+    expect(artefact.querySelectorAll('#report .pstrip a')).toHaveLength(5)
+    expect(artefact.querySelectorAll('#report .vpane, #report .vrow')).toHaveLength(0)
     await expect(pr.locator('.piece-intro h3')).toHaveText([...artefact.querySelectorAll('.piece .intro h2')].map(node => node.textContent!))
     await expect(pr.locator('.piece-intro p')).toHaveText([...artefact.querySelectorAll('.piece .intro p')].map(node => node.textContent!))
     // On the page grid: the three pieces stack in the order a developer meets them, each across all twelve columns at 1440.
@@ -52,9 +59,10 @@ for (const width of [1440, 375]) {
     await expect(checkPage.locator('.pr-legend')).toHaveText('Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect')
     await expect(checkPage.locator('.pr-links a')).toHaveText(['Open the report', '+1 more problem', 'What worked'])
     await expect(checkPage.locator('.pr-foot')).toContainText('paid panel (Prolific, CloudResearch Connect)')
-    // The report's people link to their attempts; the Details link opens the check page.
-    await expect(pr.locator('.rr-people a')).toHaveCount(5)
-    await expect(pr.locator('.rr-people a').first()).toHaveAttribute('href', '/r/k2m9/p1')
+    // The report is the list; its people strip links to their attempts; the Details link opens the check page.
+    await expect(pr.locator('.rr-card')).toHaveCount(5)
+    await expect(pr.locator('.rr-strip a')).toHaveCount(5)
+    for (let n = 1; n <= 5; n++) await expect(pr.locator('.rr-strip a').nth(n - 1)).toHaveAttribute('href', `/r/k2m9/p${n}`)
     await expect(ours.getByRole('link', { name: 'ui-tests details' })).toHaveAttribute('href', '#check-page')
     expect(offences(await pr.innerText(), shown)).toEqual([])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
@@ -62,66 +70,67 @@ for (const width of [1440, 375]) {
     expect(errors).toEqual([])
   })
 
-  test(`the report page /r/k2m9 from the run's data: selection, the pane, the copy and the people at ${width}px`, async ({ page, context }) => {
+  test(`the report page /r/k2m9 as the list, from the run's data: the cards, their clips and moments, and the people at ${width}px`, async ({ page }) => {
     const errors = await open(page, '/r/k2m9', width)
     const report = page.locator('.run-report')
     await expect(page.getByRole('heading', { level: 1 })).toHaveText('invite a colleague · Reached the goal: 2 of 5 · Problems found: 4, seen across all 5 people · Pressed Done, but your check failed: 2 of 5')
     await expect(report.locator('.rr-crumb')).toContainText('5 people from a paid panel (Prolific, CloudResearch Connect)')
-    // The five people in one line from the recordings: reached or not, time and ease, each linking to their attempt.
-    await expect(report.locator('.rr-people li')).toHaveText([/Person 1 reached · 0:57 · ease 4/, /Person 2 not reached · 0:53 · ease 2/, /Person 3 not reached · 1:03 · ease 3/, /Person 4 not reached · 0:47 · ease 4/, /Person 5 reached · 0:52 · ease 5/])
-    // The list: worst first by impact then count, what worked last; the legend on first use.
-    await expect(report.locator('.rr-row .rr-what > b')).toHaveText(titles)
-    await expect(report.locator('.rr-row .rr-count')).toHaveText(['2 of 5', '1 of 5', '4 of 5', '2 of 5', '5 of 5'])
-    await expect(report.locator('.rr-row .rr-impact')).toHaveText(['Blocked', 'Blocked', 'Slowed', 'Confused', 'Worked'])
-    await expect(report.locator('.rr-row').nth(2).locator('.rr-marks')).toHaveAttribute('aria-label', 'Hit by Person 1, Person 2, Person 3, Person 5')
     await expect(report.locator('.rr-legend')).toHaveText('Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect')
-    // The pane: the first problem's evidence.
-    const pane = report.locator('.rr-pane')
-    await expect(pane.locator('.rr-quote')).toContainText("I wasn't sure the first Add did anything, so I pressed it again.Person 3, after the task")
-    await expect(pane.locator('dd code')).toHaveText(['/settings/members', "getByRole('button', { name: 'Add' })"])
-    await expect(pane.locator('.rr-chip')).toHaveText(['Person 3 · 00:58', 'Person 4 · 00:41'])
-    await expect(pane.locator('.rr-fix')).toHaveText('On press, change the button to "Invited sam@acme.co" and disable it.')
-    await expect(pane.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p3.webm#t=58')
-    await expect(pane.locator('.rr-secs')).toHaveText('00:58 → 01:04')
-    // Selecting a problem swaps the evidence; a moment chip swaps the clip to that person at that second.
-    await report.locator('.rr-row').nth(2).click()
-    await expect(report.locator('.rr-row').nth(2)).toHaveAttribute('aria-pressed', 'true')
-    await expect(pane).toHaveAttribute('aria-label', 'Evidence: Looked for Invite in the Share menu and found only link options')
-    await expect(pane.locator('.rr-quote')).toContainText('Share is where you add people.')
-    await expect(pane.locator('.rr-chip')).toHaveText(['Person 1 · 00:04', 'Person 2 · 00:06', 'Person 3 · 00:03', 'Person 5 · 00:09'])
-    await expect(pane.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p1.webm#t=4')
-    await pane.getByRole('button', { name: 'Person 5 · 00:09', exact: true }).click()
-    await expect(pane.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p5.webm#t=9')
-    // "Copy as an issue" puts the Markdown on the clipboard: title, where, steps from the trace, the clip link and the suggested change.
-    await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-    await pane.getByRole('button', { name: 'Copy as an issue' }).click()
-    await expect(pane.getByRole('status')).toHaveText('Copied')
-    const markdown = await page.evaluate(() => navigator.clipboard.readText())
-    expect(markdown).toMatch(/^## Looked for Invite in the Share menu and found only link options\n\n\*\*Where:\*\* `\/board` · `getByRole\('button', \{ name: 'Share' \}\)`/)
-    expect(markdown).toContain("**Steps, from Person 5's trace** (Desktop · Chromium · window 1280×800):\n\n1. `00:00` Started · scenario card dismissed (/board)\n2. `00:09` Clicked Share · menu open (/board)")
-    expect(markdown).toContain('**Clip:** https://ui-tests.com/r/k2m9#problem-3&t=9 (Person 5 · 00:09)')
-    expect(markdown).toContain('**Suggested change:** Put "Invite a colleague" at the top of the Share menu.')
-    expect(offences(markdown, shown)).toEqual([])
+    // Issue #49, item 3: one card per problem, worst first by impact then count, what worked as the last card.
+    const cards = report.locator('.rr-card')
+    await expect(cards.locator('.rr-what > b')).toHaveText(titles)
+    await expect(cards.locator('.rr-rank')).toHaveText(['1', '2', '3', '4', ''])
+    await expect(cards.locator('.rr-impact')).toHaveText(['Blocked', 'Blocked', 'Slowed', 'Confused', 'Worked'])
+    await expect(cards.locator('.rr-where')).toHaveText(['/settings/members · button "Add"', '/settings/members · button "Add"', '/board · menu "Share"', '/board · field "Search"', '/settings · tab "Members"'])
+    await expect(cards.locator('.rr-count')).toHaveText(['2 of 5', '1 of 5', '4 of 5', '2 of 5', '5 of 5'])
+    await expect(cards.nth(2).locator('.rr-marks')).toHaveAttribute('aria-label', 'Hit by Person 1, Person 2, Person 3, Person 5')
+    await expect(cards.nth(2).locator('.rr-marks i.on')).toHaveText(['1', '2', '3', '5'])
+    await expect(cards.last()).toHaveAttribute('id', 'worked')
+    await expect(cards.last().locator('.rr-clip, .rr-quote, .rr-chip, .rr-fix')).toHaveCount(0)
+    // Each problem card: the words and who said them, the moments as play chips, the suggested change, and the clip on the right.
+    const first = report.locator('#problem-1')
+    await expect(first.locator('.rr-quote')).toHaveText("I wasn't sure the first Add did anything, so I pressed it again.Person 3, after the task")
+    await expect(first.locator('.rr-chip')).toHaveText(['Person 3 · 00:58', 'Person 4 · 00:41'])
+    await expect(first.locator('.rr-fix')).toHaveText('On press, change the button to "Invited sam@acme.co" and disable it.')
+    await expect(first.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p3.webm#t=58')
+    await expect(first.locator('.rr-secs')).toHaveText('00:58')
+    await expect(report.locator('.rr-clip')).toHaveCount(4)
+    // The viewer is gone: no sticky pane, no selected row, no "Copy as an issue".
+    await expect(report.locator('.rr-pane, .rr-row, .is-sel, .rr-copy')).toHaveCount(0)
+    await expect(report.getByRole('button', { name: 'Copy as an issue' })).toHaveCount(0)
+    // A moment chip plays that person's clip in its card, from that second.
+    const share = report.locator('#problem-3')
+    await expect(share.locator('.rr-chip')).toHaveText(['Person 1 · 00:04', 'Person 2 · 00:06', 'Person 3 · 00:03', 'Person 5 · 00:09'])
+    await expect(share.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p1.webm#t=4')
+    await share.getByRole('button', { name: 'Person 5 · 00:09', exact: true }).click()
+    await expect(share.getByRole('button', { name: 'Person 5 · 00:09', exact: true })).toHaveAttribute('aria-pressed', 'true')
+    await expect(share.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p5.webm#t=9')
+    await expect(first.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p3.webm#t=58')
+    const video = share.locator('.rr-clip video')
+    await share.getByRole('button', { name: /^Play Person 5 · 00:09/ }).click()
+    await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime)).toBeGreaterThan(9)
+    await share.getByRole('button', { name: /^Pause Person 5 · 00:09/ }).click()
+    // The people in a strip under the cards, each linking to their attempt.
+    const strip = report.locator('.rr-strip a')
+    await expect(strip).toHaveText([/^Person 1Reached the goal0:57 · ease 4 of 7 · Pressed Done$/, /^Person 2Did not reach it0:53 · ease 2 of 7 · Pressed I couldn't do this$/, /^Person 3Did not reach it1:03 · ease 3 of 7 · Pressed Done$/, /^Person 4Did not reach it0:47 · ease 4 of 7 · Pressed Done$/, /^Person 5Reached the goal0:52 · ease 5 of 7 · Pressed Done$/])
+    for (let n = 1; n <= 5; n++) await expect(strip.nth(n - 1)).toHaveAttribute('href', `/r/k2m9/p${n}`)
+    const [lastCard, firstPerson] = await Promise.all([cards.last().boundingBox(), strip.first().boundingBox()])
+    expect(firstPerson!.y).toBeGreaterThan(lastCard!.y + lastCard!.height)
     // The closing line: the study-wide answers, the first look, who took part, the environment and the caveat.
     await expect(report.locator('.rr-foot')).toHaveText('After the goal: would it help them 4 of 5 · easy to use 2 of 5 · First look: named the purpose 4 of 5, first click on your path 3 of 5 · Who took part: 5 people from a paid panel (Prolific, CloudResearch Connect), screened as signed up for a planning tool this week · desktop Chromium, 1280×800 · Found automatically from what people did; it can miss problems. Watch the clips.')
     expect(offences(await report.innerText(), shown)).toEqual([])
 
-    const [list, side] = await Promise.all([report.locator('.rr-list').boundingBox(), pane.boundingBox()])
+    const [text, clip] = await Promise.all([first.locator('.rr-text').boundingBox(), first.locator('.rr-clip').boundingBox()])
+    const people = await strip.evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().y)))
     if (width === 1440) {
-      // Side by side, 5 to 7; the pane stays put while the list scrolls: given a list longer than the screen, it holds 16px from the top.
-      expect(side!.x).toBeGreaterThan(list!.x + list!.width)
-      expect(list!.width / (list!.width + side!.width)).toBeCloseTo(5 / 12, 1)
-      await expect(pane).toHaveCSS('position', 'sticky')
-      await report.locator('.rr-list ol').evaluate(ol => { for (let i = 0; i < 4; i++) for (const row of [...ol.children].slice(0, 5)) ol.append(row.cloneNode(true)) })
-      const top = await report.locator('.rr-viewer').evaluate(node => node.getBoundingClientRect().top + scrollY)
-      for (const offset of [200, 900, 1600]) {
-        await page.evaluate(y => scrollTo(0, y), top + offset)
-        await expect.poll(() => pane.evaluate(node => Math.round(node.getBoundingClientRect().top))).toBe(16)
-      }
+      // The clip on the right of its card, 300px wide; the five people in one row.
+      expect(clip!.x).toBeGreaterThan(text!.x + text!.width)
+      expect(Math.round(clip!.width)).toBe(300)
+      expect(new Set(people).size).toBe(1)
     } else {
-      // On a phone the two panes stack, the pane under the list and not sticky.
-      expect(side!.y).toBeGreaterThanOrEqual(list!.y + list!.height - 1)
-      await expect(pane).toHaveCSS('position', 'static')
+      // On a phone the clip goes under the card's text and the strip takes two columns.
+      expect(clip!.y).toBeGreaterThanOrEqual(text!.y + text!.height - 1)
+      expect(new Set(people).size).toBe(3)
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     }
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
@@ -129,13 +138,17 @@ for (const width of [1440, 375]) {
   })
 }
 
-test('the check links select the problem and the moment; each person opens their attempt; the share link is signed and white-labelled', async ({ page, context }) => {
+test('the check links open the problem at the moment; each person opens their attempt; the share link is signed and white-labelled', async ({ page, context }) => {
+  // The check's moment link opens its card, in view, with that person's clip from that second.
+  await page.goto('/r/k2m9#problem-3&t=9')
+  const card = page.locator('#problem-3')
+  await expect(card.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p5.webm#t=9')
+  await expect(card.getByRole('button', { name: 'Person 5 · 00:09', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(card).toBeInViewport()
   await page.goto('/r/k2m9#problem-2&t=49')
-  const pane = page.locator('.rr-pane')
-  await expect(page.locator('.rr-row').nth(1)).toHaveAttribute('aria-pressed', 'true')
-  await expect(pane.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p2.webm#t=49')
+  await expect(page.locator('#problem-2 .rr-clip video')).toHaveAttribute('src', '/sessions/p2.webm#t=49')
   // Each person links to their attempt, where everything about that person lives.
-  await page.locator('.rr-people a').nth(3).click()
+  await page.locator('.rr-strip a').nth(3).click()
   await expect(page).toHaveURL(/\/r\/k2m9\/p4$/)
   await expect(page.locator('.attempt-headline')).toHaveText('Person 4 did not reach the goal.')
   await expect(page.locator('.attempt-foot')).toContainText('Person 4 of 5 · paid panel (Prolific)')
@@ -149,7 +162,7 @@ test('the check links select the problem and the moment; each person opens their
   await page.goto(link)
   await expect(page.locator('.site-header, .wordmark')).toHaveCount(0)
   await expect(page.locator('.run-report')).toBeVisible()
-  await expect(page.locator('.rr-people a').first()).toHaveAttribute('href', `/r/k2m9/p1?s=${sign('/r/k2m9/p1')}`)
+  await expect(page.locator('.rr-strip a').first()).toHaveAttribute('href', `/r/k2m9/p1?s=${sign('/r/k2m9/p1')}`)
   expect((await page.request.get(`/r/k2m9/p1?s=${sign('/r/k2m9/p1')}`)).status()).toBe(200)
   // An altered or foreign signature, and an unknown run, are not found.
   for (const route of ['/r/k2m9?s=forged', `/r/k2m9/p1?s=${sign('/r/k2m9')}`, '/r/zzzz', '/r/k2m9/p9']) expect((await page.request.get(route)).status(), route).toBe(404)

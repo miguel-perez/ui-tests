@@ -1,11 +1,11 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
-import { mkdir } from 'node:fs/promises'
+import { mkdir, readFile } from 'node:fs/promises'
 import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, runs, sources, whatComesBack } from '../../apps/web/lib/copy'
 import { shown, offences } from '../vocabulary'
 
 /** Every content type's component on the landing page (docs/design/site-schema.md). */
-const artefacts = ['terminal-window', 'code-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'run-report', 'dashboard']
+const artefacts = ['terminal-window', 'code-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'run-report', 'agents', 'dashboard']
 /** Relative luminance of a computed rgb() colour. */
 const luminance = (rgb: string) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return r * .2126 + g * .7152 + b * .0722 }
 /** The distinct colours of the text inside each matched element. */
@@ -74,7 +74,7 @@ for (const width of [1440, 375]) {
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(promise)
         await expect(page.getByText(intro)).toBeVisible()
         for (const [key, text] of Object.entries(landing)) if (!['fileCaption', 'moment', 'words', 'scenario', 'priority', 'result', 'reached'].includes(key)) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first(), key).toBeVisible()
-        for (const text of [agent.heading, agent.lead, agent.closing, hosted.heading, hosted.lead, hosted.closing, compilation.heading, compilation.lead, whatComesBack.heading, whatComesBack.lead.replaceAll('`', '')]) await expect(page.getByText(text, { exact: true })).toBeVisible()
+        for (const text of [agent.heading, agent.lead, hosted.heading, hosted.lead, hosted.closing, compilation.heading, compilation.lead, whatComesBack.heading]) await expect(page.getByText(text, { exact: true })).toBeVisible()
         // Round six: one section in place of "What the person sees" and "Three commands".
         await expect(page.getByRole('heading', { name: 'What the person sees.' })).toHaveCount(0)
         await expect(page.getByRole('heading', { name: 'Three commands.' })).toHaveCount(0)
@@ -108,9 +108,14 @@ for (const width of [1440, 375]) {
         await expect(people.locator('.src-cols')).toBeVisible({ visible: width === 1440 })
         const heights = await people.locator('.src-row').evaluateAll(nodes => nodes.map(node => Math.round(node.getBoundingClientRect().height)))
         if (width === 1440) expect(heights.every(height => height >= 152)).toBe(true)
-        // Item 6: the agent block runs against an API.
-        await expect(page.locator('section[aria-labelledby="agents"]')).toContainText('Agent run · add a member through the API · 5 trials')
-        await expect(page.locator('section[aria-labelledby="agents"]')).toContainText(agent.fileLine)
+        // Issue #49, item 1: the agent section is the artefact's tiles; the old terminal, its caption, the goal snippet and the
+        // agent check's name are off the landing, and nothing says "instead of a person".
+        const agents = page.locator('section[aria-labelledby="agents"]')
+        await expect(agents.locator('.agents-tile')).toHaveCount(3)
+        await expect(agents.locator('pre, code, .terminal-window, .code-window, .caption')).toHaveCount(0)
+        await expect(agents).not.toContainText(agent.fileLine)
+        await expect(agents).not.toContainText(agent.closing)
+        expect(await page.locator('main').innerText()).not.toMatch(/ui-tests \(agent\)|instead of a person/)
         await expect(page.getByRole('link', { name: 'Get started', exact: true }).first()).toHaveAttribute('href', '/docs/getting-started')
       } else {
         await expect(page.locator('.step')).toHaveCount(8)
@@ -121,8 +126,13 @@ for (const width of [1440, 375]) {
         for (const text of [guide.install, guide.try, guide.write, guide.next, guide.once, guide.pr, guide.agent]) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first()).toBeVisible()
         // The agent step matches the landing's API example; the hosted form has the screen fields.
         await expect(page.locator('#agent')).toContainText(agent.fileLine)
+        // Issue #49, item 1: the two steps are "Run it with people" and "Test your API with an agent"; never "instead of a person".
+        await expect(page.getByRole('navigation', { name: 'Getting started' }).locator('a')).toContainText(['Run it with people', 'Test your API with an agent'])
+        await expect(page.locator('#real-people h2')).toContainText('Run it with people')
+        await expect(page.locator('#agent h2')).toContainText('Test your API with an agent')
+        expect(await page.locator('main').innerText()).not.toMatch(/instead of a person/i)
         for (const [label, value] of [['Did, recently', hosted.screen.did], ['Within', hosted.screen.within], ['Uses any of', hosted.screen.uses], ['Not', hosted.screen.not]]) await expect(page.locator('.hosted-form').getByLabel(label, { exact: true })).toHaveValue(value)
-        await page.getByRole('navigation', { name: 'Getting started' }).getByRole('link', { name: /Run it with real people/ }).click()
+        await page.getByRole('navigation', { name: 'Getting started' }).getByRole('link', { name: /Run it with people/ }).click()
         await expect(page.locator('#real-people h2')).toBeInViewport()
       }
       if (process.env.CAPTURE_SITE === '1') {
@@ -210,7 +220,7 @@ for (const width of [1440, 375]) {
     // The report in the section: one clip at a time, played on its control from its start second, under reduced motion too.
     await page.goto('/')
     const report = page.locator('section[aria-labelledby="comes-back"] .run-report')
-    const clipVideo = report.locator('.rr-clip video')
+    const clipVideo = report.locator('#problem-1 .rr-clip video')
     expect(await clipVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
     await report.getByRole('button', { name: /^Play Person 3 · 00:58/ }).click()
     await expect.poll(() => clipVideo.evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThan(58)
@@ -270,6 +280,13 @@ for (const width of [1440, 375]) test(`what you write, what they see: the comman
   await expect(tabs).toHaveText(compilation.pieces.map(piece => `${piece.n}${piece.tab}`))
   const open = async () => ({ selected: await tabs.evaluateAll(nodes => nodes.findIndex(node => node.getAttribute('aria-selected') === 'true')), visible: await section.locator('[role="tabpanel"]:visible').count() })
   expect(await open()).toEqual({ selected: 0, visible: 1 })
+  // Issue #49, item 5: on desktop the steps keep the tallest step's height through all six tabs, so the page never jumps; on a phone
+  // each step takes its own height. The closed steps are invisible and inert, never in the tab order.
+  const stage = section.locator('.compile-steps'), heights: number[] = []
+  for (let i = 0; i < compilation.pieces.length; i++) { await tabs.nth(i).click(); heights.push(Math.round((await stage.boundingBox())!.height)) }
+  if (width === 1440) expect(new Set(heights).size, `step heights ${heights}`).toBe(1); else expect(new Set(heights).size, `step heights ${heights}`).toBeGreaterThan(1)
+  expect(await section.locator('.compile-step:not(.is-current)').evaluateAll(nodes => nodes.every(node => (node as HTMLElement).inert))).toBe(true)
+  await tabs.nth(0).click()
   // Each step: its number and name, its note and its own lines under their original numbers on the left; a frame and what comes back on the right.
   for (const [i, piece] of compilation.pieces.entries()) {
     await tabs.nth(i).click()
@@ -356,7 +373,10 @@ for (const width of [1440, 375]) test(`the sources table opens one row at a time
   const section = page.locator('section[aria-labelledby="people"]')
   const rows = section.locator('.src-row'), wells = section.locator('.src-well')
   const open = async () => (await rows.evaluateAll(nodes => nodes.map(node => node.getAttribute('aria-expanded'))))
-  // The link is open on arrival; opening another closes it.
+  // Issue #49, item 4: no row is open on arrival; the first click opens one, and opening another closes it.
+  expect(await open()).toEqual(['false', 'false', 'false'])
+  await expect(wells.locator('visible=true')).toHaveCount(0)
+  await rows.nth(0).click()
   expect(await open()).toEqual(['true', 'false', 'false'])
   await expect(wells.locator('visible=true')).toHaveCount(1)
   await rows.nth(1).click()
@@ -422,7 +442,7 @@ for (const width of [1440, 375]) test(`hover, focus and active never move anythi
   }
   await still(page, ['.moment-press', '.attempt-index a', '.attempt-fold summary'])
   await page.goto('/#step2')
-  await still(page, ['.rr-row:not(.is-sel)', '.rr-chip', '.rr-copy', '.rr-play', '.rr-people a', '.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.pr-chk a', '.nav-links a', '.compile-tabs button[aria-selected="false"]', '.compile-stepnav .snext', '.stepper .nextb', '.dashboard tbody tr'])
+  await still(page, ['.rr-chip[aria-pressed="false"]', '.rr-play', '.rr-strip a', '.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.pr-chk a', '.nav-links a', '.compile-tabs button[aria-selected="false"]', '.compile-stepnav .snext', '.stepper .nextb', '.dashboard tbody tr'])
 })
 
 /** Each target keeps its exact box on hover, and buttons and links on focus and press too. */
@@ -503,8 +523,54 @@ test('failed playback restores the attempt clip and reel play controls without a
   await report.getByRole('button', { name: 'Person 4 · 00:41', exact: true }).click()
   await report.getByRole('button', { name: /^Play Person 4 · 00:41/ }).click()
   await expect(report.getByRole('button', { name: /^Pause Person 4 · 00:41/ })).toBeVisible()
-  await expect.poll(() => report.locator('.rr-clip video').evaluate(element => 'rejectPlay' in element)).toBe(true)
-  await report.locator('.rr-clip video').evaluate((video: HTMLVideoElement & { rejectPlay: () => void }) => video.rejectPlay())
+  await expect.poll(() => report.locator('#problem-1 .rr-clip video').evaluate(element => 'rejectPlay' in element)).toBe(true)
+  await report.locator('#problem-1 .rr-clip video').evaluate((video: HTMLVideoElement & { rejectPlay: () => void }) => video.rejectPlay())
   await expect(report.getByRole('button', { name: /^Play Person 4 · 00:41/ })).toBeVisible()
+  expect(errors).toEqual([])
+})
+
+for (const width of [1440, 375]) test(`the agent section is the artefact, word for word: the command under the heading, the lead, three tiles and no code at ${width}px`, async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+  page.on('pageerror', error => errors.push(error.message))
+  await page.setViewportSize({ width, height: 1000 })
+  await page.goto('/')
+  await page.evaluate(() => document.fonts.ready)
+  const section = page.locator('section[aria-labelledby="agents"]')
+  // Issue #49, item 1: the words of design/artefacts/agents-section.html, verbatim.
+  const { parseHTML } = await import('linkedom')
+  const artefact = parseHTML(`<html><body>${await readFile('design/artefacts/agents-section.html', 'utf8')}</body></html>`).document
+  const text = (node: Element | null) => node!.textContent!.replace(/\s+/g, ' ').trim()
+  await expect(section.getByRole('heading', { level: 2 })).toHaveText(text(artefact.querySelector('.head h1')))
+  await expect(section.locator('.agents-cmd')).toHaveText(text(artefact.querySelector('.head .cmd')))
+  await expect(section.locator('.section-head [data-lead]')).toHaveText(text(artefact.querySelector('.head p')))
+  const tiles = [...artefact.querySelectorAll('.tile')]
+  await expect(section.locator('.agents-tile h3')).toHaveText(tiles.map(tile => text(tile.querySelector('h2'))))
+  await expect(section.locator('.agents-tile h3 span')).toHaveText(tiles.map(tile => text(tile.querySelector('h2 span'))))
+  await expect(section.locator('.agents-tile p')).toHaveText(tiles.map(tile => text(tile.querySelector('p'))))
+  await expect(section.locator('.agents-tile p b')).toHaveText(tiles.flatMap(tile => [...tile.querySelectorAll('p b')].map(text)))
+  // Each tile's icon in the accent, 56px; no terminal, no code block, no result line.
+  for (const icon of await section.locator('.agents-icon').all()) {
+    await expect(icon).toHaveCSS('color', 'rgb(75, 63, 240)')
+    expect(Math.round((await icon.boundingBox())!.width)).toBe(56)
+  }
+  await expect(section.locator('pre, code, .terminal-window, .code-window, video')).toHaveCount(0)
+  // The command sits under the heading in the first five columns; the lead in the right seven; the tiles across twelve, one row at 1440.
+  const [heading, command, lead] = await Promise.all([section.locator('h2').boundingBox(), section.locator('.agents-cmd').boundingBox(), section.locator('[data-lead]').boundingBox()])
+  expect(command!.y).toBeGreaterThanOrEqual(heading!.y + heading!.height - 1)
+  const boxes = await section.locator('.agents-tile').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect()).map(r => ({ x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width) })))
+  const figure = (await section.locator('.agents-tiles').boundingBox())!
+  if (width === 1440) {
+    expect([Math.round(command!.x), Math.round(lead!.x)]).toEqual([96, 630])
+    expect([Math.round(figure.x), Math.round(figure.width)]).toEqual([96, 1248])
+    expect(new Set(boxes.map(box => box.y)).size).toBe(1)
+    expect(boxes.map(box => box.width)).toEqual([400, 400, 400])
+  } else {
+    expect(lead!.y).toBeGreaterThanOrEqual(command!.y + command!.height - 1)
+    expect(boxes.every(box => box.x === 16 && box.width === 343)).toBe(true)
+    expect(boxes.every((box, i) => i === 0 || box.y > boxes[i - 1].y)).toBe(true)
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  }
+  expect((await new AxeBuilder({ page }).include('section[aria-labelledby="agents"]').analyze()).violations).toEqual([])
   expect(errors).toEqual([])
 })

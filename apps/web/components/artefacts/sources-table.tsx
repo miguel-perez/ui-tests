@@ -5,11 +5,12 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 export type SourceRow = { id: string; name: string; cells: ReactNode; well: ReactNode }
 
 /**
- * The sources table's behaviour (design/artefacts/sources-section.html): one row open at a time, the first open on arrival; a click
+ * The sources table's behaviour (design/artefacts/sources-section.html): one row open at a time, none on arrival (issue #49), so the
+ * first click opens one; a click
  * outside the open well, or Escape, closes it. The column header sticks to the top once scrolled past and reads as stuck.
  */
 export function SourcesTable({ columns, rows }: { columns: readonly string[]; rows: SourceRow[] }) {
-  const [open, setOpen] = useState<string | null>(rows[0]?.id ?? null)
+  const [open, setOpen] = useState<string | null>(null)
   const [stuck, setStuck] = useState(false)
   const header = useRef<HTMLDivElement>(null)
   const table = useRef<HTMLDivElement>(null)

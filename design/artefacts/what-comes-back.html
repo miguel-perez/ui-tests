@@ -1,15 +1,15 @@
 <!--
-  Approved landing section "In the pull request" (D2 round eight), exported from the design artifact, with the run report.
-  Three pieces in one column, in the order a developer meets them: the check in the merge box with a neutral mark; the
-  check's own page on GitHub (the sentence, the three problems to fix first with where they are and a link to the moment,
-  links to the report, no pictures); and the report page, the viewer: one line for the result, the five people in one
-  line with their outcome, the problems on the left worst first with impact, where, who hit it and how many, and on the
-  right the evidence of the selected problem (clip, words, where as a locator, moments, suggested change, copy as issue),
-  one closing line for the study-wide answers, who took part and the caveat.
+  Approved landing section "How it works." (the composition round, issue #46, as "What comes back."; the agent round, issue #49),
+  exported from the design artifact. No lead: three pieces after the hairline, in the order a developer meets them: the check in the
+  merge box with a neutral mark; the check's own page on GitHub (the sentence, the three problems to fix first with where they are and
+  a link to the moment, links to the report, no pictures); and the report page as the list (run-report-list.html): one line for the
+  result, one card per problem worst first with its evidence inline (rank, impact, the sentence, where, the person marks and x of n,
+  the words, the moments, the suggested change, the clip), what worked last, the five people in a strip each linking to their
+  attempt, and one closing line for the study-wide answers, who took part and the caveat.
   Research: docs/discovery/pull-request-surfaces-research.md, report-presentation-research.md, reporting-schema-research.md.
   The page skeleton (doctype, head, body) is added by the site; this file is the content and its styles.
 -->
-<title>What Comes Back</title>
+<title>How It Works</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -608,12 +608,48 @@ img { display: block; max-width: 100%; }
 .opened .pbody { padding: 0 0 6px 0; }
 .foot1 { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; line-height: 1.6; text-wrap: pretty; }
 .foot1 b { color: var(--ink); font-weight: 500; }
+/* The report as the list (run-report-list.html, issue #49): one card per problem, evidence inline, the people in a strip. */
+.cards { display: grid; gap: 14px; }
+.pcard { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; grid-template-columns: 1fr 300px; gap: 18px; background: var(--raised); }
+.pcard > * { min-width: 0; }
+.pcard .hd { display: grid; grid-template-columns: 24px 80px 1fr auto; gap: 12px; align-items: baseline; }
+.pcard .hd .rank { font: 500 14px/1 var(--mono); color: var(--moment); }
+.pcard .hd b { font-weight: 500; font-size: 15px; }
+.pcard .hd .where { display: block; font: 400 12px/1.4 var(--mono); color: var(--muted); margin-top: 2px; }
+.pcard .hd .who { display: flex; align-items: center; gap: 10px; font: 400 13px/1 var(--mono); }
+.pcard .ev { display: grid; gap: 10px; margin-top: 12px; font-size: 14px; }
+.pcard .ev .q { font-style: italic; color: var(--ink); border-left: 2px solid var(--note); padding-left: 12px; }
+.pcard .ev .q small { display: block; font-style: normal; font-size: 12px; color: var(--comment); }
+.pcard .ev .fix b { font-weight: 500; color: var(--done); }
+.pcard .clipcard { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--host-bg); aspect-ratio: 16 / 10; }
+.pcard .clipcard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.pcard .clipcard .secs { position: absolute; left: 8px; bottom: 8px; font: 500 11px/1 var(--mono); color: #e1e2e7; background: rgba(44,51,83,.92); padding: 5px 7px; border-radius: 4px; }
+.pcard .clipcard .play { position: absolute; right: 8px; bottom: 8px; width: 30px; height: 30px; border-radius: 50%; background: var(--moment); color: var(--chip-ink); display: grid; place-items: center; }
+.pcard .clipcard .play svg { width: 11px; height: 11px; margin-left: 1px; }
+.pcard.worked { grid-template-columns: 1fr; background: transparent; }
+.pcard .moms { display: flex; flex-wrap: wrap; gap: 6px; }
+.pcard .moms span { display: inline-flex; align-items: center; gap: 6px; font: 400 12px/1 var(--mono); border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; }
+.pcard .moms span svg { width: 10px; height: 10px; color: var(--moment); }
+.pstrip { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+.pstrip a { display: grid; gap: 3px; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; color: var(--muted); text-decoration: none; }
+.pstrip a b { color: var(--ink); font-weight: 500; }
+.pstrip a .yes { color: var(--done); }
+.pstrip a .no { color: var(--no); }
+.pstrip a .f { font: 400 12px/1 var(--mono); color: var(--comment); }
+.vpane .clipcard { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--host-bg); aspect-ratio: 16 / 10; }
+.vpane .clipcard img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.vpane .clipcard .secs { position: absolute; left: 10px; bottom: 10px; font: 500 12px/1 var(--mono); color: #e1e2e7; background: rgba(44,51,83,.92); padding: 6px 8px; border-radius: 4px; }
+.vpane .clipcard .play { position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%; background: var(--moment); color: var(--chip-ink); display: grid; place-items: center; }
+.vpane .clipcard .play svg { width: 13px; height: 13px; margin-left: 1px; }
+@media (max-width: 900px) {
+  .pcard { grid-template-columns: 1fr; }
+  .pstrip { grid-template-columns: 1fr 1fr; }
+}
 </style>
 
 <div class="page">
   <header class="head">
-    <h1>What comes back.</h1>
-    <p>Put <code>npx ui-tests run</code> in the job that deploys your preview. Once the attempts are in, a check lands on the pull request, and behind it the report: whether people reached the goal, the problems they hit, worst first, and for each one the clip, their words, the moment to watch and the smallest change. The check never fails your build. Your other tests prove the code works. This one shows whether a person can use it.</p>
+    <h1>How it works.</h1>
   </header>
 
   <section class="piece">
@@ -650,26 +686,38 @@ img { display: block; max-width: 100%; }
   </section>
 
   <section class="piece" id="report">
-    <div class="intro"><h2 data-n="3">The report</h2><p>The page the check links to, and the one you can send as a link. One line says whether it worked. The five people sit under it, each with their outcome and a link to their attempt. Then the problems on the left, worst first, with impact, where, who hit it and how many; on the right the evidence for the one selected, which stays put while the list scrolls: the clip, the words, where as a locator you can paste, the moments, the smallest change, and a copy as an issue. One line closes the page.</p></div>
+    <div class="intro"><h2 data-n="3">The report</h2><p>The page the check links to, and the one you can send as a link. One line says whether it worked. Then each problem as one card, worst first, with its evidence inline: who hit it, where, the clip, their words and the smallest change. The five people in a strip, each linking to their attempt. One line closes the page.</p></div>
     <div class="rep" aria-label="The report page"><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/r/k2m9</span></div><div class="body">
   <div class="top"><div class="crumb"><span>Weekboard</span><span>Run <b class="mono">k2m9</b></span><span>14 Oct 2026</span><span>5 people from a paid panel (Prolific, CloudResearch Connect)</span></div><h1><b>invite a colleague</b> · 2 of 5 reached the goal · 4 problems, seen across all 5 · <span class="no">2 pressed Done, but your check failed</span></h1></div>
-  <div class="vhead"><span><b>Person 1</b> <span class="yes">reached</span> · 0:58 · ease 4</span><span><b>Person 2</b> <span class="no">not reached</span> · 0:55 · ease 2</span><span><b>Person 3</b> <span class="no">not reached</span> · 1:03 · ease 3</span><span><b>Person 4</b> <span class="no">not reached</span> · 0:48 · ease 4</span><span><b>Person 5</b> <span class="yes">reached</span> · 0:53 · ease 5</span></div>
-  <div class="viewer">
-    <div class="vlist">
-      <div class="vrow is-sel"><span class="rank">1</span><span><b>Pressed Add, saw nothing change, pressed it again; Sam got two invitations.</b><span class="sub"><span class="impact blocked">Blocked</span><span class="where">/settings/members · button "Add"</span><span class="marks"><i class="" aria-label="Person 1 did not" title="Person 1 did not">1</i><i class="" aria-label="Person 2 did not" title="Person 2 did not">2</i><i class="on" aria-label="Person 3 hit it" title="Person 3 hit it">3</i><i class="on" aria-label="Person 4 hit it" title="Person 4 hit it">4</i><i class="" aria-label="Person 5 did not" title="Person 5 did not">5</i></span></span></span><span class="cnt">2 of 5</span></div><div class="vrow"><span class="rank">2</span><span><b>The Add button looked switched off; Person 2 pressed I couldn't do this.</b><span class="sub"><span class="impact blocked">Blocked</span><span class="where">/settings/members · button "Add"</span><span class="marks"><i class="" aria-label="Person 1 did not" title="Person 1 did not">1</i><i class="on" aria-label="Person 2 hit it" title="Person 2 hit it">2</i><i class="" aria-label="Person 3 did not" title="Person 3 did not">3</i><i class="" aria-label="Person 4 did not" title="Person 4 did not">4</i><i class="" aria-label="Person 5 did not" title="Person 5 did not">5</i></span></span></span><span class="cnt">1 of 5</span></div><div class="vrow"><span class="rank">3</span><span><b>Looked for Invite in the Share menu and found only link options.</b><span class="sub"><span class="impact slowed">Slowed</span><span class="where">/board · menu "Share"</span><span class="marks"><i class="on" aria-label="Person 1 hit it" title="Person 1 hit it">1</i><i class="on" aria-label="Person 2 hit it" title="Person 2 hit it">2</i><i class="on" aria-label="Person 3 hit it" title="Person 3 hit it">3</i><i class="" aria-label="Person 4 did not" title="Person 4 did not">4</i><i class="on" aria-label="Person 5 hit it" title="Person 5 hit it">5</i></span></span></span><span class="cnt">4 of 5</span></div><div class="vrow"><span class="rank">4</span><span><b>Typed Sam's email into the board search.</b><span class="sub"><span class="impact confused">Confused</span><span class="where">/board · field "Search"</span><span class="marks"><i class="on" aria-label="Person 1 hit it" title="Person 1 hit it">1</i><i class="" aria-label="Person 2 did not" title="Person 2 did not">2</i><i class="on" aria-label="Person 3 hit it" title="Person 3 hit it">3</i><i class="" aria-label="Person 4 did not" title="Person 4 did not">4</i><i class="" aria-label="Person 5 did not" title="Person 5 did not">5</i></span></span></span><span class="cnt">2 of 5</span></div>
-      <div class="vrow"><span class="rank"></span><span><b>Found Settings, then Members, on their own.</b><span class="sub"><span class="impact okay">Worked</span><span class="where">/settings · tab "Members"</span><span class="marks"><i class="on" aria-label="Person 1 hit it" title="Person 1 hit it">1</i><i class="on" aria-label="Person 2 hit it" title="Person 2 hit it">2</i><i class="on" aria-label="Person 3 hit it" title="Person 3 hit it">3</i><i class="on" aria-label="Person 4 hit it" title="Person 4 hit it">4</i><i class="on" aria-label="Person 5 hit it" title="Person 5 hit it">5</i></span></span></span><span class="cnt">5 of 5</span></div>
-    </div>
-    <div class="vpane">
-      <div class="clipcard"><img src="attempt-view/members.jpg" alt="The Members page at the moment"><span class="secs">00:58 → 01:04</span><span class="play"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg></span></div>
-      <p class="q">I wasn't sure the first Add did anything, so I pressed it again.<small>Person 3, after the task</small></p>
-            <dl>
-              <div><dt>Where</dt><dd><code>/settings/members</code> · <code>button "Add"</code></dd></div>
-              <div><dt>Moments</dt><dd><span class="moms"><span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg>Person 3 · 00:58</span><span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg>Person 4 · 00:41</span></span></dd></div>
-              <div><dt>Suggested change</dt><dd class="fix"><b>On press, change the button to "Invited sam@acme.co" and disable it.</b></dd></div>
-            </dl>
-            <span class="act"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="2" width="9" height="11" rx="1.5"/><path d="M3 5v8.5A1.5 1.5 0 0 0 4.5 15H11"/></svg>Copy as an issue</span>
-    </div>
+  <div class="cards">
+    <div class="pcard">
+  <div>
+    <div class="hd"><span class="rank">1</span><span class="impact blocked">Blocked</span><span><b>Pressed Add, saw nothing change, pressed it again; Sam got two invitations.</b><span class="where">/settings/members · button "Add"</span></span><span class="who"><span class="marks"><i class="" title="Person 1">1</i><i class="" title="Person 2">2</i><i class="on" title="Person 3">3</i><i class="on" title="Person 4">4</i><i class="" title="Person 5">5</i></span><span>2 of 5</span></span></div>
+    <div class="ev"><p class="q">I wasn't sure the first Add did anything, so I pressed it again.<small>Person 3, after the task</small></p><p class="moms"><span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg>Person 3 · 00:58</span><span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg>Person 4 · 00:41</span></p><p class="fix"><b>On press, change the button to "Invited sam@acme.co" and disable it.</b></p></div>
   </div>
+  <div class="clipcard"><img src="attempt-view/members.jpg" alt="The moment"><span class="secs">00:58</span><span class="play"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg></span></div>
+</div><div class="pcard">
+  <div>
+    <div class="hd"><span class="rank">2</span><span class="impact blocked">Blocked</span><span><b>The Add button looked switched off; Person 2 pressed I couldn't do this.</b><span class="where">/settings/members · button "Add"</span></span><span class="who"><span class="marks"><i class="" title="Person 1">1</i><i class="on" title="Person 2">2</i><i class="" title="Person 3">3</i><i class="" title="Person 4">4</i><i class="" title="Person 5">5</i></span><span>1 of 5</span></span></div>
+    <div class="ev"><p class="q">It looked switched off.<small>Person 2, after the task</small></p><p class="moms"><span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg>Person 2 · 00:49</span></p><p class="fix"><b>Keep the button solid; check the address on press, with a message.</b></p></div>
+  </div>
+  <div class="clipcard"><img src="attempt-view/members.jpg" alt="The moment"><span class="secs">00:49</span><span class="play"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg></span></div>
+</div><div class="pcard">
+  <div>
+    <div class="hd"><span class="rank">3</span><span class="impact slowed">Slowed</span><span><b>Looked for Invite in the Share menu and found only link options.</b><span class="where">/board · menu "Share"</span></span><span class="who"><span class="marks"><i class="on" title="Person 1">1</i><i class="on" title="Person 2">2</i><i class="on" title="Person 3">3</i><i class="" title="Person 4">4</i><i class="on" title="Person 5">5</i></span><span>4 of 5</span></span></div>
+    <div class="ev"><p class="q">Share is where you add people.<small>Person 5, after the task</small></p><p class="moms"><span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg>Person 1 · 00:04</span><span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg>Person 2 · 00:06</span><span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg>Person 3 · 00:03</span><span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg>Person 5 · 00:09</span></p><p class="fix"><b>Put "Invite a colleague" at the top of the Share menu.</b></p></div>
+  </div>
+  <div class="clipcard"><img src="attempt-view/members.jpg" alt="The moment"><span class="secs">00:04</span><span class="play"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg></span></div>
+</div><div class="pcard">
+  <div>
+    <div class="hd"><span class="rank">4</span><span class="impact confused">Confused</span><span><b>Typed Sam's email into the board search.</b><span class="where">/board · field "Search"</span></span><span class="who"><span class="marks"><i class="on" title="Person 1">1</i><i class="" title="Person 2">2</i><i class="on" title="Person 3">3</i><i class="" title="Person 4">4</i><i class="" title="Person 5">5</i></span><span>2 of 5</span></span></div>
+    <div class="ev"><p class="q">I figured it would find them.<small>Person 1, after the task</small></p><p class="moms"><span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg>Person 1 · 00:30</span><span><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg>Person 3 · 00:23</span></p><p class="fix"><b>When a search matches no cards, offer "Invite someone with this email".</b></p></div>
+  </div>
+  <div class="clipcard"><img src="attempt-view/members.jpg" alt="The moment"><span class="secs">00:23</span><span class="play"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg></span></div>
+</div>
+    <div class="pcard worked"><div class="hd"><span></span><span class="impact okay">Worked</span><span><b>Found Settings, then Members, on their own.</b><span class="where">/settings · tab "Members"</span></span><span class="who"><span class="marks"><i class="on" title="Person 1">1</i><i class="on" title="Person 2">2</i><i class="on" title="Person 3">3</i><i class="on" title="Person 4">4</i><i class="on" title="Person 5">5</i></span><span>5 of 5</span></span></div></div>
+  </div>
+  <div class="pstrip"><a href="#"><b>Person 1</b><span class="yes">Reached the goal</span><span class="f">0:58 · ease 4 of 7 · Pressed Done</span></a><a href="#"><b>Person 2</b><span class="no">Did not reach it</span><span class="f">0:55 · ease 2 of 7 · Couldn't do this</span></a><a href="#"><b>Person 3</b><span class="no">Did not reach it</span><span class="f">1:03 · ease 3 of 7 · Pressed Done</span></a><a href="#"><b>Person 4</b><span class="no">Did not reach it</span><span class="f">0:48 · ease 4 of 7 · Pressed Done</span></a><a href="#"><b>Person 5</b><span class="yes">Reached the goal</span><span class="f">0:53 · ease 5 of 7 · Pressed Done</span></a></div>
   <p class="foot1">After the goal: would it help them <b>4 of 5</b> · easy to use <b>2 of 5</b> · first look: named the purpose <b>4 of 5</b>, first click on your path <b>3 of 5</b> · screened as signed up for a planning tool this week · desktop Chromium, 1280×800 · Five people give an 87% chance of seeing any problem that hits one in three; problems are found from what people did and can be missed, so watch the clips.</p>
 </div></div>
   </section>

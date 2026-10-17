@@ -3,20 +3,20 @@ import { SiteShell, repository } from '../components/site-shell'
 import { Hero } from '../components/hero'
 import { SectionHead } from '../components/site/section-head'
 import { Caption } from '../components/site/caption'
-import { TerminalWindow } from '../components/artefacts/terminal-window'
 import { CodeWindow } from '../components/artefacts/code-window'
 import { WhatComesBack } from '../components/artefacts/what-comes-back'
 import { Compilation } from '../components/artefacts/compilation'
 import { Sources } from '../components/artefacts/sources'
+import { Agents } from '../components/artefacts/agents'
 import { Dashboard } from '../components/artefacts/dashboard'
 import { Icon } from '../components/icon'
-import { promise, intro, landing, agent, hosted } from '../lib/copy'
+import { promise, intro, landing, hosted } from '../lib/copy'
 
 function Actions() { return <div className="actions"><Link className="button primary" href="/docs/getting-started">Get started<Icon name="arrow" /></Link><a className="button quiet" href={repository}><Icon name="github" />GitHub</a></div> }
 
 /**
  * The landing page: a sequence of typed content per docs/design/site-schema.md, every section on one grid per docs/design/grid-plan.md
- * (design/artefacts/README.md, "The page grid, in one place"): hero, what comes back, what you write, where the people come from, the
+ * (design/artefacts/README.md, "The page grid, in one place"): hero, how it works, what you write, where the people come from, the
  * agent section, the hosted section.
  */
 export default function Home() {
@@ -26,10 +26,7 @@ export default function Home() {
       <WhatComesBack />
       <Compilation />
       <Sources />
-      <section className="block" aria-labelledby="agents" data-section="agents">
-        <SectionHead id="agents" heading={agent.heading} lead={agent.lead} />
-        <div className="split figure-right"><TerminalWindow name="agent" title={agent.command} /><Caption side code={agent.fileLine} text={agent.closing} /></div>
-      </section>
+      <Agents />
       <section className="block" aria-labelledby="hosted" data-section="hosted">
         <SectionHead id="hosted" heading={hosted.heading} lead={hosted.lead} />
         <CodeWindow code={hosted.snippet} title="index.html" language="html" />
