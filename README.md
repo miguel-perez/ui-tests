@@ -213,18 +213,6 @@ Five screens, one question each; press Next to see them all. The first two come 
 
 ease 3 of 7 · what made it difficult, in their words · would it help them 4 of 5 · easy to use 2 of 5 · words and audio
 
-People
-
-5 from the paid panel, matched to `users`
-
-Chance of seeing a 1-in-3 problem
-
-87%
-
-Cost
-
-from $60 · cap $70 · first people within minutes, usually all five within a few hours
-
 ## The file
 
 ui-tests/invite.ui.test.ts
@@ -359,11 +347,25 @@ Its details, on GitHub
 
 Press Details and GitHub shows the check's own page: the sentence, the three problems to fix first with where they are and a link to the moment, and a link to the report. One screen, no pictures, no scrolling.
 
-the-report
+the-replay
 
-The report
+The replay
 
-The page the check links to, and the one you can send as a link. One line says whether it worked. Then each problem as one card, worst first, with its evidence inline: who hit it, where, the clip, their words and the smallest change. The five people in a strip, each linking to their attempt. One line closes the page.
+Every problem in the report comes with the moment it happened: the person's minute as a rail, the moments that got in the way as stops, and at each stop the clip, what they did, what they said afterwards, and the smallest change that would have fixed it.
+
+Blocked
+
+Pressed Add, saw nothing change, pressed it again.
+
+I wasn't sure the first Add did anything, so I pressed it again.
+
+On press, change the button to "Invited sam@acme.co" and disable it.
+
+Started on /board
+
+Pressed Done
+
+the check failed
 
 ## The example run
 

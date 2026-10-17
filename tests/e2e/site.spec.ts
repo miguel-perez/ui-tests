@@ -6,8 +6,9 @@ import { shown, unsaid, offences } from '../vocabulary'
 import { texture, travel } from '../../apps/web/lib/texture'
 import { mixOklab, over, darken } from '../oklab'
 
-/** Every content type's component on the landing page (docs/design/site-schema.md); the code window is the guide's since the host round (issue #56). */
-const artefacts = ['terminal-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'run-report', 'worth', 'agents', 'host']
+/** Every content type's component on the landing page (docs/design/site-schema.md); the code window is the guide's since the host round (issue #56),
+ *  and the report is /r/<run>'s since the replay round (issue #62). */
+const artefacts = ['terminal-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'worth', 'agents', 'host']
 /** Relative luminance of a computed rgb() colour. */
 const luminance = (rgb: string) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return r * .2126 + g * .7152 + b * .0722 }
 /** The distinct colours of the text inside each matched element. */
@@ -75,7 +76,7 @@ for (const width of [1440, 375]) {
       if (name === 'landing') {
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(promise)
         await expect(page.getByText(intro)).toBeVisible()
-        for (const [key, text] of Object.entries(landing)) if (!['fileCaption', 'moment', 'words', 'scenario', 'priority', 'result', 'reached'].includes(key)) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first(), key).toBeVisible()
+        for (const [key, text] of Object.entries(landing)) if (!['fileCaption', 'moment', 'words', 'scenario', 'priority', 'result', 'reached', 'closing'].includes(key)) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first(), key).toBeVisible()
         for (const text of [agent.heading, agent.lead, hosted.heading, hosted.lead.replaceAll('`', ''), hosted.closing, compilation.heading, compilation.lead, whatComesBack.heading]) await expect(page.getByText(text, { exact: true })).toBeVisible()
         // Round six: one section in place of "What the person sees" and "Three commands".
         await expect(page.getByRole('heading', { name: 'What the person sees.' })).toHaveCount(0)
@@ -88,10 +89,12 @@ for (const width of [1440, 375]) {
         expect(new Set(await page.locator('.page-texture').evaluate(node => [...node.children, ...node.shadowRoot!.children].map(child => `${child.tagName} ${child.className}`)))).toEqual(new Set(['CANVAS page-texture-tile']))
         await expect(page.locator('.page-texture')).toHaveText('')
         await expect(page.getByRole('button', { name: /frustration gestures|texture/i })).toHaveCount(0)
-        // Issue #46, item 2: "What comes back." in place of the attempt view block and "In the pull request": the check, its page and
-        // the report; the one-person attempt view is off the landing, behind each name in the report's people line.
+        // Issue #46, item 2: "What comes back." in place of the attempt view block and "In the pull request": the check, its page and,
+        // since issue #62, the replay; the report and the one-person attempt view are off the landing, at /r/k2m9 and behind each name there.
         const comesBack = page.locator('section[aria-labelledby="comes-back"]')
-        for (const piece of ['merge-box', 'check-page', 'run-report']) await expect(comesBack.locator(`[data-artefact="${piece}"]`)).toHaveCount(1)
+        for (const piece of ['merge-box', 'check-page']) await expect(comesBack.locator(`[data-artefact="${piece}"]`)).toHaveCount(1)
+        await expect(comesBack.locator('#the-replay .replay-moment')).toBeVisible()
+        await expect(page.locator('[data-artefact="run-report"], .run-report')).toHaveCount(0)
         await expect(page.locator('[data-artefact="attempt-view"], [data-artefact="pull-request"], section[aria-labelledby="pull-request"]')).toHaveCount(0)
         await expect(page.getByRole('heading', { name: 'In the pull request.' })).toHaveCount(0)
         // The page order: hero, what comes back, what you write, where the people come from, what a run is worth (issue #53), the agent
@@ -244,9 +247,10 @@ for (const width of [1440, 375]) {
     // Under reduced motion nothing in the view transitions.
     expect(await view.locator('*').evaluateAll(nodes => nodes.every(node => getComputedStyle(node).transitionDuration.split(', ').every(duration => duration === '0s')))).toBe(true)
 
-    // The report in the section: one clip at a time, played on its control from its start second, under reduced motion too.
-    await page.goto('/')
-    const report = page.locator('section[aria-labelledby="comes-back"] .run-report')
+    // The report at /r/k2m9 (off the landing since issue #62): one clip at a time, played on its control from its start second, under
+    // reduced motion too.
+    await page.goto('/r/k2m9')
+    const report = page.locator('.run-report')
     const clipVideo = report.locator('#problem-1 .rr-clip video')
     expect(await clipVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
     await report.getByRole('button', { name: /^Play Person 3 · 00:58/ }).click()
@@ -422,6 +426,9 @@ for (const width of [1440, 375]) test(`what you write, what they see: the comman
     const [left, main] = await Promise.all([row.locator('.compile-left').boundingBox(), row.locator('.compile-main').boundingBox()])
     if (width === 1440) { expect(Math.round(left!.width)).toBe(510); expect(Math.round(main!.x)).toBe(630) } else expect(main!.y).toBeGreaterThanOrEqual(left!.y + left!.height - 1)
     await expect(row.locator('.lines-window, pre, code.shiki, .lines-body')).toHaveCount(0)
+    // Issue #62, item 4: no step carries the worked-out box, step 2 included; its text, screen and "Comes back" line stay.
+    await expect(row.locator('.compile-check, dl')).toHaveCount(0)
+    await expect(row).not.toContainText('Worked out on your side')
     expect(await row.innerText()).not.toContain('After Done')
   }
   // At 375 the file's code wraps instead of scrolling.
@@ -558,8 +565,11 @@ for (const width of [1440, 375]) test(`hover, focus and active never move anythi
     expect(await row.boundingBox(), `flow row ${i + 1} hover`).toEqual(before)
   }
   await still(page, ['.moment-press', '.attempt-index a', '.attempt-fold summary'])
+  // The report, at /r/k2m9 since the replay round (issue #62).
+  await page.goto('/r/k2m9')
+  await still(page, ['.rr-chip[aria-pressed="false"]', '.rr-play', '.rr-strip a'])
   await page.goto('/#step2')
-  await still(page, ['.rr-chip[aria-pressed="false"]', '.rr-play', '.rr-strip a', '.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.pr-chk a', '.nav-links a', '.compile-tabs button[aria-selected="false"]', '.compile-stepnav .snext', '.stepper .nextb'])
+  await still(page, ['.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.pr-chk a', '.nav-links a', '.compile-tabs button[aria-selected="false"]', '.compile-stepnav .snext', '.stepper .nextb'])
 })
 
 /** Each target keeps its exact box on hover, and buttons and links on focus and press too. */
@@ -609,7 +619,7 @@ test('failed playback restores the attempt clip and reel play controls without a
   })
   const view = page.locator('.attempt-view')
   const report = page.locator('.run-report')
-  for (const [route, container, play, pause] of [['/r/k2m9/p3', view, /^Play 00:03 to 00:19/, /^Pause 00:03 to 00:19/], ['/', report, /^Play Person 3 · 00:58/, /^Pause Person 3 · 00:58/]] as const) {
+  for (const [route, container, play, pause] of [['/r/k2m9/p3', view, /^Play 00:03 to 00:19/, /^Pause 00:03 to 00:19/], ['/r/k2m9', report, /^Play Person 3 · 00:58/, /^Pause Person 3 · 00:58/]] as const) {
     await page.goto(route)
     await container.getByRole('button', { name: play }).click()
     await expect(container.getByRole('button', { name: pause })).toBeVisible()

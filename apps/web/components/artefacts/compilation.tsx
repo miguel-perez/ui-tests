@@ -12,9 +12,9 @@ import { Stepped } from './stepped'
  * Compilation (docs/design/site-schema.md; design/artefacts/compile-section.html): what you write, what they see, on the page grid.
  * The heading in five columns and the lead in seven; the three commands as cards; then the six pieces a person meets as tabs, one
  * step visible at a time (`CompileSteps`), and the whole file after them across all twelve. Each step is a 5/7 pair: its number,
- * name and note on the left; the screen in a constant light frame with the chrome at real size, the worked-out box and what comes
- * back on the right. No code inside the tabs and nothing sticky (issue #54). The chrome is drawn as the inverse of the light
- * Weekboard page with its mint accent.
+ * name and note on the left; the screen in a constant light frame with the chrome at real size, and what comes back, on the
+ * right; no worked-out box (issue #62). No code inside the tabs and nothing sticky (issue #54). The chrome is drawn as the inverse
+ * of the light Weekboard page with its mint accent.
  */
 export async function Compilation() {
   const html = await highlight(inviteExample)
@@ -102,10 +102,6 @@ const screens: Record<string, ReactNode> = {
       <Sheet step="A few questions first · 5 of 6" title="How do you do it today?"><Options items={['*A shared document or spreadsheet', 'A planning tool', 'Chat and email', 'In my head']} /><div className="ch-actions"><span className="ch-small">Pick one.</span><Next /></div></Sheet>
       <Sheet step="A few questions first · 6 of 6" title="How much does it matter to you to get this right?"><Options items={['*A lot: it costs me time every week', 'Some', 'Not much']} /><div className="ch-actions"><span className="ch-small">Pick one.</span><Next /></div></Sheet>
     </Stepped>
-    <div className="compile-check" aria-label="The sample, worked out on your side" role="group">
-      <span className="who">Worked out on your side</span>
-      <dl>{compilation.sample.map(([term, value]) => <div key={term}><dt>{term}</dt><dd><Prose text={value} /></dd></div>)}</dl>
-    </div>
   </>,
   impression: <Board label="First look question over the flashed page">
     <Sheet step="You saw a page for half a second" title="What was that page for?">
