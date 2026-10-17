@@ -19,7 +19,7 @@
 | `questions` | UX-Lite, two items, usefulness and ease | yes |
 | `sample` | n, derived (below) | no |
 | `sentenceRule` | derived (below) | no |
-| `consent`, `instructions` | standing text with the recording level (event replay always, screen video when `video: true`), incentive and purposes filled in | yes |
+| `consent`, `instructions` | standing text with the recording level (event replay always, screen video when `video: true`), the payout line (the amount, or that a `link` run is unpaid; [`03-participants.md`](03-participants.md#the-payout-line)) and purposes filled in | yes |
 
 ## The ladder the report reads
 
@@ -72,7 +72,7 @@ Time on goal starts when the scenario card is dismissed and the target is ready,
 | Environment | usual browser, device and assistive technology from the screener; accommodation is never a quality flag |
 | Quality flags | speeder under half the median, failed attention item; flagged, never auto-excluded. A duplicate device or IP across runs of the same project is the one exception: excluded from n and still paid |
 
-Event replay (what the person does on the page: clicks, typing without its values, pages) is always recorded. Screen video, when the context sets `video: true`, needs the browser's prompt, attaches to the attempt and applies the 1.5× incentive multiplier. Voice is the person's choice and the camera is off; neither is an author field.
+Event replay (what the person does on the page: clicks, typing without its values, pages) is always recorded. Screen video, when the context sets `video: true`, needs the browser's prompt, attaches to the attempt and applies the 1.5× recording multiplier to the incentive's hourly term ([`03-participants.md`](03-participants.md)). Voice is the person's choice and the camera is off; neither is an author field.
 
 ## Sample size
 
@@ -145,7 +145,13 @@ One record per run, viewable in the browser like a Playwright trace behind the a
 - money: estimate, reserved, paid, trued up, in minor units
 - the sentence
 
-A shareable report page renders the issues, the sentence and the moments for a reader without a login, through a signed link the author creates.
+## The report
+
+The report is the list at `/r/<run>`: the result line, then one card per problem, ranked by impact and then by how many people hit it, each with where it is (the page and the element), who hit it, their words, the moments as play chips and the suggested change; what worked is the last card. Under the cards are the people, each linking to their attempt at `/r/<run>/p<n>`, the attempt view, where everything about one person stays. The pull-request check's links open a card at its moment.
+
+A reader without a login sees the same report through a share link the author creates with `ui-tests report --share`: the path signed with an HMAC under `UI_TESTS_SHARE_SECRET`, white-labelled, its people linking to signed attempts. Without the secret there are no share links, and an unsigned or altered link is not found.
+
+The landing page shows no report. It shows the replay: an illustration of one person's minute as a rail, with the moments that got in the way as stops and one moment as a card, and nothing to press. It promises nothing interactive about the report; the report's behaviour is described here and nowhere on the landing.
 
 ## Revisions
 

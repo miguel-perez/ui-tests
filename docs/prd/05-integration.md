@@ -6,7 +6,7 @@
 | --- | --- | --- |
 | Recorder, taskbar, player | SDK mounted in the author's Next.js app through a root-layout component, active only when a run cookie is present | One snippet through a tag manager or `<script>` on the live site, companion mode |
 | Collector | Route handler in the author's app, writes to the run store | the author's deploy |
-| Run store | SQLite file in dev; Postgres on previews and in CI; independent of any deployment | the deploy's store, recordings in the author's bucket |
+| Run store | SQLite file in dev; Postgres on previews and in CI; independent of any deployment | the deploy's store (D1 on the first provider), recordings in the author's bucket (R2) |
 | Hooks | Run by `ui-tests verify` in CI or on the dev machine against stored end-state snapshots; never inside the app under test | Success checks by URL, element or question, evaluated on the deploy |
 | Context definition | `*.ui.test.ts` | a form on the deploy with the same inputs |
 | Participants | link, panel by the author's key | link, panel by the author's key, intercept |
@@ -15,21 +15,34 @@
 
 The candidate build can record and store attempts; it cannot judge them. Hooks, happy paths and expected answers never ship to the app or the player. The run record outlives any preview because it lives in the store, and `ui-tests status`, `verify` and the GitHub check read the store, not the preview.
 
-Any framework can implement the recorder and collector contract; it is a handful of HTTP endpoints with JSON schemas. Next.js is the one shipped. The hosted track is the same compiler, lint, sentence, issues and trace with a different install path and host: the author's deploy, made by `ui-tests host` ([`01-dx-contract.md`](01-dx-contract.md); [`../discovery/hosting-decision.md`](../discovery/hosting-decision.md)). There is no service operated by ui-tests.com; recordings, panel accounts and payment are the author's.
+Any framework can implement the recorder and collector contract; it is a handful of HTTP endpoints with JSON schemas. Next.js is the one shipped. The hosted track is the same compiler, lint, sentence, issues and trace with a different install path and host: the author's deploy, made by `ui-tests host` ([`01-dx-contract.md`](01-dx-contract.md); [`../discovery/hosting-decision.md`](../discovery/hosting-decision.md)). There is no service operated by ui-tests.com; recordings, panel accounts and payment are the author's. The command's contract is provider-agnostic, a container plus a bucket; the first provider is Cloudflare Workers, with R2 as the bucket and D1 as the store. Until the deploy ships ([#59](https://github.com/miguel-perez/ui-tests/issues/59)) `ui-tests host` prints what it will do and where, and exits 2 with "host: not shipped yet; see https://github.com/miguel-perez/ui-tests/issues/59".
 
 ## Reachability
 
-Participants have to reach the build. The mode is declared in the config, shown in the trace, and limits what a run can license.
+Participants have to reach the build. The mode is declared in the config, shown in the trace, and limits what a run can license. The link `ui-tests run` prints can point at a branch preview, at the author's laptop through a tunnel, or at the live site: the first three rows.
 
 | Mode | How participants reach the build | Where the collector and store live | Limit |
 | --- | --- | --- | --- |
 | Public preview | A Vercel preview with the protection-bypass token in the invite link | In the app; the Postgres store | Needs a deployment |
-| Tunnel from a local machine | `ui-tests run --tunnel` opens a short-lived cloudflared or ngrok tunnel to `localhost`, scoped to the run and closed at the deadline or when the process exits, whichever is first | On the dev machine; SQLite | The machine must stay up; fits link runs and rehearsal, not a paid-panel run, which stays open until its deadline (48 hours unless the author sets one) |
+| Tunnel from a local machine | `ui-tests run --tunnel` opens a short-lived cloudflared or ngrok tunnel to `localhost`, scoped to the run and closed at the deadline or when the process exits, whichever is first | On the dev machine; SQLite | The machine must stay up, so it fits a run the author watches for a few hours: rehearsal, or a link sent to a few people. A longer or unattended run, a paid-panel run, which stays open until its deadline (48 hours unless the author sets one), and the visitors source, which listens all the time, use `ui-tests host` ([`../discovery/hosting-decision.md`](../discovery/hosting-decision.md)). See "When the laptop closes" below |
 | The author's deploy | Participants reach the live site | The collector and store live on the deploy | The provider's free tier |
 | Inside the perimeter | Invite links on the internal hostname; collector, store and runner all run inside; nothing crosses the boundary unless the author exports the record | Inside | Participants must be inside too: employees, a lab, a LAN; panels and the hosted track do not apply |
 | Local only | As inside, with the runner on the same box and participants in the room | On the box | Hallway testing with a recorder and a trace |
 
-The tunnel URL alone opens nothing: every request through it needs the participant token issued at invite and scoped to one run, as the collector requires everywhere. The tunnel URL is recorded in the trace so a leak is traceable. A remote browser hosted inside a perimeter and streamed to an outside participant is a planned omission; the player and collector never assume they are public, and the runner only ever talks to the store, so it slots in without changing the contract.
+The tunnel URL alone opens nothing: every request through it needs the participant token issued at invite and scoped to one run, as the collector requires everywhere. The tunnel URL is recorded in the trace so a leak is traceable.
+
+### When the laptop closes
+
+A tunnel run lives as long as the machine. If the laptop closes, sleeps or loses its connection, or the process exits, mid-run:
+
+- The link goes dark: anyone who opens it reaches nothing.
+- Attempts in progress are lost. The person's page can no longer reach the collector; what arrived of the attempt is kept as `disconnected`, never `incorrect`, and it does not count toward n. Where the consent promised pay, that person is still owed it.
+- Attempts already received are kept, with their recordings, in the SQLite store on the machine.
+- The same run resumes: the next `ui-tests run` from the same commit, context and actor derives the same key, returns the same run, and reopens the tunnel. Nothing is created twice.
+- The deadline keeps counting from the run's start; it does not pause while the machine is closed. A run that reaches its deadline closed ends as any run does then, inconclusive if fewer than n attempts came in.
+- A tunnel whose address changes on each start (a quick tunnel) leaves the link sent before dark; `run` prints the new link to send. A named tunnel keeps its address, and the old link works again.
+
+The tunnel fits a run watched for a few hours. A longer or unattended run uses `ui-tests host`, which is always up ([`../discovery/hosting-decision.md`](../discovery/hosting-decision.md)). A remote browser hosted inside a perimeter and streamed to an outside participant is a planned omission; the player and collector never assume they are public, and the runner only ever talks to the store, so it slots in without changing the contract.
 
 ## The run handle
 
@@ -61,7 +74,15 @@ Completion is observable three ways: poll `ui-tests status`, a webhook the store
 
 ## GitHub
 
-The action posts a check `ui-tests (human)` or `ui-tests (agent)` with the estimate as the summary while pending, then the issues, the sentence and a link to the trace. The reconciliation workflow runs `ui-tests verify` and `ui-tests status` on a schedule with default-branch code only. Invite links carry the Vercel protection-bypass token so participants reach a protected preview without the author's session.
+The action posts one check run named `ui-tests` on the commit for a human run; an agent run posts its own, `ui-tests (agent)`, which never counts with people ([`04-agent-studies.md`](04-agent-studies.md)). While pending its summary is the estimate. On completion its conclusion is `neutral` for every outcome, so it never fails the build or blocks a merge, even when a team marks it required; with `check: { block_on: 'problems' }` in the config it is `failure` when problems were found, and only then. Its mark in the merge box is neutral, never red or green.
+
+Its title, one line in the merge box, is one of three:
+
+- "{n} problems found · {x} of {n} people reached the goal" ("1 problem found" for one)
+- "No problems found with {n} people · {x} of {n} reached the goal"
+- "Inconclusive · only {x} of {n} attempts completed", when fewer attempts completed than the run asked for
+
+Its page on GitHub, behind Details, is one screen with no pictures: the sentence; "This check never fails your build. It reports problems, or that none were seen this time." (with `block_on`, that it fails the build when it finds problems); the three problems to fix first, each with where it is (the page and the element), how many people, the impact and a link to the moment; the links to the report; and a footer with who took part, where it ran, the commit and the date. The rest of the problems sit folded below. No annotations and no images. Details opens the report at `/r/<run>` ([`02-study-and-verdict.md`](02-study-and-verdict.md#the-report)). One sticky comment of three to five lines is updated in place, posted only when the outcome changes; `check: { comment: false }` turns it off. The reconciliation workflow runs `ui-tests verify` and `ui-tests status` on a schedule with default-branch code only. Invite links carry the Vercel protection-bypass token so participants reach a protected preview without the author's session.
 
 ## What the record evidences
 
