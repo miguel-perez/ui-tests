@@ -354,7 +354,7 @@ test('the waves move visibly but slowly, grey with a blue centre, and stay light
   await expect(page.locator('.site-header .wordmark')).toHaveCSS('display', 'flex')
 })
 
-for (const width of [1440, 375]) test(`what you write, what they see: the commands, the file, then one step at a time by tab, key and hash, stepped frames of one height, no console errors at ${width}px`, async ({ page }) => {
+for (const width of [1440, 375]) test(`what you write, what they see: the commands, one step at a time by tab, key and hash, each at its own height with no code, then the file, stepped frames of one height, no console errors at ${width}px`, async ({ page }) => {
   const errors: string[] = []
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
   page.on('pageerror', error => errors.push(error.message))
@@ -366,22 +366,34 @@ for (const width of [1440, 375]) test(`what you write, what they see: the comman
   const commands = await section.locator('.compile-command').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().top))
   expect(commands).toHaveLength(3)
   if (width === 1440) expect(new Set(commands).size).toBe(1); else expect(new Set(commands).size).toBe(3)
-  // The whole file, as init writes it, in the site's highlighter, above the tabs.
-  const file = section.locator('.lines-window').first()
+  // Issue #54: the whole file, as init writes it, in the site's highlighter, after the steps' previous and next row, across all
+  // twelve columns with --space-2 above it; the only code window in the section.
+  await expect(section.locator('.lines-window')).toHaveCount(1)
+  const file = section.locator('.lines-window')
   expect((await file.locator('li code').allInnerTexts()).join('\n')).toBe(inviteExample)
+  expect(await file.evaluate(node => node.previousElementSibling?.classList.contains('compile-stepper') && !node.nextElementSibling)).toBe(true)
+  const [stepper, fileBox, commandsBox] = await Promise.all([section.locator('.compile-stepper').boundingBox(), file.boundingBox(), section.locator('.compile-commands').boundingBox()])
+  expect(Math.round(fileBox!.y - (stepper!.y + stepper!.height))).toBe(width === 1440 ? 48 : 36)
+  expect([Math.round(fileBox!.x), Math.round(fileBox!.width)]).toEqual([Math.round(commandsBox!.x), Math.round(commandsBox!.width)])
   // Issue #46, item 3: a tab strip, 1 Consent to 6 After the task, and one step visible at a time.
   const tabs = section.getByRole('tab')
   await expect(tabs).toHaveText(compilation.pieces.map(piece => `${piece.n}${piece.tab}`))
   const open = async () => ({ selected: await tabs.evaluateAll(nodes => nodes.findIndex(node => node.getAttribute('aria-selected') === 'true')), visible: await section.locator('[role="tabpanel"]:visible').count() })
   expect(await open()).toEqual({ selected: 0, visible: 1 })
-  // Issue #49, item 5: on desktop the steps keep the tallest step's height through all six tabs, so the page never jumps; on a phone
-  // each step takes its own height. The closed steps are invisible and inert, never in the tab order.
+  // Issue #54: the panel takes each step's own height at every width, and nothing in the section is sticky. The closed steps are out
+  // of the layout and inert, never in the tab order.
   const stage = section.locator('.compile-steps'), heights: number[] = []
-  for (let i = 0; i < compilation.pieces.length; i++) { await tabs.nth(i).click(); heights.push(Math.round((await stage.boundingBox())!.height)) }
-  if (width === 1440) expect(new Set(heights).size, `step heights ${heights}`).toBe(1); else expect(new Set(heights).size, `step heights ${heights}`).toBeGreaterThan(1)
-  expect(await section.locator('.compile-step:not(.is-current)').evaluateAll(nodes => nodes.every(node => (node as HTMLElement).inert))).toBe(true)
+  for (let i = 0; i < compilation.pieces.length; i++) {
+    await tabs.nth(i).click()
+    const [panel, step] = await Promise.all([stage.boundingBox(), section.locator('.compile-step.is-current').boundingBox()])
+    expect(Math.round(panel!.height)).toBe(Math.round(step!.height))
+    heights.push(Math.round(panel!.height))
+  }
+  expect(new Set(heights).size, `step heights ${heights}`).toBeGreaterThan(1)
+  expect(await section.locator('*').evaluateAll(nodes => nodes.filter(node => getComputedStyle(node).position === 'sticky').length)).toBe(0)
+  expect(await section.locator('.compile-step:not(.is-current)').evaluateAll(nodes => nodes.every(node => (node as HTMLElement).inert && getComputedStyle(node).display === 'none'))).toBe(true)
   await tabs.nth(0).click()
-  // Each step: its number and name, its note and its own lines under their original numbers on the left; a frame and what comes back on the right.
+  // Each step: its number, name and note on the left, and no code; a frame and what comes back on the right, and no after-Done box.
   for (const [i, piece] of compilation.pieces.entries()) {
     await tabs.nth(i).click()
     expect(await open()).toEqual({ selected: i, visible: 1 })
@@ -391,18 +403,14 @@ for (const width of [1440, 375]) test(`what you write, what they see: the comman
     await expect(row.locator('.compile-intro h3')).toHaveText(new RegExp(`^${piece.n}${piece.name}`))
     await expect(row.locator('.compile-back')).toHaveText(`Comes back${piece.returns}`)
     await expect(row.locator('.compile-frame[data-figure]')).toHaveCount(1)
-    // The text and its lines on the left, the screen on the right: a 5/7 pair at 1440, stacked at 375.
+    // The text on the left, the screen on the right: a 5/7 pair at 1440, stacked at 375.
     const [left, main] = await Promise.all([row.locator('.compile-left').boundingBox(), row.locator('.compile-main').boundingBox()])
     if (width === 1440) { expect(Math.round(left!.width)).toBe(510); expect(Math.round(main!.x)).toBe(630) } else expect(main!.y).toBeGreaterThanOrEqual(left!.y + left!.height - 1)
-    if (!piece.lines.length) { await expect(row.locator('.lines-window')).toHaveCount(0); continue }
-    const numbers = (await row.locator('.lines-body .ln').allInnerTexts()).filter(Boolean).map(Number)
-    expect(numbers).toEqual(piece.lines)
-    // A skipped run of lines is one dots row.
-    const gaps = piece.lines.filter((n, j) => j && n - piece.lines[j - 1] > 1).length
-    await expect(row.locator('.lines-body li.gap')).toHaveCount(gaps)
-    // At 375 the code wraps instead of scrolling.
-    if (width === 375) for (const body of await row.locator('.lines-body').all()) expect(await body.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true)
+    await expect(row.locator('.lines-window, pre, code.shiki, .lines-body')).toHaveCount(0)
+    expect(await row.innerText()).not.toContain('After Done')
   }
+  // At 375 the file's code wraps instead of scrolling.
+  if (width === 375) expect(await file.locator('.lines-body').evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true)
   // Arrow keys, Home and End move between the tabs and take the focus with them.
   await tabs.nth(5).focus()
   await page.keyboard.press('ArrowLeft'); expect((await open()).selected).toBe(4); await expect(tabs.nth(4)).toBeFocused()

@@ -286,8 +286,8 @@ main { position: relative; isolation: isolate; }
 .attempt-foot span + span::before { content: '·'; margin: 0 10px; }
 .attempt-foot b { font-weight: 500; color: var(--ink); }
 
-/* L3 · Compilation (design/artefacts/compile-section.html), on the page grid: the commands and the whole file across twelve columns,
-   then the six steps as tabs, one open at a time, each a 5/7 pair: the text and its lines on the left, sticky; the screen on the right.
+/* L3 · Compilation (design/artefacts/compile-section.html), on the page grid: the commands across twelve columns, then the six steps
+   as tabs, one open at a time, each a 5/7 pair: the text on the left, the screen on the right; then the whole file across twelve.
    The frames are the light Weekboard page; the chrome over it is that page's inverse with its mint accent, at real size. */
 .compile-commands { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); }
 .compile-command { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
@@ -303,15 +303,13 @@ main { position: relative; isolation: isolate; }
 .compile-tabs button b, .compile-stepnav b { font: 500 12px/1 var(--font-mono), monospace; color: var(--moment); }
 .compile-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--moment); }
 .compile-tabs button:focus-visible { outline-offset: -2px; }
-/* Every step shares one grid cell, so the steps keep the tallest step's height and the page never jumps when a tab changes; the
-   closed steps stay in the layout, invisible. On a phone the closed steps go, so each step takes its own height (issue #49). */
+/* The closed steps leave the layout, so the step area takes each step's own height at every width; nothing is sticky (issue #54). */
 /* The tab strip, the open step and previous and next are one figure: their spacing is the figure's own. */
 .compile-stepper > .compile-steps { margin-top: 28px; }
-.compile-steps { display: grid; }
-.compile-step { grid-area: 1 / 1; min-width: 0; }
-.compile-step:not(.is-current) { visibility: hidden; pointer-events: none; }
+.compile-step { min-width: 0; }
+.compile-step:not(.is-current) { display: none; }
 .compile-pair { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gutter); align-items: start; scroll-margin-top: 24px; }
-.compile-left { position: sticky; top: 24px; display: grid; gap: 20px; min-width: 0; }
+.compile-left { display: grid; gap: 20px; min-width: 0; }
 .compile-stepper > .compile-stepnav { margin-top: 32px; }
 .compile-stepnav { display: flex; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
 .compile-stepnav button { display: inline-flex; gap: 8px; align-items: baseline; border: 0; background: none; padding: 0; color: var(--muted); }
@@ -324,7 +322,6 @@ main { position: relative; isolation: isolate; }
 .lines-body li { display: grid; grid-template-columns: 44px minmax(0, 1fr); min-height: 24px; padding-right: 16px; white-space: pre; }
 .lines-body .ln { text-align: right; padding-right: 14px; color: var(--muted); font-size: 11px; user-select: none; }
 .lines-body code { font: inherit; }
-.lines-body li.gap code { color: var(--muted); }
 .compile-intro { display: grid; gap: 10px; max-width: 64ch; }
 .compile-intro h3 { font-size: 20px; line-height: 1.25; letter-spacing: -.01em; }
 .compile-intro h3 > span:not(.compile-n) { font-weight: 400; color: var(--muted); }
@@ -335,12 +332,9 @@ main { position: relative; isolation: isolate; }
 .compile-back span { color: var(--muted); font-family: var(--font-sans), sans-serif; margin-right: 8px; }
 .compile-check { border: 1px dashed var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 10px; }
 .compile-check .who { font: 500 11px/1 var(--font-mono), monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--dead); }
-.compile-check pre { font: 400 13px/1.6 var(--font-mono), monospace; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
-.compile-check pre .fn { color: var(--blue); } .compile-check pre .k { color: var(--purple); } .compile-check pre .s { color: var(--green); } .compile-check pre .pu { color: var(--cyan); }
 .compile-check dl { display: grid; gap: 6px; font-size: 14px; }
 .compile-check dl > div { display: grid; grid-template-columns: minmax(0, 15em) minmax(0, 1fr); gap: 18px; }
 .compile-check dt { color: var(--muted); }
-.compile-check .no { color: var(--dead); font-weight: 500; } .compile-check .yes { color: var(--done); font-weight: 500; }
 /* The frame: constant and light, the host page under test; its address bar and the board drawn as the participant sees them. */
 .compile-frame { position: relative; aspect-ratio: 16 / 10; width: 100%; border-radius: 8px; overflow: hidden; background: var(--host-bg); border: 1px solid var(--line); }
 .compile-frame .frame-shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
@@ -695,8 +689,6 @@ main { position: relative; isolation: isolate; }
    page's side list goes above it. */
 @media (max-width: 900px) {
   .compile-pair { grid-template-columns: minmax(0, 1fr); }
-  .compile-left { position: static; }
-  .compile-step:not(.is-current) { display: none; }
   .rr-card, .pr-cp { grid-template-columns: minmax(0, 1fr); }
   .rr-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .agents-tiles { grid-template-columns: minmax(0, 1fr); gap: 14px; }
@@ -711,7 +703,7 @@ main { position: relative; isolation: isolate; }
   .section-head > *, .split > *, .hero-grid > *, .compile-pair > * { grid-column: 1 / -1 !important; grid-row: auto !important; }
   .section-head, .split, .compile-pair { row-gap: var(--space-1); }
   .footer-links { justify-content: flex-start; }
-  .step > h2, .compile-left { position: static; }
+  .step > h2 { position: static; }
   .hero h1 { font-size: 44px; max-width: none; }
   .worth .worth-say { font-size: 20px; }
   .hero-artefact { margin-top: var(--space-2); }

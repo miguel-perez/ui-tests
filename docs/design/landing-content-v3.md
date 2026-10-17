@@ -105,11 +105,11 @@ The report (`/r/k2m9`; `design/artefacts/run-report-list.html`, the list, since 
 
 *Do I have to write a script, and will I lead them.*
 
-Since the composition round (issue #46) the six screens below are tabs under the commands and the file, one step open at a time (1 Consent, 2 Screener, 3 First look, 4 Scenario card, 5 Your page, with the bar, 6 After the task); the words are unchanged.
+Since the composition round (issue #46) the six screens below are tabs under the commands, one step open at a time (1 Consent, 2 Screener, 3 First look, 4 Scenario card, 5 Your page, with the bar, 6 After the task); the words are unchanged. Since the trim round (issue #54) the tabs carry no code and the file sits after the steps' previous and next row; it is listed here first, as the command card names it.
 
 **Heading.** What you write, what they see.
 
-**Lead.** Every screen a person meets, in the order they meet it, beside the lines of your test that produce it, and what comes back from each. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.
+**Lead.** Every screen a person meets, in the order they meet it, and what comes back from each, then the whole test that produces them. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.
 
 **Commands.** Three cards in one row, each a command and what it does.
 
@@ -149,19 +149,13 @@ context({
 })
 ```
 
-**The pieces.** Six, in the order a person meets them. Each shows its name, the note, only the lines that produce it (original line numbers kept, skipped lines as a dots row), the screen in a light frame with the chrome at real size, and what comes back.
+**The pieces.** Six, in the order a person meets them. Each shows its name and the note on the left, and the screen in a light frame with the chrome at real size and what comes back on the right. No piece shows code of its own (the trim round, issue #54).
 
 ### 1. Consent
 
 **Subtitle.** before anything loads
 
 **Note.** What the person does on the page is always recorded, and the consent says so in plain words. `video: true` adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.
-
-**Lines.** `video`
-
-```text
-12   video: true,
-```
 
 **Screen.** "Weekboard · before you start". "Weekboard would like to watch you try something on their site." What you do on their page: where you click, what you type, which pages you open (always) · Your screen, as a video, while you try it (needed) · Your voice, only if you choose to talk later (optional) · Your camera (off). "The website is being tested, not you. You can stop at any time and still be paid $9." [ What is recorded? ] [ Continue ]
 
@@ -173,26 +167,11 @@ context({
 
 **Note.** Six questions, one per screen; press Next to see them all. The first three come from `users`: `did` and `within` become a recency question with bands, `uses` a multi-select with one decoy, `not` an item among neutral ones, so nobody can tell what disqualifies. The last three come from `purpose`: when they last needed it, how they do it today, how much it matters. Write `users` as the sentence alone and the first three are drafted from it.
 
-The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $55, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
-
-**Lines.** `users · purpose · catch`
-
-```text
- 4   users: {
- 5     are: 'people who signed up this week and want a colleague on their board',
- 6     did: 'signed up for a tool to plan work with a team',
- 7     within: '7 days',
- 8     uses: ['Trello', 'Asana', 'Notion', 'Linear'],
- 9     not: ['has used Weekboard'],
-10   },
-11   purpose: 'plan the week together without emailing screenshots around',
-   ⋯
-17     catch: { affecting: '1 in 3', confidence: 0.85 },
-```
+The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost from $60, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
 
 **Screens.** Six, one per screen, each with Next. "A few questions first · n of 6". (1) When did you last sign up for a tool to plan work with a team? In the past week · In the past month · Earlier this year · I haven't. (2) Which of these do you use to plan work? Pick all that apply. Trello · Asana · Notion · Linear · Basecamp · None of these. (3) Which of these have you done? Pick all that apply. Managed a team of more than five · Used Weekboard · Taken a course on planning or project management · None of these. (4) When did you last need to plan a week with other people? This week · This month · Earlier this year · I don't. (5) How do you do it today? A shared document or spreadsheet · A planning tool · Chat and email · In my head. (6) How much does it matter to you to get this right? A lot: it costs me time every week · Some · Not much.
 
-**Worked out on your side.** People: 5 from the paid panel, matched to `users` · Chance of seeing a 1-in-3 problem: 87% · Cost: about $55 · cap $70 · first people within minutes, usually all five within a few hours.
+**Worked out on your side.** People: 5 from the paid panel, matched to `users` · Chance of seeing a 1-in-3 problem: 87% · Cost: from $60 · cap $70 · first people within minutes, usually all five within a few hours.
 
 **Comes back.** screened 20 · matched 5 · who took part: 3 of 5 had the need this month · how they do it today, in their words
 
@@ -201,14 +180,6 @@ The `catch` line sets how many: one in three at 85% confidence means five people
 **Subtitle.** on by default
 
 **Note.** The page the task starts on is flashed for 500 ms, then one open question. The start is the first page of the `happyPath` unless the goal names a `start`; name another page for the flash with `impression: { page }` when the task begins behind a login and the purpose lives on the public page. The answers are read against the `purpose`, which the person never sees, and you can re-read any of them. Then the page comes back for one click.
-
-**Lines.** `purpose · happyPath`
-
-```text
-11   purpose: 'plan the week together without emailing screenshots around',
-   ⋯
-16     happyPath: ['/board', '/settings/members'],
-```
 
 **Screen.** Over the flashed page: "You saw a page for half a second". "What was that page for?" [ In your own words. There is no right answer. ] Talk instead · [ Next ]
 
@@ -219,17 +190,6 @@ The `catch` line sets how many: one in three at 85% confidence means five people
 **Subtitle.** from the goal, never the path
 
 **Note.** The situation from `users.are` and `purpose`, the action from the goal's name, the name and email from `beforeEach`. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with `scenario`.
-
-**Lines.** `users · purpose · beforeEach · goal`
-
-```text
- 5     are: 'people who signed up this week and want a colleague on their board',
-   ⋯
-11   purpose: 'plan the week together without emailing screenshots around',
-   ⋯
-14   beforeEach(async () => ({ colleague: 'Sam', email: 'sam@acme.co' }))
-15   goal('invite a colleague', {
-```
 
 **Screen.** Over the dimmed page: "Task 1 of 1". "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co." "When you think you've finished, press **Done**. If you get stuck, press **I couldn't do this**." [ Start task ]
 
@@ -243,22 +203,7 @@ The `catch` line sets how many: one in three at 85% confidence means five people
 
 When they press Done, the `outcome` runs against the page as they left it. What they said does not count; what the page says does. A check that cannot decide returns "couldn't tell" and is never rounded either way.
 
-**Lines.** `goal · happyPath · video · outcome`
-
-```text
-12   video: true,
-   ⋯
-15   goal('invite a colleague', {
-16     happyPath: ['/board', '/settings/members'],
-   ⋯
-19     outcome(async ({ page }) => {
-20       expect(await page.textContent('main')).toContain('1 invitation pending')
-21     })
-```
-
 **Screen.** The board with the bar: ● 0:41 ‖ · Task 1 of 1 Invite Sam to the board · Done · I couldn't do this.
-
-**After Done · runs on your side.** `expect(await page.textContent('main')).toContain('1 invitation pending')` · Person 3, after Done: Not reached · main contained "2 invitations pending" · Person 5, after Done: Reached · 1:12.
 
 **Comes back.** time on this goal · every moment · their path against yours · how it ended · reached the goal: yes / no / couldn't tell, with the diff
 
@@ -267,8 +212,6 @@ When they press Done, the `outcome` runs against the page as they left it. What 
 **Subtitle.** not from your file
 
 **Note.** Five screens, one question each; press Next to see them all. The first two come after every attempt, including the ones that gave up: how easy it was, with nothing preselected, and, at 4 or below, what made it difficult. The last three come once, after all goals: would it help them, is it easy to use, and anything they want to say, typed or spoken. Confidence is asked only when a goal has no check, so Weekboard's people never see it.
-
-**Lines.** None: not from your file.
 
 **Screens.** Five, one per screen, each with Next, the last with Finish. "After the task · 1 of 2": Overall, how difficult or easy did you find this task? 1 Very difficult … 7 Very easy. "After the task · 2 of 2": What made it difficult? (typed, or Talk instead). "After all goals · 1 of 3": Would Weekboard be useful to you? Strongly disagree · Disagree · Neither · Agree · Strongly agree. "After all goals · 2 of 3": Weekboard is easy to use. (the same five). "After all goals · 3 of 3": Anything you want to tell Weekboard? Type here, or talk.
 
@@ -289,8 +232,8 @@ Rebuilt in round seven (issue #31) from [`../../design/artefacts/sources-section
 | Source | Who | Cost | Time | Good for |
 | --- | --- | --- | --- | --- |
 | **Your link** · A link to your run that anyone can open. Nothing to install. | Anyone outside your team: a customer, a community, a friend's friend | Free · Pay them if you like; the consent says so either way | As each person finishes · Closes at the deadline, 48 h unless you set one | What almost anybody would stumble on, today, and every week |
-| **Your visitors** · On the hosted version: people already on your live site, invited when a page has given them trouble twice. | Real visitors who seemed stuck and said yes, on their own device | Paid like the panel · Under a daily cap you set | Depends on your traffic · A page with trouble and a few hundred visitors a day gives one or two | Real tasks, real devices, the moment it went wrong |
-| **A paid panel** · Five strangers who match your `users` block, found for you and paid by the run. | People who say they did what `users` describes; nobody who works in UX, design or marketing | About $11 a person · Five about $55; a cap of $70 holds the reserve | First people within minutes · Usually all five within a few hours; a narrow audience a day or more | People like your users when you don't know any |
+| **Your visitors** · On the hosted version: people already on your live site, invited when a page has given them trouble twice. | Real visitors who seemed stuck and said yes, on their own device | Paid · Like the panel, under a daily cap you set | Depends on your traffic · A page with trouble and a few hundred visitors a day gives one or two | Real tasks, real devices, the moment it went wrong |
+| **A paid panel** · Five strangers who match your `users` block, found for you and paid by the run. | People who say they did what `users` describes; nobody who works in UX, design or marketing | Starting at $12 a person · Five from $60; a cap of $70 holds the reserve | First people within minutes · Usually all five within a few hours; a narrow audience a day or more | People like your users when you don't know any |
 
 No row is open on arrival (issue #49); the first click opens one. One row is open at a time; each opens to how it works, the caveat and one picture.
 
@@ -298,7 +241,7 @@ No row is open on arrival (issue #49); the first click opens one. One row is ope
 
 **Your visitors.** How it works: (1) One script tag on your site. It watches for the same trouble the attempt view shows: a dead click, a rage click, a U-turn, a long pause. (2) Mark the pages it must never interrupt. Checkout, payment and a form in progress are never interrupted anyway. (3) The second sign of trouble on the same page invites the person. Nothing from before a yes is kept. Their attempt is kept beside the five, not inside. Caveat: **They show where real users get stuck, not how many do.** Treat their problems as leads, and confirm them with a link or a panel run. Picture: the invitation over the Weekboard page, in the chrome's surface, from the real player: "This page seems to be giving you trouble. Would you show us where? Five minutes, paid, in your own words. The site is being tested, not you." [ Sure ] [ No thanks ]
 
-**A paid panel.** How it works: (1) Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token. (2) `npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends. (3) People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back. Caveat: **Panel people answer screeners for money.** Read the Who took part line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not. Picture: run k2m9 filling, 5 people wanted, 2 h 10 m. Prolific (its wordmark): 3 of 3, first at 6 min; Pool: 300,000+ active participants, 300+ filters, plus the screener from `users`; Speed: First person usually within minutes; five within a few hours; a narrow audience a day or more, and the plan says so. CloudResearch Connect (its wordmark): 2 of 2, first at 11 min; Pool: Thousands of vetted, census-matched participants; profiled, screened and custom audiences; Speed: First person within minutes; five within a few hours; a narrow audience needs a prescreen project, which adds time and cost. Paid $55 of the $70 cap · $15 back · Each attempt labelled with its panel.
+**A paid panel.** How it works: (1) Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token. (2) `npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends. (3) People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back. Caveat: **Panel people answer screeners for money.** Read the Who took part line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not. Picture: run k2m9 filling, 5 people wanted, 2 h 10 m. Prolific (its wordmark): 3 of 3, first at 6 min; Pool: 300,000+ active participants, 300+ filters, plus the screener from `users`; Speed: First person usually within minutes; five within a few hours; a narrow audience a day or more, and the plan says so. CloudResearch Connect (its wordmark): 2 of 2, first at 11 min; Pool: Thousands of vetted, census-matched participants; profiled, screened and custom audiences; Speed: First person within minutes; five within a few hours; a narrow audience needs a prescreen project, which adds time and cost. Paid $60 of the $70 cap · $10 back · Each attempt labelled with its panel.
 
 ---
 
@@ -452,7 +395,7 @@ Person 2 · Prolific
 Person 3 · CloudResearch Connect · first at 11 min
 Person 4 · Prolific
 Person 5 · CloudResearch Connect
-Paid $55 of the $70 cap · $15 back
+Paid $60 of the $70 cap · $10 back
 ```
 
 **Read what came back**

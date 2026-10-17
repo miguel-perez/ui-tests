@@ -39,7 +39,7 @@ export const offences = (text: string, words: [string, RegExp][]) => words.filte
  * Issue #31, item 2: the sources section's copy is the artefact's, every cell, step and caveat as written, and the item wins over this
  * list. These are the artefact's phrases that use a word of the list; each must stay in design/artefacts/sources-section.html word for word.
  */
-export const verbatim = ['Paid like the panel', 'brings the panel accounts', "each panel's filters", 'a link or a panel run', 'Panel people answer screeners for money.', 'Each attempt labelled with its panel', 'a dead click']
+export const verbatim = ['Like the panel, under a daily cap you set', 'brings the panel accounts', "each panel's filters", 'a link or a panel run', 'Panel people answer screeners for money.', 'Each attempt labelled with its panel', 'a dead click']
 /**
  * Issue #53, item 3: what a run is worth is said as hours of a developer's time, never in the words docs/discovery/roi-research.md
  * rules out: an ROI figure, the rule of ten as fact, "studies show", "doubles conversion" or "saves money".

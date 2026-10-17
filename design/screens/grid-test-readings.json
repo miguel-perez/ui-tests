@@ -1,6 +1,6 @@
 {
   "landing-1440": {
-    "height": 8431,
+    "height": 8111,
     "sections": [
       {
         "section": "what-comes-back",
@@ -20,13 +20,8 @@
         "widest": 1248,
         "figures": [
           "96+1248",
-          "96+1248",
           "630+714",
-          "630+714",
-          "630+714",
-          "630+714",
-          "630+714",
-          "630+714"
+          "96+1248"
         ]
       },
       {
@@ -67,7 +62,7 @@
     ]
   },
   "landing-375": {
-    "height": 14126,
+    "height": 13986,
     "sections": [
       {
         "section": "what-comes-back",
