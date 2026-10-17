@@ -113,6 +113,26 @@ for (const width of [1440, 375]) {
       expect([Math.round(line!.x), Math.round(line!.width)]).toEqual([16, 343])
     }
     expect(line!.y).toBeGreaterThan(moment!.y + moment!.height)
+    // Issue #65, item 4: the rail's ends. Every dot, its ring included, sits inside the container, the first and the last too, and the
+    // line is inset by half the largest dot; the moments' labels stay inside it and never overlap one another.
+    const ends = await rail.evaluate(node => {
+      const box = node.getBoundingClientRect(), track = node.querySelector('.replay-line')!.getBoundingClientRect()
+      // A moment's dot carries a 4px ring outside its box.
+      const dots = [...node.querySelectorAll('.replay-dots li i')].map(dot => { const r = dot.getBoundingClientRect(), ring = dot.parentElement!.className ? 4 : 0; return { left: r.left - ring, right: r.right + ring } })
+      const labels = [...node.querySelectorAll('.replay-dots li span')].map(label => { const r = label.getBoundingClientRect(); return { left: r.left, right: r.right } })
+      return { box: { left: box.left, right: box.right }, inset: [track.left - box.left, box.right - track.right], dots, labels }
+    })
+    expect(ends.inset).toEqual([11, 11])
+    for (const dot of ends.dots) {
+      expect(dot.left, 'a dot inside the container').toBeGreaterThanOrEqual(ends.box.left)
+      expect(dot.right, 'a dot inside the container').toBeLessThanOrEqual(ends.box.right)
+    }
+    expect(ends.labels).toHaveLength(3)
+    for (const [i, label] of ends.labels.entries()) {
+      expect(label.left).toBeGreaterThanOrEqual(ends.box.left)
+      expect(label.right).toBeLessThanOrEqual(ends.box.right)
+      if (i) expect(label.left, 'the labels never overlap').toBeGreaterThan(ends.labels[i - 1].right)
+    }
     expect(offences(await pr.innerText(), shown)).toEqual([])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     expect((await new AxeBuilder({ page }).include('section[aria-labelledby="comes-back"]').analyze()).violations).toEqual([])

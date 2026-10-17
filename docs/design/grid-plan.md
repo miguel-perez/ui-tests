@@ -7,7 +7,7 @@
 ## The grid
 
 - Container 1248 px centred at 1440 (96 px margins), 12 columns of 82 px with 24 px gutters. One column 82, two 188, three 294, four 400, five 506, six 612, seven 718, eight 824, twelve 1248.
-- **One split for every section: 5 / 7.** A section's heading takes the first five columns and its lead the right seven, as one `5fr 7fr` split with one 24 px gutter: the heading starts at 96 and is 510 wide, the lead starts at 630 and is 714 wide. The same split carries every pair in a section (a compile step, a guide step, the agent's terminal and its caption, the sources well).
+- **One split for every section: 5 / 7.** A section's heading takes the first five columns and its lead the right seven, as one `5fr 7fr` split with one 24 px gutter: the heading starts at 96 and is 510 wide; the lead keeps to 64ch inside the right seven and ends flush with the container's right edge, at 1344 (the host section's rule since issue #56, every landing section's since issue #65; a guide step's sentence still starts at 630, over the figures it introduces). The same split carries every pair in a section (a compile step, a guide step, the agent's terminal and its caption, the sources well).
 - **A figure takes all twelve columns (96, 1248 wide) or the right seven (630, 714 wide).** Nothing is centred in a narrower column: the compilation's 800 px column and the pull-request section's 1036 px column are gone (issue #46).
 - Pieces inside a section are numbered with a small mono figure in the moment colour before the heading; each piece's text keeps to 64ch.
 - Vertical rhythm in three steps only (issue #51): `--space-1` 24, `--space-2` 48, `--space-3` 96, which on a phone are 24, 36 and 64. Every section opens with 96 (`padding-block: var(--space-3) 0`) and the last before the footer closes with 96; a head is followed by 48, a figure by 48, a caption or a note by 24, and nothing else spaces a section's top-level children. The hero keeps 96 above and below. No rule or motif separates sections, and since issue #62 no horizontal rule appears anywhere outside a drawn surface: not between the pieces of "How it works.", under the compile tab strip or over its previous and next row, between the sources table's rows or under its last, or around the guide's step index; spacing alone keeps those gaps. Hairlines stay only inside drawn windows (a window's tab bar, the merge box rows, the check page's table, the code windows, the demo frames). `tests/e2e/rules.spec.ts` walks both pages at both widths for any other.
@@ -87,7 +87,7 @@ At 1440:
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
-[Section heading                    ] [lead, 714 wide                                         ]  head
+[Section heading                    ]          [lead, 64ch, ends flush at 1344                ]  head
 [cmd: npm install         ] [cmd: npx ui-tests init    ] [cmd: npx ui-tests run               ]  cards · 84
 [note under the commands                                                                      ]  24
 [1 Consent · 2 Screener · 3 First look · 4 Scenario card · 5 Your page, with the bar · 6 After]  tabs · 44
@@ -118,7 +118,7 @@ At 1440:
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
-[Section heading                    ] [lead, 714 wide                                         ]  head
+[Section heading                    ]          [lead, 64ch, ends flush at 1344                ]  head
 [ic|Source        |Who           |Cost      |Time      |Good for            |v ]               header · 40, sticky
 [ic|name + what   |who           |cost+note |time+note |good for            |^ ]               row · 152 (once opened)
 [  |How it works: 3 steps, caveat   ] [picture: join / invitation / fill (right 7)            ]  well · 520
@@ -151,7 +151,7 @@ At 1440:
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
-[Agents use some interfaces, too.   ] [lead: three sentences, 714 wide                        ]  head
+[Agents use some interfaces, too.   ]          [lead: three sentences, 64ch, ends at 1344     ]  head
 [$ npx ui-tests run --actor agent   ]
 [icon · Your API · target: { http } ] [icon · Your MCP server        ] [icon · Your CLI           ]  tiles · 230
 [  one sentence                     ] [  one sentence                ] [  one sentence            ]
@@ -245,4 +245,4 @@ At 375:
 
 ## What is measured
 
-`tests/e2e/grid.spec.ts` reads every section on the landing and the guide: at 1440 each heading's left edge at 96, each lead's at 630, and each outermost figure at 96 and 1248 wide or at 630 and 714 wide (±2 px), the landing's sections in order and the landing no taller than 9,000 px; at 375 every heading, lead and figure at 16 and 343 wide, and no horizontal scroll. It writes its readings to `test-results/grid-readings.json` for the PR description. The ui-harness layout rows (`harness.layout.layout_metrics`) remain feedback, not a gate.
+`tests/e2e/grid.spec.ts` reads every section on the landing and the guide: at 1440 each heading's left edge at 96, each landing lead's right edge at 1344 and each guide lead's left edge at 630, and each outermost figure at 96 and 1248 wide or at 630 and 714 wide (±2 px), the landing's sections in order and the landing no taller than 9,000 px; at 375 every heading, lead and figure at 16 and 343 wide, and no horizontal scroll. It also opens the four section artefacts with a lead and holds their leads to the same rule. It writes its readings to `test-results/grid-readings.json` for the PR description. `tests/e2e/text.spec.ts` (issue #65) walks the landing, the guide and `/r/k2m9` at both widths for a text block that ends on a single word and for a paragraph wider than 72ch. The ui-harness layout rows (`harness.layout.layout_metrics`) remain feedback, not a gate.

@@ -145,7 +145,7 @@ Consent
 
 before anything loads
 
-What the person does on the page is always recorded, and the consent says so in plain words. `video: true` adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.
+What the person does on the page is always recorded, and the consent says so in plain words. `video: true` adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.
 
 recorded: actions, screen, voice · camera: declined
 
@@ -612,7 +612,7 @@ You see "ui-tests" in `devDependencies`.
 
 You see a link in the terminal, then in your browser the consent, a few questions, the first look, the scenario card, your own page with the bar over it, and the questions after the task, one at a time. Press "Done". The terminal prints:
 
-You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in, and change it to your own site:
+You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in, and change it to your own site:
 
 You see, on the next `npx ui-tests`, the card reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co. When you think you've finished, press Done. If you get stuck, press I couldn't do this." It is written from `users`, `purpose`, the goal and `beforeEach`, never from the path; pin your own wording with `scenario`. Write `users` as the sentence alone and `ui-tests lint` prints the screener it drafted from it, and the plan names the recording level: event replay, or screen video with `video: true`.
 

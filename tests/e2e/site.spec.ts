@@ -664,13 +664,15 @@ for (const width of [1440, 375]) test(`the agent section is the artefact, word f
     expect(Math.round((await icon.boundingBox())!.width)).toBe(56)
   }
   await expect(section.locator('pre, code, .terminal-window, .code-window, video')).toHaveCount(0)
-  // The command sits under the heading in the first five columns; the lead in the right seven; the tiles across twelve, one row at 1440.
+  // The command sits under the heading in the first five columns; the lead in the right seven, ending flush at 1344 (issue #65); the
+  // tiles across twelve, one row at 1440.
   const [heading, command, lead] = await Promise.all([section.locator('h2').boundingBox(), section.locator('.agents-cmd').boundingBox(), section.locator('[data-lead]').boundingBox()])
   expect(command!.y).toBeGreaterThanOrEqual(heading!.y + heading!.height - 1)
   const boxes = await section.locator('.agents-tile').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect()).map(r => ({ x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width) })))
   const figure = (await section.locator('.agents-tiles').boundingBox())!
   if (width === 1440) {
-    expect([Math.round(command!.x), Math.round(lead!.x)]).toEqual([96, 630])
+    expect([Math.round(command!.x), Math.round(lead!.x + lead!.width)]).toEqual([96, 1344])
+    expect(lead!.x).toBeGreaterThanOrEqual(630 - 2)
     expect([Math.round(figure.x), Math.round(figure.width)]).toEqual([96, 1248])
     expect(new Set(boxes.map(box => box.y)).size).toBe(1)
     expect(boxes.map(box => box.width)).toEqual([400, 400, 400])

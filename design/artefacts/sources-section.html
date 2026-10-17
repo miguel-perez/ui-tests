@@ -57,7 +57,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 img { display: block; max-width: 100%; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
-.page { max-width: 1200px; margin: 0 auto; }
+.page { max-width: 1248px; margin: 0 auto; }
 
 /* Section head: heading 5 columns, lead 7 */
 .head { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; margin-bottom: 36px; }
@@ -248,10 +248,8 @@ img { display: block; max-width: 100%; }
   .pair .side { position: static; }
 }
 
-/* Single column: one 800px reading column; each pair stacks the lines above the screen they produce. */
-.page { max-width: 1200px; }
-.head { grid-template-columns: 1fr; gap: 10px; margin-bottom: 28px; }
-.head p { max-width: 64ch; }
+/* Each pair stacks the lines above the screen they produce; the lead keeps to 64ch, flush with the container's right edge (issue #65). */
+.head p { max-width: 64ch; justify-self: end; }
 .pairs { gap: 56px; }
 .pair { grid-template-columns: 1fr; gap: 12px; }
 .pair .side { position: static; }
@@ -377,7 +375,6 @@ img { display: block; max-width: 100%; }
 </style>
 <style>
 /* Section as a table: one row per source with who, cost, time and good for; a row expands to the steps, the caveat and one picture. */
-.head { grid-template-columns: 1fr; gap: 10px; margin-bottom: 28px; max-width: 64ch; }
 .srcs { border-top: 0; }
 .cols:has(+ .src .row-h[aria-expanded="false"]) { border-bottom-color: transparent; }
 .cols, .row-h { display: grid; grid-template-columns: 28px 3fr 3fr 2fr 2fr 2fr 24px; gap: 0 24px; align-items: center; }
