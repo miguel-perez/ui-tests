@@ -379,15 +379,15 @@ img { display: block; max-width: 100%; }
 /* Section as a table: one row per source with who, cost, time and good for; a row expands to the steps, the caveat and one picture. */
 .head { grid-template-columns: 1fr; gap: 10px; margin-bottom: 28px; max-width: 64ch; }
 .srcs { border-top: 0; }
-.cols:has(+ .src .row-h[aria-expanded="true"]) { border-bottom-color: transparent; }
+.cols:has(+ .src .row-h[aria-expanded="false"]) { border-bottom-color: transparent; }
 .cols, .row-h { display: grid; grid-template-columns: 28px 3fr 3fr 2fr 2fr 2fr 24px; gap: 0 24px; align-items: center; }
 .cols { cursor: default; position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; padding: 12px 0; font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--comment); border-bottom: 1px solid var(--line); background: var(--canvas); box-shadow: 0 0 0 100vmax var(--canvas); clip-path: inset(0 -100vmax); }
 .cols.is-stuck { color: var(--muted); }
 .src { border-bottom: 1px solid var(--line); }
 .row-h { width: 100%; min-height: 152px; padding: 22px 0; text-align: left; font-size: 15px; line-height: 1.5; color: var(--muted); }
-.row-h:hover:not([aria-expanded="true"]) { background: linear-gradient(90deg, transparent, var(--surface) 12%, var(--surface) 88%, transparent); }
-.row-h[aria-expanded="true"] { background: var(--surface); box-shadow: 0 0 0 100vmax var(--surface); clip-path: inset(0 -100vmax); }
-.src:has(.row-h[aria-expanded="true"]) { border-bottom-color: transparent; }
+.row-h:hover:not([aria-expanded="false"]) { background: linear-gradient(90deg, transparent, var(--surface) 12%, var(--surface) 88%, transparent); }
+.row-h[aria-expanded="false"] { background: var(--surface); box-shadow: 0 0 0 100vmax var(--surface); clip-path: inset(0 -100vmax); }
+.src:has(.row-h[aria-expanded="false"]) { border-bottom-color: transparent; }
 .row-h .name { display: grid; gap: 4px; color: var(--ink); }
 .row-h .name b { font: 500 19px/1.2 var(--sans); letter-spacing: -.01em; }
 .row-h .ico { width: 22px; height: 22px; color: var(--moment); display: grid; place-items: center; }
@@ -396,7 +396,7 @@ img { display: block; max-width: 100%; }
 .row-h .cell { color: var(--ink); }
 .row-h .cell small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
 .row-h .chev { width: 24px; height: 24px; display: grid; place-items: center; color: var(--muted); justify-self: end; transition: transform .2s; }
-.row-h[aria-expanded="true"] .chev { transform: rotate(180deg); color: var(--moment); }
+.row-h[aria-expanded="false"] .chev { transform: rotate(180deg); color: var(--moment); }
 .row-h .chev svg { width: 16px; height: 16px; }
 .row-b { display: grid; grid-template-columns: 5fr 7fr; gap: 32px; align-items: start; background: var(--surface); border: 0; border-radius: 0; margin: 0 calc(50% - 50vw); padding: 40px max(16px, calc(50vw - 600px)) 48px; }
 .row-b > * { min-width: 0; }
@@ -499,7 +499,7 @@ img { display: block; max-width: 100%; }
     <div class="cols" id="cols" aria-hidden="true" title="Close"><span></span><span>Source</span><span>Who</span><span>Cost</span><span>Time</span><span>Good for</span><span></span></div>
     
     <div class="src" id="link">
-      <button class="row-h" type="button" aria-expanded="true" aria-controls="link-b">
+      <button class="row-h" type="button" aria-expanded="false" aria-controls="link-b">
         <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.07 0l3-3a5 5 0 0 0-7.07-7.07l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3a5 5 0 0 0 7.07 7.07l1.5-1.5"/></svg></span><span class="name"><b>Your link</b><span>A link to your run that anyone can open. Nothing to install.</span></span>
         <span class="cell" data-k="Who">Anyone outside your team: a customer, a community, a friend's friend</span>
         <span class="cell" data-k="Cost">Free<small>Pay them if you like; the consent says so either way</small></span>
@@ -507,7 +507,7 @@ img { display: block; max-width: 100%; }
         <span class="cell" data-k="Good for">What almost anybody would stumble on, today, and every week</span>
         <span class="chev" aria-hidden="true"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2 4l4 4 4-4"/></svg></span>
       </button>
-      <div class="row-b" id="link-b">
+      <div class="row-b" id="link-b" hidden>
         <div class="how">
           <h4>How it works</h4>
           <ol class="steps3"><li><span><code>npx ui-tests run</code> prints the link. It can point at a branch preview, at your laptop through a tunnel, or at your live site.</span></li><li><span>You send it. Ask a friend to pass it on rather than take it themselves.</span></li><li><span>Whoever opens it answers the same short screener, so the report still says who they were. Each attempt lands as the person finishes.</span></li></ol>
