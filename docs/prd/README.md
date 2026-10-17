@@ -6,9 +6,9 @@ Built on [`../pitch.md`](../pitch.md), [`../stack.md`](../stack.md), [`../person
 | --- | --- |
 | [`01-dx-contract.md`](01-dx-contract.md) | What a developer types and what is derived; config, test file, CLI, reporters, CI, lint |
 | [`02-study-and-verdict.md`](02-study-and-verdict.md) | What a context compiles to; the ladder the report reads; the impression stage; fit; participant flow; measures in the standard's terms; sample size; what the numbers may say; issues; the trace |
-| [`03-participants.md`](03-participants.md) | Sources including intercept; router; incentive formula; budget; consent and purposes; quality; payment; access conditions |
+| [`03-participants.md`](03-participants.md) | Sources including intercept; router; incentive formula; budget; the payout line; consent and purposes; quality; payment; access conditions |
 | [`04-agent-studies.md`](04-agent-studies.md) | The agent actor: targets, harnesses, measures, separation from human studies |
-| [`05-integration.md`](05-integration.md) | Where things run and where the record lives; the run handle; idempotency; JSON contracts; GitHub; the hosted track; DAG and GEPA consumers |
+| [`05-integration.md`](05-integration.md) | Where things run and where the record lives; the run handle; idempotency; JSON contracts; GitHub; the author's deploy (`ui-tests host`); DAG and GEPA consumers |
 | [`06-nonfunctional.md`](06-nonfunctional.md) | Privacy, security, money, accessibility, licensing |
 
 ## Problem
@@ -31,7 +31,7 @@ Figma prototypes, mobile native, moderated sessions, comparisons between builds,
 
 ## Personas
 
-See [`../personas.md`](../personas.md). The author is persona 1; persona 2 is served by the impression stage, issues and intercept recruiting; persona 3 by the hosted install-once track.
+See [`../personas.md`](../personas.md). The author is persona 1; persona 2 is served by the impression stage, issues and intercept recruiting; persona 3 by `ui-tests host`, the one-command deploy to their own account.
 
 ## Riskiest assumptions
 
