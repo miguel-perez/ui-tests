@@ -99,7 +99,11 @@ export function checkText(run: CheckRun) {
   if (!rest.length) return undefined
   return `<details><summary>${rest.length} more problem${rest.length === 1 ? '' : 's'}</summary>\n\n${table(run, rest, top)}\n\n</details>`
 }
-/** The body of `POST /repos/{owner}/{repo}/check-runs`: completed, with the Details link to the report, no annotations and no images. */
+/**
+ * The body of `POST /repos/{owner}/{repo}/check-runs`: completed, with the Details link to the report, no annotations and no images.
+ * GitHub keeps `details_url` for an App's installation token; a check created with an Actions `GITHUB_TOKEN` gets its Details link
+ * pointed at the check's own page instead, so the summary also carries "Open the report".
+ */
 export function checkRunPayload(run: CheckRun, headSha: string, options: CheckOptions = {}) {
   const text = checkText(run)
   return {
@@ -125,12 +129,12 @@ export function parseCheckRun(value: unknown): CheckRun {
   const run = value as CheckRun
   const count = (n: unknown) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= run.people
   const text = (s: unknown) => typeof s === 'string' && s.length > 0
-  // A moment URL goes inside a Markdown link: HTTP(S), no whitespace and no `)` that would close the link early.
+  // The report and moment URLs go inside Markdown links: HTTP(S), no whitespace and no `)` that would close the link early.
   const link = (s: unknown) => typeof s === 'string' && /^https?:\/\/[^\s()]+$/.test(s)
   if (!run || typeof run !== 'object' || Array.isArray(run)) throw new Error('Invalid run: not an object')
   if (!text(run.goal) || !Number.isInteger(run.people) || run.people < 1) throw new Error('Invalid run: goal and people')
   if (!count(run.attempted) || !count(run.reached) || (run.pressedDoneFailed !== undefined && !count(run.pressedDoneFailed)) || run.reached + (run.pressedDoneFailed ?? 0) > run.attempted) throw new Error('Invalid run: counts')
-  if (!text(run.reportUrl) || !/^https?:\/\//.test(run.reportUrl)) throw new Error('Invalid run: reportUrl')
+  if (!link(run.reportUrl)) throw new Error('Invalid run: reportUrl')
   if (!run.footer || typeof run.footer !== 'object' || !text(run.footer.people) || !text(run.footer.preview) || !text(run.footer.commit) || !text(run.footer.date)) throw new Error('Invalid run: footer')
   if (!Array.isArray(run.problems) || run.problems.some(p => !p || typeof p !== 'object' || !text(p.title) || !text(p.page) || !text(p.locator) || !Number.isInteger(p.people) || p.people < 1 || p.people > run.people || !impacts.includes(p.impact)
     || (p.moment !== undefined && (!Number.isInteger(p.moment.person) || !Number.isInteger(p.moment.seconds) || !link(p.moment.url))))) throw new Error('Invalid run: problems')

@@ -91,6 +91,7 @@ describe('the ui-tests check (issue #35, item 3)', () => {
     const moment = (url: string) => ({ ...exampleCheck, problems: [{ ...exampleCheck.problems[0], moment: { person: 1, seconds: 4, url } }] })
     for (const url of ['javascript:alert(1)', 'https://ui-tests.com/r/k2m9 #t=4', 'https://ui-tests.com/r/k2m9)#t=4', '']) expect(() => parseCheckRun(moment(url))).toThrow('Invalid run: problems')
     expect(parseCheckRun(moment('https://ui-tests.com/r/k2m9#problem-1&t=4'))).toBeTruthy()
+    for (const reportUrl of ['javascript:alert(1)', 'https://ui-tests.com/r/k2m9)', 'https://ui-tests.com/r/ k2m9']) expect(() => parseCheckRun({ ...exampleCheck, reportUrl })).toThrow('Invalid run: reportUrl')
     for (const field of ['people', 'preview', 'commit', 'date'] as const) expect(() => parseCheckRun({ ...exampleCheck, footer: { ...exampleCheck.footer, [field]: '' } })).toThrow('Invalid run: footer')
     expect(() => parseCheckRun({ ...exampleCheck, footer: {} })).toThrow('Invalid run: footer')
     const { stdout } = await exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'check', 'apps/web/generated/example-check.json', '--block-on', 'problems', '--print'], { env: { ...process.env, GITHUB_EVENT_PATH: '', GITHUB_SHA: 'deadbeef' }, timeout: 15000 })
