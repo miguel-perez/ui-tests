@@ -567,11 +567,16 @@ main { position: relative; isolation: isolate; }
   .compile-frame:not(.auto) .ch-sheet { width: calc(100% - 24px); }
   .ch-sheet { padding: 14px; }
   .compile-check dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
-  .ch-bar { left: 8px; right: 8px; bottom: 8px; }
-  .ch-pill { width: 100%; justify-content: space-between; padding: 0 6px 0 10px; }
-  .ch-pill .task { max-width: 24px; color: transparent; }
-  .ch-pill .task::after { color: var(--ch-dim); margin-left: -24px; }
-  .ch-pill .seg + .seg { margin-left: 8px; padding-left: 8px; }
+  .ch-bar { left: 6px; right: 6px; bottom: 8px; }
+  .ch-pill { width: 100%; justify-content: space-between; padding: 0 6px 0 8px; }
+  /* The summary folds to its chevron: the text takes no width but stays the button's name; the chevron sits inside the 24px button. */
+  .ch-pill .task { max-width: 24px; font-size: 0; flex: none; text-overflow: clip; }
+  .ch-pill .grip { flex: none; }
+  .ch-pill .task b { font-size: 0; margin: 0; }
+  .ch-pill .task::after { font-size: 13px; margin-left: 0; color: var(--ch-dim); }
+  /* The frame is 327px wide here: tighter separators and a narrower give-up control keep every control inside the pill. */
+  .ch-pill .seg + .seg { margin-left: 6px; padding-left: 6px; }
+  .ch-pill .cant { padding: 0 6px; }
   .compile-piece { padding: 32px 0; }
 }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

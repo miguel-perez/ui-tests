@@ -182,7 +182,11 @@ export function TaskBar({ scenario, steps = [], index = 1, total = 1, interacted
           current.moved = true
           setOffset({ x: current.from.x + dx, y: current.from.y + dy })
         }}
-        onPointerUp={() => { if (drag.current?.moved && !contained) sessionStorage.setItem('ui-tests-bar-offset', JSON.stringify(offset)) }}
+        onPointerUp={event => {
+          // Saved from the drag and this event, not from state, which can lag the last move by a frame.
+          const current = drag.current
+          if (current?.moved && !contained) sessionStorage.setItem('ui-tests-bar-offset', JSON.stringify({ x: current.from.x + event.clientX - current.x, y: current.from.y + event.clientY - current.y }))
+        }}
         onClick={() => { if (drag.current?.moved) { drag.current = null; return } drag.current = null; move(position === 'bottom' ? 'top' : 'bottom') }}><Grip /></button>
       {recording && <RecordingSegment {...recording} />}
       <button className="uit-seg uit-summary" aria-expanded={expanded} aria-controls={`${id}-task`} onClick={() => setExpanded(!expanded)}>

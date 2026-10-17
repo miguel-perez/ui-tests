@@ -74,11 +74,15 @@ export function createCollector(getStorage: () => StorageAdapter = () => new SQL
         if (run.withdrawnAt && body.action !== 'withdraw') return new Response('Attempt was withdrawn', { status: 409 })
         if (body.action === 'screener') {
           if (run.status !== 'consented') return new Response('The screener comes after consent and before the task', { status: 409 })
-          run.screener = body.answers
+          // Once per session: the first answers stand. An identical retry (after a response that never arrived) is accepted; different answers are refused.
+          if (!run.screener) run.screener = body.answers
+          else if (JSON.stringify(run.screener) !== JSON.stringify(body.answers)) return new Response('The screener was already answered', { status: 409 })
         } else if (body.action === 'impression') {
           if (run.status !== 'consented') return new Response('The first impression comes after consent and before the task', { status: 409 })
           // The code is proposed here, beside the words; it never goes back to the participant and a reviewer can change it in the trace.
-          run.impression = { answer: body.answer, spoken: body.spoken, code: codeImpression(body.answer, run.context.purpose) }
+          // Once per session, as the screener: an identical retry is accepted, a different answer refused.
+          if (!run.impression) run.impression = { answer: body.answer, spoken: body.spoken, code: codeImpression(body.answer, run.context.purpose) }
+          else if (run.impression.answer !== body.answer || run.impression.spoken !== body.spoken) return new Response('The first impression was already answered', { status: 409 })
         } else if (body.action === 'begin') {
           if (run.status !== 'consented') return new Response('Consent is required before beginning', { status: 409 })
           run.status = 'active'; run.startedAt = Date.now()

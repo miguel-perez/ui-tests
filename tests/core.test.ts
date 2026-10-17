@@ -322,6 +322,13 @@ describe('storage, verification and participant boundary', () => {
       assert(trace).toMatch(/<select aria-label="How the answer reads against the purpose">/)
       assert(trace).toContain('named the purpose')
       assert(trace).toContain('In the past week')
+      // Each comes once: an identical retry after a lost response is accepted and changes nothing; different data is refused.
+      assert((await post({ action: 'screener', answers: [['In the past week']] })).status).toBe(200)
+      assert((await post({ action: 'screener', answers: [['In the past month']] })).status).toBe(409)
+      assert((await post({ action: 'impression', answer: 'A way to find out whether people can use what you built', spoken: false })).status).toBe(200)
+      assert((await post({ action: 'impression', answer: 'Something else', spoken: false })).status).toBe(409)
+      assert((await post({ action: 'impression', answer: 'A way to find out whether people can use what you built', spoken: true })).status).toBe(409)
+      assert(store.get(run.id)!).toMatchObject({ screener: [['In the past week']], impression: { answer: 'A way to find out whether people can use what you built', spoken: false } })
       assert((await post({ action: 'begin' })).status).toBe(200)
       assert((await post({ action: 'impression', answer: 'late', spoken: false })).status).toBe(409)
     } finally { close.mockRestore(); store.close() }
