@@ -52,7 +52,7 @@ export default defineConfig({
   participants: {
     sources: ['link', 'prolific'],              // fan-out order; 'link' is always available
     prolific: { token: process.env.PROLIFIC_TOKEN },
-    budget: { max: 70, currency: 'USD' },       // hard cap per run, includes the 25% reserve for raise and true-up
+    budget: { max: 70, currency: 'USD' },       // hard cap per run, includes the reserve for the raise and the true-up
   },
   ci: { blocking: false, on: ['label:ui-test', 'main'] },   // per-context `blocking` overrides this default
   reporters: ['default', 'github-actions', 'json'],
