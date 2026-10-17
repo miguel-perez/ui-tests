@@ -83,6 +83,14 @@ for (const width of [1440, 375]) {
     await expect(cards.locator('.rr-impact')).toHaveText(['Blocked', 'Blocked', 'Slowed', 'Confused', 'Worked'])
     await expect(cards.locator('.rr-where')).toHaveText(['/settings/members · button "Add"', '/settings/members · button "Add"', '/board · menu "Share"', '/board · field "Search"', '/settings · tab "Members"'])
     await expect(cards.locator('.rr-count')).toHaveText(['2 of 5', '1 of 5', '4 of 5', '2 of 5', '5 of 5'])
+    // The cards' words are design/artefacts/run-report-list.html's, verbatim: the sentence, the impact, where, x of n and the quote.
+    const { parseHTML } = await import('linkedom')
+    const list = [...parseHTML(await readFile('design/artefacts/run-report-list.html', 'utf8')).document.querySelectorAll('.rep .pcard')]
+    const words = (selector: string) => list.flatMap(card => [...card.querySelectorAll(selector)].map(node => node.textContent!.replace(/\s+/g, ' ').trim()))
+    await expect(cards.locator('.rr-what > b')).toHaveText(words('.hd > span:nth-child(3) > b'))
+    await expect(cards.locator('.rr-impact')).toHaveText(words('.hd .impact'))
+    await expect(cards.locator('.rr-where')).toHaveText(words('.hd .where'))
+    await expect(cards.locator('.rr-quote')).toHaveText(words('.q'))
     await expect(cards.nth(2).locator('.rr-marks')).toHaveAttribute('aria-label', 'Hit by Person 1, Person 2, Person 3, Person 5')
     await expect(cards.nth(2).locator('.rr-marks i.on')).toHaveText(['1', '2', '3', '5'])
     await expect(cards.last()).toHaveAttribute('id', 'worked')
