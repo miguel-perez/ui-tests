@@ -54,7 +54,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 img { display: block; max-width: 100%; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
-.page { max-width: 1200px; margin: 0 auto; }
+.page { max-width: 1248px; margin: 0 auto; }
 
 /* Section head: heading 5 columns, lead 7 */
 .head { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; margin-bottom: 36px; }
@@ -245,19 +245,32 @@ img { display: block; max-width: 100%; }
   .pair .side { position: static; }
 }
 
-/* Single column: one 800px reading column; each pair stacks the lines above the screen they produce. */
-.page { max-width: 800px; }
-.head { grid-template-columns: 1fr; gap: 10px; margin-bottom: 28px; }
-.head p { max-width: 64ch; }
-.pairs { gap: 56px; }
-.pair { grid-template-columns: 1fr; gap: 12px; }
+/* One step at a time: a tab strip under the file, each step a 5/7 pair, the text and its lines on the left, the screen on the right. */
+.pairs { gap: 0; }
+.pair { grid-template-columns: 5fr 7fr; gap: 24px; }
+.pair > .left { position: sticky; top: 24px; display: grid; gap: 16px; min-width: 0; grid-column: 1; grid-row: 1; align-self: start; }
+.pair > .main { grid-column: 2; grid-row: 1; }
+.pair .intro { margin-bottom: 0; }
 .pair .side { position: static; }
 .pair .excerpt li { white-space: pre; }
 .pair .meta { margin-top: 12px; }
 .pair .meta .from { max-width: 64ch; }
 .whole .window { max-width: none; }
 .after { margin-top: 48px; }
-@media (max-width: 900px) { .cmds { grid-template-columns: 1fr; } }
+.tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); margin: 40px 0 28px; overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
+.tabs button { flex: none; padding: 10px 14px 12px; font-size: 14px; color: var(--muted); border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; display: inline-flex; gap: 8px; align-items: baseline; }
+.tabs button b { font: 500 12px/1 var(--mono); color: var(--moment); }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-color: var(--moment); }
+.pair[hidden] { display: none; }
+.stepnav { display: flex; justify-content: space-between; gap: 16px; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
+.stepnav button { color: var(--muted); display: inline-flex; gap: 8px; align-items: baseline; }
+.stepnav button:hover { color: var(--ink); }
+.stepnav button b { font: 500 12px/1 var(--mono); color: var(--moment); }
+.stepnav button:disabled { visibility: hidden; }
+@media (max-width: 900px) { .cmds { grid-template-columns: 1fr; } .pair { grid-template-columns: 1fr; } .pair > .left { position: static; } .head { grid-template-columns: 1fr; gap: 10px; } }
+
 
 .pair .intro { display: grid; gap: 10px; margin-bottom: 18px; max-width: 64ch; }
 .pair .intro h3 { font: 500 20px/1.25 var(--sans); letter-spacing: -.01em; }
@@ -330,6 +343,7 @@ img { display: block; max-width: 100%; }
   .pill .task::after { font-size: 13px; margin-left: 0; color: var(--ch-dim); }
   .pill .seg + .seg { margin-left: 8px; padding-left: 8px; }
 }
+ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px 0 0 !important; }
 </style>
 
 <div class="page">
@@ -379,11 +393,13 @@ img { display: block; max-width: 100%; }
 
   </section>
 
+  <div class="tabs" role="tablist" aria-label="The screens, one at a time" id="tabs"></div>
   <ol class="pairs" id="rows">
 
       <li class="pair" id="r1" data-fields="video" data-lines="12" data-name="Consent">
-        <div class="intro"><h3 data-n="1">Consent <span>· before anything loads</span></h3><p class="from">What the person does on the page is always recorded, and the consent says so in plain words. <code>video: true</code> adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.</p></div>
-        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
+        <div class="left"><div class="intro"><h3 data-n="1">Consent <span>· before anything loads</span></h3><p class="from">What the person does on the page is always recorded, and the consent says so in plain words. <code>video: true</code> adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.</p></div></div>
+        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol>
+    <nav class="stepnav" aria-label="Previous and next step"><button type="button" class="sprev"></button><button type="button" class="snext"></button></nav></div></div>
         <div class="main">
           <figure class="frame auto" aria-label="Consent screen">
             <div class="blank"></div>
@@ -406,7 +422,7 @@ img { display: block; max-width: 100%; }
       </li>
 
       <li class="pair" id="r2" data-fields="users · purpose · catch" data-lines="4 5 6 7 8 9 10 11 17" data-name="Screener">
-        <div class="intro"><h3 data-n="2">Who gets in, and how many <span>· the sample</span></h3><p class="from">Six questions, one per screen; press Next to see them all. The first three come from <code>users</code>: <code>did</code> and <code>within</code> become a recency question with bands, <code>uses</code> a multi-select with one decoy, <code>not</code> an item among neutral ones, so nobody can tell what disqualifies. The last three come from <code>purpose</code>: when they last needed it, how they do it today, how much it matters. Write <code>users</code> as the sentence alone and the first three are drafted from it.</p><p class="from">The <code>catch</code> line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $55, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.</p></div>
+        <div class="left"><div class="intro"><h3 data-n="2">Who gets in, and how many <span>· the sample</span></h3><p class="from">Six questions, one per screen; press Next to see them all. The first three come from <code>users</code>: <code>did</code> and <code>within</code> become a recency question with bands, <code>uses</code> a multi-select with one decoy, <code>not</code> an item among neutral ones, so nobody can tell what disqualifies. The last three come from <code>purpose</code>: when they last needed it, how they do it today, how much it matters. Write <code>users</code> as the sentence alone and the first three are drafted from it.</p><p class="from">The <code>catch</code> line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $55, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.</p></div></div>
         <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
         <div class="main">
           <figure class="frame auto multi" aria-label="Screener questions, one at a time">
@@ -463,7 +479,7 @@ img { display: block; max-width: 100%; }
       </li>
 
       <li class="pair" id="r3" data-fields="purpose · happyPath" data-lines="11 16" data-name="First look">
-        <div class="intro"><h3 data-n="3">First look <span>· on by default</span></h3><p class="from">The page the task starts on is flashed for 500 ms, then one open question. The start is the first page of the <code>happyPath</code> unless the goal names a <code>start</code>; name another page for the flash with <code>impression: { page }</code> when the task begins behind a login and the purpose lives on the public page. The answers are read against the <code>purpose</code>, which the person never sees, and you can re-read any of them. Then the page comes back for one click.</p></div>
+        <div class="left"><div class="intro"><h3 data-n="3">First look <span>· on by default</span></h3><p class="from">The page the task starts on is flashed for 500 ms, then one open question. The start is the first page of the <code>happyPath</code> unless the goal names a <code>start</code>; name another page for the flash with <code>impression: { page }</code> when the task begins behind a login and the purpose lives on the public page. The answers are read against the <code>purpose</code>, which the person never sees, and you can re-read any of them. Then the page comes back for one click.</p></div></div>
         <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
         <div class="main">
           <figure class="frame" aria-label="First look question over the flashed page">
@@ -482,7 +498,7 @@ img { display: block; max-width: 100%; }
       </li>
 
       <li class="pair" id="r4" data-fields="users · purpose · beforeEach · goal" data-lines="5 11 14 15" data-name="Scenario card">
-        <div class="intro"><h3 data-n="4">Scenario card <span>· from the goal, never the path</span></h3><p class="from">The situation from <code>users.are</code> and <code>purpose</code>, the action from the goal's name, the name and email from <code>beforeEach</code>. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with <code>scenario</code>.</p></div>
+        <div class="left"><div class="intro"><h3 data-n="4">Scenario card <span>· from the goal, never the path</span></h3><p class="from">The situation from <code>users.are</code> and <code>purpose</code>, the action from the goal's name, the name and email from <code>beforeEach</code>. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with <code>scenario</code>.</p></div></div>
         <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
         <div class="main">
           <figure class="frame" aria-label="Scenario card over the dimmed page">
@@ -501,7 +517,7 @@ img { display: block; max-width: 100%; }
       </li>
 
       <li class="pair" id="r5" data-fields="goal · happyPath · video · outcome" data-lines="12 15 16 19 20 21" data-name="Your page, with the bar">
-        <div class="intro"><h3 data-n="5">Your page, with the bar, then the check <span>· two controls, one check</span></h3><p class="from">One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from <code>video</code>, with a pause; there is no microphone during the task. The summary is the goal's name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: the two pages of the <code>happyPath</code> set a silent three-minute limit, and the person may ask for more time once. The pill takes your font, inverts your page's colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.</p><p class="from">When they press Done, the <code>outcome</code> runs against the page as they left it. What they said does not count; what the page says does. A check that cannot decide returns "couldn't tell" and is never rounded either way.</p></div>
+        <div class="left"><div class="intro"><h3 data-n="5">Your page, with the bar, then the check <span>· two controls, one check</span></h3><p class="from">One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from <code>video</code>, with a pause; there is no microphone during the task. The summary is the goal's name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: the two pages of the <code>happyPath</code> set a silent three-minute limit, and the person may ask for more time once. The pill takes your font, inverts your page's colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.</p><p class="from">When they press Done, the <code>outcome</code> runs against the page as they left it. What they said does not count; what the page says does. A check that cannot decide returns "couldn't tell" and is never rounded either way.</p></div></div>
         <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
         <div class="main">
           <figure class="frame" aria-label="The page under test with the bar">
@@ -530,7 +546,7 @@ img { display: block; max-width: 100%; }
 
       
       <li class="pair" id="r7" data-lines="" data-name="After the task">
-        <div class="intro"><h3 data-n="6">After the task <span>· not from your file</span></h3><p class="from">Five screens, one question each; press Next to see them all. The first two come after every attempt, including the ones that gave up: how easy it was, with nothing preselected, and, at 4 or below, what made it difficult. The last three come once, after all goals: would it help them, is it easy to use, and anything they want to say, typed or spoken. Confidence is asked only when a goal has no check, so Weekboard's people never see it.</p></div>
+        <div class="left"><div class="intro"><h3 data-n="6">After the task <span>· not from your file</span></h3><p class="from">Five screens, one question each; press Next to see them all. The first two come after every attempt, including the ones that gave up: how easy it was, with nothing preselected, and, at 4 or below, what made it difficult. The last three come once, after all goals: would it help them, is it easy to use, and anything they want to say, typed or spoken. Confidence is asked only when a goal has no check, so Weekboard's people never see it.</p></div></div>
         <div class="main">
           <figure class="frame auto multi" aria-label="The questions after the task, one at a time">
             <div class="blank"></div>
@@ -633,5 +649,37 @@ img { display: block; max-width: 100%; }
       else if (e.key === "ArrowLeft" || e.key === "ArrowUp") { pick(Math.max(0, i - 1)); e.preventDefault(); }
     });
   });
+})();
+
+(function () {
+  var pairs = Array.prototype.slice.call(document.querySelectorAll('.pair')), tabs = document.getElementById('tabs');
+  pairs.forEach(function (p) { var l = p.querySelector(':scope > .left'), sd = p.querySelector(':scope > .side'); if (l && sd) l.appendChild(sd); });
+  var prev = document.querySelector('.stepnav .sprev'), next = document.querySelector('.stepnav .snext'), cur = 0;
+  pairs.forEach(function (p, i) {
+    var h = p.querySelector('.intro h3'), name = p.dataset.name || (h ? h.firstChild.textContent.trim() : 'Step ' + (i + 1));
+    var b = document.createElement('button'); b.type = 'button'; b.setAttribute('role', 'tab'); b.id = 'tab-' + (i + 1);
+    b.innerHTML = '<b>' + (i + 1) + '</b>' + name; tabs.appendChild(b);
+    p.setAttribute('role', 'tabpanel'); p.setAttribute('aria-labelledby', b.id);
+    b.addEventListener('click', function () { show(i, true); });
+  });
+  function label(i) { var b = tabs.children[i]; return b ? b.innerHTML : ''; }
+  function show(i, focus) {
+    cur = Math.max(0, Math.min(pairs.length - 1, i));
+    pairs.forEach(function (p, k) { p.hidden = k !== cur; });
+    Array.prototype.forEach.call(tabs.children, function (b, k) { b.setAttribute('aria-selected', k === cur ? 'true' : 'false'); b.tabIndex = k === cur ? 0 : -1; });
+    prev.disabled = cur === 0; next.disabled = cur === pairs.length - 1;
+    prev.innerHTML = cur > 0 ? '&larr; ' + label(cur - 1) : ''; next.innerHTML = cur < pairs.length - 1 ? label(cur + 1) + ' &rarr;' : '';
+    if (history.replaceState) history.replaceState(null, '', '#step' + (cur + 1));
+    if (focus) tabs.children[cur].focus();
+  }
+  tabs.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowRight') { show(cur + 1, true); e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { show(cur - 1, true); e.preventDefault(); }
+    else if (e.key === 'Home') { show(0, true); e.preventDefault(); }
+    else if (e.key === 'End') { show(pairs.length - 1, true); e.preventDefault(); }
+  });
+  prev.addEventListener('click', function () { show(cur - 1); document.getElementById('tabs').scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+  next.addEventListener('click', function () { show(cur + 1); document.getElementById('tabs').scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+  var m = /^#step(\d)$/.exec(location.hash); show(m ? +m[1] - 1 : 0);
 })();
 </script>

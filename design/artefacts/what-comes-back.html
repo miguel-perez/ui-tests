@@ -9,7 +9,7 @@
   Research: docs/discovery/pull-request-surfaces-research.md, report-presentation-research.md, reporting-schema-research.md.
   The page skeleton (doctype, head, body) is added by the site; this file is the content and its styles.
 -->
-<title>In The Pull Request</title>
+<title>What Comes Back</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -57,7 +57,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 img { display: block; max-width: 100%; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
-.page { max-width: 1200px; margin: 0 auto; }
+.page { max-width: 1248px; margin: 0 auto; }
 
 /* Section head: heading 5 columns, lead 7 */
 .head { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; margin-bottom: 36px; }
@@ -249,8 +249,6 @@ img { display: block; max-width: 100%; }
 }
 
 /* Single column: one 800px reading column; each pair stacks the lines above the screen they produce. */
-.page { max-width: 1000px; }
-.head { grid-template-columns: 1fr; gap: 10px; margin-bottom: 28px; }
 .head p { max-width: 64ch; }
 .pairs { gap: 56px; }
 .pair { grid-template-columns: 1fr; gap: 12px; }
@@ -428,10 +426,13 @@ img { display: block; max-width: 100%; }
 </style>
 <style>
 /* Section: three pieces in one column, in the order a developer meets them: the check, its page, the report. */
-.head { grid-template-columns: 1fr; gap: 10px; margin-bottom: 36px; max-width: 70ch; }
+.head { margin-bottom: 36px; }
+.head p { max-width: 64ch; }
+@media (max-width: 900px) { .head { grid-template-columns: 1fr; gap: 10px; } }
 .head p code { color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; font-size: 13px; }
 .piece { border-top: 1px solid var(--line); padding: 40px 0 48px; display: grid; gap: 18px; }
 .piece .intro { display: grid; gap: 8px; max-width: 64ch; }
+.piece > .intro { grid-column: 1 / -1; }
 .piece .intro h2 { font: 500 20px/1.25 var(--sans); letter-spacing: -.01em; }
 .piece .intro h2::before { content: attr(data-n); color: var(--moment); font-family: var(--mono); font-size: 15px; margin-right: 10px; }
 .piece .intro p { color: var(--muted); font-size: 15px; line-height: 1.6; text-wrap: pretty; }
@@ -611,8 +612,8 @@ img { display: block; max-width: 100%; }
 
 <div class="page">
   <header class="head">
-    <h1>In the pull request.</h1>
-    <p>Put <code>npx ui-tests run</code> in the job that deploys your preview. Once the attempts are in, a check lands on the pull request. It never fails your build. Its details are the worst problems with the moment to watch, and the full report opens for you, or for anyone you send a link to. Your other tests prove the code works. This one shows whether a person can use it.</p>
+    <h1>What comes back.</h1>
+    <p>Put <code>npx ui-tests run</code> in the job that deploys your preview. Once the attempts are in, a check lands on the pull request, and behind it the report: whether people reached the goal, the problems they hit, worst first, and for each one the clip, their words, the moment to watch and the smallest change. The check never fails your build. Your other tests prove the code works. This one shows whether a person can use it.</p>
   </header>
 
   <section class="piece">
@@ -642,16 +643,16 @@ img { display: block; max-width: 100%; }
             </tbody>
           </table></div>
           <p class="links"><a href="#report">Open the report</a><a href="#">+1 more problem</a><a href="#">What worked</a></p>
-          <p class="foot">5 people · paid panel (Prolific) · weekboard-git-invite-flow.vercel.app · 80035db · 14 Oct 2026</p>
+          <p class="foot">5 people · paid panel (Prolific, CloudResearch Connect) · weekboard-git-invite-flow.vercel.app · 80035db · 14 Oct 2026</p>
         </div>
       </div>
     </div>
   </section>
 
   <section class="piece" id="report">
-    <div class="intro"><h2 data-n="3">The report</h2><p>The page the check links to, and the one you can share with a link. One line says whether it worked. The five people sit in one line under it, each with their outcome. Then the problems on the left, worst first, each with its impact, where, who hit it and how many; and on the right the evidence of the one you selected, which stays put while the list scrolls: the clip, the words, where as a locator you can paste, the moments, the smallest change, and a copy as an issue. One line closes the page. Everything about one person is on their attempt.</p></div>
+    <div class="intro"><h2 data-n="3">The report</h2><p>The page the check links to, and the one you can send as a link. One line says whether it worked. The five people sit under it, each with their outcome and a link to their attempt. Then the problems on the left, worst first, with impact, where, who hit it and how many; on the right the evidence for the one selected, which stays put while the list scrolls: the clip, the words, where as a locator you can paste, the moments, the smallest change, and a copy as an issue. One line closes the page.</p></div>
     <div class="rep" aria-label="The report page"><div class="addr"><i></i><i></i><i></i><span>ui-tests.com/r/k2m9</span></div><div class="body">
-  <div class="top"><div class="crumb"><span>Weekboard</span><span>Run <b class="mono">k2m9</b></span><span>14 Oct 2026</span><span>5 people from a paid panel (Prolific)</span></div><h1><b>invite a colleague</b> · 2 of 5 reached the goal · 4 problems, seen across all 5 · <span class="no">2 pressed Done, but your check failed</span></h1></div>
+  <div class="top"><div class="crumb"><span>Weekboard</span><span>Run <b class="mono">k2m9</b></span><span>14 Oct 2026</span><span>5 people from a paid panel (Prolific, CloudResearch Connect)</span></div><h1><b>invite a colleague</b> · 2 of 5 reached the goal · 4 problems, seen across all 5 · <span class="no">2 pressed Done, but your check failed</span></h1></div>
   <div class="vhead"><span><b>Person 1</b> <span class="yes">reached</span> · 0:58 · ease 4</span><span><b>Person 2</b> <span class="no">not reached</span> · 0:55 · ease 2</span><span><b>Person 3</b> <span class="no">not reached</span> · 1:03 · ease 3</span><span><b>Person 4</b> <span class="no">not reached</span> · 0:48 · ease 4</span><span><b>Person 5</b> <span class="yes">reached</span> · 0:53 · ease 5</span></div>
   <div class="viewer">
     <div class="vlist">

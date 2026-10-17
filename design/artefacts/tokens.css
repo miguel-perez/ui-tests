@@ -1,4 +1,4 @@
-/* The site's tokens: light first, the Tokyo Night palette as the dark alternate. The ground is ink, one accent, two greys and white; the roles are derived in OKLCH around the accent at one lightness and chroma, each at 4.5:1 or better on the canvas. Colour stays on the data; chrome is neutral. The demo app under test keeps its own cool grey (host-*); the participant chrome is its inverse (ch-*). */
+/* The site's tokens, light only; the Tokyo Night block below is the artefact viewer's dark alternate, never the site's. The ground is ink, one accent, two greys and white; the roles are derived in OKLCH around the accent at one lightness and chroma, each at 4.5:1 or better on the canvas. Colour stays on the data; chrome is neutral. The demo app under test keeps its own cool grey (host-*); the participant chrome is its inverse (ch-*). */
 :root {
   color-scheme: light;
   --canvas: #f6f6f6; --surface: #ffffff; --raised: #efefef; --line: #e2e2e2; --ink: #111111; --muted: #575757;
