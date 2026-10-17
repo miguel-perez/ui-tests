@@ -1,13 +1,13 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { mkdir, readFile } from 'node:fs/promises'
-import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, runs, sources, whatComesBack } from '../../apps/web/lib/copy'
-import { shown, offences } from '../vocabulary'
+import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, runs, sources, whatComesBack, worth } from '../../apps/web/lib/copy'
+import { shown, unsaid, offences } from '../vocabulary'
 import { texture, travel } from '../../apps/web/lib/texture'
 import { mixOklab, over, darken } from '../oklab'
 
 /** Every content type's component on the landing page (docs/design/site-schema.md). */
-const artefacts = ['terminal-window', 'code-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'run-report', 'agents', 'dashboard']
+const artefacts = ['terminal-window', 'code-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'run-report', 'worth', 'agents', 'dashboard']
 /** Relative luminance of a computed rgb() colour. */
 const luminance = (rgb: string) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return r * .2126 + g * .7152 + b * .0722 }
 /** The distinct colours of the text inside each matched element. */
@@ -94,8 +94,11 @@ for (const width of [1440, 375]) {
         for (const piece of ['merge-box', 'check-page', 'run-report']) await expect(comesBack.locator(`[data-artefact="${piece}"]`)).toHaveCount(1)
         await expect(page.locator('[data-artefact="attempt-view"], [data-artefact="pull-request"], section[aria-labelledby="pull-request"]')).toHaveCount(0)
         await expect(page.getByRole('heading', { name: 'In the pull request.' })).toHaveCount(0)
-        // The page order: hero, what comes back, what you write, where the people come from, the agent section, the hosted section.
-        expect(await page.locator('main section[aria-labelledby]').evaluateAll(nodes => nodes.filter(node => !node.parentElement?.closest('section')).map(node => node.getAttribute('aria-labelledby')))).toEqual(['promise', 'comes-back', 'what-you-write', 'people', 'agents', 'hosted'])
+        // The page order: hero, what comes back, what you write, where the people come from, what a run is worth (issue #53), the agent
+        // section, the hosted section.
+        expect(await page.locator('main section[aria-labelledby]').evaluateAll(nodes => nodes.filter(node => !node.parentElement?.closest('section')).map(node => node.getAttribute('aria-labelledby')))).toEqual(['promise', 'comes-back', 'what-you-write', 'people', 'worth', 'agents', 'hosted'])
+        // Issue #53, item 3: nothing on the page weighs the run in the words the research rules out.
+        expect(offences(await page.locator('body').innerText(), unsaid)).toEqual([])
         // Issue #22: nothing in the report rows, the check, the dashboard or the terminals uses the old words.
         for (const selector of ['section[aria-labelledby="comes-back"]', '.dashboard', '.terminal-window']) for (const text of await page.locator(selector).allInnerTexts()) expect(offences(text, shown), selector).toEqual([])
         await expect(page.locator('.checks-box, .findings-list, [data-artefact="checks-box"], [data-artefact="findings-list"]')).toHaveCount(0)
@@ -664,4 +667,105 @@ for (const width of [1440, 375]) test(`the agent section is the artefact, word f
   }
   expect((await new AxeBuilder({ page }).include('section[aria-labelledby="agents"]').analyze()).violations).toEqual([])
   expect(errors).toEqual([])
+})
+
+/** A paragraph's words with each field read as its value, as the page and the artefact both show them; the no-break spaces kept. */
+const said = (node: Element) => { const copy = node.cloneNode(true) as Element; for (const input of copy.querySelectorAll('input')) input.replaceWith(input.getAttribute('value') ?? (input as HTMLInputElement).value); return copy.textContent!.replace(/[ \t\n\r]+/g, ' ').trim() }
+
+for (const width of [1440, 375]) test(`what a run is worth is the artefact, word for word: one sentence, its arithmetic and the sources at ${width}px`, async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+  page.on('pageerror', error => errors.push(error.message))
+  await page.setViewportSize({ width, height: 1000 })
+  await page.goto('/')
+  await page.evaluate(() => document.fonts.ready)
+  const section = page.locator('section[aria-labelledby="worth"]')
+  // Issue #53, item 1: the words of design/artefacts/roi-section.html, verbatim, and the same in the copy the README carries.
+  const { parseHTML } = await import('linkedom')
+  const artefact = parseHTML(`<html><body>${await readFile('design/artefacts/roi-section.html', 'utf8')}</body></html>`).document
+  const note = artefact.querySelector('.claim footer')!.cloneNode(true) as Element
+  note.querySelector('.srcs')!.remove()
+  const read = (selector: string) => section.locator(selector).evaluate(node => { const copy = node.cloneNode(true) as Element; for (const input of copy.querySelectorAll('input')) input.replaceWith((input as HTMLInputElement).value); return copy.textContent!.replace(/[ \t\n\r]+/g, ' ').trim() })
+  await expect(section.getByRole('heading', { level: 2 })).toHaveText(artefact.querySelector('h1')!.textContent!)
+  expect(worth.heading).toBe(artefact.querySelector('h1')!.textContent)
+  expect(await read('.worth-say')).toBe(said(artefact.querySelector('.claim p')!))
+  expect(await read('.worth-say')).toBe(worth.sentence)
+  expect(await read('.worth-arithmetic')).toBe(said(note))
+  expect(await read('.worth-arithmetic')).toBe(worth.arithmetic)
+  const links = [...artefact.querySelectorAll('.srcs a')].map(link => ({ name: link.textContent, href: link.getAttribute('href') }))
+  expect(worth.sources).toEqual(links)
+  await expect(section.locator('.worth-sources a')).toHaveText(links.map(link => link.name!))
+  expect(await section.locator('.worth-sources a').evaluateAll(nodes => nodes.map(node => node.getAttribute('href')))).toEqual(links.map(link => link.href))
+  // No figure and no calculator: only the heading, the sentence, the arithmetic and the sources.
+  await expect(section.locator('[data-figure], figure, form, button, select, video, img, svg, table')).toHaveCount(0)
+  await expect(section.locator('.worth-say b')).toHaveCSS('font-weight', '500')
+  await expect(section.locator('.worth-say b')).toHaveCSS('color', 'rgb(17, 17, 17)')
+  await expect(section.locator('.worth-say .worth-time')).toHaveCSS('color', 'rgb(184, 77, 0)')
+  await expect(section.locator('.worth-say .worth-time')).toHaveCSS('font-weight', '500')
+  await expect(section.locator('.worth-say')).toHaveCSS('font-size', width === 1440 ? '23px' : '20px')
+  await expect(section.locator('.worth-arithmetic')).toHaveCSS('text-wrap', /pretty/)
+  // The four given numbers are fields set as the arithmetic's code, labelled as the artefact labels them, each as wide as what it holds.
+  const fields = section.locator('.worth-arithmetic code input')
+  const given = [...artefact.querySelectorAll('.claim footer input')].map(input => ({ value: input.getAttribute('value'), label: input.getAttribute('aria-label') }))
+  expect(given).toHaveLength(4)
+  expect(Object.values(worth.given)).toEqual(given)
+  expect(await fields.evaluateAll(nodes => nodes.map(node => ({ value: (node as HTMLInputElement).value, label: node.getAttribute('aria-label') })))).toEqual(given)
+  for (const field of await fields.all()) {
+    await expect(field).toHaveAttribute('type', 'text')
+    await expect(field).toHaveCSS('border-bottom-style', 'dashed')
+    await expect(field).toHaveCSS('font-family', /Fira[_ ]Code/)
+    expect(await field.evaluate((node: HTMLInputElement) => Math.abs(node.scrollWidth - node.clientWidth) <= 1 && node.clientWidth < 80)).toBe(true)
+  }
+  // On the grid: the heading in the five, the sentence and the arithmetic in the right seven, the arithmetic no wider than the sentence
+  // and, at 1440, 600px and two lines.
+  const [heading, say, arithmetic] = await Promise.all(['h2', '.worth-say', '.worth-arithmetic'].map(selector => section.locator(selector).boundingBox()))
+  expect(arithmetic!.width).toBeLessThanOrEqual(say!.width + 0.5)
+  if (width === 1440) {
+    expect([Math.round(heading!.x), Math.round(say!.x), Math.round(arithmetic!.x)]).toEqual([96, 630, 630])
+    expect(Math.round(arithmetic!.width)).toBe(600)
+    expect(await section.locator('.worth-arithmetic').evaluate(node => Math.round(node.getBoundingClientRect().height / parseFloat(getComputedStyle(node).lineHeight)))).toBe(2)
+  } else {
+    expect([Math.round(heading!.x), Math.round(say!.x)]).toEqual([16, 16])
+    expect(say!.y).toBeGreaterThanOrEqual(heading!.y + heading!.height)
+  }
+  expect((await new AxeBuilder({ page }).include('section[aria-labelledby="worth"]').analyze()).violations).toEqual([])
+
+  // Item 1: a new price recomputes the sentence and the arithmetic on every keystroke; minutes under 90, hours to one place above.
+  const price = section.getByRole('textbox', { name: worth.given.price.label })
+  await price.fill('')
+  await price.pressSequentially('120')
+  await expect(section.locator('.worth-say')).toContainText('Five people cost about $120, about 77\u00a0minutes of a US developer')
+  await expect.poll(() => read('.worth-arithmetic')).toContain('$120 ÷ $93 = 1.29 h, about 77\u00a0minutes.')
+  await price.press('Backspace')
+  await expect(section.locator('.worth-say b')).toHaveText('$12')
+  await price.fill('200')
+  await expect(section.locator('.worth-say .worth-time')).toHaveText('2.2\u00a0hours')
+  expect(await price.evaluate((node: HTMLInputElement) => node.style.getPropertyValue('--n'))).toBe('3')
+  // The given numbers drive the derived ones: the share moves the rate in both places.
+  const share = section.getByRole('textbox', { name: worth.given.share.label })
+  await share.fill('50')
+  await expect.poll(() => read('.worth-arithmetic')).toBe('The arithmetic: $135,980 ÷ 2,080 h = $65 an hour in wages. Wages are 50% of what employers pay, so about $131 an hour. $200 ÷ $131 = 1.53 h, about 1.5\u00a0hours.')
+  // A number is written back in the artefact's format on leaving its field; nothing is stored, so a reload restores the defaults.
+  const pay = section.getByRole('textbox', { name: worth.given.pay.label })
+  await pay.fill('100000')
+  await pay.blur()
+  await expect(pay).toHaveValue('100,000')
+  expect(await page.evaluate(() => localStorage.length + sessionStorage.length)).toBe(0)
+  await page.reload()
+  await expect(section.locator('.worth-say')).toHaveText(worth.sentence)
+  await expect.poll(() => read('.worth-arithmetic')).toBe(worth.arithmetic)
+  expect(errors).toEqual([])
+})
+
+test('the run\'s time never breaks across a line, in the sentence or the arithmetic, at any width', async ({ page }) => {
+  await page.goto('/')
+  await page.evaluate(() => document.fonts.ready)
+  const times = page.locator('section[aria-labelledby="worth"] .worth-time')
+  await expect(times).toHaveText(['39\u00a0minutes', '39\u00a0minutes'])
+  for (const width of [320, 340, 360, 375, 390, 414, 480, 600, 700, 768, 820, 900, 1024, 1180, 1280, 1366, 1440, 1600]) {
+    await page.setViewportSize({ width, height: 900 })
+    // One line box each: the number and the word, and the full stop after the arithmetic's, stay together.
+    expect(await times.evaluateAll(nodes => nodes.map(node => node.getClientRects().length)), `at ${width}px`).toEqual([1, 1])
+    expect(await times.last().evaluate(node => { const range = document.createRange(); range.setStart(node.firstChild!, 0); range.setEnd(node.nextSibling!, 1); return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size }), `the full stop at ${width}px`).toBe(1)
+  }
 })

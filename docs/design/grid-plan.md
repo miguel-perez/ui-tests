@@ -32,7 +32,7 @@ Each map shows the 12 columns at 1440 with a ruler; a bracket spans the columns 
 
 ## Landing page
 
-Six sections, in order: L1 the hero, L2 how it works ("What comes back." until issue #49), L3 what you write, L4 where the people come from, L5 the agent section, L6 the hosted section. At 1440 the page is 8,114 px tall with the footer and the three-step rhythm (issue #51; about 8,350 px after issue #49, 8,253 px after issue #46, 15,385 px before it; the limit is 9,000).
+Seven sections, in order: L1 the hero, L2 how it works ("What comes back." until issue #49), L3 what you write, L4 where the people come from, L5 what a run is worth (issue #53), L6 the agent section, L7 the hosted section. At 1440 the page is 8,431 px tall with the footer, the three-step rhythm and what a run is worth (issue #53; 8,114 px after issue #51, about 8,350 px after issue #49, 8,253 px after issue #46, 15,385 px before it; the limit is 9,000).
 
 ### L1 · Claim
 
@@ -139,7 +139,23 @@ At 1440:
 
 At 375: heading, lead; each source a card with its cells labelled; the open well in one column.
 
-### L5 · Agents: agents use some interfaces, too
+### L5 · Worth: what a run is worth
+
+**Rule** (issue #53; `design/artefacts/roi-section.html`). The smallest section on the page: no figure and no calculator. The heading in 5; in the right 7, stacked, with no lead: the one sentence (23 px, its "$60" in the ink and its "39 minutes" in the moment colour), its arithmetic under it in 13 px, no wider than the sentence (600 px, two lines), its four given numbers editable in place, and the two BLS sources. The right column is the head's second cell, so the section has a head and nothing after it, and the next section's 96 follows. Empty area: the five columns under the heading and the 114 px right of the sentence, smaller than the sentence and its arithmetic.
+
+At 1440:
+
+```text
+   1       2       3       4       5       6       7       8       9      10      11      12   
+[What a run is worth.               ] [Five people cost about $60, about 39 minutes of   ]        head · 96 above
+[                                   ] [a US developer's time. If one problem … paid for  ]        sentence · 130, 600 wide
+[                                   ] [The arithmetic: $[135,980] ÷ [2,080] h = $65 …    ]        arithmetic · 40, two lines
+[                                   ] [BLS, software developers · BLS, employer costs    ]        sources · 20
+```
+
+At 375: the heading; the sentence (20 px); the arithmetic in three lines; the two sources, one under the other.
+
+### L6 · Agents: agents use some interfaces, too
 
 **Rule** (issue #49; `design/artefacts/agents-section.html`). The heading in 5 with the command under it, the lead in 7. Then three tiles across 12, one per interface (Your API, Your MCP server, Your CLI), each 4 columns (400 px): its icon in the accent, its name and target, one sentence. No terminal, no code block, no result line. Empty area: the inside of the tiles under their sentences, smaller than the tiles' text.
 
@@ -155,7 +171,7 @@ At 1440:
 
 At 375: heading, the command, lead; the three tiles stacked, each 343 wide.
 
-### L6 · Section + Snippet + Dashboard
+### L7 · Section + Snippet + Dashboard
 
 **Rule.** The snippet across 12, the dashboard across 12, the caption under them. The dashboard is a table: fixed fields first (date, participants, status, headline result), the run name last as the free text; numbers right-aligned.
 

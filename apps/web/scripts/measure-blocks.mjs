@@ -12,7 +12,7 @@ import path from 'node:path'
 const base = process.env.SITE_BASE_URL ?? 'http://localhost:3000'
 const harness = process.env.UI_HARNESS_ROOT
 const pages = [
-  { name: 'landing', route: '/', blocks: [['L1', 'main > section.hero'], ...['comes-back', 'what-you-write', 'people', 'agents', 'hosted'].map((id, i) => [`L${i + 2}`, `section.block[aria-labelledby="${id}"]`])] },
+  { name: 'landing', route: '/', blocks: [['L1', 'main > section.hero'], ...['comes-back', 'what-you-write', 'people', 'worth', 'agents', 'hosted'].map((id, i) => [`L${i + 2}`, `section.block[aria-labelledby="${id}"]`])] },
   { name: 'guide', route: '/docs/getting-started', blocks: [['G0', '.guide-head'], ...['install', 'set-up', 'try-it', 'write-your-own', 'real-people', 'agent', 'paste', 'fill'].map((id, i) => [`G${i + 1}`, `#${id}`])] },
   // The run report page, /r/<run> (issue #35): the share line and the report, one block.
   { name: 'report', route: '/r/k2m9', blocks: [['R1', 'main .report-column']] },

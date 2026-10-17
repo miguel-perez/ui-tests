@@ -182,6 +182,26 @@ export const agent = {
     { seconds: '0:35', stopped: 'sent the email in the query string, 400' },
   ] },
 }
+/**
+ * What a run is worth (design/artefacts/roi-section.html; docs/discovery/roi-research.md; issue #53), verbatim: the heading, the one
+ * sentence and its arithmetic as they read with the four given numbers at their defaults, each field's value and label, and the two
+ * sources. The section recomputes the sentence and the arithmetic as the given numbers change (lib/worth.ts).
+ */
+export const worth = {
+  heading: 'What a run is worth.',
+  sentence: "Five people cost about $60, about 39\u00a0minutes of a US developer's time. If one problem they show you would have taken longer than that to find from bug reports, reproduce and fix after release, the run has paid for itself.",
+  arithmetic: 'The arithmetic: $135,980 ÷ 2,080 h = $65 an hour in wages. Wages are 70% of what employers pay, so about $93 an hour. $60 ÷ $93 = 0.65 h, about 39\u00a0minutes.',
+  given: {
+    pay: { value: '135,980', label: 'US median pay for software developers, a year' },
+    hours: { value: '2,080', label: 'working hours a year' },
+    share: { value: '70', label: 'wages as a share of what employers pay, per cent' },
+    price: { value: '60', label: 'what the run cost' },
+  },
+  sources: [
+    { name: 'BLS, software developers, May 2025', href: 'https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm' },
+    { name: 'BLS, employer costs, March 2026', href: 'https://www.bls.gov/news.release/archives/ecec_03202026.htm' },
+  ],
+}
 export const hosted = {
   heading: 'No repo to put it in? Paste one line.',
   lead: 'One script tag on your live site, through your tag manager if that is how you ship. Then the same test in a form instead of a file: who the users are, what they are trying to do, and how you can tell they did it, by a page they reach, an element they see or a question they answer. People come from your link, a paid panel or your own visitors, and the report is a page you can share.',

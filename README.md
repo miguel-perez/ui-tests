@@ -600,6 +600,38 @@ $15
 
 Each attempt labelled with its panel
 
+## What a run is worth
+
+What a run is worth.
+
+Five people cost about $60, about 39 minutes of a US developer's time. If one problem they show you would have taken longer than that to find from bug reports, reproduce and fix after release, the run has paid for itself.
+
+The arithmetic: $135,980 ÷ 2,080 h = $65 an hour in wages. Wages are 70% of what employers pay, so about $93 an hour. $60 ÷ $93 = 0.65 h, about 39 minutes.
+
+135,980
+
+US median pay for software developers, a year
+
+2,080
+
+working hours a year
+
+70
+
+wages as a share of what employers pay, per cent
+
+60
+
+what the run cost
+
+BLS, software developers, May 2025
+
+https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm
+
+BLS, employer costs, March 2026
+
+https://www.bls.gov/news.release/archives/ecec_03202026.htm
+
 ## This page runs this test
 
 ```ts

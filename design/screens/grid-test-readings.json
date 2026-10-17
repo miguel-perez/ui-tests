@@ -1,6 +1,6 @@
 {
   "landing-1440": {
-    "height": 8114,
+    "height": 8431,
     "sections": [
       {
         "section": "what-comes-back",
@@ -39,6 +39,13 @@
         ]
       },
       {
+        "section": "worth",
+        "heading": 96,
+        "lead": 630,
+        "widest": null,
+        "figures": []
+      },
+      {
         "section": "agents",
         "heading": 96,
         "lead": 630,
@@ -60,7 +67,7 @@
     ]
   },
   "landing-375": {
-    "height": 13670,
+    "height": 14126,
     "sections": [
       {
         "section": "what-comes-back",
@@ -89,6 +96,12 @@
         "figures": [
           "16+343"
         ]
+      },
+      {
+        "section": "worth",
+        "heading": 16,
+        "lead": 16,
+        "figures": []
       },
       {
         "section": "agents",

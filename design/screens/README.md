@@ -10,8 +10,8 @@ PLAYWRIGHT_BROWSERS_PATH=0 CAPTURE_SITE=1 npm run test:e2e
 
 [Landing at 1440](landing-1440.jpg) · [landing at 375](landing-375.jpg) · [guide at 1440](guide-1440.jpg) · [guide at 375](guide-375.jpg)
 
-The four full routes were retaken in the composition round (issue #46), with every section on one grid, and again in the agent round (issue #49): the agent tiles, "How it works." with no lead, the report as the list, the sources table closed on arrival; the readings below are that run's. The grid test
-(`tests/e2e/grid.spec.ts`) writes its readings to `test-results/grid-readings.json`; the issue #49 run is kept as
+The four full routes were retaken in the composition round (issue #46), with every section on one grid, and again in the agent round (issue #49): the agent tiles, "How it works." with no lead, the report as the list, the sources table closed on arrival; and the landing again in the worth round (issue #53), with what a run is worth between the sources and the agents. The readings below are that run's. The grid test
+(`tests/e2e/grid.spec.ts`) writes its readings to `test-results/grid-readings.json`; the issue #53 run is kept as
 [`grid-test-readings.json`](grid-test-readings.json): each section's heading and lead left edges and its figures' left edges and widths
 at 1440 and 375, and the page heights. The block captures and the ui-harness readings below predate issue #46.
 
