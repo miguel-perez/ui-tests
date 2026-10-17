@@ -54,16 +54,16 @@ function Piece({ piece, children }: { piece: Piece; children: ReactNode }) {
 }
 
 /**
- * WhatComesBack (docs/design/site-schema.md; design/artefacts/what-comes-back.html): the landing section "What comes back.", in place
- * of the one-person attempt view and "In the pull request" (issue #46). On the page grid: the heading in five columns and the lead in
- * seven, then three numbered pieces in the order a developer meets them, each artefact across all twelve columns: the check in the
- * merge box with a neutral mark, its page on GitHub, and the report the check links to, whose people open their attempts at
+ * WhatComesBack (docs/design/site-schema.md; design/artefacts/what-comes-back.html): the landing section "How it works." (issue #49;
+ * "What comes back." in issue #46). On the page grid: the heading in five columns and no lead, then three numbered pieces straight
+ * after the hairline, in the order a developer meets them, each artefact across all twelve columns: the check in the merge box with a
+ * neutral mark, its page on GitHub, and the report the check links to, as the list, whose people open their attempts at
  * /r/<run>/p<n>. GitHub's chrome is drawn in the site's neutrals; colour stays on the data.
  */
 export function WhatComesBack() {
   const { check, checkPage, report } = whatComesBack
   return <section className="block comes-back" aria-labelledby="comes-back" data-artefact="what-comes-back" data-section="what-comes-back">
-    <SectionHead id="comes-back" heading={whatComesBack.heading} lead={whatComesBack.lead} />
+    <SectionHead id="comes-back" heading={whatComesBack.heading} />
     <Piece piece={check}><MergeBox /></Piece>
     <Piece piece={checkPage}><CheckPage /></Piece>
     <Piece piece={report}>

@@ -12,7 +12,7 @@ export const metadata: Metadata = { title: `${runFacts.product} Â· ${run.goal} Â
 export const generateStaticParams = () => [{ run: run.run }]
 
 /**
- * The run report, /r/<run> (design/artefacts/run-report.html). For the author it sits in the site with a Share control; with a valid
+ * The run report, /r/<run>, as the list (design/artefacts/run-report-list.html). For the author it sits in the site with a Share control; with a valid
  * signature (`?s=`) it is the shareable page, white-labelled: no ui-tests header, the product's name, and people linking to their
  * signed attempts. An unknown run, or an altered or unsigned share link, is not found.
  */

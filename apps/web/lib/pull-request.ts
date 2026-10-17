@@ -1,5 +1,5 @@
 import { checkSentence, buildLine, ranked, legend, caveat, problemsLine, type CheckRun, type Impact } from 'ui-tests/check'
-import { run, attempt, clock, short, typical, type Attempt } from './attempts'
+import { run, attempt, short, typical, endedLabel, type Attempt } from './attempts'
 import { problems, worked, runFacts } from './copy'
 
 /**
@@ -60,8 +60,8 @@ export const result = {
 }
 export { legend, caveat }
 
-/** One person in the person line: reached or not, time and ease, linking to their attempt. */
-export const people = run.attempts.map(entry => ({ number: entry.number, person: entry.person, reached: entry.reached === 'yes', time: short(entry.time), ease: entry.ease, href: attemptPath(entry.number) }))
+/** One person in the people strip: reached or not, time, ease and how it ended, linking to their attempt. */
+export const people = run.attempts.map(entry => ({ number: entry.number, person: entry.person, reached: entry.reached === 'yes', time: short(entry.time), ease: entry.ease, ended: endedLabel[entry.ended], href: attemptPath(entry.number) }))
 
 const environment = [...new Set(run.attempts.map(entry => `${entry.device.toLowerCase()} ${entry.browser}, ${entry.window}`))].join('; ')
 /** The closing line: the study-wide answers, the first look, who took part, the environment and the caveat. */
@@ -76,24 +76,4 @@ export const closing = {
 export function clip(moment: Moment) {
   const entry = attempt(`p${moment.person}`)
   return { video: entry.video, from: moment.seconds, to: Math.min(entry.time + 1, moment.seconds + 9) }
-}
-
-/**
- * "Copy as an issue": Markdown with the title, where (page and the Playwright locator), the steps from the trace of the person whose
- * moment is selected (every moment up to and including the problem's), the clip link and the suggested change.
- */
-export function issueMarkdown(finding: Finding, moment: Moment = finding.moments[0], base = reportUrl) {
-  const entry = attempt(`p${moment.person}`)
-  const last = entry.moments.reduce((found, step, index) => step.seconds === moment.seconds || (step.issue !== undefined && step.issue === finding.rank && step.seconds >= moment.seconds) ? index : found, -1)
-  const steps = entry.moments.slice(0, last + 1).map((step, index) => `${index + 1}. \`${clock(step.seconds)}\` ${step.what}${step.rest ?? ''}${step.route ? ` (${step.route})` : ''}`)
-  const impact = finding.impact === 'worked' ? 'Worked' : finding.impact[0].toUpperCase() + finding.impact.slice(1)
-  return [
-    `## ${finding.title}`,
-    `**Where:** \`${finding.page}\` · \`${finding.playwright}\``,
-    `**Impact:** ${impact}, ${finding.people.length} of ${total} people (${finding.people.map(person => `Person ${person}`).join(', ')})`,
-    `**Steps, from Person ${moment.person}'s trace** (${entry.device} · ${entry.browser} · window ${entry.window}):\n\n${steps.join('\n')}`,
-    `**Clip:** ${base}${momentHash(finding, moment)} (Person ${moment.person} · ${clock(moment.seconds)})`,
-    ...(finding.change ? [`**Suggested change:** ${finding.change}`] : []),
-    `Run ${run.run} · ${run.goal} · ${run.date}. ${caveat}`,
-  ].join('\n\n')
 }

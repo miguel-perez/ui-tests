@@ -57,7 +57,7 @@ export const compilation = {
   check: [['Person 3, after Done', 'Not reached', 'main contained "2 invitations pending"'], ['Person 5, after Done', 'Reached', '1:12']],
 }
 /**
- * The run's problems (design/artefacts/run-report.html), each as a sentence about the design, where as the page and the element
+ * The run's problems (design/artefacts/run-report-list.html), each as a sentence about the design, where as the page and the element
  * (the short form, and the Playwright locator a developer can paste into a test), the moments that show it (person and second,
  * the first one the moment to watch), the words tied to it and who said them, and the suggested change. Who hit it and how many
  * come from the moments; the rank (impact, then how many people) is computed, so the Share-menu problem, 4 of 5 but slowed,
@@ -72,17 +72,16 @@ export const problems = [
 /** What worked: the last row of the list, with the moment each person did it. */
 export const worked = { title: 'Found Settings, then Members, on their own', page: '/settings', locator: 'tab "Members"', playwright: "getByRole('link', { name: 'Members' })", moments: [[1, 44], [2, 40], [3, 46], [4, 19], [5, 39]] } as const
 /**
- * WhatComesBack (docs/design/site-schema.md; design/artefacts/what-comes-back.html): the landing section "What comes back.", in
- * place of the one-person attempt view and "In the pull request" (issue #46). Three numbered pieces in the order a developer meets
- * them: the check in the merge box, its page on GitHub, and the report. The heading, the lead and the intros are the artefact's.
+ * WhatComesBack (docs/design/site-schema.md; design/artefacts/what-comes-back.html): the landing section "How it works.", with no
+ * lead (issue #49). Three numbered pieces in the order a developer meets them: the check in the merge box, its page on GitHub, and
+ * the report as the list (design/artefacts/run-report-list.html). The heading and the intros are the artefact's.
  */
 export const whatComesBack = {
-  heading: 'What comes back.',
-  lead: 'Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request, and behind it the report: whether people reached the goal, the problems they hit, worst first, and for each one the clip, their words, the moment to watch and the smallest change. The check never fails your build. Your other tests prove the code works. This one shows whether a person can use it.',
+  heading: 'How it works.',
   /** The merge box: GitHub's own heading, then our check and two of the team's. */
   check: { n: 1, id: 'the-check', name: 'The check', intro: 'One line in the merge box, next to your other checks. Its mark is neutral, never red or green: there is no pass to give, and it never blocks a merge unless you ask it to.', heading: 'All checks have passed', counts: '1 neutral and 2 successful checks', others: [{ name: 'preview', summary: 'Deployment ready' }, { name: 'tests', summary: '212 passed' }] },
   checkPage: { n: 2, id: 'check-page', name: 'Its details, on GitHub', intro: 'Press Details and GitHub shows the check\'s own page: the sentence, the three problems to fix first with where they are and a link to the moment, and a link to the report. One screen, no pictures, no scrolling.' },
-  report: { n: 3, id: 'the-report', name: 'The report', intro: 'The page the check links to, and the one you can send as a link. One line says whether it worked. The five people sit under it, each with their outcome and a link to their attempt. Then the problems on the left, worst first, with impact, where, who hit it and how many; on the right the evidence for the one selected, which stays put while the list scrolls: the clip, the words, where as a locator you can paste, the moments, the smallest change, and a copy as an issue. One line closes the page.' },
+  report: { n: 3, id: 'the-report', name: 'The report', intro: 'The page the check links to, and the one you can send as a link. One line says whether it worked. Then each problem as one card, worst first, with its evidence inline: who hit it, where, the clip, their words and the smallest change. The five people in a strip, each linking to their attempt. One line closes the page.' },
 }
 /** The example run's facts that are not in the recordings: the product, where the report lives, the preview and commit the check ran on, where each person came from. */
 export const runFacts = {
@@ -92,7 +91,6 @@ export const runFacts = {
   screened: 'screened as signed up for a planning tool this week',
   firstLook: { named: 4, firstClick: 3 },
   share: 'Share',
-  copyIssue: 'Copy as an issue',
 }
 /**
  * Sources (docs/design/site-schema.md; design/artefacts/sources-section.html): where the people come from, verbatim from the artefact.
@@ -147,7 +145,7 @@ export const commands = { install: 'npm install -D ui-tests', init: 'npx ui-test
 export const rehearsal = 'Rehearsal: 0 of 5 planned attempts recorded.'
 export const guide = {
   title: 'Getting started',
-  titles: ['Install', 'Set up', 'Try it on yourself', 'Write your own', 'Run it with real people', 'Run it with an agent'],
+  titles: ['Install', 'Set up', 'Try it on yourself', 'Write your own', 'Run it with people', 'Test your API with an agent'],
   requirement: 'Node 22. Paste one line on any site, or install the package in a Next.js app.',
   installIntro: 'In a Next.js app, install the package. On any other site, paste one line instead: Without a repository.',
   install: 'You see "ui-tests" in `devDependencies`.',
@@ -160,9 +158,19 @@ export const guide = {
   once: 'You type, once the attempts are in:',
   pr: 'Then, for the pull request, put `npx ui-tests run` in the job that deploys your preview. On the next pull request you see the check:',
 }
+/**
+ * The agent section (design/artefacts/agents-section.html; docs/discovery/agent-section-research.md), verbatim: the heading, the
+ * command under it, the three-sentence lead, and one tile per interface an agent uses, each its name, its target and one sentence
+ * (a word in backticks is set in mono). The guide's agent step keeps the command, the file line, the closing and the terminal's report.
+ */
 export const agent = {
-  heading: 'The same test, run by an agent.',
-  lead: 'Point a file at your API, your MCP server or your CLI and run it with an agent instead of a person. Five trials, a trace for each, a report of its own. Agent runs are never counted with people and never described as people.',
+  heading: 'Agents use some interfaces, too.',
+  lead: 'Your API, your MCP server and your CLI have a second kind of user: an agent that reads text, not pixels. Point the same file at that surface and five trials show whether it gets through. It is a capability test, not a usability one, and it never counts with people.',
+  tiles: [
+    { id: 'api', name: 'Your API', target: 'target: { http }', text: 'Endpoint names, schemas and error bodies are its whole page. A `400` with no reason is a dead end.' },
+    { id: 'mcp', name: 'Your MCP server', target: 'target: { mcp }', text: 'Tool names and their descriptions are the only labels it reads. If two tools sound alike, it picks one.' },
+    { id: 'cli', name: 'Your CLI', target: 'target: { cli }', text: 'Flags, help text and exit codes are what it sees. A `--help` that lies costs it the run.' },
+  ],
   closing: 'One file, two actors, two reports that never mix.',
   command: 'npx ui-tests run --actor agent',
   fileLine: "goal('add a member through the API', { target: { http: 'https://api.weekboard.app' } })",

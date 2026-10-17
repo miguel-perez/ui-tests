@@ -1,11 +1,11 @@
 {
   "landing-1440": {
-    "height": 8253,
+    "height": 8354,
     "sections": [
       {
         "section": "what-comes-back",
         "heading": 96,
-        "lead": 630,
+        "lead": null,
         "widest": 1248,
         "figures": [
           "96+1248",
@@ -21,6 +21,11 @@
         "figures": [
           "96+1248",
           "96+1248",
+          "630+714",
+          "630+714",
+          "630+714",
+          "630+714",
+          "630+714",
           "630+714"
         ]
       },
@@ -37,9 +42,9 @@
         "section": "agents",
         "heading": 96,
         "lead": 630,
-        "widest": 714,
+        "widest": 1248,
         "figures": [
-          "630+714"
+          "96+1248"
         ]
       },
       {
@@ -55,12 +60,12 @@
     ]
   },
   "landing-375": {
-    "height": 13350,
+    "height": 13638,
     "sections": [
       {
         "section": "what-comes-back",
         "heading": 16,
-        "lead": 16,
+        "lead": null,
         "figures": [
           "16+343",
           "16+343",
@@ -203,7 +208,7 @@
     ]
   },
   "guide-375": {
-    "height": 8716,
+    "height": 8766,
     "sections": [
       {
         "section": "guide",

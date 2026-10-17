@@ -71,8 +71,21 @@ main { position: relative; isolation: isolate; }
 .block::before { content: ''; position: absolute; bottom: -10px; left: -8px; width: 36px; height: 20px; background: var(--canvas); }
 .block::after { content: ''; position: absolute; bottom: -10px; left: 0; width: 20px; height: 20px; z-index: 1; -webkit-mask: var(--mark-motif) center / 14px no-repeat; mask: var(--mark-motif) center / 14px no-repeat; background-color: var(--comment); }
 .section-head { align-items: baseline; }
-.section-head h2 { grid-column: 1; }
+.section-head h2, .section-title { grid-column: 1; }
 .section-head p { grid-column: 2; color: var(--muted); font-size: 18px; max-width: 64ch; text-wrap: pretty; }
+
+/* The agent section (design/artefacts/agents-section.html): the command under the heading, then three tiles across twelve columns. */
+.agents-cmd { margin-top: 14px; font: 400 14px/1.5 var(--font-mono), monospace; color: var(--ink); }
+.agents-prompt { color: var(--muted); margin-right: 8px; }
+.agents-flag { color: var(--green); }
+.block > .agents-tiles { margin-top: 40px; }
+.agents-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); }
+.agents-tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 26px 26px 24px; display: grid; gap: 18px; align-content: start; min-width: 0; }
+.agents-icon { width: 56px; height: 56px; color: var(--accent); display: block; }
+.agents-tile h3 { font: 500 18px/1.25 var(--font-sans), sans-serif; letter-spacing: -.01em; }
+.agents-tile h3 span { display: block; font: 400 12px/1.4 var(--font-mono), monospace; color: var(--muted); margin-top: 4px; }
+.agents-tile p { color: var(--muted); font-size: 14.5px; line-height: 1.55; }
+.agents-tile p b { color: var(--ink); font: 500 13px var(--font-mono), monospace; white-space: nowrap; }
 
 /* Caption: beside an artefact of 8 columns or fewer, or under a wider one in one or two lines. */
 .caption { color: var(--muted); font-size: 15px; }
@@ -266,7 +279,12 @@ main { position: relative; isolation: isolate; }
 .compile-tabs button b, .compile-stepnav b { font: 500 12px/1 var(--font-mono), monospace; color: var(--moment); }
 .compile-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--moment); }
 .compile-tabs button:focus-visible { outline-offset: -2px; }
-.block > .compile-step { margin-top: 28px; }
+/* Every step shares one grid cell, so the steps keep the tallest step's height and the page never jumps when a tab changes; the
+   closed steps stay in the layout, invisible. On a phone the closed steps go, so each step takes its own height (issue #49). */
+.block > .compile-steps { margin-top: 28px; }
+.compile-steps { display: grid; }
+.compile-step { grid-area: 1 / 1; min-width: 0; }
+.compile-step:not(.is-current) { visibility: hidden; pointer-events: none; }
 .compile-pair { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gutter); align-items: start; scroll-margin-top: 24px; }
 .compile-left { position: sticky; top: 24px; display: grid; gap: 20px; min-width: 0; }
 .block > .compile-stepnav { margin-top: 32px; }
@@ -471,7 +489,7 @@ main { position: relative; isolation: isolate; }
 .pr-md th, .pr-md td { text-align: left; padding: 8px 10px; border: 1px solid var(--line); vertical-align: top; }
 .pr-md th { color: var(--muted); font-weight: 500; background: var(--raised); }
 .pr-md td.num, .pr-md td:last-child { white-space: nowrap; }
-.pr-md td code, .rr-pane dd code { font: 12px var(--font-mono), monospace; color: var(--ink); background: var(--raised); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; white-space: nowrap; }
+.pr-md td code { font: 12px var(--font-mono), monospace; color: var(--ink); background: var(--raised); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; white-space: nowrap; }
 .pr-legend { font-size: 12px; color: var(--muted); }
 .pr-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
 .pr-foot { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
@@ -482,63 +500,54 @@ main { position: relative; isolation: isolate; }
 .pr-impact[data-impact="confused"], .rr-impact[data-impact="confused"], .rr-legend b[data-impact="confused"] { color: var(--pause); }
 .rr-impact[data-impact="worked"] { color: var(--done); }
 
-/* RunReport (design/artefacts/run-report.html): the viewer. A white window; the selected row and the pane take the canvas, where
-   every data role holds 4.5:1 (the artefact's raised grey drops the moment to 4.45:1); it clips rather than hides its overflow, so the
-   evidence pane can stay put while the list scrolls. */
-.window.run-report { overflow: clip; }
+/* RunReport (design/artefacts/run-report-list.html): the list. A white window; one card per problem on the canvas, where every data
+   role holds 4.5:1 (the artefact's raised grey drops the moment to 4.45:1), the text on the left and the clip in 300px on the right;
+   what worked as the last card, unfilled; the people in a strip of five. */
 .rr-addr { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-bottom: 1px solid var(--line); font: 12px var(--font-mono), monospace; color: var(--muted); }
 .rr-dots { display: inline-flex; gap: 8px; }
 .rr-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
 .rr-url { margin-left: 6px; min-width: 0; overflow-wrap: anywhere; }
 .rr-addr .example-label, .rr-crumb .example-label { margin-left: auto; }
-.rr-body { padding: 26px 28px 28px; display: grid; gap: 22px; }
+.rr-body { padding: 22px 26px 26px; display: grid; gap: 20px; }
 .rr-top { display: grid; gap: 8px; }
 .rr-crumb { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
 .rr-crumb b { font-weight: 500; color: var(--ink); }
 .rr-result { font: 500 19px/1.4 var(--font-sans), sans-serif; letter-spacing: -.01em; text-wrap: pretty; }
 .rr-result b { font-weight: 600; }
-.rr-result .no, .rr-people .no { color: var(--no); }
-.rr-people { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
-.rr-people a { color: var(--accent); }
-.rr-people a b { font-weight: 500; }
-.rr-people .yes { color: var(--done); }
-.rr-viewer { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; }
-.rr-viewer > * { min-width: 0; }
-.rr-legend { font-size: 12px; color: var(--muted); padding: 0 10px 8px; }
+.rr-result .no, .rr-strip .no { color: var(--no); }
+.rr-legend { font-size: 12px; color: var(--muted); }
 .rr-legend b { font-weight: 500; }
-.rr-list ol { list-style: none; margin: 0; padding: 0; }
-.rr-row { width: 100%; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 12px 10px; border: 0; border-bottom: 1px solid var(--line); border-radius: 6px; background: none; text-align: left; font-size: 14px; color: var(--ink); }
-.rr-row.is-sel { background: var(--canvas); box-shadow: inset 2px 0 0 var(--moment); }
-.rr-rank { font: 500 13px/1 var(--font-mono), monospace; color: var(--moment); padding-top: 3px; }
+.rr-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
+.rr-card { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; background: var(--canvas); scroll-margin-top: 16px; }
+.rr-card.worked { grid-template-columns: minmax(0, 1fr); background: var(--surface); }
+.rr-hd { display: grid; grid-template-columns: 24px 80px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; font-size: 15px; }
+.rr-rank { font: 500 14px/1 var(--font-mono), monospace; color: var(--moment); }
 .rr-what b { font-weight: 500; }
-.rr-sub { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 5px; font-size: 12px; color: var(--muted); }
-.rr-sub .rr-impact { font-size: 10px; }
-.rr-where { font-family: var(--font-mono), monospace; }
-.rr-count { font: 12px/1 var(--font-mono), monospace; color: var(--ink); padding-top: 3px; white-space: nowrap; }
+.rr-where { display: block; font: 12px/1.4 var(--font-mono), monospace; color: var(--muted); margin-top: 2px; }
+.rr-who { display: flex; align-items: center; gap: 10px; }
+.rr-count { font: 13px/1 var(--font-mono), monospace; color: var(--ink); white-space: nowrap; }
+.rr-ev { display: grid; gap: 10px; margin-top: 12px; font-size: 14px; }
 /* The person marks: the accent for the people who hit it, green-teal on what worked. */
 .rr-marks { display: inline-flex; gap: 4px; }
 .rr-marks i { width: 18px; height: 18px; border-radius: 3px; border: 1px solid var(--line); display: inline-grid; place-items: center; font: 500 10px/1 var(--font-mono), monospace; font-style: normal; color: var(--muted); }
 .rr-marks i.on { background: var(--accent); border-color: var(--accent); color: var(--chip-ink); }
 #worked .rr-marks i.on { background: var(--done); border-color: var(--done); }
-.rr-pane { position: sticky; top: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); padding: 16px 18px; display: grid; gap: 12px; font-size: 14px; }
-.rr-clip { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--host-bg); aspect-ratio: 16 / 10; }
+.rr-clip { position: relative; align-self: start; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--host-bg); aspect-ratio: 16 / 10; }
 .rr-clip video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
-.rr-secs { position: absolute; left: 10px; bottom: 10px; font: 500 12px/1 var(--font-mono), monospace; color: var(--ch-ink); background: var(--ch-surface); padding: 6px 8px; border-radius: 4px; }
-.rr-play { position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--moment); color: var(--chip-ink); display: grid; place-items: center; }
-.rr-quote { font-style: italic; font-size: 16px; color: var(--ink); border-left: 2px solid var(--note); padding-left: 12px; }
-.rr-quote small { display: block; font: normal 12px var(--font-sans), sans-serif; color: var(--muted); margin-top: 4px; }
-.rr-pane dl { display: grid; gap: 8px; }
-.rr-pane dl > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; }
-.rr-pane dt { color: var(--muted); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; padding-top: 2px; }
-.rr-pane dd code { background: var(--surface); }
+.rr-secs { position: absolute; left: 8px; bottom: 8px; font: 500 11px/1 var(--font-mono), monospace; color: var(--ch-ink); background: var(--ch-surface); padding: 5px 7px; border-radius: 4px; }
+.rr-play { position: absolute; right: 8px; bottom: 8px; width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--moment); color: var(--chip-ink); display: grid; place-items: center; }
+.rr-quote { font-style: italic; color: var(--ink); border-left: 2px solid var(--note); padding-left: 12px; }
+.rr-quote small { display: block; font: normal 12px var(--font-sans), sans-serif; color: var(--muted); }
 .rr-moments { display: flex; flex-wrap: wrap; gap: 6px; }
 .rr-chip { display: inline-flex; align-items: center; gap: 6px; font: 12px/1 var(--font-mono), monospace; border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; background: var(--surface); color: var(--ink); }
 .rr-chip .line-icon { color: var(--moment); }
 .rr-chip[aria-pressed="true"] { border-color: var(--moment); }
 .rr-fix b { font-weight: 500; color: var(--done); }
-.rr-act { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-.rr-copy { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; background: var(--surface); }
-.rr-status { font-size: 13px; color: var(--done); }
+.rr-strip { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.rr-strip a { height: 100%; display: grid; gap: 3px; align-content: start; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; color: var(--muted); text-decoration: none; }
+.rr-strip a b { color: var(--accent); font-weight: 500; }
+.rr-strip .yes { color: var(--done); }
+.rr-f { font: 12px/1.4 var(--font-mono), monospace; color: var(--muted); }
 .rr-foot { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; line-height: 1.6; text-wrap: pretty; }
 .rr-foot b { color: var(--ink); font-weight: 500; }
 /* The page /r/<run> and each attempt: the same 10-column reading width; the shared version carries no site header. */
@@ -625,12 +634,11 @@ main { position: relative; isolation: isolate; }
 /* States change paint only: no size, weight, margin, padding or position changes on hover, focus or active. */
 @media (hover: hover) {
   .button.primary:hover { filter: brightness(1.08); }
-  .button.quiet:hover, .copy-control:hover, .rr-chip:hover, .rr-copy:hover { border-color: var(--muted); color: var(--ink); }
+  .button.quiet:hover, .copy-control:hover, .rr-chip:hover, .rr-strip a:hover { border-color: var(--muted); color: var(--ink); }
   .attempt-index a:hover b, .attempt-fold summary:hover b { text-decoration: underline; }
   .moment-press:hover .moment-play { filter: brightness(1.08); }
-  .rr-row:not(.is-sel):hover { background: var(--canvas); }
   .rr-play:hover { filter: brightness(1.08); }
-  .pr-chk a:hover, .pr-md a:hover, .rr-people a:hover, .report-back a:hover { text-decoration: underline; }
+  .pr-chk a:hover, .pr-md a:hover, .report-back a:hover { text-decoration: underline; }
   .nav-links a:hover, .text-link:hover, .step-index a:hover { color: var(--ink); }
   /* A closed source row lights up from the middle; the open one already carries the surface. */
   .src-row:not([aria-expanded="true"]):hover { background: linear-gradient(90deg, transparent, var(--surface) 12%, var(--surface) 88%, transparent); }
@@ -660,12 +668,15 @@ main { position: relative; isolation: isolate; }
   .src-fill-row { grid-template-columns: minmax(0, 1fr) 48px; }
   .src-fill-row .src-bar, .src-fill-row .src-when { display: none; }
 }
-/* Below 900px the report's two panes stack and the check page's side list goes above it. */
+/* Below 900px each report card puts its clip under its text, the people strip takes two columns, the agent tiles stack, and the check
+   page's side list goes above it. */
 @media (max-width: 900px) {
   .compile-pair { grid-template-columns: minmax(0, 1fr); }
   .compile-left { position: static; }
-  .rr-viewer, .pr-cp { grid-template-columns: minmax(0, 1fr); }
-  .rr-pane { position: static; }
+  .compile-step:not(.is-current) { display: none; }
+  .rr-card, .pr-cp { grid-template-columns: minmax(0, 1fr); }
+  .rr-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .agents-tiles { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .pr-side { border-right: 0; border-bottom: 1px solid var(--line); }
 }
 /* At 375 everything stacks in source order. */
@@ -694,9 +705,11 @@ main { position: relative; isolation: isolate; }
   .pr-main { padding: 16px; }
   .rr-body { padding: 20px 16px; }
   .rr-result { font-size: 17px; }
-  .rr-pane { padding: 14px; }
-  .rr-pane dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
-  .rr-pane dd code { white-space: normal; overflow-wrap: anywhere; }
+  .rr-card { padding: 14px; }
+  .rr-hd { grid-template-columns: 24px minmax(0, 1fr); row-gap: 6px; }
+  .rr-hd > :not(.rr-rank) { grid-column: 2; }
+  .rr-hd .rr-impact { grid-row: 1; }
+  .rr-where { overflow-wrap: anywhere; }
   .report-column { width: calc(100% - 48px); }
   .hosted-form form, .hosted-screen { grid-template-columns: 1fr; padding: 16px; }
   .hosted-form form > *, .hosted-screen > * { grid-column: 1 !important; }
