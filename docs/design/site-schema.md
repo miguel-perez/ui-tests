@@ -10,7 +10,7 @@ The pages are built from content types, each rendered by one component with one 
 
 | Type | Fields | Component | Layout rule at 1440 |
 | --- | --- | --- | --- |
-| Claim | headline, standfirst, actions[], fine print | `Hero` | Headline and standfirst span 7 columns left; the hero artefact takes 5 columns right, stacked below on narrow widths. Only the texture sits behind the whole hero: its waves in the line colour, moving slowly and continuously, still under reduced motion. No recording, gestures or sensors. |
+| Claim | headline, standfirst, actions[], fine print | `Hero` | Headline and standfirst span 7 columns left; the hero artefact takes 5 columns right, stacked below on narrow widths. No texture of its own: the page's texture (issue #51) runs behind it as behind every section and the footer, fine waves in the line colour with a narrow wave-accent tint at each line's centre, moving slowly, still under reduced motion. No recording, gestures or sensors. |
 | Section | heading, lead (optional), under (optional) | `SectionHead` | Heading in the first 5 columns, lead in the right 7, one row, 96px above, 48px below. Never a side caption. Every landing section's head, including the compilation's and the sources'. "How it works." has no lead (issue #49); what sits under a heading (the agent section's command) stays in the five. |
 | TerminalOutput | title (the command), fragment (from the Ink renderer), marked rank | `TerminalWindow` | The only component with terminal chrome. 5 columns beside a Claim; otherwise 12 or the right 7. |
 | CodeFile | filename, language, lines, marked line | `CodeWindow` | Filename tab, copy control, highlighted lines. 12 columns, or the right 7 in a guide step. |
@@ -29,6 +29,8 @@ The pages are built from content types, each rendered by one component with one 
 ### Page composition
 
 Landing: Claim; WhatComesBack (how it works); Compilation (what you write, what they see); Sources (where the people come from); Agents (the agent section); Section + Snippet + Dashboard (the hosted track). There is no commands block and no "this page runs this test" code file; the commands are the Compilation's cards. Guide: Step × 6, then the "Without a repository" track as Step × 2. Report: RunReport at `/r/<run>`, each person's AttemptView at `/r/<run>/p<n>`.
+
+Every page in the site shell (the landing, the guide, the report and each attempt) has the page's texture behind it and closes with the footer: the wordmark, then "miguel.design", "Open source MIT licence" and "Report a bug or suggest an improvement". The shared report links and the participant player carry neither.
 
 ### Rules that apply to every component
 

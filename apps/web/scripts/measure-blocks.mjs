@@ -50,8 +50,8 @@ for (const width of [1440, 375]) {
           const paints = s.backgroundColor !== 'rgba(0, 0, 0, 0)' || s.backgroundImage !== 'none' || parseFloat(s.borderTopWidth) > 0 || s.boxShadow !== 'none'
           const empty = el.children.length === 0 && !text && !imageLike && !control
           if (empty && !paints) continue
-          // The background session and texture sit behind the hero and are not placed content.
-          if (el.closest('.hero-backdrop')) continue
+          // The page's texture sits behind everything and is not placed content.
+          if (el.closest('.page-texture')) continue
           const leaf = el.children.length === 0 || imageLike || control
           boxes.push([tag, ...rel(r), leaf ? 1 : 0, text ? 1 : 0, imageLike ? 1 : 0])
         }

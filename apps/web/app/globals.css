@@ -7,6 +7,7 @@
   --purple: #7444b4; --cyan: #00757c; --red: #bd1f44; --yellow: #8b6100; --no: #bd1f44; --yes: #007852;
   --done: #007852; --note: #7a41af; --pause: #8b6100; --deviation: #4b3ff0; --dead: #bd1f44; --correct: #007852;
   --incorrect: #bd1f44; --chip-ink: #ffffff; --focus: #4b3ff0;
+  --wave-accent: color-mix(in oklab, var(--line) 82%, var(--accent));
   --host-bg: #e9eaef; --host-panel: #f4f5f8; --host-line: #cfd3de; --host-ink: #2c3353; --host-dim: #4b5a94;
   --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225,226,231,.68); --ch-hair: rgba(225,226,231,.16); --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px;
   --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
@@ -17,7 +18,7 @@
    the accent. The demo app under test keeps its own light grey (public/demo/weekboard.html, weekboard-light.css), unchanged, so
    its frames match its screenshots; the participant chrome over it is the inverse with the mint accent (ch-*, player-styles.ts). */
 :root { --path: var(--accent); --host-bg: #e1e2e7; --host-chrome: #eef0f5; --host-line: #c4c8da;
-  --radius: 8px; --space-1: 24px; --space-2: 48px; --space-3: 96px; --gutter: 24px; --mark-motif: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='black' stroke-width='12'%3E%3Crect x='20' y='20' width='60' height='60'/%3E%3Cpath d='M50 20V50H80'/%3E%3C/svg%3E"); }
+  --radius: 8px; --space-1: 24px; --space-2: 48px; --space-3: 96px; --gutter: 24px; }
 * { box-sizing: border-box; }
 html { scroll-padding-top: 24px; }
 body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 16px/1.6 var(--font-sans), sans-serif; -webkit-font-smoothing: antialiased; }
@@ -44,6 +45,15 @@ h3, h4 { font-weight: 500; }
 .skip-link:focus { top: 0; }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
 main { position: relative; isolation: isolate; }
+/* The page's texture (issue #51): in the document, not fixed, as wide and as tall as the page, under everything on it. */
+.site { position: relative; }
+.page-texture { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+/* The footer (issue #51): the wordmark in the first five columns, the links in the right seven, the last flush with the container. */
+.site-footer { padding-block: var(--space-2); }
+.site-footer .split { align-items: center; }
+.site-footer .wordmark { justify-self: start; }
+.footer-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px var(--space-1); list-style: none; margin: 0; padding: 0; font-size: 14px; color: var(--muted); }
+.footer-links a { text-decoration: underline; text-underline-offset: 4px; }
 .line-icon { flex-shrink: 0; display: inline-block; vertical-align: middle; }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 46px; padding: 0 20px; border-radius: 8px; font-weight: 500; border: 1px solid var(--line); }
 .primary { background: var(--accent); color: var(--chip-ink); border-color: var(--accent); }
@@ -64,12 +74,13 @@ main { position: relative; isolation: isolate; }
 .split.figure-right > :first-child { grid-column: 2; grid-row: 1; }
 .split.figure-right > :last-child { grid-column: 1; grid-row: 1; }
 
-/* Blocks: 96 above the section head, 48 between artefacts, 24 between an artefact and its caption underneath. */
-.block { position: relative; padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
+/* Sections (issue #51): no separators, and one rhythm in three steps. Every section opens with --space-3 and the last before the
+   footer closes with it; inside, the head and each figure are followed by --space-2, a caption or a note by --space-1. Nothing else
+   spaces a section's top-level children; hairlines stay only inside figures. */
+.block { padding-block: var(--space-3) 0; }
+.block:last-child { padding-bottom: var(--space-3); }
 .block > * + * { margin-top: var(--space-2); }
-.block > .caption-under, .block > .actions { margin-top: var(--space-1); }
-.block::before { content: ''; position: absolute; bottom: -10px; left: -8px; width: 36px; height: 20px; background: var(--canvas); }
-.block::after { content: ''; position: absolute; bottom: -10px; left: 0; width: 20px; height: 20px; z-index: 1; -webkit-mask: var(--mark-motif) center / 14px no-repeat; mask: var(--mark-motif) center / 14px no-repeat; background-color: var(--comment); }
+.block > .caption-under, .block > .actions, .block > .compile-note, .block > .caption-under + *, .block > .compile-note + * { margin-top: var(--space-1); }
 .section-head { align-items: baseline; }
 .section-head h2, .section-title { grid-column: 1; }
 .section-head p { grid-column: 2; color: var(--muted); font-size: 18px; max-width: 64ch; text-wrap: pretty; }
@@ -78,8 +89,7 @@ main { position: relative; isolation: isolate; }
 .agents-cmd { margin-top: 14px; font: 400 14px/1.5 var(--font-mono), monospace; color: var(--ink); }
 .agents-prompt { color: var(--muted); margin-right: 8px; }
 .agents-flag { color: var(--green); }
-.block > .agents-tiles { margin-top: 40px; }
-.agents-tiles { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); }
+.agents-tiles { list-style: none; margin-inline: 0; margin-bottom: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); }
 .agents-tile { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 26px 26px 24px; display: grid; gap: 18px; align-content: start; min-width: 0; }
 .agents-icon { width: 56px; height: 56px; color: var(--accent); display: block; }
 .agents-tile h3 { font: 500 18px/1.25 var(--font-sans), sans-serif; letter-spacing: -.01em; }
@@ -131,8 +141,6 @@ main { position: relative; isolation: isolate; }
 .standfirst { font-size: 18px; color: var(--muted); max-width: 36rem; }
 .hero-copy .actions { margin: var(--space-2) 0 var(--space-1); }
 .hero-artefact .terminal-body { font-size: 13px; padding: var(--space-1) 20px; }
-.hero-backdrop { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
-.trace-texture { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% + 480px); -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 100%); mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 100%); }
 
 /* L2 · AttemptView (design/artefacts/attempt-view.html). 12 columns; the flow runs down the page; a moment card is 7 columns clip,
    5 columns text; nothing sticky. A white window on the canvas, on the site tokens; the Weekboard recording inside the clips keeps
@@ -268,11 +276,9 @@ main { position: relative; isolation: isolate; }
 .compile-command code { font-size: 14px; white-space: nowrap; overflow-wrap: normal; }
 .compile-command > span { font-size: 13px; color: var(--muted); }
 .compile-command b { font-weight: 500; color: var(--ink); }
-.block > .compile-note { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.compile-note { font-size: 13px; color: var(--muted); }
 .compile-note .code-inline { font-size: 12px; }
-.block > .compile-note + .lines-window { margin-top: var(--space-1); }
 /* The tab strip: the step's number in the moment colour, its name; the open tab underlined in the moment colour. */
-.block > .compile-tabs { margin-top: 40px; }
 .compile-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
 .compile-tabs::-webkit-scrollbar { display: none; }
 .compile-tabs button { flex: none; display: inline-flex; gap: 8px; align-items: baseline; padding: 10px 14px 12px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; font-size: 14px; color: var(--muted); white-space: nowrap; }
@@ -281,13 +287,14 @@ main { position: relative; isolation: isolate; }
 .compile-tabs button:focus-visible { outline-offset: -2px; }
 /* Every step shares one grid cell, so the steps keep the tallest step's height and the page never jumps when a tab changes; the
    closed steps stay in the layout, invisible. On a phone the closed steps go, so each step takes its own height (issue #49). */
-.block > .compile-steps { margin-top: 28px; }
+/* The tab strip, the open step and previous and next are one figure: their spacing is the figure's own. */
+.compile-stepper > .compile-steps { margin-top: 28px; }
 .compile-steps { display: grid; }
 .compile-step { grid-area: 1 / 1; min-width: 0; }
 .compile-step:not(.is-current) { visibility: hidden; pointer-events: none; }
 .compile-pair { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gutter); align-items: start; scroll-margin-top: 24px; }
 .compile-left { position: sticky; top: 24px; display: grid; gap: 20px; min-width: 0; }
-.block > .compile-stepnav { margin-top: 32px; }
+.compile-stepper > .compile-stepnav { margin-top: 32px; }
 .compile-stepnav { display: flex; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
 .compile-stepnav button { display: inline-flex; gap: 8px; align-items: baseline; border: 0; background: none; padding: 0; color: var(--muted); }
 .compile-stepnav button:disabled { visibility: hidden; }
@@ -297,7 +304,7 @@ main { position: relative; isolation: isolate; }
 .lines-body { padding: 12px 0; overflow-x: auto; font: 400 13px/1.7 var(--font-mono), monospace; }
 .lines-body ol { list-style: none; margin: 0; padding: 0; background: transparent !important; }
 .lines-body li { display: grid; grid-template-columns: 44px minmax(0, 1fr); min-height: 24px; padding-right: 16px; white-space: pre; }
-.lines-body .ln { text-align: right; padding-right: 14px; color: var(--muted); font-size: 11px; opacity: .8; user-select: none; }
+.lines-body .ln { text-align: right; padding-right: 14px; color: var(--muted); font-size: 11px; user-select: none; }
 .lines-body code { font: inherit; }
 .lines-body li.gap code { color: var(--muted); }
 .compile-intro { display: grid; gap: 10px; max-width: 64ch; }
@@ -451,9 +458,7 @@ main { position: relative; isolation: isolate; }
 /* L2 · WhatComesBack (design/artefacts/what-comes-back.html): three numbered pieces in the order a developer meets them, each a
    64ch intro over its artefact across all twelve columns, hairlines between them. GitHub's chrome is drawn in the site's neutrals;
    colour stays on the data. */
-.block > .piece { margin-top: 36px; }
 .piece { border-top: 1px solid var(--line); padding-top: 40px; display: grid; gap: 18px; }
-.piece + .piece { margin-top: 48px; }
 .piece-intro { display: grid; gap: 8px; max-width: 64ch; }
 .piece-intro h3 { font: 500 20px/1.25 var(--font-sans), sans-serif; letter-spacing: -.01em; }
 .piece-intro h3::before { content: attr(data-n); color: var(--moment); font: 15px var(--font-mono), monospace; margin-right: 10px; }
@@ -607,7 +612,7 @@ main { position: relative; isolation: isolate; }
 
 /* The guide: the step index, then Step × 6 and the hosted track as Step × 2. */
 .guide { padding-bottom: var(--space-3); }
-.guide-head { padding-top: var(--space-2); align-items: baseline; }
+.guide-head { padding-top: var(--space-3); align-items: baseline; }
 .guide-head h1 { font-size: 48px; line-height: 1.1; font-weight: 500; letter-spacing: -.04em; }
 .guide-head p { color: var(--muted); font-size: 18px; max-width: 64ch; }
 .step-index { margin-top: var(--space-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
@@ -627,7 +632,7 @@ main { position: relative; isolation: isolate; }
 .mount-steps li { counter-increment: step; position: relative; padding-left: 36px; overflow-wrap: anywhere; }
 .mount-steps li::before { content: counter(step); position: absolute; left: 0; top: 2px; width: 24px; height: 24px; display: grid; place-items: center; border: 1.5px solid var(--muted); border-radius: 4px; font: 12px var(--font-mono), monospace; color: var(--muted); }
 /* Named for the guide alone: the attempt view's scrub line has a `.track` of its own (issue #46, item 5). */
-.guide-track { margin-top: var(--space-3); padding-top: var(--space-2); border-top: 1px solid var(--line); }
+.guide-track { padding-top: var(--space-3); }
 .guide-track > h2 { grid-column: 1; }
 .guide-track > .step { grid-column: 1 / -1; }
 
@@ -639,7 +644,7 @@ main { position: relative; isolation: isolate; }
   .moment-press:hover .moment-play { filter: brightness(1.08); }
   .rr-play:hover { filter: brightness(1.08); }
   .pr-chk a:hover, .pr-md a:hover, .report-back a:hover { text-decoration: underline; }
-  .nav-links a:hover, .text-link:hover, .step-index a:hover { color: var(--ink); }
+  .nav-links a:hover, .text-link:hover, .step-index a:hover, .footer-links a:hover { color: var(--ink); }
   /* A closed source row lights up from the middle; the open one already carries the surface. */
   .src-row:not([aria-expanded="true"]):hover { background: linear-gradient(90deg, transparent, var(--surface) 12%, var(--surface) 88%, transparent); }
 }
@@ -679,19 +684,19 @@ main { position: relative; isolation: isolate; }
   .agents-tiles { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .pr-side { border-right: 0; border-bottom: 1px solid var(--line); }
 }
-/* At 375 everything stacks in source order. */
+/* At 375 everything stacks in source order, and the rhythm tightens: --space-3 is 64 and --space-2 36. */
 @media (max-width: 700px) {
+  :root { --space-2: 36px; --space-3: 64px; }
   .site-header nav { height: 64px; }
   .nav-links { gap: 20px; }
   .section-head, .split, .hero-grid, .compile-pair { grid-template-columns: minmax(0, 1fr); }
   .section-head > *, .split > *, .hero-grid > *, .compile-pair > * { grid-column: 1 / -1 !important; grid-row: auto !important; }
   .section-head, .split, .compile-pair { row-gap: var(--space-1); }
+  .footer-links { justify-content: flex-start; }
   .step > h2, .compile-left { position: static; }
-  .hero-grid { padding: var(--space-2) 0; }
   .hero h1 { font-size: 44px; max-width: none; }
   .hero-artefact { margin-top: var(--space-2); }
   .hero-artefact .terminal-body, .terminal-body { padding: 16px; font-size: 12px; }
-  .block { padding: var(--space-2) 0; }
   .window-chrome { gap: 8px; flex-wrap: wrap; }
   .window-chrome .window-dots { display: none; }
   .terminal-window .window-title { text-align: left; font-size: 11px; }
@@ -701,7 +706,6 @@ main { position: relative; isolation: isolate; }
   .flow-row .url { grid-column: 2; }
   .attempt-headline { font-size: 28px; }
   .piece { padding-top: 32px; }
-  .piece + .piece { margin-top: 32px; }
   .pr-main { padding: 16px; }
   .rr-body { padding: 20px 16px; }
   .rr-result { font-size: 17px; }
@@ -714,7 +718,6 @@ main { position: relative; isolation: isolate; }
   .hosted-form form, .hosted-screen { grid-template-columns: 1fr; padding: 16px; }
   .hosted-form form > *, .hosted-screen > * { grid-column: 1 !important; }
   .guide-head h1 { font-size: 40px; }
-  .step { padding-top: var(--space-2); }
   .step > h2 { font-size: 26px; }
   /* The compilation stacks: commands one per row, the code wraps, the frames fit their sheets, the pill docks across the bottom. */
   .compile-commands { grid-template-columns: minmax(0, 1fr); }

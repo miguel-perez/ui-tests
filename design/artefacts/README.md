@@ -16,6 +16,8 @@ Approved markup exported from the design artifacts. Each file is the spec for th
 
 Every landing and guide section sits on one container: 1248px wide, centred, with 96px margins at 1440 and 16px at phone width, twelve columns with 24px gutters. The section heading takes the first five columns and its lead the right seven, as the hero does. A figure takes all twelve columns or the right seven; nothing is centred in a narrower column. Pieces inside a section are numbered with a small mono figure in the moment colour before the heading, and each piece's text keeps to 64ch. On a phone everything stacks to one column. A test measures every section's heading, lead and widest figure against this rule.
 
+The vertical rhythm has three steps (issue #51): 24, 48 and 96, which on a phone are 24, 36 and 64. Every section opens with 96 and the last closes with 96 before the footer; a head and each figure are followed by 48, a caption or a note by 24. No rule or motif separates sections; hairlines stay inside figures. The footer is a 5 / 7 row on the same container: the wordmark in the first five, the links in the right seven ending flush with the figures above. Behind everything runs the page's texture, the line colour with a narrow `--wave-accent` tint at each line's centre (`color-mix(in oklab, var(--line) 82%, var(--accent))`, in `tokens.css`).
+
 ## Files
 
 | File | Surface |

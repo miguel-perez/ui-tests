@@ -10,9 +10,11 @@
 - **One split for every section: 5 / 7.** A section's heading takes the first five columns and its lead the right seven, as one `5fr 7fr` split with one 24 px gutter: the heading starts at 96 and is 510 wide, the lead starts at 630 and is 714 wide. The same split carries every pair in a section (a compile step, a guide step, the agent's terminal and its caption, the sources well).
 - **A figure takes all twelve columns (96, 1248 wide) or the right seven (630, 714 wide).** Nothing is centred in a narrower column: the compilation's 800 px column and the pull-request section's 1036 px column are gone (issue #46).
 - Pieces inside a section are numbered with a small mono figure in the moment colour before the heading; each piece's text keeps to 64ch.
-- Vertical scale 24 / 48 / 96. A section head has 96 above and 48 below. Artefacts in a block are 48 apart; a caption is 24 under its artefact.
+- Vertical rhythm in three steps only (issue #51): `--space-1` 24, `--space-2` 48, `--space-3` 96, which on a phone are 24, 36 and 64. Every section opens with 96 (`padding-block: var(--space-3) 0`) and the last before the footer closes with 96; a head is followed by 48, a figure by 48, a caption or a note by 24, and nothing else spaces a section's top-level children. The hero keeps 96 above and below. No rule or motif separates sections; hairlines stay only inside figures (table rows, the merge box, the check page, the three pieces of "How it works.", the compile tab strip).
+- The footer closes every page: a 5 / 7 row, the wordmark at 96 and the three links in the right seven ending flush at 1344; at 375 one column, the links left-aligned. 48 above and below it (36 on a phone).
+- The page's texture runs behind everything (issue #51): fine waves 14 px apart down the whole document, in the line colour with a blue tint at each line's centre.
 - At 375 the container is 343 px (16 px margins) and everything stacks in source order in one column, with no horizontal scroll; only the compile section's tab strip scrolls sideways, inside itself.
-- `tests/e2e/grid.spec.ts` measures it: every `[data-section]`'s heading, lead and outermost figures on the landing and the guide, at 1440 and 375.
+- `tests/e2e/grid.spec.ts` measures it: every `[data-section]`'s heading, lead and outermost figures on the landing and the guide, at 1440 and 375; each section's top padding and the gap from its head to its first figure; and the footer on the landing, the guide and the report.
 
 ## The rules that decide every cell
 
@@ -30,11 +32,11 @@ Each map shows the 12 columns at 1440 with a ruler; a bracket spans the columns 
 
 ## Landing page
 
-Six sections, in order: L1 the hero, L2 how it works ("What comes back." until issue #49), L3 what you write, L4 where the people come from, L5 the agent section, L6 the hosted section. At 1440 the page is about 8,350 px tall (8,253 px after issue #46, 15,385 px before it; the limit is 9,000).
+Six sections, in order: L1 the hero, L2 how it works ("What comes back." until issue #49), L3 what you write, L4 where the people come from, L5 the agent section, L6 the hosted section. At 1440 the page is 8,114 px tall with the footer and the three-step rhythm (issue #51; about 8,350 px after issue #49, 8,253 px after issue #46, 15,385 px before it; the limit is 9,000).
 
 ### L1 · Claim
 
-**Rule.** Unchanged. Headline and standfirst take columns 1-7; the hero artefact (the Ink report in its terminal) takes columns 8-12 with its caption under it. The texture alone sits behind the whole hero. The hero is the Claim, not a section: it has an h1 and no lead, and the grid test reads the sections after it.
+**Rule.** Unchanged. Headline and standfirst take columns 1-7; the hero artefact (the Ink report in its terminal) takes columns 8-12 with its caption under it. The page's texture runs behind it, as behind every section and the footer (issue #51); the hero has none of its own. The hero is the Claim, not a section: it has an h1 and no lead, and the grid test reads the sections after it.
 
 At 1440:
 
@@ -165,9 +167,11 @@ At 1440:
 [Snippet in CodeWindow                                                                        ]  snippet · 96
 [date         ] [people       ] [status       ] [result       ] [name (free text last)        ]  Dashboard · 320
 [Caption under                                                                                ]  32
+                                                                                                  96 to the footer
+[ui-tests. wordmark                 ] [   miguel.design · Open source MIT licence · Report a bug ]  Footer · 48 above and below
 ```
 
-At 375: heading, lead; the snippet; the dashboard (scrolls sideways inside itself); the caption.
+At 375: heading, lead; the snippet; the dashboard (scrolls sideways inside itself); the caption; then the footer, the wordmark over the three links, left-aligned.
 
 ## Getting-started page
 

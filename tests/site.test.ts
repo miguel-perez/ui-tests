@@ -128,3 +128,13 @@ it('the demo bar steps aside while a field has focus, drags by its grip, and Don
   expect(demo).toContain("grip.addEventListener('pointermove'")
   expect(demo).toMatch(/aria-label="Finished this task\?"[^>]*hidden><p>Finished this task\?<\/p><button class="yes" id="doneYes" type="button">Yes, I've finished<\/button><button class="no" id="doneNo" type="button">Not yet<\/button>/)
 })
+
+it('licenses the code under MIT to miguel.design, with no personal name, and says so in every manifest (issue #51)', async () => {
+  const licence = await readFile('LICENSE', 'utf8')
+  expect(licence).toMatch(/^MIT License\n\nCopyright \(c\) 2026 miguel\.design\n/)
+  expect(licence).toContain('THE SOFTWARE IS PROVIDED "AS IS"')
+  for (const manifest of ['package.json', 'apps/web/package.json', 'packages/ui-tests/package.json']) expect(JSON.parse(await readFile(manifest, 'utf8')).license, manifest).toBe('MIT')
+  const shell = await readFile('apps/web/components/site-shell.tsx', 'utf8')
+  for (const text of [licence, shell]) expect(text).not.toMatch(/Miguel|Pérez|Perez/)
+})
+

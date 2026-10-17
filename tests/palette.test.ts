@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest'
 import { readFile } from 'node:fs/promises'
 import { texture } from '../apps/web/lib/texture'
+import { mixOklab, over, darken } from './oklab'
 
 function luminance(hex: string) {
   const rgb = hex.match(/[\da-f]{2}/gi)!.map(value => parseInt(value, 16) / 255).map(value => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
@@ -9,18 +10,20 @@ function luminance(hex: string) {
 function contrast(a: string, b: string) { const x = luminance(a), y = luminance(b); return (Math.max(x,y) + .05) / (Math.min(x,y) + .05) }
 // The tokens' own floors are in tests/contrast.test.ts, read from design/artefacts/tokens.css.
 const tokenFile = await readFile('design/artefacts/tokens.css', 'utf8')
-// The site is light only (issue #43), so the hero and its texture are only ever on the light block.
+// The site is light only (issue #43), so the page's texture is only ever on the light block.
 const themes = {
   light: Object.fromEntries([...(/^:root \{([^}]*)\}/m.exec(tokenFile)![1]).matchAll(/--([\w-]+): (#[\da-f]{6})/g)].map(match => [match[1], match[2]])),
 }
 
-it('draws the texture in the line token and keeps the hero copy AA over its strongest pixel', () => {
+it('draws the texture in the line token with the wave accent, and keeps every text AA over its strongest pixel', () => {
   expect(texture.token).toBe('--line')
-  const channels = (hex: string) => hex.match(/[\da-f]{2}/gi)!.map(value => parseInt(value, 16))
+  expect(texture.accentToken).toBe('--wave-accent')
   for (const [theme, tokens] of Object.entries(themes)) {
-    const stroke = channels(tokens.line), canvas = channels(tokens.canvas)
-    const strongest = '#' + canvas.map((value, i) => Math.round(value + (stroke[i] - value) * texture.maxAlpha).toString(16).padStart(2, '0')).join('')
-    // Over the texture the hero sets type in ink and muted, and links in the accent; everything else sits on an opaque window or button.
+    // The strongest pixel: a grey line and a blue centre crossing at the top of the alpha range. The canvas draws with `darken`, so
+    // overlapping lines never compound past the strongest line; the darker of each channel shows.
+    const accent = mixOklab(tokens.line, 0.82, tokens.accent)
+    const strongest = darken(over(tokens.canvas, tokens.line, texture.maxAlpha), over(tokens.canvas, accent, texture.maxAlpha))
+    // Over the texture the page sets type in ink and muted, and links in the accent; everything else sits on an opaque window or button.
     for (const text of ['ink', 'muted', 'accent']) expect(contrast(tokens[text], strongest), `${text} over the texture, ${theme}`).toBeGreaterThanOrEqual(4.5)
   }
 })
