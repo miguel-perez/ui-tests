@@ -1,4 +1,5 @@
 import { exampleFile, exampleFileName } from 'ui-tests/example'
+import { hostCaveat, hostIssue } from 'ui-tests/host'
 
 /** Approved D2 copy. README parity tests cover every exported string. */
 export const promise = 'See where people get stuck on what you just shipped.'
@@ -112,7 +113,7 @@ export const sources = {
       caveat: ['Friends are kind and people in tech know too much.', 'Send it beyond your team and beyond tech where you can, and for each problem ask whether your users would hit it too.'],
     },
     {
-      id: 'visitors', icon: 'cursor', picture: 'invitation', name: 'Your visitors', what: 'On the hosted version: people already on your live site, invited when a page has given them trouble twice.',
+      id: 'visitors', icon: 'cursor', picture: 'invitation', name: 'Your visitors', what: 'On your deploy: people already on your live site, invited when a page has given them trouble twice.',
       who: 'Real visitors who seemed stuck and said yes, on their own device',
       cost: 'Paid', costNote: 'Like the panel, under a daily cap you set',
       time: 'Depends on your traffic', timeNote: 'A page with trouble and a few hundred visitors a day gives one or two',
@@ -126,7 +127,7 @@ export const sources = {
       cost: 'Starting at $12 a person', costNote: 'Five from $60; a cap of $70 holds the reserve',
       time: 'First people within minutes', timeNote: 'Usually all five within a few hours; a narrow audience a day or more',
       goodFor: "People like your users when you don't know any",
-      steps: ['Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token.', '`npx ui-tests run` turns `users` into each panel\'s filters and a short screener, prints the plan, and asks before it spends.', 'People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back.'],
+      steps: ['Put a cap in the config. Your deploy and your machine both use your own panel account: add a token once.', '`npx ui-tests run` turns `users` into each panel\'s filters and a short screener, prints the plan, and asks before it spends.', 'People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back.'],
       caveat: ['Panel people answer screeners for money.', 'Read the Who took part line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not.'],
     },
   ],
@@ -145,8 +146,8 @@ export const rehearsal = 'Rehearsal: 0 of 5 planned attempts recorded.'
 export const guide = {
   title: 'Getting started',
   titles: ['Install', 'Set up', 'Try it on yourself', 'Write your own', 'Run it with people', 'Test your API with an agent'],
-  requirement: 'Node 22. Paste one line on any site, or install the package in a Next.js app.',
-  installIntro: 'In a Next.js app, install the package. On any other site, paste one line instead: Without a repository.',
+  requirement: 'Node 22. Install the package in a Next.js app, or run one command if you have no repository.',
+  installIntro: 'In a Next.js app, install the package. With no repository, run one command instead: Without a repository.',
   install: 'You see "ui-tests" in `devDependencies`.',
   try: 'You see a link in the terminal, then in your browser the consent, a few questions, the first look, the scenario card, your own page with the bar over it, and the questions after the task, one at a time. Press "Done". The terminal prints:',
   write: 'You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in, and change it to your own site:',
@@ -201,28 +202,28 @@ export const worth = {
     { name: 'BLS, employer costs, March 2026', href: 'https://www.bls.gov/news.release/archives/ecec_03202026.htm' },
   ],
 }
+/**
+ * The host section (design/artefacts/hosted-section.html; docs/discovery/hosting-decision.md; issue #56), verbatim: the heading, the
+ * lead, two unnumbered pieces (the command and its terminal as drawn, the line and its script tag) and the closing. There is no hosted
+ * service: the deploy is the author's. The guide and the README say the same in one paragraph with the CLI's caveat, until issue #59.
+ */
 export const hosted = {
-  heading: 'No repo to put it in? Paste one line.',
-  lead: 'One script tag on your live site, through your tag manager if that is how you ship. Then the same test in a form instead of a file: who the users are, what they are trying to do, and how you can tell they did it, by a page they reach, an element they see or a question they answer. People come from your link, a paid panel or your own visitors, and the report is a page you can share.',
-  closing: 'Same test, same report, no install.',
-  snippet: '<script src="https://ui-tests.com/s.js" data-site="weekboard" async></script>',
-  users: 'people who signed up this week and want a colleague on their board',
-  purpose: 'plan the week together without emailing screenshots around',
-  goal: 'invite a colleague',
-  screen: { did: 'signed up for a tool to plan work with a team', within: '7 days', uses: 'Trello, Asana, Notion, Linear', not: 'has used Weekboard' },
-  paste: 'Paste the line',
-  pasteSee: 'You see the script in your live site’s markup, or in the tag manager that publishes it.',
-  fill: 'Fill the form',
-  fillSee: 'You see the run on your dashboard, and a report page you can share once the attempts are in.',
+  heading: 'No repo to put it in? One command.',
+  lead: '`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.',
+  command: { name: 'The command', intro: 'Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.', tab: ['Terminal', 'Example'] },
+  terminal: `$ npx ui-tests host
+Deploying to your account…
+  collector   https://ui-tests.weekboard.workers.dev
+  player      https://ui-tests.weekboard.workers.dev/t
+  store       weekboard-ui-tests, your bucket, 0 recordings
+  panel       no key yet · add one with ui-tests host --panel prolific`,
+  line: { name: 'The line', intro: 'One script tag, pointing at your deploy. It records only while a run is open and a person has said yes; the rest of the time it is forty lines that do nothing.', tab: ['index.html', 'or your tag manager'] },
+  snippet: '<script src="https://ui-tests.weekboard.workers.dev/s.js" async></script>',
+  closing: 'Same test, same report, on a box you own.',
+  guide: 'No repository? `npx ui-tests host` deploys the collector, the player and the store to a free tier in an account you own, Cloudflare Workers first, and prints the one line to paste on your live site, through your tag manager if that is how you ship. Then the same test in a form on your deploy instead of a file; the recordings stay in your bucket. Run it again to update.',
+  caveat: hostCaveat,
+  issue: hostIssue,
 }
-/** The hosted dashboard: other runs on the same site, none of them the example run shown above it. Fixed fields first, the name last. */
-export const runs = [
-  { date: '16 Oct', participants: '3 of 5', status: 'running', progress: 0.6, result: '', band: '', name: 'change the plan to Team' },
-  { date: '15 Oct', participants: '5 of 5', status: 'done', progress: 1, result: 'Reached 5 of 5 · 1 problem', band: 'great', name: 'export last month’s board' },
-  { date: '12 Oct', participants: '8 of 8', status: 'done', progress: 1, result: 'Reached 6 of 8 · 3 problems', band: 'check', name: 'start a board from a template' },
-  { date: '9 Oct', participants: '5 of 5', status: 'done', progress: 1, result: 'Reached 5 of 5 · none found', band: 'great', name: 'find a card from last week' },
-  { date: '—', participants: '0 of 5', status: 'draft', progress: 0, result: '', band: '', name: 'archive a finished board' },
-] as const
 /** The footer's links (issue #51): the author's site, the licence and the new-issue page; the header already links to GitHub. */
 export const footer = { site: 'miguel.design', licence: 'Open source MIT licence', report: 'Report a bug or suggest an improvement', label: 'About ui-tests' }
 export const ui = { wordmark: 'ui-tests', guide: 'Guide', github: 'GitHub', getStarted: 'Get started', skip: 'Skip to content', navigation: 'Main navigation', steps: 'Getting started', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy. Select and copy the code.', typescript: 'TypeScript', shell: 'Shell', output: 'Output', example: 'Example run' }

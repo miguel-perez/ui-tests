@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { parseHTML } from 'linkedom'
-import { was, shown, unsaid, offences, verbatim } from './vocabulary'
+import { was, shown, unsaid, offences, verbatim, hostVerbatim, hosting } from './vocabulary'
 
 const exec = promisify(execFile)
 
@@ -29,7 +29,7 @@ it('finds none of the old words in apps/web, packages/ui-tests/src or the genera
     let text = await readFile(file, 'utf8')
     if (file.endsWith('globals.css')) text = text.replace(tokens, tokens.replace(/[^\n]/g, ''))
     // The sources section's verbatim phrases are taken out first; everything else on the line is still checked.
-    text.split('\n').forEach((line, index) => { const rest = verbatim.reduce((left, phrase) => left.replaceAll(phrase, ''), line.replaceAll("\\'", "'")); for (const name of offences(rest, was)) found.push(`${file}:${index + 1} ${name}`) })
+    text.split('\n').forEach((line, index) => { const rest = [...verbatim, ...hostVerbatim].reduce((left, phrase) => left.replaceAll(phrase, ''), line.replaceAll("\\'", "'")); for (const name of offences(rest, was)) found.push(`${file}:${index + 1} ${name}`) })
   }
   expect(found).toEqual([])
 })
@@ -46,10 +46,30 @@ it('never weighs a run in the words the ROI research rules out, in apps/web, pac
   expect(offences(`${worth.heading} ${worth.sentence} ${worth.arithmetic}`, unsaid)).toEqual([])
 })
 
-it('keeps every verbatim exception in the sources artefact, word for word', async () => {
+it('keeps every verbatim exception in the sources and host artefacts, word for word', async () => {
   // The artefact is a fragment without a body: its words are the markup with the tags taken out.
-  const artefact = (await readFile('design/artefacts/sources-section.html', 'utf8')).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')
+  const words = async (file: string) => (await readFile(file, 'utf8')).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')
+  const artefact = await words('design/artefacts/sources-section.html')
   for (const phrase of verbatim) expect(artefact, phrase).toContain(phrase)
+  const host = await words('design/artefacts/hosted-section.html')
+  for (const phrase of hostVerbatim) expect(host, phrase).toContain(phrase.replace(/\s+/g, ' '))
+})
+
+it('never calls ui-tests.com a hosted service, in apps/web, packages/ui-tests/src, the README, docs/design or docs/prd (issue #56)', async () => {
+  const found: string[] = []
+  const scanned = [...await files('apps/web'), ...await files('packages/ui-tests/src'), 'README.md', ...await files('docs/design'), ...await files('docs/prd')]
+  for (const file of scanned) {
+    (await readFile(file, 'utf8')).split('\n').forEach((line, index) => {
+      for (const name of offences(line, hosting)) found.push(`${file}:${index + 1} ${name}`)
+      // "Hosted" no longer names ui-tests.com on the site or in docs/design; the only hosted thing is the author's deploy.
+      if (!file.startsWith('docs/prd') && /\bhosted\b/i.test(line) && /ui-tests\.com/i.test(line)) found.push(`${file}:${index + 1} hosted ui-tests.com`)
+    })
+  }
+  expect(found).toEqual([])
+  for (const said of ['On the hosted version: people', 'Recordings go to our servers', 'We store your recordings', 'Paid from our wallet']) expect(offences(said, hosting), said).not.toEqual([])
+  const { hosted, sources } = await import('../apps/web/lib/copy')
+  expect(offences(Object.values(hosted).flatMap(value => typeof value === 'string' ? [value] : Object.values(value).flat()).join(' '), hosting)).toEqual([])
+  expect(sources.rows.find(row => row.id === 'visitors')!.what).toMatch(/^On your deploy: /)
 })
 
 it('renders every terminal surface and fragment in the new words only', async () => {

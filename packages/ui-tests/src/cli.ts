@@ -13,6 +13,7 @@ import { renderTrace } from './trace.tsx'
 import type { Context } from './index.ts'
 import { printTerminal, impacts, type Report } from './report.tsx'
 import { parseCheckRun, publishCheck, checkRunPayload, stickyComment, type CheckOptions } from './check.ts'
+import { hostArgs, hostHelp, hostPlan, hostCaveat } from './host.ts'
 const print = (text: string) => printTerminal({ lines: text.split('\n') })
 
 const args = process.argv.slice(2)
@@ -95,9 +96,18 @@ async function check() {
   const published = await publishCheck({ token, repository, headSha, pullRequest, run, options })
   print(`Check ${published.checkRun.html_url ?? 'created'} · comment: ${published.comment}`)
 }
-/** Entry point: `init`, `check <run.json>`, `verify <run-id>`, `lint`, or dev mode, which compiles and lints the test file, starts the trace viewer, opens the player and verifies each attempt when it finishes. */
+/** `ui-tests host`: prints the contract with `--help`; otherwise what it will do and where, then the caveat, and exits 2 until issue #59 ships the deploy. */
+function host() {
+  const parsed = hostArgs(args.slice(1))
+  if (parsed.help) { console.log(hostHelp); return }
+  console.log(hostPlan(parsed.account))
+  console.error(hostCaveat)
+  process.exit(2)
+}
+/** Entry point: `init`, `check <run.json>`, `host`, `verify <run-id>`, `lint`, or dev mode, which compiles and lints the test file, starts the trace viewer, opens the player and verifies each attempt when it finishes. */
 async function main() {
   if (command === 'init') return init()
+  if (command === 'host') return host()
   if (command === 'check') return check()
   if (command === 'report') {
     const id = args[1]

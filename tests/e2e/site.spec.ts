@@ -1,13 +1,13 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { mkdir, readFile } from 'node:fs/promises'
-import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, runs, sources, whatComesBack, worth } from '../../apps/web/lib/copy'
+import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, sources, whatComesBack, worth } from '../../apps/web/lib/copy'
 import { shown, unsaid, offences } from '../vocabulary'
 import { texture, travel } from '../../apps/web/lib/texture'
 import { mixOklab, over, darken } from '../oklab'
 
-/** Every content type's component on the landing page (docs/design/site-schema.md). */
-const artefacts = ['terminal-window', 'code-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'run-report', 'worth', 'agents', 'dashboard']
+/** Every content type's component on the landing page (docs/design/site-schema.md); the code window is the guide's since the host round (issue #56). */
+const artefacts = ['terminal-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'run-report', 'worth', 'agents', 'host']
 /** Relative luminance of a computed rgb() colour. */
 const luminance = (rgb: string) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return r * .2126 + g * .7152 + b * .0722 }
 /** The distinct colours of the text inside each matched element. */
@@ -41,7 +41,7 @@ for (const width of [1440, 375]) {
       expect(dots.length).toBeGreaterThan(0)
       expect(dots.every(Boolean)).toBe(true)
       // The theme rules (design/artefacts/README.md): the site's own surfaces are white windows on the canvas with the line colour as their edge.
-      for (const selector of ['.attempt-view', '.run-report', '.dashboard', '.pr-gh', '.hosted-form', '.src-row[aria-expanded="true"]', '.src-well:not([hidden])', '.terminal-window', '.code-window']) {
+      for (const selector of ['.attempt-view', '.run-report', '.host-window', '.pr-gh', '.src-row[aria-expanded="true"]', '.src-well:not([hidden])', '.terminal-window', '.code-window']) {
         for (const surface of await page.locator(selector).evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(surface, `${selector} is white`).toBe('rgb(255, 255, 255)')
       }
       for (const edge of await page.locator('.window').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).borderTopColor))) expect(edge).toBe('rgb(226, 226, 226)')
@@ -76,7 +76,7 @@ for (const width of [1440, 375]) {
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(promise)
         await expect(page.getByText(intro)).toBeVisible()
         for (const [key, text] of Object.entries(landing)) if (!['fileCaption', 'moment', 'words', 'scenario', 'priority', 'result', 'reached'].includes(key)) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first(), key).toBeVisible()
-        for (const text of [agent.heading, agent.lead, hosted.heading, hosted.lead, hosted.closing, compilation.heading, compilation.lead, whatComesBack.heading]) await expect(page.getByText(text, { exact: true })).toBeVisible()
+        for (const text of [agent.heading, agent.lead, hosted.heading, hosted.lead.replaceAll('`', ''), hosted.closing, compilation.heading, compilation.lead, whatComesBack.heading]) await expect(page.getByText(text, { exact: true })).toBeVisible()
         // Round six: one section in place of "What the person sees" and "Three commands".
         await expect(page.getByRole('heading', { name: 'What the person sees.' })).toHaveCount(0)
         await expect(page.getByRole('heading', { name: 'Three commands.' })).toHaveCount(0)
@@ -95,17 +95,31 @@ for (const width of [1440, 375]) {
         await expect(page.locator('[data-artefact="attempt-view"], [data-artefact="pull-request"], section[aria-labelledby="pull-request"]')).toHaveCount(0)
         await expect(page.getByRole('heading', { name: 'In the pull request.' })).toHaveCount(0)
         // The page order: hero, what comes back, what you write, where the people come from, what a run is worth (issue #53), the agent
-        // section, the hosted section.
+        // section, the host section.
         expect(await page.locator('main section[aria-labelledby]').evaluateAll(nodes => nodes.filter(node => !node.parentElement?.closest('section')).map(node => node.getAttribute('aria-labelledby')))).toEqual(['promise', 'comes-back', 'what-you-write', 'people', 'worth', 'agents', 'hosted'])
         // Issue #53, item 3: nothing on the page weighs the run in the words the research rules out.
         expect(offences(await page.locator('body').innerText(), unsaid)).toEqual([])
-        // Issue #22: nothing in the report rows, the check, the dashboard or the terminals uses the old words.
-        for (const selector of ['section[aria-labelledby="comes-back"]', '.dashboard', '.terminal-window']) for (const text of await page.locator(selector).allInnerTexts()) expect(offences(text, shown), selector).toEqual([])
+        // Issue #22: nothing in the report rows, the check or the terminals uses the old words.
+        for (const selector of ['section[aria-labelledby="comes-back"]', '.terminal-window']) for (const text of await page.locator(selector).allInnerTexts()) expect(offences(text, shown), selector).toEqual([])
         await expect(page.locator('.checks-box, .findings-list, [data-artefact="checks-box"], [data-artefact="findings-list"]')).toHaveCount(0)
-        // Item 3: the hosted block shows the snippet and a dashboard of several runs; no reels repeated.
-        const hostedBlock = page.locator('section[aria-labelledby="hosted"]')
-        await expect(hostedBlock.locator('video, [data-artefact="attempt-view"], [data-artefact="run-report"]')).toHaveCount(0)
-        await expect(hostedBlock.locator('.dashboard tbody tr')).toHaveCount(runs.length)
+        // Issue #56: the host section is the artefact's: two unnumbered pieces, the terminal exactly as drawn and the script tag with its
+        // tab, then the closing line. No dashboard, no form and no reels; nothing names ui-tests.com as a host.
+        const hostBlock = page.locator('section[aria-labelledby="hosted"]')
+        await expect(hostBlock.locator('video, table, form, [data-artefact="attempt-view"], [data-artefact="run-report"], [data-artefact="dashboard"]')).toHaveCount(0)
+        await expect(page.locator('[data-artefact="dashboard"], .dashboard')).toHaveCount(0)
+        await expect(hostBlock.locator('.piece-intro h3')).toHaveText([hosted.command.name, hosted.line.name])
+        for (const h3 of await hostBlock.locator('.piece-intro h3').all()) expect(await h3.evaluate(node => [node.getAttribute('data-n'), getComputedStyle(node, '::before').content])).toEqual([null, 'none'])
+        for (const text of [hosted.command.intro, hosted.line.intro]) await expect(hostBlock.getByText(text, { exact: true })).toBeVisible()
+        const [terminal, tag] = await hostBlock.locator('.host-window').all()
+        await expect(terminal.locator('figcaption')).toHaveText(hosted.command.tab.join(''))
+        expect(await terminal.locator('pre').innerText()).toBe(hosted.terminal)
+        expect((await terminal.locator('pre').innerText()).split('\n').at(-1)).toMatch(/^\s+panel\s/)
+        await expect(tag.locator('figcaption')).toHaveText(hosted.line.tab.join(''))
+        expect(await tag.locator('pre').innerText()).toBe(hosted.snippet)
+        expect(hosted.snippet).toContain('https://ui-tests.weekboard.workers.dev/s.js')
+        for (const fragment of await textColours(page, '.host-term, .host-snip')) expect(fragment.colours.length, `host ${fragment.text}`).toBeGreaterThanOrEqual(3)
+        await expect(hostBlock.locator('.caption')).toHaveText(hosted.closing)
+        expect(await hostBlock.innerText()).not.toMatch(/ui-tests\.com|hosted version|our servers|we store|our wallet/i)
         // Round seven: the sources table in place of the three cards, its copy the artefact's, in the order link, visitors, paid panel.
         const people = page.locator('section[aria-labelledby="people"]')
         await expect(people.locator('.option-card')).toHaveCount(0)
@@ -124,20 +138,26 @@ for (const width of [1440, 375]) {
         expect(await page.locator('main').innerText()).not.toMatch(/ui-tests \(agent\)|instead of a person/)
         await expect(page.getByRole('link', { name: 'Get started', exact: true }).first()).toHaveAttribute('href', '/docs/getting-started')
       } else {
-        await expect(page.locator('.step')).toHaveCount(8)
+        await expect(page.locator('.step')).toHaveCount(6)
         await expect(page.locator('[data-artefact="run-report"], [data-artefact="attempt-view"]')).toHaveCount(0)
         // Item 5: the guide's first step offers both ways in.
-        await expect(page.locator('#install')).toContainText('On any other site, paste one line instead')
+        await expect(page.locator('#install')).toContainText('With no repository, run one command instead')
         await expect(page.locator('.guide-head')).toContainText(guide.requirement)
         for (const text of [guide.install, guide.try, guide.write, guide.next, guide.once, guide.pr, guide.agent]) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first()).toBeVisible()
-        // The agent step matches the landing's API example; the hosted form has the screen fields.
+        // The agent step matches the landing's API example.
         await expect(page.locator('#agent')).toContainText(agent.fileLine)
         // Issue #49, item 1: the two steps are "Run it with people" and "Test your API with an agent"; never "instead of a person".
         await expect(page.getByRole('navigation', { name: 'Getting started' }).locator('a')).toContainText(['Run it with people', 'Test your API with an agent'])
         await expect(page.locator('#real-people h2')).toContainText('Run it with people')
         await expect(page.locator('#agent h2')).toContainText('Test your API with an agent')
         expect(await page.locator('main').innerText()).not.toMatch(/instead of a person/i)
-        for (const [label, value] of [['Did, recently', hosted.screen.did], ['Within', hosted.screen.within], ['Uses any of', hosted.screen.uses], ['Not', hosted.screen.not]]) await expect(page.locator('.hosted-form').getByLabel(label, { exact: true })).toHaveValue(value)
+        // Issue #56: "Without a repository" is one paragraph on `ui-tests host` and the CLI's caveat, linked to the follow-up issue.
+        const track = page.locator('#without-repository')
+        await expect(track.locator('.guide-host > p')).toHaveCount(2)
+        await expect(track.locator('.guide-host > p').first()).toHaveText(hosted.guide.replaceAll('`', ''))
+        await expect(track.locator('.guide-caveat')).toHaveText(hosted.caveat)
+        await expect(track.locator('.guide-caveat a')).toHaveAttribute('href', hosted.issue)
+        await expect(page.locator('.hosted-form, [data-artefact="dashboard"], form')).toHaveCount(0)
         await page.getByRole('navigation', { name: 'Getting started' }).getByRole('link', { name: /Run it with people/ }).click()
         await expect(page.locator('#real-people h2')).toBeInViewport()
       }
@@ -232,11 +252,6 @@ for (const width of [1440, 375]) {
     await report.getByRole('button', { name: /^Play Person 3 · 00:58/ }).click()
     await expect.poll(() => clipVideo.evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThan(58)
     await report.getByRole('button', { name: /^Pause Person 3 · 00:58/ }).click()
-    // Item 12: fixed-width fields first and the free text last, numbers right-aligned, in every page table.
-    const dashboard = page.locator('.dashboard')
-    expect(await dashboard.locator('thead th').allTextContents()).toEqual(['Date', 'People', 'Status', 'Result', 'Run'])
-    await expect(dashboard.locator('td.num').first()).toHaveCSS('text-align', 'right')
-    await expect(dashboard.locator('tbody tr').first().locator('td').last()).toHaveText(runs[0].name)
   })
 }
 
@@ -544,7 +559,7 @@ for (const width of [1440, 375]) test(`hover, focus and active never move anythi
   }
   await still(page, ['.moment-press', '.attempt-index a', '.attempt-fold summary'])
   await page.goto('/#step2')
-  await still(page, ['.rr-chip[aria-pressed="false"]', '.rr-play', '.rr-strip a', '.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.pr-chk a', '.nav-links a', '.compile-tabs button[aria-selected="false"]', '.compile-stepnav .snext', '.stepper .nextb', '.dashboard tbody tr'])
+  await still(page, ['.rr-chip[aria-pressed="false"]', '.rr-play', '.rr-strip a', '.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.pr-chk a', '.nav-links a', '.compile-tabs button[aria-selected="false"]', '.compile-stepnav .snext', '.stepper .nextb'])
 })
 
 /** Each target keeps its exact box on hover, and buttons and links on focus and press too. */
@@ -568,7 +583,7 @@ async function still(page: Page, targets: string[]) {
 
 test('the guide keeps its controls still on hover too', async ({ page }) => {
   await page.goto('/docs/getting-started')
-  for (const selector of ['.step-index a', '.hosted-form input[role=switch]', '.hosted-form .button', '.copy-control', '.text-link']) {
+  for (const selector of ['.step-index a', '.copy-control', '.text-link', '.guide-caveat a']) {
     const target = page.locator(selector).first()
     await target.scrollIntoViewIfNeeded()
     await page.mouse.move(0, 0)
@@ -578,24 +593,6 @@ test('the guide keeps its controls still on hover too', async ({ page }) => {
     await target.focus()
     expect(await target.boundingBox(), `${selector} focus`).toEqual(before)
   }
-  const form = page.locator('.hosted-form')
-  await expect(form.getByLabel('Users', { exact: true })).toHaveValue(hosted.users)
-  await expect(form.getByLabel('Your link', { exact: true })).toBeChecked()
-  await expect(form.getByLabel('A paid panel', { exact: true })).not.toBeChecked()
-  const method = form.getByLabel('How you can tell', { exact: true })
-  // A change made before the form hydrates is lost in the dev server: retry until the evidence field follows the method.
-  await expect(async () => {
-    await method.selectOption('Element seen')
-    await expect(form.getByLabel('Element', { exact: true })).toBeVisible({ timeout: 500 })
-  }).toPass({ timeout: 10_000 })
-  await method.selectOption('Page reached')
-  await form.getByLabel('Page path', { exact: true }).fill('/settings/team')
-  await method.selectOption('Element seen')
-  await expect(form.getByLabel('Element', { exact: true })).toHaveValue('')
-  await method.selectOption('Page reached')
-  await expect(form.getByLabel('Page path', { exact: true })).toHaveValue('/settings/team')
-  await form.getByRole('button', { name: 'Start the run' }).click()
-  await expect(form.getByRole('status')).toContainText('Example run ready')
 })
 
 test('failed playback restores the attempt clip and reel play controls without a pause event', async ({ page }) => {

@@ -532,7 +532,7 @@ img { display: block; max-width: 100%; }
     </div>
     <div class="src" id="visitors">
       <button class="row-h" type="button" aria-expanded="false" aria-controls="visitors-b">
-        <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3l7 18 2.5-7.5L21 11z"/></svg></span><span class="name"><b>Your visitors</b><span>On the hosted version: people already on your live site, invited when a page has given them trouble twice.</span></span>
+        <span class="ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 3l7 18 2.5-7.5L21 11z"/></svg></span><span class="name"><b>Your visitors</b><span>On your deploy: people already on your live site, invited when a page has given them trouble twice.</span></span>
         <span class="cell" data-k="Who">Real visitors who seemed stuck and said yes, on their own device</span>
         <span class="cell" data-k="Cost">Paid<small>Like the panel, under a daily cap you set</small></span>
         <span class="cell" data-k="Time">Depends on your traffic<small>A page with trouble and a few hundred visitors a day gives one or two</small></span>
@@ -568,7 +568,7 @@ img { display: block; max-width: 100%; }
       <div class="row-b" id="panel-b" hidden>
         <div class="how">
           <h4>How it works</h4>
-          <ol class="steps3"><li><span>Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token.</span></li><li><span><code>npx ui-tests run</code> turns <code>users</code> into each panel's filters and a short screener, prints the plan, and asks before it spends.</span></li><li><span>People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back.</span></li></ol>
+          <ol class="steps3"><li><span>Put a cap in the config. Your deploy and your machine both use your own panel account: add a token once.</span></li><li><span><code>npx ui-tests run</code> turns <code>users</code> into each panel's filters and a short screener, prints the plan, and asks before it spends.</span></li><li><span>People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back.</span></li></ol>
           <p class="caveat"><b>Panel people answer screeners for money.</b> Read the Who took part line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not.</p>
         </div>
         <div class="show"><div class="fill" aria-label="One run filling across two panels">

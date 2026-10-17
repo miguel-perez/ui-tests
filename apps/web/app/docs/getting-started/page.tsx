@@ -5,15 +5,15 @@ import { Caption } from '../../../components/site/caption'
 import { Code, Prose } from '../../../components/site/code'
 import { TerminalWindow } from '../../../components/artefacts/terminal-window'
 import { CodeWindow } from '../../../components/artefacts/code-window'
-import { HostedForm } from '../../../components/artefacts/hosted-form'
-import { Dashboard } from '../../../components/artefacts/dashboard'
 import { Icon } from '../../../components/icon'
-import { guide, landing, inviteExample, inviteFile, agent, hosted, runs } from '../../../lib/copy'
+import { guide, landing, inviteExample, inviteFile, agent, hosted } from '../../../lib/copy'
 
 const anchors = ['install', 'set-up', 'try-it', 'write-your-own', 'real-people', 'agent']
-const started = [{ ...runs[0], date: 'today', participants: '0 of 5', status: 'running' as const, progress: 0.02, name: hosted.goal }]
 
-/** The guide: Step × 6, then the "Without a repository" track as Step × 2 (docs/design/site-schema.md), on the landing's grid. */
+/**
+ * The guide: Step × 6, then "Without a repository" as one paragraph on `ui-tests host` with the CLI's caveat until the deploy ships
+ * (docs/design/site-schema.md; issue #56), on the landing's grid.
+ */
 export default function GettingStarted() {
   return <SiteShell><main id="content" className="site-width guide">
     <header className="guide-head split" data-section="guide"><h1 data-heading>{guide.title}</h1><p data-lead>{guide.requirement}</p></header>
@@ -26,8 +26,7 @@ export default function GettingStarted() {
     <StepPair id="agent" number="06" title={guide.titles[5]} intro={<p><Prose text={guide.agent} /></p>} type={<><TerminalWindow name="agentCommand" title={agent.command} example={false} /><Caption code={agent.fileLine} /></>} see={<><TerminalWindow name="agent" title={agent.command} /><Caption text={agent.closing} /></>} />
     <section className="guide-track split" id="without-repository" aria-labelledby="without-repository-title" data-section="without-repository">
       <h2 id="without-repository-title" data-heading>Without a repository</h2>
-      <StepPair id="paste" number="1" title={hosted.paste} type={<CodeWindow code={hosted.snippet} title="index.html" language="html" />} see={<Caption text={hosted.pasteSee} />} />
-      <StepPair id="fill" number="2" title={hosted.fill} type={<HostedForm />} see={<><Dashboard rows={started} /><Caption text={hosted.fillSee} /><p className="caption">{hosted.closing}</p></>} />
+      <div className="guide-host" data-lead><p><Prose text={hosted.guide} /></p><p className="guide-caveat">{hosted.caveat.slice(0, hosted.caveat.indexOf(hosted.issue))}<a className="text-link" href={hosted.issue}>{hosted.issue}</a></p></div>
     </section>
   </main></SiteShell>
 }

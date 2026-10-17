@@ -32,7 +32,7 @@ Each map shows the 12 columns at 1440 with a ruler; a bracket spans the columns 
 
 ## Landing page
 
-Seven sections, in order: L1 the hero, L2 how it works ("What comes back." until issue #49), L3 what you write, L4 where the people come from, L5 what a run is worth (issue #53), L6 the agent section, L7 the hosted section. At 1440 the page is 8,431 px tall with the footer, the three-step rhythm and what a run is worth (issue #53; 8,114 px after issue #51, about 8,350 px after issue #49, 8,253 px after issue #46, 15,385 px before it; the limit is 9,000).
+Seven sections, in order: L1 the hero, L2 how it works ("What comes back." until issue #49), L3 what you write, L4 where the people come from, L5 what a run is worth (issue #53), L6 the agent section, L7 the host section (issue #56: no repo, one command). At 1440 the page is 8,016 px tall with the footer after the host round (issue #56; 8,111 px after issue #54, 8,431 px with what a run is worth, issue #53; 8,114 px after issue #51, about 8,350 px after issue #49, 8,253 px after issue #46, 15,385 px before it; the limit is 9,000).
 
 ### L1 · Claim
 
@@ -171,23 +171,25 @@ At 1440:
 
 At 375: heading, the command, lead; the three tiles stacked, each 343 wide.
 
-### L7 · Section + Snippet + Dashboard
+### L7 · Host: no repo, one command
 
-**Rule.** The snippet across 12, the dashboard across 12, the caption under them. The dashboard is a table: fixed fields first (date, participants, status, headline result), the run name last as the free text; numbers right-aligned.
+**Rule** (issue #56; `design/artefacts/hosted-section.html`). The heading in the first 5; the lead in the right 7, at most 64ch and flush to the container's right edge, so it ends at 1344 at 1440. Then two unnumbered pieces with no hairline above them, each its name and intro (64ch) over a white window across 12: "The command" with the `host` terminal, "The line" with the script tag. The caption under them. No dashboard.
 
 At 1440:
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
-[Section heading                    ] [lead, 714 wide                                         ]  head
-[Snippet in CodeWindow                                                                        ]  snippet · 96
-[date         ] [people       ] [status       ] [result       ] [name (free text last)        ]  Dashboard · 320
-[Caption under                                                                                ]  32
+[Section heading                    ]          [lead, 64ch, ends flush at 1344                ]  head
+[The command + intro (64ch)                    ]                                                 intro
+[Terminal · Example: $ npx ui-tests host, Deploying…, collector, player, store, panel         ]  terminal · 200
+[The line + intro (64ch)                       ]                                                 intro
+[index.html · or your tag manager: <script src=".../s.js" async></script>                     ]  snippet · 64
+[Caption under                                                                                ]  24
                                                                                                   96 to the footer
 [ui-tests. wordmark                 ] [   miguel.design · Open source MIT licence · Report a bug ]  Footer · 48 above and below
 ```
 
-At 375: heading, lead; the snippet; the dashboard (scrolls sideways inside itself); the caption; then the footer, the wordmark over the three links, left-aligned.
+At 375: heading, lead (left-aligned); the command and its terminal (the rows wrap); the line and its script tag; the caption; then the footer, the wordmark over the three links, left-aligned.
 
 ## Getting-started page
 
@@ -201,15 +203,15 @@ At 375: heading, lead; the snippet; the dashboard (scrolls sideways inside itsel
 [step index: 01 … 06, Without a repository (wraps)                                            ]  nav · 48
 ```
 
-### G1-G6 · Step × 6, and G7-G8 · Without a repository: Step × 2
+### G1-G6 · Step × 6, and G7 · Without a repository
 
-**Rule** (issue #46). The number and title in the first 5 columns, sticky 24 px from the top; the step's sentence of context (its lead), "You type" and "You see" in the right 7, one under the other, so every terminal, code window, form and dashboard in a step is a right-seven figure at 630, 714 wide. The "Without a repository" track's heading takes the first 5 above its two steps. Empty area: the left column under the title, bounded by the right column's height.
+**Rule** (issue #46). The number and title in the first 5 columns, sticky 24 px from the top; the step's sentence of context (its lead), "You type" and "You see" in the right 7, one under the other, so every terminal and code window in a step is a right-seven figure at 630, 714 wide. "Without a repository" (issue #56) puts its heading in the first 5 and, as its lead in the right 7, one paragraph on `ui-tests host` with the CLI's caveat line under it; no form and no dashboard. Empty area: the left column under the title, bounded by the right column's height.
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
 [01 Title                           ] [sentence of context (lead)                             ]  head
-[                                   ] [You type: TerminalWindow / CodeWindow / HostedForm      ]  type · 80-560
-[                                   ] [You see: TerminalWindow / Dashboard / Caption           ]  see · 40-420
+[                                   ] [You type: TerminalWindow / CodeWindow                    ]  type · 80-560
+[                                   ] [You see: TerminalWindow / Caption                        ]  see · 40-420
 ```
 
 At 375 (all guide blocks):

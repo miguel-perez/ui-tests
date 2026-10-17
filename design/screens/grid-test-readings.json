@@ -1,11 +1,12 @@
 {
   "landing-1440": {
-    "height": 8111,
+    "height": 8016,
     "sections": [
       {
         "section": "what-comes-back",
         "heading": 96,
         "lead": null,
+        "leadRight": null,
         "widest": 1248,
         "figures": [
           "96+1248",
@@ -17,6 +18,7 @@
         "section": "compilation",
         "heading": 96,
         "lead": 630,
+        "leadRight": 1273,
         "widest": 1248,
         "figures": [
           "96+1248",
@@ -28,6 +30,7 @@
         "section": "sources",
         "heading": 96,
         "lead": 630,
+        "leadRight": 1273,
         "widest": 1248,
         "figures": [
           "96+1248"
@@ -37,6 +40,7 @@
         "section": "worth",
         "heading": 96,
         "lead": 630,
+        "leadRight": 1344,
         "widest": null,
         "figures": []
       },
@@ -44,6 +48,7 @@
         "section": "agents",
         "heading": 96,
         "lead": 630,
+        "leadRight": 1273,
         "widest": 1248,
         "figures": [
           "96+1248"
@@ -52,7 +57,8 @@
       {
         "section": "hosted",
         "heading": 96,
-        "lead": 630,
+        "lead": 701.2,
+        "leadRight": 1344,
         "widest": 1248,
         "figures": [
           "96+1248",
@@ -62,7 +68,7 @@
     ]
   },
   "landing-375": {
-    "height": 13986,
+    "height": 13781,
     "sections": [
       {
         "section": "what-comes-back",
@@ -118,12 +124,13 @@
     ]
   },
   "guide-1440": {
-    "height": 7241,
+    "height": 5506,
     "sections": [
       {
         "section": "guide",
         "heading": 96,
         "lead": 630,
+        "leadRight": 1273,
         "widest": null,
         "figures": []
       },
@@ -131,6 +138,7 @@
         "section": "install",
         "heading": 96,
         "lead": 630,
+        "leadRight": 1201,
         "widest": 714,
         "figures": [
           "630+714"
@@ -140,6 +148,7 @@
         "section": "set-up",
         "heading": 96,
         "lead": null,
+        "leadRight": null,
         "widest": 714,
         "figures": [
           "630+714",
@@ -150,6 +159,7 @@
         "section": "try-it",
         "heading": 96,
         "lead": 630,
+        "leadRight": 1201,
         "widest": 714,
         "figures": [
           "630+714",
@@ -160,6 +170,7 @@
         "section": "write-your-own",
         "heading": 96,
         "lead": 630,
+        "leadRight": 1201,
         "widest": 714,
         "figures": [
           "630+714"
@@ -169,6 +180,7 @@
         "section": "real-people",
         "heading": 96,
         "lead": null,
+        "leadRight": null,
         "widest": 714,
         "figures": [
           "630+714",
@@ -181,6 +193,7 @@
         "section": "agent",
         "heading": 96,
         "lead": 630,
+        "leadRight": 1201,
         "widest": 714,
         "figures": [
           "630+714",
@@ -190,33 +203,15 @@
       {
         "section": "without-repository",
         "heading": 96,
-        "lead": null,
+        "lead": 630,
+        "leadRight": 1201,
         "widest": null,
         "figures": []
-      },
-      {
-        "section": "paste",
-        "heading": 96,
-        "lead": null,
-        "widest": 714,
-        "figures": [
-          "630+714"
-        ]
-      },
-      {
-        "section": "fill",
-        "heading": 96,
-        "lead": null,
-        "widest": 714,
-        "figures": [
-          "630+714",
-          "630+714"
-        ]
       }
     ]
   },
   "guide-375": {
-    "height": 8812,
+    "height": 6805,
     "sections": [
       {
         "section": "guide",
@@ -281,25 +276,8 @@
       {
         "section": "without-repository",
         "heading": 16,
-        "lead": null,
+        "lead": 16,
         "figures": []
-      },
-      {
-        "section": "paste",
-        "heading": 16,
-        "lead": null,
-        "figures": [
-          "16+343"
-        ]
-      },
-      {
-        "section": "fill",
-        "heading": 16,
-        "lead": null,
-        "figures": [
-          "16+343",
-          "16+343"
-        ]
       }
     ]
   }

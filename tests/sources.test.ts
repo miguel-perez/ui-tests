@@ -71,10 +71,9 @@ it('says 48 hours only as the deadline, and has no $60 cap, no $54 and no "visib
     })
   }
   expect(found).toEqual([])
-  // The example cap is $70 in the guide's run output, the config example, the hosted form and PRD 01.
+  // The example cap is $70 in the guide's run output, the config example and PRD 01.
   expect(await readFile('apps/web/generated/terminal-run.html', 'utf8')).toContain('cap $70')
   expect((await import('../packages/ui-tests/src/example')).configFile).toContain('budget: { max: 70')
-  expect(await readFile('apps/web/components/artefacts/hosted-form.tsx', 'utf8')).toContain('defaultValue="70"')
   expect(await readFile('docs/prd/01-dx-contract.md', 'utf8')).toContain('budget: { max: 70')
 })
 
