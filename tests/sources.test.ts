@@ -37,9 +37,12 @@ it('carries every cell, step and caveat of the sources artefact verbatim, in the
   expect(text(fill.querySelector('.fill-f'))).toBe(`Paid ${sources.fill.paid} of the ${sources.fill.cap} cap · ${sources.fill.back} back${sources.fill.labelled}`)
   // The three items the issue names, word for word.
   expect(sources.rows[0].cost + ' ' + sources.rows[0].costNote).toBe('Free Pay them if you like; the consent says so either way')
-  expect(sources.rows[2].cost + '. ' + sources.rows[2].costNote).toBe('About $11 a person. Five about $55; a cap of $70 holds the reserve')
+  // Issue #54: the cost column reads Free, Paid and Starting at $12 a person.
+  expect(sources.rows.map(row => row.cost)).toEqual(['Free', 'Paid', 'Starting at $12 a person'])
+  expect(sources.rows[2].cost + '. ' + sources.rows[2].costNote).toBe('Starting at $12 a person. Five from $60; a cap of $70 holds the reserve')
   expect(sources.rows[2].time + '. ' + sources.rows[2].timeNote).toBe('First people within minutes. Usually all five within a few hours; a narrow audience a day or more')
-  expect(sources.rows[1].cost + ', ' + sources.rows[1].costNote.toLowerCase()).toBe('Paid like the panel, under a daily cap you set')
+  expect(sources.rows[1].cost + '. ' + sources.rows[1].costNote).toBe('Paid. Like the panel, under a daily cap you set')
+  expect(text(fill.querySelector('.fill-f'))).toBe('Paid $60 of the $70 cap · $10 back' + 'Each attempt labelled with its panel')
 })
 
 async function files(directory: string): Promise<string[]> {
@@ -61,8 +64,8 @@ it('says 48 hours only as the deadline, and has no $60 cap, no $54 and no "visib
     const lines = (await readFile(file, 'utf8')).split('\n')
     lines.forEach((line, i) => {
       if (/48 hours/.test(line.replaceAll(deadlineSentence, '').replaceAll("'The run closes at its deadline, 48 hours unless you set one.'", ''))) found.push(`${file}:${i + 1} 48 hours`)
-      // Issue #53: $60 is the run's price in what a run is worth (five people at $12); it is never the cap, which is $70.
-      if (/\$60\b/.test(line) && /\bcap\b|\bbudget\b|max: 60\b/i.test(line)) found.push(`${file}:${i + 1} $60 cap`)
+      // Issue #53: $60 is the run's price (five people at $12); it is never the cap, which is $70.
+      if (/\bcap (of )?\$60\b|\$60 cap\b|max: 60\b/i.test(line)) found.push(`${file}:${i + 1} $60 cap`)
       if (/\$54\b/.test(line)) found.push(`${file}:${i + 1} $54`)
       if (/visibly struggling/i.test(line)) found.push(`${file}:${i + 1} visibly struggling`)
     })
@@ -73,6 +76,19 @@ it('says 48 hours only as the deadline, and has no $60 cap, no $54 and no "visib
   expect((await import('../packages/ui-tests/src/example')).configFile).toContain('budget: { max: 70')
   expect(await readFile('apps/web/components/artefacts/hosted-form.tsx', 'utf8')).toContain('defaultValue="70"')
   expect(await readFile('docs/prd/01-dx-contract.md', 'utf8')).toContain('budget: { max: 70')
+})
+
+it('prices the paid panel at $12 a person everywhere: five from $60, the $70 cap with $10 back, and no $55, $54 or $11 a person (issue #54)', async () => {
+  const found: string[] = []
+  for (const directory of ['apps/web', 'packages/ui-tests/src', 'docs/design', 'docs/prd', 'design/artefacts']) for (const file of [...await files(directory), ...(directory === 'apps/web' ? ['README.md'] : [])]) {
+    (await readFile(file, 'utf8')).split('\n').forEach((line, i) => {
+      for (const old of [/\$55\b/, /\$54\b/, /\$11 a person/i, /about \$11\b/i, /\$15 back/]) if (old.test(line)) found.push(`${file}:${i + 1} ${old.source}`)
+    })
+  }
+  expect(found).toEqual([])
+  for (const file of ['README.md', 'apps/web/generated/terminal-run.html', 'apps/web/scripts/render-terminal.mjs', 'design/artefacts/sources-section.html', 'docs/design/landing-content-v3.md']) expect((await readFile(file, 'utf8')).replace(/<\/?b>/g, ''), file).toContain('Paid $60 of the $70 cap · $10 back')
+  for (const file of ['apps/web/lib/copy.ts', 'design/artefacts/compile-section.html', 'docs/design/landing-content-v3.md', 'README.md']) expect(await readFile(file, 'utf8'), file).toContain('five people cost from $60')
+  expect(await readFile('docs/prd/03-participants.md', 'utf8')).toContain('starts at $12 a person, so five people cost from $60')
 })
 
 it('keeps the invitation one string in PRD 03, the player and the demo, and the trigger in the PRD\'s words', async () => {
@@ -146,5 +162,5 @@ it('prints where the people come from in the run plan: both panels, the cap, how
   expect(plan(compiled, {})).toContain('budget: { max: 70 }')
   // The guide's run output names the panel each person came from.
   const fragment = await readFile('apps/web/generated/terminal-run.html', 'utf8')
-  for (const line of ['Person 1 · Prolific', 'Person 3 · CloudResearch Connect', 'Paid $55 of the $70 cap']) expect(fragment).toContain(line)
+  for (const line of ['Person 1 · Prolific', 'Person 3 · CloudResearch Connect', 'Paid $60 of the $70 cap · $10 back']) expect(fragment).toContain(line)
 })

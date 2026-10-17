@@ -248,7 +248,7 @@ img { display: block; max-width: 100%; }
 /* One step at a time: a tab strip under the file, each step a 5/7 pair, the text and its lines on the left, the screen on the right. */
 .pairs { gap: 0; }
 .pair { grid-template-columns: 5fr 7fr; gap: 24px; }
-.pair > .left { position: sticky; top: 24px; display: grid; gap: 16px; min-width: 0; grid-column: 1; grid-row: 1; align-self: start; }
+.pair > .left { display: grid; gap: 16px; min-width: 0; grid-column: 1; grid-row: 1; align-self: start; }
 .pair > .main { grid-column: 2; grid-row: 1; }
 .pair .intro { margin-bottom: 0; }
 .pair .side { position: static; }
@@ -263,13 +263,7 @@ img { display: block; max-width: 100%; }
 .tabs button b { font: 500 12px/1 var(--mono); color: var(--moment); }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"] { color: var(--ink); border-color: var(--moment); }
-/* Every step shares one grid cell, so the panel keeps the height of the tallest step and the page never jumps. On a phone the steps stack, so the panel takes each step's own height instead of the tallest. */
 .pair[hidden] { display: none; }
-@media (min-width: 901px) {
-  .pairs { display: grid; }
-  ol.pairs > li.pair { grid-area: 1 / 1; }
-  .pair[hidden] { display: grid; visibility: hidden; pointer-events: none; }
-}
 .stepnav { display: flex; justify-content: space-between; gap: 16px; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
 .stepnav button { color: var(--muted); display: inline-flex; gap: 8px; align-items: baseline; }
 .stepnav button:hover { color: var(--ink); }
@@ -350,6 +344,8 @@ img { display: block; max-width: 100%; }
   .pill .seg + .seg { margin-left: 8px; padding-left: 8px; }
 }
 ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px 0 0 !important; }
+.whole-top.after-steps { margin-top: 48px; }
+.whole-top.after-steps .window { max-width: none; }
 </style>
 
 <div class="page">
@@ -365,47 +361,14 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
   </div>
   <p class="cmds-note"><code>npx ui-tests</code> on its own runs every screen on you first, so you see the card, the bar and your own trace before anyone else does.</p>
 
-    <section class="whole-top" aria-label="The file">
-      <div class="window">
-        <div class="tab"><span>ui-tests/invite.ui.test.ts</span><span class="legend">23 lines</span></div>
-        <div class="code">
-          <ol id="code">
-            <li data-l="1"><span class="ln">1</span><span class="marks"></span><span class="src"><span class="k">import</span> <span class="pu">{</span> <span class="id">context, beforeEach, goal, outcome, expect</span> <span class="pu">}</span> <span class="k">from</span> <span class="s">'ui-tests'</span></span></li>
-            <li data-l="2"><span class="ln">2</span><span class="marks"></span><span class="src"> </span></li>
-            <li data-l="3"><span class="ln">3</span><span class="marks"></span><span class="src"><span class="fn">context</span><span class="pu">({</span></span></li>
-            <li data-l="4" data-rows="2 4"><span class="ln">4</span><span class="marks"></span><span class="src">  <span class="pr">users</span><span class="pu">: {</span></span></li>
-            <li data-l="5" data-rows="2 4"><span class="ln">5</span><span class="marks"></span><span class="src">    <span class="pr">are</span><span class="pu">:</span> <span class="s">'people who signed up this week and want a colleague on their board'</span><span class="pu">,</span></span></li>
-            <li data-l="6" data-rows="2"><span class="ln">6</span><span class="marks"></span><span class="src">    <span class="pr">did</span><span class="pu">:</span> <span class="s">'signed up for a tool to plan work with a team'</span><span class="pu">,</span></span></li>
-            <li data-l="7" data-rows="2"><span class="ln">7</span><span class="marks"></span><span class="src">    <span class="pr">within</span><span class="pu">:</span> <span class="s">'7 days'</span><span class="pu">,</span></span></li>
-            <li data-l="8" data-rows="2"><span class="ln">8</span><span class="marks"></span><span class="src">    <span class="pr">uses</span><span class="pu">: [</span><span class="s">'Trello'</span><span class="pu">,</span> <span class="s">'Asana'</span><span class="pu">,</span> <span class="s">'Notion'</span><span class="pu">,</span> <span class="s">'Linear'</span><span class="pu">],</span></span></li>
-            <li data-l="9" data-rows="2" class="hidden-line"><span class="ln">9</span><span class="marks"></span><span class="src">    <span class="pr">not</span><span class="pu">: [</span><span class="s">'has used Weekboard'</span><span class="pu">],</span></span></li>
-            <li data-l="10" data-rows="2"><span class="ln">10</span><span class="marks"></span><span class="src">  <span class="pu">},</span></span></li>
-            <li data-l="11" data-rows="2 3 4"><span class="ln">11</span><span class="marks"></span><span class="src">  <span class="pr">purpose</span><span class="pu">:</span> <span class="s">'plan the week together without emailing screenshots around'</span><span class="pu">,</span></span></li>
-            <li data-l="12" data-rows="1 5"><span class="ln">12</span><span class="marks"></span><span class="src">  <span class="pr">video</span><span class="pu">:</span> <span class="nu">true</span><span class="pu">,</span></span></li>
-            <li data-l="13"><span class="ln">13</span><span class="marks"></span><span class="src"><span class="pu">}, () => {</span></span></li>
-            <li data-l="14" data-rows="4"><span class="ln">14</span><span class="marks"></span><span class="src">  <span class="fn">beforeEach</span><span class="pu">(</span><span class="k">async</span> <span class="pu">() => ({</span> <span class="pr">colleague</span><span class="pu">:</span> <span class="s">'Sam'</span><span class="pu">,</span> <span class="pr">email</span><span class="pu">:</span> <span class="s">'sam@acme.co'</span> <span class="pu">}))</span></span></li>
-            <li data-l="15" data-rows="4 5"><span class="ln">15</span><span class="marks"></span><span class="src">  <span class="fn">goal</span><span class="pu">(</span><span class="s">'invite a colleague'</span><span class="pu">, {</span></span></li>
-            <li data-l="16" data-rows="3 5" class="hidden-line"><span class="ln">16</span><span class="marks"></span><span class="src">    <span class="pr">happyPath</span><span class="pu">: [</span><span class="s">'/board'</span><span class="pu">,</span> <span class="s">'/settings/members'</span><span class="pu">],</span></span></li>
-            <li data-l="17" data-rows="n"><span class="ln">17</span><span class="marks"></span><span class="src">    <span class="pr">catch</span><span class="pu">: {</span> <span class="pr">affecting</span><span class="pu">:</span> <span class="s">'1 in 3'</span><span class="pu">,</span> <span class="pr">confidence</span><span class="pu">:</span> <span class="nu">0.85</span> <span class="pu">},</span></span></li>
-            <li data-l="18"><span class="ln">18</span><span class="marks"></span><span class="src">  <span class="pu">}, () => {</span></span></li>
-            <li data-l="19" data-rows="6" class="hidden-line"><span class="ln">19</span><span class="marks"></span><span class="src">    <span class="fn">outcome</span><span class="pu">(</span><span class="k">async</span> <span class="pu">({</span> <span class="id">page</span> <span class="pu">}) => {</span></span></li>
-            <li data-l="20" data-rows="6"><span class="ln">20</span><span class="marks"></span><span class="src">      <span class="fn">expect</span><span class="pu">(</span><span class="k">await</span> <span class="id">page</span><span class="pu">.</span><span class="fn">textContent</span><span class="pu">(</span><span class="s">'main'</span><span class="pu">)).</span><span class="fn">toContain</span><span class="pu">(</span><span class="s">'1 invitation pending'</span><span class="pu">)</span></span></li>
-            <li data-l="21" data-rows="6"><span class="ln">21</span><span class="marks"></span><span class="src">    <span class="pu">})</span></span></li>
-            <li data-l="22"><span class="ln">22</span><span class="marks"></span><span class="src">  <span class="pu">})</span></span></li>
-            <li data-l="23"><span class="ln">23</span><span class="marks"></span><span class="src"><span class="pu">})</span></span></li>
-          </ol>
-        </div>
-      </div>
-
-  </section>
+    
 
   <div class="tabs" role="tablist" aria-label="The screens, one at a time" id="tabs"></div>
   <ol class="pairs" id="rows">
 
       <li class="pair" id="r1" data-fields="video" data-lines="12" data-name="Consent">
         <div class="left"><div class="intro"><h3 data-n="1">Consent <span>· before anything loads</span></h3><p class="from">What the person does on the page is always recorded, and the consent says so in plain words. <code>video: true</code> adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.</p></div></div>
-        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol>
-    <nav class="stepnav" aria-label="Previous and next step"><button type="button" class="sprev"></button><button type="button" class="snext"></button></nav></div></div>
+        
         <div class="main">
           <figure class="frame auto" aria-label="Consent screen">
             <div class="blank"></div>
@@ -428,8 +391,8 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
       </li>
 
       <li class="pair" id="r2" data-fields="users · purpose · catch" data-lines="4 5 6 7 8 9 10 11 17" data-name="Screener">
-        <div class="left"><div class="intro"><h3 data-n="2">Who gets in, and how many <span>· the sample</span></h3><p class="from">Six questions, one per screen; press Next to see them all. The first three come from <code>users</code>: <code>did</code> and <code>within</code> become a recency question with bands, <code>uses</code> a multi-select with one decoy, <code>not</code> an item among neutral ones, so nobody can tell what disqualifies. The last three come from <code>purpose</code>: when they last needed it, how they do it today, how much it matters. Write <code>users</code> as the sentence alone and the first three are drafted from it.</p><p class="from">The <code>catch</code> line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $55, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.</p></div></div>
-        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
+        <div class="left"><div class="intro"><h3 data-n="2">Who gets in, and how many <span>· the sample</span></h3><p class="from">Six questions, one per screen; press Next to see them all. The first three come from <code>users</code>: <code>did</code> and <code>within</code> become a recency question with bands, <code>uses</code> a multi-select with one decoy, <code>not</code> an item among neutral ones, so nobody can tell what disqualifies. The last three come from <code>purpose</code>: when they last needed it, how they do it today, how much it matters. Write <code>users</code> as the sentence alone and the first three are drafted from it.</p><p class="from">The <code>catch</code> line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost from $60, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.</p></div></div>
+        
         <div class="main">
           <figure class="frame auto multi" aria-label="Screener questions, one at a time">
             <div class="blank"></div>
@@ -477,7 +440,7 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
             <dl class="res">
               <dt>People</dt><dd>5 from the panel, matched to <code>users</code></dd>
               <dt>Chance of seeing a 1-in-3 problem</dt><dd>87%</dd>
-              <dt>Cost</dt><dd>about $55 · cap $70 · first people within minutes, usually all five within a few hours</dd>
+              <dt>Cost</dt><dd>from $60 · cap $70 · first people within minutes, usually all five within a few hours</dd>
             </dl>
           </div>
           <p class="back-line"><span>Comes back</span>screened 20 · matched 5 · who took part: 3 of 5 had the need this month · how they do it today, in their words</p>
@@ -486,7 +449,7 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
 
       <li class="pair" id="r3" data-fields="purpose · happyPath" data-lines="11 16" data-name="First look">
         <div class="left"><div class="intro"><h3 data-n="3">First look <span>· on by default</span></h3><p class="from">The page the task starts on is flashed for 500 ms, then one open question. The start is the first page of the <code>happyPath</code> unless the goal names a <code>start</code>; name another page for the flash with <code>impression: { page }</code> when the task begins behind a login and the purpose lives on the public page. The answers are read against the <code>purpose</code>, which the person never sees, and you can re-read any of them. Then the page comes back for one click.</p></div></div>
-        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
+        
         <div class="main">
           <figure class="frame" aria-label="First look question over the flashed page">
             <img class="shot" src="attempt-view/board.jpg" alt="The Weekboard board, as flashed for half a second">
@@ -505,7 +468,7 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
 
       <li class="pair" id="r4" data-fields="users · purpose · beforeEach · goal" data-lines="5 11 14 15" data-name="Scenario card">
         <div class="left"><div class="intro"><h3 data-n="4">Scenario card <span>· from the goal, never the path</span></h3><p class="from">The situation from <code>users.are</code> and <code>purpose</code>, the action from the goal's name, the name and email from <code>beforeEach</code>. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with <code>scenario</code>.</p></div></div>
-        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
+        
         <div class="main">
           <figure class="frame" aria-label="Scenario card over the dimmed page">
             <img class="shot" src="attempt-view/board.jpg" alt="The Weekboard board behind the card">
@@ -524,7 +487,7 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
 
       <li class="pair" id="r5" data-fields="goal · happyPath · video · outcome" data-lines="12 15 16 19 20 21" data-name="Your page, with the bar">
         <div class="left"><div class="intro"><h3 data-n="5">Your page, with the bar, then the check <span>· two controls, one check</span></h3><p class="from">One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from <code>video</code>, with a pause; there is no microphone during the task. The summary is the goal's name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: the two pages of the <code>happyPath</code> set a silent three-minute limit, and the person may ask for more time once. The pill takes your font, inverts your page's colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.</p><p class="from">When they press Done, the <code>outcome</code> runs against the page as they left it. What they said does not count; what the page says does. A check that cannot decide returns "couldn't tell" and is never rounded either way.</p></div></div>
-        <div class="side"><div class="window"><div class="tab"><span class="file-name">ui-tests/invite.ui.test.ts</span><span class="legend lines-note"></span></div><ol class="excerpt"></ol></div></div>
+        
         <div class="main">
           <figure class="frame" aria-label="The page under test with the bar">
             <img class="shot" src="attempt-view/board.jpg" alt="The Weekboard board with the bar over it">
@@ -538,14 +501,7 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
               </div>
             </div>
           </figure>
-          <div class="check" aria-label="The outcome check, run on your side">
-            <span class="who">After Done · runs on your side</span>
-            <pre><span class="fn">expect</span><span class="pu">(</span><span class="k">await</span> page.<span class="fn">textContent</span><span class="pu">(</span><span class="s">'main'</span><span class="pu">)).</span><span class="fn">toContain</span><span class="pu">(</span><span class="s">'1 invitation pending'</span><span class="pu">)</span></pre>
-            <dl class="res">
-              <dt>Person 3, after Done</dt><dd><span class="no">Not reached</span> · main contained "2 invitations pending"</dd>
-              <dt>Person 5, after Done</dt><dd><span class="yes">Reached</span> · 1:12</dd>
-            </dl>
-          </div>
+          
           <p class="back-line"><span>Comes back</span>time on this goal · every moment · their path against yours · how it ended · reached the goal: yes / no / couldn't tell, with the diff</p>
         </div>
       </li>
@@ -596,34 +552,49 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
 
       
     </ol>
+    <nav class="stepnav" aria-label="Previous and next step"><button type="button" class="sprev"></button><button type="button" class="snext"></button></nav>
+
+  <section class="whole-top after-steps" aria-label="The file">
+      <div class="window">
+        <div class="tab"><span>ui-tests/invite.ui.test.ts</span><span class="legend">23 lines</span></div>
+        <div class="code">
+          <ol id="code">
+            <li data-l="1"><span class="ln">1</span><span class="marks"></span><span class="src"><span class="k">import</span> <span class="pu">{</span> <span class="id">context, beforeEach, goal, outcome, expect</span> <span class="pu">}</span> <span class="k">from</span> <span class="s">'ui-tests'</span></span></li>
+            <li data-l="2"><span class="ln">2</span><span class="marks"></span><span class="src"> </span></li>
+            <li data-l="3"><span class="ln">3</span><span class="marks"></span><span class="src"><span class="fn">context</span><span class="pu">({</span></span></li>
+            <li data-l="4" data-rows="2 4"><span class="ln">4</span><span class="marks"></span><span class="src">  <span class="pr">users</span><span class="pu">: {</span></span></li>
+            <li data-l="5" data-rows="2 4"><span class="ln">5</span><span class="marks"></span><span class="src">    <span class="pr">are</span><span class="pu">:</span> <span class="s">'people who signed up this week and want a colleague on their board'</span><span class="pu">,</span></span></li>
+            <li data-l="6" data-rows="2"><span class="ln">6</span><span class="marks"></span><span class="src">    <span class="pr">did</span><span class="pu">:</span> <span class="s">'signed up for a tool to plan work with a team'</span><span class="pu">,</span></span></li>
+            <li data-l="7" data-rows="2"><span class="ln">7</span><span class="marks"></span><span class="src">    <span class="pr">within</span><span class="pu">:</span> <span class="s">'7 days'</span><span class="pu">,</span></span></li>
+            <li data-l="8" data-rows="2"><span class="ln">8</span><span class="marks"></span><span class="src">    <span class="pr">uses</span><span class="pu">: [</span><span class="s">'Trello'</span><span class="pu">,</span> <span class="s">'Asana'</span><span class="pu">,</span> <span class="s">'Notion'</span><span class="pu">,</span> <span class="s">'Linear'</span><span class="pu">],</span></span></li>
+            <li data-l="9" data-rows="2" class="hidden-line"><span class="ln">9</span><span class="marks"></span><span class="src">    <span class="pr">not</span><span class="pu">: [</span><span class="s">'has used Weekboard'</span><span class="pu">],</span></span></li>
+            <li data-l="10" data-rows="2"><span class="ln">10</span><span class="marks"></span><span class="src">  <span class="pu">},</span></span></li>
+            <li data-l="11" data-rows="2 3 4"><span class="ln">11</span><span class="marks"></span><span class="src">  <span class="pr">purpose</span><span class="pu">:</span> <span class="s">'plan the week together without emailing screenshots around'</span><span class="pu">,</span></span></li>
+            <li data-l="12" data-rows="1 5"><span class="ln">12</span><span class="marks"></span><span class="src">  <span class="pr">video</span><span class="pu">:</span> <span class="nu">true</span><span class="pu">,</span></span></li>
+            <li data-l="13"><span class="ln">13</span><span class="marks"></span><span class="src"><span class="pu">}, () => {</span></span></li>
+            <li data-l="14" data-rows="4"><span class="ln">14</span><span class="marks"></span><span class="src">  <span class="fn">beforeEach</span><span class="pu">(</span><span class="k">async</span> <span class="pu">() => ({</span> <span class="pr">colleague</span><span class="pu">:</span> <span class="s">'Sam'</span><span class="pu">,</span> <span class="pr">email</span><span class="pu">:</span> <span class="s">'sam@acme.co'</span> <span class="pu">}))</span></span></li>
+            <li data-l="15" data-rows="4 5"><span class="ln">15</span><span class="marks"></span><span class="src">  <span class="fn">goal</span><span class="pu">(</span><span class="s">'invite a colleague'</span><span class="pu">, {</span></span></li>
+            <li data-l="16" data-rows="3 5" class="hidden-line"><span class="ln">16</span><span class="marks"></span><span class="src">    <span class="pr">happyPath</span><span class="pu">: [</span><span class="s">'/board'</span><span class="pu">,</span> <span class="s">'/settings/members'</span><span class="pu">],</span></span></li>
+            <li data-l="17" data-rows="n"><span class="ln">17</span><span class="marks"></span><span class="src">    <span class="pr">catch</span><span class="pu">: {</span> <span class="pr">affecting</span><span class="pu">:</span> <span class="s">'1 in 3'</span><span class="pu">,</span> <span class="pr">confidence</span><span class="pu">:</span> <span class="nu">0.85</span> <span class="pu">},</span></span></li>
+            <li data-l="18"><span class="ln">18</span><span class="marks"></span><span class="src">  <span class="pu">}, () => {</span></span></li>
+            <li data-l="19" data-rows="6" class="hidden-line"><span class="ln">19</span><span class="marks"></span><span class="src">    <span class="fn">outcome</span><span class="pu">(</span><span class="k">async</span> <span class="pu">({</span> <span class="id">page</span> <span class="pu">}) => {</span></span></li>
+            <li data-l="20" data-rows="6"><span class="ln">20</span><span class="marks"></span><span class="src">      <span class="fn">expect</span><span class="pu">(</span><span class="k">await</span> <span class="id">page</span><span class="pu">.</span><span class="fn">textContent</span><span class="pu">(</span><span class="s">'main'</span><span class="pu">)).</span><span class="fn">toContain</span><span class="pu">(</span><span class="s">'1 invitation pending'</span><span class="pu">)</span></span></li>
+            <li data-l="21" data-rows="6"><span class="ln">21</span><span class="marks"></span><span class="src">    <span class="pu">})</span></span></li>
+            <li data-l="22"><span class="ln">22</span><span class="marks"></span><span class="src">  <span class="pu">})</span></span></li>
+            <li data-l="23"><span class="ln">23</span><span class="marks"></span><span class="src"><span class="pu">})</span></span></li>
+          </ol>
+        </div>
+      </div>
+
+  </section>
   </div>
 
 
 
-</div>
+
 
 <script>
-(function () {
-  var master = Array.prototype.slice.call(document.querySelectorAll('#code li'));
-  function line(n) { return document.querySelector('#code li[data-l="' + n + '"]'); }
-  document.querySelectorAll('.pair').forEach(function (pair, i) {
-    var ex = pair.querySelector('.excerpt'), note = pair.querySelector('.lines-note');
-    var nums = (pair.dataset.lines || '').split(' ').filter(Boolean).map(Number).sort(function (a, b) { return a - b; });
-    if (!nums.length) {
-      var side = pair.querySelector('.side'); if (side) side.remove();
-      return;
-    }
-    var prev = null;
-    nums.forEach(function (n) {
-      if (prev !== null && n - prev > 1) { var g = document.createElement('li'); g.className = 'gap'; g.innerHTML = '<span class="ln"></span><span class="src">  ⋯</span>'; ex.appendChild(g); }
-      var src = line(n), li = document.createElement('li'); if (src.classList.contains('hidden-line')) li.className = 'hidden-line';
-      li.innerHTML = '<span class="ln">' + n + '</span>' + src.querySelector('.src').outerHTML; ex.appendChild(li); prev = n;
-    });
-    var ranges = [], a = nums[0], b = nums[0];
-    for (var k = 1; k <= nums.length; k++) { if (k < nums.length && nums[k] === b + 1) { b = nums[k]; } else { ranges.push(a === b ? String(a) : a + '–' + b); if (k < nums.length) { a = b = nums[k]; } } }
-    note.textContent = pair.dataset.fields || '';
-  });
-})();
+
 
 (function () {
   document.querySelectorAll('.pair').forEach(function (pair) {

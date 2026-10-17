@@ -192,8 +192,6 @@ Consent
 
 before anything loads
 
-video
-
 What the person does on the page is always recorded, and the consent says so in plain words. `video: true` adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.
 
 recorded: actions, screen, voice · camera: declined
@@ -206,11 +204,9 @@ Who gets in, and how many
 
 the sample
 
-users · purpose · catch
-
 Six questions, one per screen; press Next to see them all. The first three come from `users`: `did` and `within` become a recency question with bands, `uses` a multi-select with one decoy, `not` an item among neutral ones, so nobody can tell what disqualifies. The last three come from `purpose`: when they last needed it, how they do it today, how much it matters. Write `users` as the sentence alone and the first three are drafted from it.
 
-The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $55, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
+The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost from $60, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
 
 screened 20 · matched 5 · who took part: 3 of 5 had the need this month · how they do it today, in their words
 
@@ -221,8 +217,6 @@ First look
 First look
 
 on by default
-
-purpose · happyPath
 
 The page the task starts on is flashed for 500 ms, then one open question. The start is the first page of the `happyPath` unless the goal names a `start`; name another page for the flash with `impression: { page }` when the task begins behind a login and the purpose lives on the public page. The answers are read against the `purpose`, which the person never sees, and you can re-read any of them. Then the page comes back for one click.
 
@@ -236,8 +230,6 @@ Scenario card
 
 from the goal, never the path
 
-users · purpose · beforeEach · goal
-
 The situation from `users.are` and `purpose`, the action from the goal's name, the name and email from `beforeEach`. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with `scenario`.
 
 the exact card text, kept with the run
@@ -249,8 +241,6 @@ Your page, with the bar
 Your page, with the bar, then the check
 
 two controls, one check
-
-goal · happyPath · video · outcome
 
 One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from `video`, with a pause; there is no microphone during the task. The summary is the goal's name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: the two pages of the `happyPath` set a silent three-minute limit, and the person may ask for more time once. The pill takes your font, inverts your page's colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.
 
@@ -280,19 +270,7 @@ Chance of seeing a 1-in-3 problem
 
 Cost
 
-about $55 · cap $70 · first people within minutes, usually all five within a few hours
-
-Person 3, after Done
-
-Not reached
-
-main contained "2 invitations pending"
-
-Person 5, after Done
-
-Reached
-
-1:12
+from $60 · cap $70 · first people within minutes, usually all five within a few hours
 
 ## The file
 
@@ -512,9 +490,9 @@ On the hosted version: people already on your live site, invited when a page has
 
 Real visitors who seemed stuck and said yes, on their own device
 
-Paid like the panel
+Paid
 
-Under a daily cap you set
+Like the panel, under a daily cap you set
 
 Depends on your traffic
 
@@ -540,9 +518,9 @@ Five strangers who match your `users` block, found for you and paid by the run.
 
 People who say they did what `users` describes; nobody who works in UX, design or marketing
 
-About $11 a person
+Starting at $12 a person
 
-Five about $55; a cap of $70 holds the reserve
+Five from $60; a cap of $70 holds the reserve
 
 First people within minutes
 
@@ -592,11 +570,11 @@ Thousands of vetted, census-matched participants; profiled, screened and custom 
 
 First person within minutes; five within a few hours; a narrow audience needs a prescreen project, which adds time and cost
 
-$55
+$60
 
 $70
 
-$15
+$10
 
 Each attempt labelled with its panel
 
@@ -820,7 +798,7 @@ Person 2 · Prolific
 Person 3 · CloudResearch Connect · first at 11 min
 Person 4 · Prolific
 Person 5 · CloudResearch Connect
-Paid $55 of the $70 cap · $15 back
+Paid $60 of the $70 cap · $10 back
 ```
 
 ## Contributing and automation

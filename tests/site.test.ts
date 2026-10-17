@@ -93,7 +93,7 @@ it('carries the derived card text in all four places and no old bar label anywhe
   }
 })
 
-it('shows the file init writes, verbatim, in the artefact, the landing copy, the guide and the README', async () => {
+it('shows the file init writes, verbatim, in the artefact, the landing copy, the guide and the README, and each step\'s text as the artefact has it', async () => {
   const { exampleFile } = await import('../packages/ui-tests/src/example')
   const { inviteExample, inviteFile, compilation } = await import('../apps/web/lib/copy')
   const { parseHTML } = await import('linkedom')
@@ -103,9 +103,14 @@ it('shows the file init writes, verbatim, in the artefact, the landing copy, the
   expect(inviteFile).toBe('ui-tests/invite.ui.test.ts')
   expect(await readFile('README.md', 'utf8')).toContain(exampleFile)
   expect(await readFile('apps/web/app/docs/getting-started/page.tsx', 'utf8')).toContain('code={inviteExample} title={inviteFile}')
-  // Each piece shows the lines the artefact names, in participant order.
+  // Issue #54: the whole file comes after the steps' previous and next row, and no step carries code of its own.
   const pieces = [...artefact.querySelectorAll('li.pair')]
-  expect(compilation.pieces.map(p => p.lines.join(' '))).toEqual(pieces.map(p => p.getAttribute('data-lines')))
+  expect(artefact.querySelector('.stepnav')!.nextElementSibling!.matches('section.whole-top.after-steps')).toBe(true)
+  expect(artefact.querySelectorAll('.pair .excerpt, .pair .window, .pair .lines-note, .pair pre').length).toBe(0)
+  expect(artefact.querySelector('#rows')!.textContent).not.toContain('After Done')
+  expect(compilation.pieces.every(p => !('lines' in p) && !('fields' in p))).toBe(true)
+  expect('check' in compilation).toBe(false)
+  // Each step's text, against the artefact, in participant order.
   expect(compilation.pieces.map(p => p.notes.join(' ').replaceAll('`', ''))).toEqual(pieces.map(p => [...p.querySelectorAll('.intro .from')].map(from => from.textContent).join(' ').replace("the ones that gave up", "the ones that ended with I couldn't do this")))
   expect(compilation.pieces.map(p => p.returns)).toEqual(pieces.map(p => p.querySelector('.back-line')!.textContent!.replace(/^Comes back/, '')))
   // Issue #46, item 3: the tabs carry the names the artefact gives its steps, 1 Consent to 6 After the task.

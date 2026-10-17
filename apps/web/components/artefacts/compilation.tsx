@@ -10,11 +10,11 @@ import { Stepped } from './stepped'
 
 /**
  * Compilation (docs/design/site-schema.md; design/artefacts/compile-section.html): what you write, what they see, on the page grid.
- * The heading in five columns and the lead in seven; the three commands as cards and the whole file across all twelve; then the
- * six pieces a person meets as tabs, one step visible at a time (`CompileSteps`). Each step is a 5/7 pair: its number, name and note
- * with only the lines that produce it (original numbers kept, skipped lines as a dots row) on the left, sticky; the screen in a
- * constant light frame with the chrome at real size, the worked-out box and what comes back on the right. The chrome is drawn as
- * the inverse of the light Weekboard page with its mint accent.
+ * The heading in five columns and the lead in seven; the three commands as cards; then the six pieces a person meets as tabs, one
+ * step visible at a time (`CompileSteps`), and the whole file after them across all twelve. Each step is a 5/7 pair: its number,
+ * name and note on the left; the screen in a constant light frame with the chrome at real size, the worked-out box and what comes
+ * back on the right. No code inside the tabs and nothing sticky (issue #54). The chrome is drawn as the inverse of the light
+ * Weekboard page with its mint accent.
  */
 export async function Compilation() {
   const html = await highlight(inviteExample)
@@ -30,7 +30,6 @@ export async function Compilation() {
       </div>)}
     </div>
     <p className="compile-note"><Prose text={compilation.note} /></p>
-    <LinesWindow title={inviteFile} legend={`${lines.length} lines`} rows={all} copy={inviteExample} label={inviteFile} figure />
     <CompileSteps label="The screens, one at a time" steps={compilation.pieces.map(piece => ({ n: piece.n, name: piece.tab }))}>
       {compilation.pieces.map(piece => <div className="compile-pair" id={`piece-${piece.id}`} key={piece.id}>
         <div className="compile-left">
@@ -38,7 +37,6 @@ export async function Compilation() {
             <h3><span className="compile-n">{piece.n}</span>{piece.name} <span>· {piece.sub}</span></h3>
             {piece.notes.map(note => <p key={note}><Prose text={note} /></p>)}
           </div>
-          {piece.lines.length > 0 && <LinesWindow title={inviteFile} legend={piece.fields} rows={excerpt(all, piece.lines)} label={`The lines that produce ${piece.name.toLowerCase()}`} />}
         </div>
         <div className="compile-main">
           {screens[piece.id]}
@@ -46,27 +44,18 @@ export async function Compilation() {
         </div>
       </div>)}
     </CompileSteps>
+    <LinesWindow title={inviteFile} legend={`${lines.length} lines`} rows={all} copy={inviteExample} label={inviteFile} figure />
   </section>
 }
 
-type Row = { n?: number; html: string }
-/** Only a piece's lines, with their original numbers; a run of skipped lines becomes one dots row. */
-function excerpt(all: Row[], numbers: number[]) {
-  const rows: Row[] = []
-  let previous: number | undefined
-  for (const n of [...numbers].sort((a, b) => a - b)) {
-    if (previous !== undefined && n - previous > 1) rows.push({ html: '<span class="line">  ⋯</span>' })
-    rows.push(all[n - 1]); previous = n
-  }
-  return rows
-}
+type Row = { n: number; html: string }
 
-/** A code window of numbered lines: the whole file with its copy control, or one piece's lines with the fields they name. At 375 the lines wrap. */
-function LinesWindow({ title, legend, rows, copy, label, figure = false }: { title: string; legend?: string; rows: Row[]; copy?: string; label: string; figure?: boolean }) {
+/** The whole file as a code window of numbered lines, with its copy control. At 375 the lines wrap. */
+function LinesWindow({ title, legend, rows, copy, label, figure = false }: { title: string; legend: string; rows: Row[]; copy: string; label: string; figure?: boolean }) {
   return <figure className="window lines-window" data-figure={figure || undefined}>
-    <figcaption className="window-chrome"><span className="code-tab">{title}</span>{legend && <span className="lines-legend">{legend}</span>}{copy && <CopyControl text={copy} label={title} />}</figcaption>
+    <figcaption className="window-chrome"><span className="code-tab">{title}</span><span className="lines-legend">{legend}</span><CopyControl text={copy} label={title} /></figcaption>
     <div className="lines-body" tabIndex={0} role="region" aria-label={label}>
-      <ol className="shiki">{rows.map((row, i) => <li key={i} className={row.n ? undefined : 'gap'}><span className="ln" aria-hidden="true">{row.n ?? ''}</span><code dangerouslySetInnerHTML={{ __html: row.html }} /></li>)}</ol>
+      <ol className="shiki">{rows.map(row => <li key={row.n}><span className="ln" aria-hidden="true">{row.n}</span><code dangerouslySetInnerHTML={{ __html: row.html }} /></li>)}</ol>
     </div>
   </figure>
 }
@@ -131,23 +120,16 @@ const screens: Record<string, ReactNode> = {
       <div className="ch-actions"><span /><button className="ch-btn pri" type="button">Start task</button></div>
     </Sheet>
   </Board>,
-  bar: <>
-    <Board label="The page under test with the bar" dim={false}>
-      <div className="ch-bar">
-        <div className="ch-pill" role="region" aria-label="Weekboard study">
-          <span className="grip" aria-hidden="true" />
-          <span className="seg rec" role="group" aria-label="Recording, 41 seconds"><span className="dot" aria-hidden="true" /><span>0:41</span><button className="pause" type="button" aria-label="Pause recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1" /><rect x="9.5" y="2" width="3.5" height="12" rx="1" /></svg></button></span>
-          <button className="seg task" type="button" aria-expanded="false"><b>Task 1 of 1</b>Invite Sam to the board</button>
-          <span className="seg"><button className="done" type="button">Done</button><button className="cant" type="button">I couldn&apos;t do this</button></span>
-        </div>
+  bar: <Board label="The page under test with the bar" dim={false}>
+    <div className="ch-bar">
+      <div className="ch-pill" role="region" aria-label="Weekboard study">
+        <span className="grip" aria-hidden="true" />
+        <span className="seg rec" role="group" aria-label="Recording, 41 seconds"><span className="dot" aria-hidden="true" /><span>0:41</span><button className="pause" type="button" aria-label="Pause recording"><svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><rect x="3" y="2" width="3.5" height="12" rx="1" /><rect x="9.5" y="2" width="3.5" height="12" rx="1" /></svg></button></span>
+        <button className="seg task" type="button" aria-expanded="false"><b>Task 1 of 1</b>Invite Sam to the board</button>
+        <span className="seg"><button className="done" type="button">Done</button><button className="cant" type="button">I couldn&apos;t do this</button></span>
       </div>
-    </Board>
-    <div className="compile-check" aria-label="The outcome check, run on your side" role="group">
-      <span className="who">After Done · runs on your side</span>
-      <pre><span className="fn">expect</span><span className="pu">(</span><span className="k">await</span> page.<span className="fn">textContent</span><span className="pu">(</span><span className="s">&apos;main&apos;</span><span className="pu">)).</span><span className="fn">toContain</span><span className="pu">(</span><span className="s">&apos;1 invitation pending&apos;</span><span className="pu">)</span></pre>
-      <dl>{compilation.check.map(([who, result, detail]) => <div key={who}><dt>{who}</dt><dd><span className={result === 'Reached' ? 'yes' : 'no'}>{result}</span> · {detail}</dd></div>)}</dl>
     </div>
-  </>,
+  </Board>,
   after: <Stepped label="The questions after the task, one at a time" url="ui-tests.com/t/k2m9" what="question">
     <Sheet step="After the task · 1 of 2" title="Overall, how difficult or easy did you find this task?">
       <ul className="ch-scale" aria-label="1 very difficult to 7 very easy, 3 chosen">{[1, 2, 3, 4, 5, 6, 7].map(n => <li key={n} className={n === 3 ? 'on' : undefined}>{n}</li>)}</ul>

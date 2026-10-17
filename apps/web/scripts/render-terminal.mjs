@@ -39,7 +39,7 @@ export const surfaces = {
   init: { lines: ['Created ui-tests.config.ts', 'Created ui-tests/invite.ui.test.ts', 'Created vitest.config.ts', 'Next: npm run dev, then npx ui-tests'] },
   dev: { lines: ['Reached the goal: Yes', rehearsal, 'Trace: http://127.0.0.1:43210/00000000-0000-4000-8000-000000000000/' + '0'.repeat(64)] },
   // `run` with the paid panel on: the cap, how long people take, the deadline as a deadline, and each person with where they came from.
-  run: { lines: ['Run k2m9 started', 'Send this link to anyone: https://ui-tests.com/t/k2m9', 'Paid panel: 5 people on Prolific and CloudResearch Connect · cap $70', `${timeStatement}.`, deadlineSentence, 'Person 1 · Prolific · first at 6 min', 'Person 2 · Prolific', 'Person 3 · CloudResearch Connect · first at 11 min', 'Person 4 · Prolific', 'Person 5 · CloudResearch Connect', 'Paid $55 of the $70 cap · $15 back'] },
+  run: { lines: ['Run k2m9 started', 'Send this link to anyone: https://ui-tests.com/t/k2m9', 'Paid panel: 5 people on Prolific and CloudResearch Connect · cap $70', `${timeStatement}.`, deadlineSentence, 'Person 1 · Prolific · first at 6 min', 'Person 2 · Prolific', 'Person 3 · CloudResearch Connect · first at 11 min', 'Person 4 · Prolific', 'Person 5 · CloudResearch Connect', 'Paid $60 of the $70 cap · $10 back'] },
 }
 
 const escape = text => text.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character])

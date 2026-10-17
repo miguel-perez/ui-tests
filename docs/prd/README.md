@@ -53,7 +53,7 @@ Which slice tests each one is in [`../story-map.md`](../story-map.md).
 | Install to first result, new author | under one afternoon |
 | Overrides of derived fields per context | fewer than one on average |
 | Problems surfaced per run that the author acts on | at least one |
-| Cost per verified attempt with a panel | about $10 a person, about $50 for five |
+| Cost per verified attempt with a panel | from $12 a person, from $60 for five |
 | Our site: visitors understand what it is for and start | per the landing context's sentence |
 
 ## Glossary

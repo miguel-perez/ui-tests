@@ -93,7 +93,7 @@ At 375:
 
 ### L3 · Compilation: what you write, what they see
 
-**Rule** (issue #46; `design/artefacts/compile-section.html`). The heading in 5, the lead in 7. The three commands as three equal cards across 12, the note under them, the whole file across 12. Then a tab strip across 12, 1 Consent to 6 After the task, and one step visible at a time as a 5/7 pair: on the left, sticky 24 px from the top, the step's number and name, its note (64ch) and only its lines; on the right the screen in its constant light frame (16:10 over the Weekboard page, or fitted to its sheet), the stepper for steps 2 and 6, the dashed worked-out box for steps 2 and 5, and the "Comes back" line. Previous and next under the pair, across 12. On desktop every step shares one grid cell, so the steps keep the tallest step's height and the page does not jump when a tab changes (issue #49); on a phone each step takes its own height. Empty area: under the sticky left column, bounded by the screen's height, and under a shorter step's frame, bounded by the tallest step.
+**Rule** (issue #46; the trim round, issue #54; `design/artefacts/compile-section.html`). The heading in 5, the lead in 7. The three commands as three equal cards across 12, the note under them. Then a tab strip across 12, 1 Consent to 6 After the task, and one step visible at a time as a 5/7 pair: on the left the step's number and name and its note (64ch), and nothing else; on the right the screen in its constant light frame (16:10 over the Weekboard page, or fitted to its sheet), the stepper for steps 2 and 6, the dashed worked-out box for step 2, and the "Comes back" line. Previous and next under the pair, across 12. Then the whole file across 12, `--space-2` below the previous and next row. Nothing is sticky, and the step area takes each step's own height at every width: the closed steps leave the layout (issue #54 removes the shared cell of issue #49). Empty area: under a shorter left column, bounded by the screen's height.
 
 At 1440:
 
@@ -102,11 +102,11 @@ At 1440:
 [Section heading                    ] [lead, 714 wide                                         ]  head
 [cmd: npm install         ] [cmd: npx ui-tests init    ] [cmd: npx ui-tests run               ]  cards · 84
 [note under the commands                                                                      ]  24
-[CodeWindow: ui-tests/invite.ui.test.ts, 23 lines                                             ]  file · 620
 [1 Consent · 2 Screener · 3 First look · 4 Scenario card · 5 Your page, with the bar · 6 After]  tabs · 44
-[n Name · note, 64ch                ] [frame, constant light, chrome at real size              ]  pair · 400-700
-[CodeWindow: only its lines (sticky)] [(stepper) (worked-out box) · Comes back                 ]
+[n Name · note, 64ch                ] [frame, constant light, chrome at real size              ]  pair · the step's own height
+[                                   ] [(stepper) (worked-out box) · Comes back                 ]
 [← previous step                                                                  next step →]  nav · 48
+[CodeWindow: ui-tests/invite.ui.test.ts, 23 lines                                             ]  file · 620 · 48 above
 ```
 
 At 375:
@@ -115,11 +115,11 @@ At 375:
 |----------------------------------------------------| 343 px, one column
 | Section heading, lead                              |
 | three command cards, stacked; the note             |
-| the whole file (the code wraps)                    |
 | tab strip (scrolls sideways inside itself)         |
-| the open step: number, name, note, its lines,      |
+| the open step: number, name, note,                 |
 |   frame, (stepper), (box), Comes back             |
 | previous · next                                    |
+| the whole file (the code wraps)                    |
 ```
 
 ### L4 · Sources: where the people come from
