@@ -22,9 +22,9 @@ async function files(directory: string): Promise<string[]> {
 
 it('finds none of the old words in apps/web, packages/ui-tests/src or the generated fragments', async () => {
   const found: string[] = []
-  // Issue #38, item 1: globals.css takes design/artefacts/tokens.css verbatim as its token block, and the item wins over this list;
-  // the block's lines are blanked first (tests/contrast.test.ts holds the block equal to the file), so the line numbers stay true.
-  const tokens = (await readFile('design/artefacts/tokens.css', 'utf8')).trimEnd()
+  // Issues #38 and #43: globals.css takes the light block of design/artefacts/tokens.css verbatim as its token block, and the item
+  // wins over this list; the block's lines are blanked first (tests/contrast.test.ts holds the block equal), so the line numbers stay true.
+  const tokens = /^:root \{[^}]*\}/m.exec(await readFile('design/artefacts/tokens.css', 'utf8'))![0]
   for (const file of [...await files('apps/web'), ...await files('packages/ui-tests/src')]) {
     let text = await readFile(file, 'utf8')
     if (file.endsWith('globals.css')) text = text.replace(tokens, tokens.replace(/[^\n]/g, ''))

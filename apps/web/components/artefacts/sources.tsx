@@ -10,7 +10,7 @@ type Fill = typeof sources.fill
 
 /** The light host page's address bar, as in every frame. */
 function Address({ url }: { url: string }) { return <div className="frame-addr" aria-hidden="true"><i /><i /><i /><span>{url}</span></div> }
-/** Prolific's and CloudResearch Connect's own wordmarks, in the ink of the page so they read in either theme; the name is the mark's accessible name. */
+/** Prolific's and CloudResearch Connect's own wordmarks, in the ink of the page; the name is the mark's accessible name. */
 function Wordmark({ id, name }: { id: string; name: string }) {
   return <span className="wordmark-group" role="img" aria-label={name}>{id === 'connect' && <span className="wordmark-maker" aria-hidden="true">CloudResearch</span>}<i className={`wordmark ${id}`} aria-hidden="true" /></span>
 }

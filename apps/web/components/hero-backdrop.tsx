@@ -13,7 +13,7 @@ function useReducedMotion() {
   return reduced
 }
 
-/** Fine lines drifting like cursor traces, in the line token of the current theme: strongest behind the hero, masked out by the second block. */
+/** Fine lines drifting like cursor traces, in the line token: strongest behind the hero, masked out by the second block. */
 function drawTexture(canvas: HTMLCanvasElement, time: number) {
   const ratio = Math.min(devicePixelRatio || 1, 1.5), width = canvas.clientWidth, height = canvas.clientHeight
   if (canvas.width !== Math.round(width * ratio) || canvas.height !== Math.round(height * ratio)) { canvas.width = Math.round(width * ratio); canvas.height = Math.round(height * ratio) }
@@ -53,10 +53,7 @@ export function HeroBackdrop() {
     const start = reduced ? undefined : setTimeout(() => { last = performance.now(); frame = requestAnimationFrame(tick) }, 600)
     const resize = new ResizeObserver(() => drawTexture(element, clock))
     resize.observe(element)
-    // The stroke is the theme's line token: repaint when the system theme changes.
-    const scheme = matchMedia('(prefers-color-scheme: dark)'), repaint = () => drawTexture(element, clock)
-    scheme.addEventListener('change', repaint)
-    return () => { clearTimeout(start); cancelAnimationFrame(frame); observer.disconnect(); resize.disconnect(); scheme.removeEventListener('change', repaint) }
+    return () => { clearTimeout(start); cancelAnimationFrame(frame); observer.disconnect(); resize.disconnect() }
   }, [reduced])
   return <div className="hero-backdrop" aria-hidden="true" data-motion={reduced ? 'still' : 'running'}>
     <canvas ref={canvas} className="trace-texture" data-motion={reduced ? 'still' : 'running'} />

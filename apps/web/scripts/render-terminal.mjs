@@ -61,7 +61,7 @@ function runs(frame) {
 const html = found => found.map(run => run.colour ? `<span style="color:${role(run.colour)}">${escape(run.text)}</span>` : escape(run.text)).join('')
 /**
  * ANSI to HTML for the frames Ink prints: one flat span per coloured run, the hex Ink emitted mapped to its code role among the
- * site's tokens (`roles` in colours.ts), so a light terminal carries the light code roles and the dark alternate Tokyo Night's.
+ * site's tokens (`roles` in colours.ts), so the light terminal carries the light code roles.
  * A colour without a role fails the render. Uncoloured text stays bare and inherits the window's ink.
  */
 export function ansiToHtml(frame) { return html(runs(frame)) }

@@ -27,19 +27,9 @@ for (const width of [1440, 375]) {
       await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
       expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
-      // Issue #38: the light theme by default, the Tokyo Night alternate under the system setting and under data-theme, axe clean in both.
+      // Issue #43: light only; the system setting and data-theme are in tests/e2e/theme.spec.ts.
       await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(246, 246, 246)')
       await expect(page.locator('body')).toHaveCSS('color', 'rgb(17, 17, 17)')
-      await page.emulateMedia({ colorScheme: 'dark' })
-      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(26, 27, 38)')
-      expect((await new AxeBuilder({ page }).analyze()).violations, 'dark alternate').toEqual([])
-      await page.evaluate(() => { document.documentElement.dataset.theme = 'light' })
-      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(246, 246, 246)')
-      await page.emulateMedia({ colorScheme: 'light' })
-      await page.evaluate(() => { document.documentElement.dataset.theme = 'dark' })
-      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(26, 27, 38)')
-      await page.evaluate(() => { delete document.documentElement.dataset.theme })
-      await expect(page.locator('body')).toHaveCSS('background-color', 'rgb(246, 246, 246)')
       const fonts = await page.locator('body *').evaluateAll(nodes => [...new Set(nodes.filter(node => node.getBoundingClientRect().width && [...node.childNodes].some(child => child.nodeType === Node.TEXT_NODE && child.textContent?.trim())).map(node => getComputedStyle(node).fontFamily))])
       for (const font of fonts) expect(font).toMatch(/^['"]?(?:__)?Fira[_ ](?:Sans|Code)/)
       await expect(page.locator('pre').first()).toHaveCSS('font-family', /Fira[_ ]Code/)
@@ -230,7 +220,7 @@ for (const width of [1440, 375]) {
   })
 }
 
-test('the texture behind the hero moves slowly and continuously in the line colour, and follows the theme', async ({ page }) => {
+test('the texture behind the hero moves slowly and continuously in the line colour, light under either system setting', async ({ page }) => {
   await page.goto('/')
   const texture = page.locator('.trace-texture')
   await expect(page.locator('.hero-backdrop')).toHaveAttribute('data-motion', 'running')
@@ -246,9 +236,10 @@ test('the texture behind the hero moves slowly and continuously in the line colo
   const frames: string[] = []
   for (let i = 0; i < 3; i++) { frames.push(await texture.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())); await page.waitForTimeout(1000) }
   expect(new Set(frames).size).toBe(3)
-  // On the dark alternate the waves take its line colour.
+  // Under a dark system setting the site stays light, and so do the waves (issue #43).
   await page.emulateMedia({ colorScheme: 'dark' })
-  await expect.poll(() => offLine([41, 46, 66])).toBeLessThanOrEqual(2)
+  await page.waitForTimeout(500)
+  expect(await offLine([226, 226, 226])).toBeLessThanOrEqual(2)
   await page.emulateMedia({ colorScheme: 'light' })
   await expect(page.locator('.wordmark svg')).toHaveCSS('color', 'rgb(75, 63, 240)')
   // The header's wordmark is the mark and the name on one line, never painted over by the source logos' masked rule.

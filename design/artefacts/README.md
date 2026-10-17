@@ -4,7 +4,8 @@ Approved markup exported from the design artifacts. Each file is the spec for th
 
 ## Theme rules, in one place
 
-- **The tokens are `tokens.css`.** Light first: ink #111111, one accent #4b3ff0, line #e2e2e2, canvas #f6f6f6, surface white. The roles (moment #b84d00, stop #8b6100, nothing happened #bd1f44, reached #007852, words #7a41af, and the code roles keyword #7444b4, string #27762f, property #00757c) are derived in OKLCH around the accent at one lightness and chroma, each at 4.5:1 or better on the canvas. The Tokyo Night palette is the dark alternate under `prefers-color-scheme: dark` and `data-theme="dark"`.
+- **The tokens are `tokens.css`.** Light first: ink #111111, one accent #4b3ff0, line #e2e2e2, canvas #f6f6f6, surface white. The roles (moment #b84d00, stop #8b6100, nothing happened #bd1f44, reached #007852, words #7a41af, and the code roles keyword #7444b4, string #27762f, property #00757c) are derived in OKLCH around the accent at one lightness and chroma, each at 4.5:1 or better on the canvas.
+- **The site is light only.** `apps/web/app/globals.css` carries the light block alone with `color-scheme: light`, whatever the system setting; nothing on the site reads `prefers-color-scheme` or `data-theme` (issue #43). The Tokyo Night block in `tokens.css` is the artifact viewer's dark alternate under `prefers-color-scheme: dark` and `data-theme="dark"`, not the site's.
 - **Colour stays on the data; chrome is neutral.** The accent carries links, buttons, the person marks and off your path. The moment carries the moment to watch, slowed and ranks. Red carries blocked, not reached and a click with no effect. Green-teal carries reached, what worked and the suggested change. Violet carries the person's words. Nothing grey carries meaning; nothing coloured is decoration.
 - **The site's own surfaces are light.** The attempt view, the report, the sections, the terminal and code windows are white windows on the canvas with the line colour as their edge. GitHub's chrome is drawn in the site's neutrals.
 - **The demo app under test keeps its own cool grey** (`weekboard-light.css`, the `host-*` tokens), so it reads as another product on the light page.
@@ -15,7 +16,7 @@ Approved markup exported from the design artifacts. Each file is the spec for th
 
 | File | Surface |
 | --- | --- |
-| `tokens.css` | The site's tokens: light first, dark alternate, host and chrome tokens. Every artefact below carries the same block. |
+| `tokens.css` | The tokens: the light block (the site's, its only theme), the Tokyo Night block (the viewer's dark alternate for the artefacts), host and chrome tokens. Every artefact below carries the same block. |
 | `attempt-view.html` (+ `attempt-view/`) | One person, one goal: the result, the minute as a flow, clips in place. A white window on the light canvas. |
 | `player-chrome.html` | Every participant surface in order: consent, the screener's six screens, first impression (open question), scenario card, the bar, the five screens after the task. |
 | `pr-section.html` | The landing section "In the pull request": the neutral check, its page on GitHub, and the report. Supersedes `pull-request-check.html` and `report-rows.html`. Built in round eight (issue #35) as `PullRequest`; where issue #35, item 4 changes a word, the site follows the issue. |

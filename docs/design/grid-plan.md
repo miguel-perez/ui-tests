@@ -2,7 +2,7 @@
 
 16 October 2026. Written before the round-three layout code (issue #18, item 9), from [`site-schema.md`](site-schema.md). Every block on both pages is built to these maps; the PR puts each map beside its capture with the ui-harness layout readings.
 
-**Themes.** This plan places content; it does not set colours. The theme rules are written once in [`../../design/artefacts/README.md`](../../design/artefacts/README.md#theme-rules-in-one-place): the site light (ink, one accent, line, canvas and white, from [`tokens.css`](../../design/artefacts/tokens.css)) with Tokyo Night as the dark alternate, the site's own surfaces and the terminal and code windows white windows on the canvas with the line colour as their edge, the demo app in its own light grey, the participant chrome the inverse of its host with the author's accent. The captures and readings below are taken on the light theme.
+**Themes.** This plan places content; it does not set colours. The theme rules are written once in [`../../design/artefacts/README.md`](../../design/artefacts/README.md#theme-rules-in-one-place): the site light only, whatever the system setting (ink, one accent, line, canvas and white, the light block of [`tokens.css`](../../design/artefacts/tokens.css); the Tokyo Night block there is the artefact viewer's dark alternate, not the site's), the site's own surfaces and the terminal and code windows white windows on the canvas with the line colour as their edge, the demo app in its own light grey, the participant chrome the inverse of its host with the author's accent. The captures and readings below are taken on the light theme.
 
 ## The grid
 

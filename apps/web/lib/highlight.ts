@@ -2,8 +2,7 @@ import { codeToHtml } from 'shiki'
 
 /**
  * The code roles (design/artefacts/tokens.css), shared by code windows and inline code so a fragment reads the same in both.
- * Every colour is a site token, so the code follows the theme: keyword violet, string green, property teal on the light site,
- * Tokyo Night's own hues on the dark alternate.
+ * Every colour is a site token: keyword violet, string green, property teal on the light site.
  */
 export const codeRoles = {
   name: 'ui-tests-code-roles', type: 'light' as const, colors: { 'editor.background': 'var(--surface)', 'editor.foreground': 'var(--ink)' },
