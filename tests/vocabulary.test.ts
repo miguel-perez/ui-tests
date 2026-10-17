@@ -22,8 +22,12 @@ async function files(directory: string): Promise<string[]> {
 
 it('finds none of the old words in apps/web, packages/ui-tests/src or the generated fragments', async () => {
   const found: string[] = []
+  // Issue #38, item 1: globals.css takes design/artefacts/tokens.css verbatim as its token block, and the item wins over this list;
+  // the block's lines are blanked first (tests/contrast.test.ts holds the block equal to the file), so the line numbers stay true.
+  const tokens = (await readFile('design/artefacts/tokens.css', 'utf8')).trimEnd()
   for (const file of [...await files('apps/web'), ...await files('packages/ui-tests/src')]) {
-    const text = await readFile(file, 'utf8')
+    let text = await readFile(file, 'utf8')
+    if (file.endsWith('globals.css')) text = text.replace(tokens, tokens.replace(/[^\n]/g, ''))
     // The sources section's verbatim phrases are taken out first; everything else on the line is still checked.
     text.split('\n').forEach((line, index) => { const rest = verbatim.reduce((left, phrase) => left.replaceAll(phrase, ''), line.replaceAll("\\'", "'")); for (const name of offences(rest, was)) found.push(`${file}:${index + 1} ${name}`) })
   }

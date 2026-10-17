@@ -16,7 +16,7 @@ Approved markup exported from the design artifacts. Each file is the spec for th
 | File | Surface |
 | --- | --- |
 | `tokens.css` | The site's tokens: light first, dark alternate, host and chrome tokens. Every artefact below carries the same block. |
-| `attempt-view.html` (+ `attempt-view/`) | One person, one goal: the result, the minute as a flow, clips in place. Dark. |
+| `attempt-view.html` (+ `attempt-view/`) | One person, one goal: the result, the minute as a flow, clips in place. A white window on the light canvas. |
 | `player-chrome.html` | Every participant surface in order: consent, the screener's six screens, first impression (open question), scenario card, the bar, the five screens after the task. |
 | `pr-section.html` | The landing section "In the pull request": the neutral check, its page on GitHub, and the report. Supersedes `pull-request-check.html` and `report-rows.html`. |
 | `run-report.html` | The run report page alone, the viewer shape. Supersedes `trace-viewer.html` for the run level. |

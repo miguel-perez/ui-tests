@@ -1,15 +1,46 @@
 @import "tailwindcss";
-/* Tokyo Night (night) for the page, its product surfaces, terminals and code. The theme rules are written once, in
-   design/artefacts/README.md: the site's own surfaces are dark, the demo app under test is light, and the participant chrome
-   is the inverse of its host page with the author's accent (packages/ui-tests/src/player-styles.ts). */
-:root { color-scheme: dark; --canvas: #1a1b26; --surface: #1f2335; --line: #292e42; --ink: #c0caf5; --muted: #a9b1d6; --comment: #565f89; --moment: #ff9e64; --path: #7aa2f7; --dead: #f7768e; --pause: #e0af68; --done: #73daca; --note: #bb9af7;
+/* The site's tokens: light first, the Tokyo Night palette as the dark alternate. The ground is ink, one accent, two greys and white; the roles are derived in OKLCH around the accent at one lightness and chroma, each at 4.5:1 or better on the canvas. Colour stays on the data; chrome is neutral. The demo app under test keeps its own cool grey (host-*); the participant chrome is its inverse (ch-*). */
+:root {
+  color-scheme: light;
+  --canvas: #f6f6f6; --surface: #ffffff; --raised: #efefef; --line: #e2e2e2; --ink: #111111; --muted: #575757;
+  --comment: #8a8a8a; --accent: #4b3ff0; --moment: #b84d00; --blue: #4b3ff0; --green: #27762f; --teal: #00757c;
+  --purple: #7444b4; --cyan: #00757c; --red: #bd1f44; --yellow: #8b6100; --no: #bd1f44; --yes: #007852;
+  --done: #007852; --note: #7a41af; --pause: #8b6100; --deviation: #4b3ff0; --dead: #bd1f44; --correct: #007852;
+  --incorrect: #bd1f44; --chip-ink: #ffffff; --focus: #4b3ff0;
+  --host-bg: #e9eaef; --host-panel: #f4f5f8; --host-line: #cfd3de; --host-ink: #2c3353; --host-dim: #4b5a94;
+  --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225,226,231,.68); --ch-hair: rgba(225,226,231,.16); --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px;
+  --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42; --ink: #c0caf5; --muted: #a9b1d6;
+    --comment: #8089b3; --accent: #7aa2f7; --moment: #ff9e64; --blue: #7aa2f7; --green: #9ece6a; --teal: #73daca;
+    --purple: #bb9af7; --cyan: #89ddff; --red: #f7768e; --yellow: #e0af68; --no: #f7768e; --yes: #73daca;
+    --done: #73daca; --note: #bb9af7; --pause: #e0af68; --deviation: #7aa2f7; --dead: #f7768e; --correct: #73daca;
+    --incorrect: #f7768e; --chip-ink: #1a1b26; --focus: #c0caf5;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --canvas: #1a1b26; --surface: #1f2335; --raised: #24283b; --line: #292e42; --ink: #c0caf5; --muted: #a9b1d6;
+  --comment: #8089b3; --accent: #7aa2f7; --moment: #ff9e64; --blue: #7aa2f7; --green: #9ece6a; --teal: #73daca;
+  --purple: #bb9af7; --cyan: #89ddff; --red: #f7768e; --yellow: #e0af68; --no: #f7768e; --yes: #73daca;
+  --done: #73daca; --note: #bb9af7; --pause: #e0af68; --deviation: #7aa2f7; --dead: #f7768e; --correct: #73daca;
+  --incorrect: #f7768e; --chip-ink: #1a1b26; --focus: #c0caf5;
+}
+/* The site's own tokens on top of the block above, which is design/artefacts/tokens.css verbatim (tests/contrast.test.ts holds
+   them equal). The theme rules are written once, in design/artefacts/README.md. Round four's name for going off your path is
+   the accent. The demo app under test keeps its own light grey (public/demo/weekboard.html, weekboard-light.css), unchanged, so
+   its frames match its screenshots; the participant chrome over it is the inverse with the mint accent (ch-*, player-styles.ts). */
+:root { --path: var(--accent); --host-bg: #e1e2e7; --host-chrome: #eef0f5; --host-line: #c4c8da;
   --radius: 8px; --space-1: 24px; --space-2: 48px; --space-3: 96px; --gutter: 24px; --mark-motif: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' fill='none' stroke='black' stroke-width='12'%3E%3Crect x='20' y='20' width='60' height='60'/%3E%3Cpath d='M50 20V50H80'/%3E%3C/svg%3E"); }
 * { box-sizing: border-box; }
 html { scroll-padding-top: 24px; }
 body { margin: 0; background: var(--canvas); color: var(--ink); font: 400 16px/1.6 var(--font-sans), sans-serif; -webkit-font-smoothing: antialiased; }
 button, input, textarea, select { font: inherit; }
 button, a, input, textarea, select, [tabindex] { outline-offset: 4px; }
-:focus-visible { outline: 2px solid var(--ink); }
+:focus-visible { outline: 2px solid var(--focus); }
 button { cursor: pointer; color: inherit; }
 a { color: inherit; text-decoration: none; }
 pre, code, time, .num, small { font-family: var(--font-mono), monospace; }
@@ -21,8 +52,8 @@ h3, h4 { font-weight: 500; }
 .site-width { width: calc(100% - 48px); max-width: 1248px; margin: auto; }
 .site-header nav { height: 80px; display: flex; align-items: center; justify-content: space-between; }
 .wordmark { display: flex; align-items: center; gap: 10px; font: 500 17px var(--font-mono), monospace; }
-.wordmark svg { width: 20px; height: 20px; color: var(--moment); }
-.wordmark em { font-style: normal; color: var(--moment); }
+.wordmark svg { width: 20px; height: 20px; color: var(--accent); }
+.wordmark em { font-style: normal; color: var(--accent); }
 .nav-links { display: flex; gap: 28px; color: var(--muted); font-size: 15px; }
 .nav-links a { display: inline-flex; align-items: center; gap: 8px; }
 .skip-link { position: absolute; top: -100px; z-index: 10; background: var(--surface); padding: 12px; }
@@ -31,11 +62,11 @@ h3, h4 { font-weight: 500; }
 main { position: relative; isolation: isolate; }
 .line-icon { flex-shrink: 0; display: inline-block; vertical-align: middle; }
 .button { display: inline-flex; align-items: center; justify-content: center; gap: 10px; height: 46px; padding: 0 20px; border-radius: 8px; font-weight: 500; border: 1px solid var(--line); }
-.primary { background: var(--moment); color: var(--canvas); border-color: var(--moment); }
+.primary { background: var(--accent); color: var(--chip-ink); border-color: var(--accent); }
 .quiet { background: var(--canvas); }
 .actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .fineprint { font-size: 14px; color: var(--muted); }
-.text-link { color: var(--path); text-decoration: underline; text-underline-offset: 4px; }
+.text-link { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
 
 /* The grid: 12 columns, 24px gutters, on the 1248px container (docs/design/grid-plan.md). */
 .row-7-5, .row-8-4, .section-head, .hero-grid, .step-pair { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); }
@@ -90,7 +121,7 @@ main { position: relative; isolation: isolate; }
 .line-numbers { display: flex; flex-direction: column; border-right: 1px solid var(--line); padding-right: 16px; color: var(--muted); text-align: right; user-select: none; }
 .video-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 48px; height: 48px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); }
 
-/* L1 · Claim. Copy in 7 columns, the terminal in 5 with its caption under it; the session and texture behind. */
+/* L1 · Claim. Copy in 7 columns, the terminal in 5 with its caption under it; only the texture behind. */
 .hero { position: relative; }
 .hero-grid { align-items: center; padding: var(--space-3) 0; }
 .hero-copy { grid-column: 1 / span 7; }
@@ -99,20 +130,14 @@ main { position: relative; isolation: isolate; }
 .hero h1 { font-size: clamp(44px,5vw,72px); font-weight: 500; line-height: 1.06; letter-spacing: -.04em; max-width: 14ch; margin-bottom: var(--space-1); text-wrap: balance; }
 .standfirst { font-size: 18px; color: var(--muted); max-width: 36rem; }
 .hero-copy .actions { margin: var(--space-2) 0 var(--space-1); }
-.hero-artefact .terminal-window { box-shadow: 0 40px 90px #0008; }
 .hero-artefact .terminal-body { font-size: 13px; padding: var(--space-1) 20px; }
 .hero-backdrop { position: absolute; inset: 0; z-index: -1; pointer-events: none; }
 .trace-texture { position: absolute; top: 0; left: 0; width: 100%; height: calc(100% + 480px); -webkit-mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 100%); mask-image: linear-gradient(to bottom, #000 0%, #000 50%, transparent 100%); }
-/* Smaller in presence than the first version: half the hero, dim and faded at its edges, never behind the headline. */
-.hero-session { position: absolute; right: max(24px, calc(50% - 680px)); top: 50%; width: min(720px, 54%); aspect-ratio: 1280 / 800; transform: translateY(-50%); opacity: .2; -webkit-mask-image: radial-gradient(ellipse at center, #000 45%, transparent 75%); mask-image: radial-gradient(ellipse at center, #000 45%, transparent 75%); }
-.hero-session video { display: block; width: 100%; height: 100%; object-fit: contain; filter: grayscale(.4); }
-.sensor { position: absolute; width: 28px; height: 28px; margin: -14px 0 0 -14px; border: 2px solid var(--moment); border-radius: 50%; opacity: 0; }
-.sensor::after { content: ''; position: absolute; inset: 9px; border-radius: 50%; background: var(--moment); }
-[data-motion="still"] .sensor.poster { opacity: 1; }
 
 /* L2 · AttemptView (design/artefacts/attempt-view.html). 12 columns; the flow runs down the page; a moment card is 7 columns clip,
-   5 columns text; nothing sticky. Dark, on the site tokens; only the Weekboard recording inside the clips is light. The artefact's
-   comment-coloured text reads in muted here: comment is decoration only. Chips on the moment hue carry the dark canvas as text. */
+   5 columns text; nothing sticky. A white window on the canvas, on the site tokens; the Weekboard recording inside the clips keeps
+   its own grey. The artefact's comment-coloured text reads in muted here: comment is decoration only. Chips on a filled hue carry
+   the chip ink. */
 .attempt-view { color: var(--ink); background: var(--surface); font-size: 15px; line-height: 1.55; }
 .attempt-view h3 { margin: 0; }
 .attempt-view time, .attempt-view .mono { font-family: var(--font-mono), monospace; font-variant-numeric: tabular-nums; }
@@ -141,7 +166,7 @@ main { position: relative; isolation: isolate; }
 .attempt-index { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
 .attempt-index a { display: inline-flex; gap: 7px; align-items: baseline; }
 .attempt-index b { font-weight: 500; color: var(--ink); }
-.attempt-view .n, .flow-moment::after { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 3px; background: var(--moment); color: var(--canvas); font: 500 11px/1 var(--font-mono), monospace; vertical-align: 1px; }
+.attempt-view .n, .flow-moment::after { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 3px; background: var(--moment); color: var(--chip-ink); font: 500 11px/1 var(--font-mono), monospace; vertical-align: 1px; }
 .attempt-view .n[data-impact="wrong end state"], .attempt-view .n[data-impact="blocked"], .flow-moment[data-impact="wrong end state"]::after, .flow-moment[data-impact="blocked"]::after { background: var(--dead); }
 .attempt-flow { position: relative; --rail: 60px; margin: 0; padding: 0; list-style: none; }
 .attempt-flow::before { content: ''; position: absolute; top: 10px; bottom: 10px; left: var(--rail); width: 1px; background: var(--line); }
@@ -166,12 +191,12 @@ main { position: relative; isolation: isolate; }
 .moment-card { display: grid; grid-template-columns: 7fr 5fr; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
 .moment-card.is-playing { border-color: var(--moment); }
 .moment-media { min-width: 0; }
-.moment-clip { position: relative; aspect-ratio: 16 / 10; background: #e1e2e7; overflow: hidden; }
+.moment-clip { position: relative; aspect-ratio: 16 / 10; background: var(--host-bg); overflow: hidden; }
 .moment-clip video { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
 .moment-press { position: absolute; inset: 0; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
 /* Play and seconds sit bottom left: the recorded bar docks bottom right and its labels stay in view. */
-.moment-secs { position: absolute; pointer-events: none; left: 54px; bottom: 16px; font: 500 12px/1 var(--font-mono), monospace; color: #ffffff; background: rgba(13, 14, 22, .78); padding: 6px 8px; border-radius: 4px; }
-.moment-play { position: absolute; left: 10px; bottom: 10px; width: 36px; height: 36px; border-radius: 50%; background: var(--moment); color: var(--canvas); display: grid; place-items: center; }
+.moment-secs { position: absolute; pointer-events: none; left: 54px; bottom: 16px; font: 500 12px/1 var(--font-mono), monospace; color: var(--ch-ink); background: var(--ch-surface); padding: 6px 8px; border-radius: 4px; }
+.moment-play { position: absolute; left: 10px; bottom: 10px; width: 36px; height: 36px; border-radius: 50%; background: var(--moment); color: var(--chip-ink); display: grid; place-items: center; }
 .moment-press:focus-visible { outline-offset: -4px; }
 .moment-scrub { position: relative; height: 18px; margin: 0 14px; }
 .moment-scrub .track, .moment-scrub .fill { position: absolute; left: 0; top: 8px; height: 2px; }
@@ -223,10 +248,10 @@ main { position: relative; isolation: isolate; }
 .attempt-path > div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; align-items: baseline; }
 .attempt-path > div > span:first-child { color: var(--muted); }
 .attempt-path .chain { display: flex; flex-wrap: wrap; gap: 6px; }
-.attempt-path i { font: 400 12px/1 var(--font-mono), monospace; font-style: normal; padding: 5px 8px; border-radius: 4px; background: var(--canvas); border: 1px solid var(--line); }
+.attempt-path i { font: 400 12px/1 var(--font-mono), monospace; font-style: normal; padding: 5px 8px; border-radius: 4px; background: var(--raised); border: 1px solid var(--line); }
 .attempt-path i.off { border-color: var(--path); color: var(--path); }
 .attempt-path i.on { border-color: var(--done); color: var(--done); }
-.attempt-diff { margin: 0; font: 400 13px/1.6 var(--font-mono), monospace; background: var(--canvas); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; color: var(--ink); }
+.attempt-diff { margin: 0; font: 400 13px/1.6 var(--font-mono), monospace; background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; color: var(--ink); }
 .attempt-diff .m { color: var(--dead); }
 .attempt-diff .p { color: var(--done); }
 .attempt-diff .c { color: var(--muted); }
@@ -237,8 +262,6 @@ main { position: relative; isolation: isolate; }
 
 /* L3 · Compilation (design/artefacts/compile-section.html): one 800px reading column, centred on the grid (8 of 12 columns at 1440).
    The frames are the light Weekboard page; the chrome over it is that page's inverse with its mint accent, at real size. */
-.compilation, .sources { --host-bg: #e1e2e7; --host-chrome: #eef0f5; --host-line: #c4c8da; --host-dim: #4b5a94;
-  --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225, 226, 231, .68); --ch-hair: rgba(225, 226, 231, .16); --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px; }
 .compile-column { max-width: 800px; margin: 0 auto; }
 .compile-head { display: grid; gap: 10px; margin-bottom: 28px; }
 .compile-head p { color: var(--muted); font-size: 18px; max-width: 64ch; }
@@ -272,7 +295,7 @@ main { position: relative; isolation: isolate; }
 .compile-check { border: 1px dashed var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 10px; }
 .compile-check .who { font: 500 11px/1 var(--font-mono), monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--dead); }
 .compile-check pre { font: 400 13px/1.6 var(--font-mono), monospace; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
-.compile-check pre .fn { color: var(--path); } .compile-check pre .k { color: var(--note); } .compile-check pre .s { color: #9ece6a; } .compile-check pre .pu { color: var(--muted); }
+.compile-check pre .fn { color: var(--blue); } .compile-check pre .k { color: var(--purple); } .compile-check pre .s { color: var(--green); } .compile-check pre .pu { color: var(--cyan); }
 .compile-check dl { display: grid; gap: 6px; font-size: 14px; }
 .compile-check dl > div { display: grid; grid-template-columns: minmax(0, 15em) minmax(0, 1fr); gap: 18px; }
 .compile-check dt { color: var(--muted); }
@@ -280,7 +303,7 @@ main { position: relative; isolation: isolate; }
 /* The frame: constant and light, the host page under test; its address bar and the board drawn as the participant sees them. */
 .compile-frame { position: relative; aspect-ratio: 16 / 10; width: 100%; border-radius: 8px; overflow: hidden; background: var(--host-bg); border: 1px solid var(--line); }
 .compile-frame .frame-shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
-.compile-frame .frame-dim { position: absolute; inset: 0; background: rgb(44 51 83 / .4); }
+.compile-frame .frame-dim { position: absolute; inset: 0; background: color-mix(in srgb, var(--ch-surface) 40%, transparent); }
 .frame-addr { position: absolute; z-index: 2; top: 0; left: 0; right: 0; height: 26px; background: var(--host-chrome); border-bottom: 1px solid var(--host-line); display: flex; align-items: center; gap: 8px; padding: 0 10px; font: 400 11px/1 var(--font-mono), monospace; color: var(--host-dim); }
 .frame-addr i { width: 8px; height: 8px; border-radius: 50%; background: var(--host-line); }
 .frame-addr span { margin-left: 6px; }
@@ -327,7 +350,7 @@ main { position: relative; isolation: isolate; }
 .ch-pill .seg { display: flex; align-items: center; gap: 8px; height: 40px; }
 .ch-pill .seg + .seg { border-left: 1px solid var(--ch-hair); margin-left: 12px; padding-left: 12px; }
 .ch-pill .rec { font: 500 12px/1 var(--font-mono), monospace; color: var(--ch-dim); }
-.ch-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ch-rec); box-shadow: 0 0 0 3px rgba(245, 42, 101, .18); }
+.ch-pill .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ch-rec); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ch-rec) 18%, transparent); }
 .ch-pill .pause { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; color: var(--ch-dim); }
 .ch-pill .pause svg { width: 10px; height: 10px; }
 .ch-pill .task { display: block; max-width: 190px; overflow: hidden; text-overflow: ellipsis; line-height: 40px; text-align: left; }
@@ -388,7 +411,7 @@ main { position: relative; isolation: isolate; }
 .src-frame.shot { aspect-ratio: 16 / 9; }
 .src-frame .frame-addr span { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .src-frame .frame-shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
-.src-fill { background: var(--canvas); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 10px; }
+.src-fill { background: var(--raised); border: 1px solid var(--line); border-radius: 10px; padding: 18px 20px; display: grid; gap: 10px; }
 .src-fill-h, .src-fill-f { display: flex; justify-content: space-between; gap: 16px; font-size: 13px; color: var(--muted); }
 .src-fill-h b, .src-fill-f b { color: var(--ink); font-weight: 500; }
 .src-fill-f { border-top: 1px solid var(--line); padding-top: 14px; flex-wrap: wrap; }
@@ -407,7 +430,8 @@ main { position: relative; isolation: isolate; }
 /* Prolific's and CloudResearch Connect's own wordmarks, drawn in the ink of the page from their shapes, so they read on either theme. */
 .wordmark-group { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--ink); }
 .wordmark-maker { font-size: 13px; font-weight: 500; color: var(--muted); }
-.wordmark { display: block; height: 20px; background-color: currentColor; -webkit-mask: var(--mark) left center / contain no-repeat; mask: var(--mark) left center / contain no-repeat; }
+/* Scoped to the group: the site's own wordmark in the header shares the class name. */
+.wordmark-group .wordmark { display: block; height: 20px; background-color: currentColor; -webkit-mask: var(--mark) left center / contain no-repeat; mask: var(--mark) left center / contain no-repeat; }
 .wordmark.prolific { --mark: url('/marks/prolific.svg'); aspect-ratio: 1180.3 / 275.9; }
 .wordmark.connect { --mark: url('/marks/connect.webp'); aspect-ratio: 770 / 170; height: 18px; }
 
@@ -416,7 +440,7 @@ main { position: relative; isolation: isolate; }
 .check-pass { display: grid; place-items: center; border-radius: 50%; width: 20px; height: 20px; color: var(--done); }
 .check-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 14px; }
 .check-row:last-child { border-bottom: 0; }
-.check-row a { margin-left: auto; font-size: 12px; color: var(--muted); }
+.check-row a { margin-left: auto; font-size: 12px; color: var(--accent); }
 .check-row strong { font-weight: 500; }
 .check-summary { color: var(--muted); }
 .issue-symbol { color: var(--moment); }
@@ -429,8 +453,7 @@ main { position: relative; isolation: isolate; }
 .findings-rows { list-style: none; margin: 0; padding: 0; }
 .finding-row { border-bottom: 1px solid var(--line); }
 .finding-line { min-height: 56px; }
-.rank { color: var(--muted); }
-.expanded .rank { color: var(--moment); }
+.rank { color: var(--moment); }
 .count { display: grid; justify-items: end; gap: 4px; font-size: 13px; }
 .count-bar { width: 64px; height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--moment) calc(var(--share) * 100%), var(--line) 0); }
 .finding-impact { justify-self: start; padding: 1px 8px; border-radius: 10px; font: 11px/1.6 var(--font-mono), monospace; border: 1px solid var(--line); color: var(--muted); }
@@ -458,10 +481,10 @@ main { position: relative; isolation: isolate; }
 .reel-label { font: 12px/1.5 var(--font-mono), monospace; color: var(--moment); }
 .reel-words { grid-column: 1 / -1; color: var(--note); font-size: 13px; line-height: 1.5; }
 .reel-player { position: relative; }
-.reel-player video { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: #11121a; }
+.reel-player video { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: var(--host-bg); }
 .reel-player .video-play { width: 36px; height: 36px; }
-.reel-stamp { position: absolute; left: 8px; bottom: 12px; padding: 1px 8px; border-radius: 10px; background: rgba(13, 14, 22, .78); color: #ffffff; font: 11px var(--font-mono), monospace; }
-.reel-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(to right, var(--moment) calc(var(--progress) * 100%), rgb(255 255 255 / .4) 0); }
+.reel-stamp { position: absolute; left: 8px; bottom: 12px; padding: 1px 8px; border-radius: 10px; background: var(--ch-surface); color: var(--ch-ink); font: 11px var(--font-mono), monospace; }
+.reel-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(to right, var(--moment) calc(var(--progress) * 100%), var(--line) 0); }
 
 /* L6 · AgentRun: the terminal in 8 columns, the caption in 4 beside it. */
 .row-8-4 .terminal-body { font-size: 13px; }
@@ -487,7 +510,7 @@ main { position: relative; isolation: isolate; }
 .empty { color: var(--muted); }
 .run-name { font-weight: 500; }
 
-/* The hosted form (guide). Dark, on the site tokens. */
+/* The hosted form (guide). A white window, on the site tokens. */
 .hosted-form form { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--space-1) var(--gutter); padding: var(--space-1); }
 .hosted-form .wide { grid-column: 1 / -1; }
 .hosted-field label { display: block; font-size: 13px; color: var(--muted); }
@@ -539,7 +562,7 @@ main { position: relative; isolation: isolate; }
   .button.quiet:hover, .copy-control:hover, .watch-moment:hover { border-color: var(--muted); color: var(--ink); }
   .attempt-index a:hover b, .attempt-fold summary:hover b { text-decoration: underline; }
   .moment-press:hover .moment-play { filter: brightness(1.08); }
-  .finding-toggle:hover span { color: var(--path); }
+  .finding-toggle:hover span { color: var(--accent); }
   .cell.hit:hover { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--moment); }
   .nav-links a:hover, .text-link:hover, .check-row a:hover, .step-index a:hover { color: var(--ink); }
   /* A closed source row lights up from the middle; the open one already carries the surface. */
@@ -550,7 +573,6 @@ main { position: relative; isolation: isolate; }
   .row-7-5 > :last-child, .row-8-4 > :last-child { grid-column: 8 / span 5; }
   .hero-copy { grid-column: 1 / -1; }
   .hero-artefact { grid-column: 1 / span 9; margin-top: var(--space-2); }
-  .hero-session { width: 90%; top: auto; bottom: 0; transform: none; }
   .findings-head, .finding-line { grid-template-columns: 24px 96px 76px 156px minmax(0, 1fr); column-gap: 12px; }
   .finding-detail > .reel-frame { grid-column: 1 / span 5; }
   .finding-evidence { grid-column: 6 / span 7; }
@@ -589,7 +611,6 @@ main { position: relative; isolation: isolate; }
   .hero h1 { font-size: 44px; max-width: none; }
   .hero-artefact { margin-top: var(--space-2); }
   .hero-artefact .terminal-body, .terminal-body { padding: 16px; font-size: 12px; }
-  .hero-session { width: 100%; right: 0; opacity: .14; }
   .block { padding: var(--space-2) 0; }
   .window-chrome { gap: 8px; flex-wrap: wrap; }
   .window-chrome .window-dots { display: none; }

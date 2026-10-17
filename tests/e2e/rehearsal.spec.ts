@@ -135,12 +135,12 @@ test('keyboard rehearsal, privacy projection, a click that did nothing, off your
   const projection = await page.evaluate(async () => (await fetch('/api/ui-tests')).text())
   expect(projection).not.toMatch(/happyPath|expected|hooks|\/docs\/getting-started|ui-tests/)
   const taskbar = page.getByRole('complementary', { name: 'Your task' })
-  // The chrome is the inverse of the host page: on this dark site the pill is the site's ink with the canvas as its text, opaque,
+  // The chrome is the inverse of the host page: on this light site the pill is the site's ink with the canvas as its text, opaque,
   // so it never shares a panel colour; without an accent in the config, Done takes the chrome's own text colour.
   const pill = taskbar.locator('.uit-pill')
-  await expect(pill).toHaveCSS('background-color', 'rgb(192, 202, 245)')
-  await expect(pill).toHaveCSS('color', 'rgb(26, 27, 38)')
-  await expect(taskbar.getByRole('button', { name: 'Done', exact: true })).toHaveCSS('background-color', 'rgb(26, 27, 38)')
+  await expect(pill).toHaveCSS('background-color', 'rgb(17, 17, 17)')
+  await expect(pill).toHaveCSS('color', 'rgb(246, 246, 246)')
+  await expect(taskbar.getByRole('button', { name: 'Done', exact: true })).toHaveCSS('background-color', 'rgb(246, 246, 246)')
   expect(await pill.evaluate(node => getComputedStyle(node).fontFamily)).toBe(await page.evaluate(() => getComputedStyle(document.body).fontFamily))
   // The recording state leads the pill, and pausing it says so in words.
   await taskbar.getByRole('button', { name: 'Pause recording' }).click()

@@ -2,7 +2,7 @@
 
 16 October 2026. Written before the round-three layout code (issue #18, item 9), from [`site-schema.md`](site-schema.md). Every block on both pages is built to these maps; the PR puts each map beside its capture with the ui-harness layout readings.
 
-**Themes.** This plan places content; it does not set colours. The theme rules are written once in [`../../design/artefacts/README.md`](../../design/artefacts/README.md#theme-rules-in-one-place): product surfaces dark on the dark page, the demo app light, terminals and code dark, the participant chrome the inverse of its host with the author's accent.
+**Themes.** This plan places content; it does not set colours. The theme rules are written once in [`../../design/artefacts/README.md`](../../design/artefacts/README.md#theme-rules-in-one-place): the site light (ink, one accent, line, canvas and white, from [`tokens.css`](../../design/artefacts/tokens.css)) with Tokyo Night as the dark alternate, the site's own surfaces and the terminal and code windows white windows on the canvas with the line colour as their edge, the demo app in its own light grey, the participant chrome the inverse of its host with the author's accent. The captures and readings below are taken on the light theme.
 
 ## The grid
 
@@ -27,7 +27,7 @@ Each map shows the 12 columns at 1440 with a ruler; a bracket spans the columns 
 
 ### L1 · Claim
 
-**Rule.** Headline and standfirst take columns 1-7; the hero artefact (the Ink report in its terminal) takes columns 8-12. The artefact is 5 columns, so its caption could sit beside it, but no columns remain; it goes under the terminal, left-aligned to its edge, in two lines. The faded recording of Person 3 and the texture sit behind the whole hero and occupy no columns. Empty area: the copy column is full height; under the terminal the caption fills the second row, so the empty area is the band below the caption (about 506 × 120), far smaller than the terminal (506 × 300).
+**Rule.** Headline and standfirst take columns 1-7; the hero artefact (the Ink report in its terminal) takes columns 8-12. The artefact is 5 columns, so its caption could sit beside it, but no columns remain; it goes under the terminal, left-aligned to its edge, in two lines. The texture alone sits behind the whole hero (its waves in the line colour; no recording since issue #38) and occupies no columns. Empty area: the copy column is full height; under the terminal the caption fills the second row, so the empty area is the band below the caption (about 506 × 120), far smaller than the terminal (506 × 300).
 
 At 1440:
 
