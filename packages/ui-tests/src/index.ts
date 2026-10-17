@@ -31,8 +31,8 @@ export function resetContexts() { contexts = []; activeContext = undefined; acti
 export function getContexts() { return contexts }
 /** The participant chrome the author sets: the one accent for Done, the selected answers and the task label (a `#rrggbb` colour), and the name the consent and questions use (default: the author). */
 export type ChromeConfig = { accent?: string; name?: string }
-/** Identity helper that types `ui-tests.config.ts`: the target URL, an optional author name and the chrome's accent. */
-export function defineConfig<T extends { target: { url: string }; author?: string; chrome?: ChromeConfig }>(config: T): T { return config }
+/** Identity helper that types `ui-tests.config.ts`: the target URL, an optional author name, the chrome's accent and the paid panel's cap per run (`budget.max`, including the 25% reserve). */
+export function defineConfig<T extends { target: { url: string }; author?: string; chrome?: ChromeConfig; budget?: { max: number; currency?: string } }>(config: T): T { return config }
 /** Declares a context. The body runs immediately and registers goals against this context. */
 export function context(input: ContextInput, body: () => void) {
   const previous = activeContext

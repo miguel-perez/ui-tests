@@ -1,5 +1,5 @@
 {
-  "measured": "2026-10-16",
+  "measured": "2026-10-17",
   "harness": "ui-harness harness.layout.layout_metrics",
   "readings": [
     {
@@ -53,21 +53,21 @@
       "block": "L3",
       "width": 1440,
       "capture": "design/screens/blocks/landing-L3-1440.png",
-      "height": 7454,
-      "contentArea": 5964800,
-      "emptyArea": 3340288,
+      "height": 7478,
+      "contentArea": 5984000,
+      "emptyArea": 3351040,
       "emptyWithinRule": true,
       "harness": {
         "grid_quality": 0.3812,
         "ngo_balance": 0.0643,
-        "ngo_density": 0.2069,
-        "white_space": 0.7931,
+        "ngo_density": 0.2062,
+        "white_space": 0.7938,
         "ngo_regularity": 0,
         "reading": {
-          "grid_quality": "231 of 606 boxes sit on the eight commonest left edges (x=224 (70), x=268 (50), x=330 (20), x=434 (19)); off-grid: dd 534×45 at (471,3119), dd 534×22 at (471,3170), span 306×38 at (462,1526)",
-          "ngo_balance": "97% of leaf area sits left of the midline; heaviest element there: img 798×498 at (225,3713)",
-          "white_space": "21% of the fold is covered; fullest region middle-centre, emptiest top-right; largest boxes: img 798×498 at (225,3713), div 798×498 at (225,3713), img 798×498 at (225,4719)",
-          "ngo_regularity": "text leaves are spaced 37 px apart on average (sd 51) over 199 gaps; 5 unusually large gap(s), e.g. 159 px after y=53"
+          "grid_quality": "231 of 606 boxes sit on the eight commonest left edges (x=224 (70), x=268 (50), x=330 (20), x=434 (19)); off-grid: dd 534×45 at (471,3143), dd 534×22 at (471,3194), span 306×38 at (462,1526)",
+          "ngo_balance": "97% of leaf area sits left of the midline; heaviest element there: img 798×498 at (225,3737)",
+          "white_space": "21% of the fold is covered; fullest region bottom-centre, emptiest top-right; largest boxes: img 798×498 at (225,3737), div 798×498 at (225,3737), img 798×498 at (225,4743)",
+          "ngo_regularity": "text leaves are spaced 37 px apart on average (sd 52) over 199 gaps; 5 unusually large gap(s), e.g. 159 px after y=53"
         }
       }
     },
@@ -76,21 +76,21 @@
       "block": "L4",
       "width": 1440,
       "capture": "design/screens/blocks/landing-L4-1440.png",
-      "height": 559,
-      "contentArea": 594032,
-      "emptyArea": 104848,
+      "height": 1188,
+      "contentArea": 1348464,
+      "emptyArea": 134160,
       "emptyWithinRule": true,
       "harness": {
-        "grid_quality": 0.6875,
-        "ngo_balance": 0.9559,
-        "ngo_density": 0.263,
-        "white_space": 0.737,
+        "grid_quality": 0.6441,
+        "ngo_balance": 0.2982,
+        "ngo_density": 0.4823,
+        "white_space": 0.5177,
         "ngo_regularity": 0,
         "reading": {
-          "grid_quality": "22 of 32 boxes sit on the eight commonest left edges (x=24 (4), x=872 (4), x=448 (3), x=890 (3)); off-grid: p 643×58 at (530,13), h2 506×43 at (0,0), code 211×21 at (55,333)",
-          "ngo_balance": "52% of leaf area sits right of the midline; heaviest element there: p 643×58 at (530,13)",
-          "white_space": "26% of the fold is covered; fullest region middle-right, emptiest top-right; largest boxes: p 643×58 at (530,13), p 350×77 at (873,200), h2 506×43 at (0,0)",
-          "ngo_regularity": "text leaves are spaced 39 px apart on average (sd 51) over 13 gaps; 1 unusually large gap(s), e.g. 187 px after y=13"
+          "grid_quality": "38 of 59 boxes sit on the eight commonest left edges (x=0 (8), x=52 (7), x=626 (4), x=824 (4)); off-grid: span 417×68 at (90,550), span 417×45 at (90,493), span 287×21 at (739,650)",
+          "ngo_balance": "85% of leaf area sits left of the midline; heaviest element there: button 1248×152 at (0,208)",
+          "white_space": "48% of the fold is covered; fullest region bottom-left, emptiest middle-right; largest boxes: button 1248×152 at (0,208), button 1248×152 at (0,881), button 1248×152 at (0,1034)",
+          "ngo_regularity": "text leaves are spaced 32 px apart on average (sd 42) over 34 gaps; 4 unusually large gap(s), e.g. 127 px after y=53"
         }
       }
     },
@@ -283,21 +283,21 @@
       "block": "G5",
       "width": 1440,
       "capture": "design/screens/blocks/guide-G5-1440.png",
-      "height": 631,
-      "contentArea": 497808,
-      "emptyArea": 290928,
+      "height": 777,
+      "contentArea": 588384,
+      "emptyArea": 385056,
       "emptyWithinRule": true,
       "harness": {
-        "grid_quality": 0.55,
-        "ngo_balance": 0.9552,
-        "ngo_density": 0.2774,
-        "white_space": 0.7226,
-        "ngo_regularity": 0.3085,
+        "grid_quality": 0.597,
+        "ngo_balance": 0.8101,
+        "ngo_density": 0.2657,
+        "white_space": 0.7343,
+        "ngo_regularity": 0.2617,
         "reading": {
-          "grid_quality": "33 of 60 boxes sit on the eight commonest left edges (x=656 (7), x=672 (5), x=664 (4), x=828 (4)); off-grid: p 612×16 at (636,60), span 519×17 at (76,100), span 519×17 at (76,267)",
-          "ngo_balance": "52% of leaf area sits right of the midline; heaviest element there: span 367×38 at (829,431)",
-          "white_space": "28% of the fold is covered; fullest region top-centre, emptiest bottom-left; largest boxes: h2 1215×36 at (33,0), p 612×24 at (0,207), span 367×38 at (829,431)",
-          "ngo_regularity": "text leaves are spaced 29 px apart on average (sd 20) over 21 gaps; 1 unusually large gap(s), e.g. 72 px after y=537"
+          "grid_quality": "40 of 67 boxes sit on the eight commonest left edges (x=656 (14), x=672 (5), x=664 (4), x=828 (4)); off-grid: p 612×16 at (636,60), span 519×17 at (76,100), span 519×17 at (76,267)",
+          "ngo_balance": "59% of leaf area sits right of the midline; heaviest element there: span 367×38 at (829,577)",
+          "white_space": "27% of the fold is covered; fullest region top-centre, emptiest bottom-left; largest boxes: h2 1215×36 at (33,0), p 612×24 at (0,207), span 367×38 at (829,577)",
+          "ngo_regularity": "text leaves are spaced 27 px apart on average (sd 20) over 28 gaps; 2 unusually large gap(s), e.g. 73 px after y=354"
         }
       }
     },
@@ -421,21 +421,21 @@
       "block": "L3",
       "width": 375,
       "capture": "design/screens/blocks/landing-L3-375.png",
-      "height": 9026,
-      "contentArea": 2961184,
-      "emptyArea": 0,
+      "height": 9048,
+      "contentArea": 2967744,
+      "emptyArea": 1312,
       "emptyWithinRule": true,
       "harness": {
-        "grid_quality": 0.4182,
-        "ngo_balance": 0.1018,
-        "ngo_density": 0.3889,
-        "white_space": 0.6111,
+        "grid_quality": 0.4248,
+        "ngo_balance": 0.1013,
+        "ngo_density": 0.3909,
+        "white_space": 0.6091,
         "ngo_regularity": 0,
         "reading": {
-          "grid_quality": "253 of 605 boxes sit on the eight commonest left edges (x=34 (76), x=0 (72), x=92 (24), x=84 (20)); off-grid: p 273×81 at (27,6150), div 273×58 at (27,5146), span 293×44 at (17,732)",
-          "ngo_balance": "95% of leaf area sits left of the midline; heaviest element there: img 325×358 at (1,4992)",
-          "white_space": "39% of the fold is covered; fullest region bottom-left, emptiest top-right; largest boxes: img 325×358 at (1,4992), div 325×358 at (1,4992), img 325×358 at (1,6044)",
-          "ngo_regularity": "text leaves are spaced 38 px apart on average (sd 47) over 235 gaps; 5 unusually large gap(s), e.g. 246 px after y=96"
+          "grid_quality": "257 of 605 boxes sit on the eight commonest left edges (x=34 (76), x=0 (72), x=92 (24), x=84 (21)); off-grid: p 273×81 at (27,6173), div 273×58 at (27,5168), dd 289×45 at (19,4298)",
+          "ngo_balance": "95% of leaf area sits left of the midline; heaviest element there: img 325×358 at (1,5014)",
+          "white_space": "39% of the fold is covered; fullest region bottom-left, emptiest top-right; largest boxes: img 325×358 at (1,5014), div 325×358 at (1,5014), img 325×358 at (1,6066)",
+          "ngo_regularity": "text leaves are spaced 38 px apart on average (sd 47) over 234 gaps; 5 unusually large gap(s), e.g. 246 px after y=96"
         }
       }
     },
@@ -444,21 +444,21 @@
       "block": "L4",
       "width": 375,
       "capture": "design/screens/blocks/landing-L4-375.png",
-      "height": 1635,
-      "contentArea": 501184,
-      "emptyArea": 35424,
+      "height": 2467,
+      "contentArea": 797696,
+      "emptyArea": 11808,
       "emptyWithinRule": true,
       "harness": {
-        "grid_quality": 0.9688,
-        "ngo_balance": 0.258,
-        "ngo_density": 0.3427,
-        "white_space": 0.6573,
-        "ngo_regularity": 0.3531,
+        "grid_quality": 0.8636,
+        "ngo_balance": 0.0243,
+        "ngo_density": 0.6694,
+        "white_space": 0.3306,
+        "ngo_regularity": 0.1897,
         "reading": {
-          "grid_quality": "31 of 32 boxes sit on the eight commonest left edges (x=24 (11), x=42 (6), x=172 (6), x=0 (2)); off-grid: button 90×35 at (106,1453)",
-          "ngo_balance": "87% of leaf area sits left of the midline; heaviest element there: h2 327×86 at (0,0)",
-          "white_space": "34% of the fold is covered; fullest region top-centre, emptiest middle-right; largest boxes: h2 327×86 at (0,0), p 327×86 at (0,110), p 277×77 at (25,326)",
-          "ngo_regularity": "text leaves are spaced 92 px apart on average (sd 60) over 17 gaps; 1 unusually large gap(s), e.g. 216 px after y=110"
+          "grid_quality": "57 of 66 boxes sit on the eight commonest left edges (x=40 (29), x=0 (9), x=38 (6), x=60 (4)); off-grid: b 287×38 at (16,1020), button 59×36 at (235,1551), em 50×20 at (244,1461)",
+          "ngo_balance": "99% of leaf area sits left of the midline; heaviest element there: button 327×415 at (0,268)",
+          "white_space": "67% of the fold is covered; fullest region bottom-left, emptiest middle-right; largest boxes: button 327×415 at (0,268), button 327×413 at (0,2051), button 327×394 at (0,1657)",
+          "ngo_regularity": "text leaves are spaced 50 px apart on average (sd 41) over 48 gaps; 1 unusually large gap(s), e.g. 194 px after y=96"
         }
       }
     },
@@ -651,21 +651,21 @@
       "block": "G5",
       "width": 375,
       "capture": "design/screens/blocks/guide-G5-375.png",
-      "height": 1305,
-      "contentArea": 369984,
-      "emptyArea": 59040,
+      "height": 1450,
+      "contentArea": 415904,
+      "emptyArea": 60352,
       "emptyWithinRule": true,
       "harness": {
-        "grid_quality": 0.8125,
-        "ngo_balance": 0.7988,
-        "ngo_density": 0.3331,
-        "white_space": 0.6669,
-        "ngo_regularity": 0.4242,
+        "grid_quality": 0.8364,
+        "ngo_balance": 0.8887,
+        "ngo_density": 0.3725,
+        "white_space": 0.6275,
+        "ngo_regularity": 0.3036,
         "reading": {
-          "grid_quality": "39 of 48 boxes sit on the eight commonest left edges (x=20 (9), x=36 (7), x=0 (5), x=192 (5)); off-grid: h2 294×31 at (33,0), span 211×17 at (224,500), span 66×18 at (248,1161)",
-          "ngo_balance": "60% of leaf area sits left of the midline; heaviest element there: a 281×45 at (0,1257)",
-          "white_space": "33% of the fold is covered; fullest region middle-centre, emptiest top-right; largest boxes: span 780×17 at (21,520), a 281×45 at (0,1257), span 101×100 at (193,930)",
-          "ngo_regularity": "text leaves are spaced 55 px apart on average (sd 31) over 23 gaps; 1 unusually large gap(s), e.g. 127 px after y=1034"
+          "grid_quality": "46 of 55 boxes sit on the eight commonest left edges (x=20 (16), x=36 (7), x=0 (5), x=192 (5)); off-grid: h2 294×31 at (33,0), span 211×17 at (224,500), span 66×18 at (248,1306)",
+          "ngo_balance": "56% of leaf area sits left of the midline; heaviest element there: a 281×45 at (0,1402)",
+          "white_space": "37% of the fold is covered; fullest region middle-centre, emptiest top-right; largest boxes: span 764×17 at (21,541), a 281×45 at (0,1402), span 101×100 at (193,1076)",
+          "ngo_regularity": "text leaves are spaced 45 px apart on average (sd 31) over 31 gaps; 1 unusually large gap(s), e.g. 126 px after y=1180"
         }
       }
     },

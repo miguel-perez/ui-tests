@@ -11,7 +11,8 @@ const contributing = original.slice(start)
 function text(value) {
   if (typeof value === 'string') return value ? [value] : []
   if (typeof value !== 'object' || value === null) return []
-  return Object.values(value).flatMap(text)
+  // A source's icon and picture name the drawing, not words a reader reads.
+  return Object.entries(value).filter(([key]) => !['icon', 'picture'].includes(key)).flatMap(([, item]) => text(item))
 }
 const blocks = [`# ui-tests\n\n${copy.promise}\n\n${copy.intro}`]
 for (const [title, values] of Object.entries({ 'The promise and the run': copy.landing, 'Agent runs': copy.agent, 'Without a repository': copy.hosted, 'The hosted dashboard': copy.runs, 'What you write, what they see': copy.compilation, 'The file': [copy.inviteFile, copy.inviteExample], 'The problems': copy.problems, 'Where the people come from': copy.sources, 'This page runs this test': copy.example, 'Getting started': copy.guide, 'Commands': copy.commands, 'Site navigation and controls': copy.ui, 'Rehearsal': copy.rehearsal })) {

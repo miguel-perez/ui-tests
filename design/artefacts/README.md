@@ -25,4 +25,4 @@ Approved markup exported from the design artifacts. Each file is the spec for th
 | `scenario-card.html`, `taskbar.html`, `ease-question.html` | The same three surfaces on their own, for the components that render them. |
 | `weekboard-light.css` | The demo app's light palette, with player overrides that match `player-chrome.html`. |
 | `report-rows.html`, `pull-request-check.html`, `trace-viewer.html`, `code-window.html`, `terminal-quiet-window.html` | The other landing artefacts from rounds two and three, recoloured onto the light tokens; all superseded by the section artefacts above and kept for the mini UIs only. |
-| `invite-link.html`, `cap-control.html`, `visitor-invitation.html` | The three source-option mini UIs. |
+| `invite-link.html`, `cap-control.html`, `visitor-invitation.html` | The three source-option mini UIs, superseded by `sources-section.html` in round seven (issue #31) and no longer on the site; the invitation's words are carried over to the one string the PRD, the player and the demo share. |

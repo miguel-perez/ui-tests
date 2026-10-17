@@ -7,7 +7,7 @@ import { TerminalWindow } from '../components/artefacts/terminal-window'
 import { CodeWindow } from '../components/artefacts/code-window'
 import { AttemptView } from '../components/artefacts/attempt-view'
 import { Compilation } from '../components/artefacts/compilation'
-import { OptionsRow } from '../components/artefacts/options-row'
+import { Sources } from '../components/artefacts/sources'
 import { ChecksBox } from '../components/artefacts/checks-box'
 import { FindingsList } from '../components/artefacts/findings-list'
 import { Dashboard } from '../components/artefacts/dashboard'
@@ -27,10 +27,7 @@ export default function Home() {
         <Caption text={landing.closing} />
       </section>
       <Compilation />
-      <section className="block" aria-labelledby="people">
-        <SectionHead id="people" heading={landing.people} lead={landing.peopleLead} />
-        <OptionsRow />
-      </section>
+      <Sources />
       <section className="block" aria-labelledby="pull-request">
         <SectionHead id="pull-request" heading={landing.pr} lead={landing.prLead} />
         <ChecksBox />

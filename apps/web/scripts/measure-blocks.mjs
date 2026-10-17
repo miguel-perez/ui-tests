@@ -16,7 +16,7 @@ const pages = [
   { name: 'guide', route: '/docs/getting-started', blocks: [['G0', '.guide-head'], ...['install', 'set-up', 'try-it', 'write-your-own', 'real-people', 'agent', 'paste', 'fill'].map((id, i) => [`G${i + 1}`, `#${id}`])] },
 ]
 /** The typed content of a block: what the grid plan places. Everything else inside a block is either part of these or empty. */
-const content = '.guide-head > *, .hero-copy, .hero-artefact, .section-head h2, .section-head p, [data-artefact], .caption, .terms, .actions, .option-card, .step-head, .step-label, .mount-steps, .step-see > p, .step-type > p'
+const content = '.guide-head > *, .hero-copy, .hero-artefact, .section-head h2, .section-head p, .src-head h2, .src-head p, [data-artefact], .caption, .terms, .actions, .step-head, .step-label, .mount-steps, .step-see > p, .step-type > p'
 
 const browser = await chromium.launch()
 const readings = []

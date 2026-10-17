@@ -182,6 +182,27 @@ export const playerCss = `
 .uit-flash { position: fixed; inset: 0; width: 100vw; height: 100vh; border: 0; background: var(--uit-host); visibility: hidden; pointer-events: none; z-index: 1; }
 .uit-flash.uit-flash-on { visibility: visible; }
 .uit-page > .uit-sheet { position: relative; z-index: 2; }
+/* The first click: the page is back and live; the question docks at the bottom so the page stays in view. */
+.uit-flash.uit-flash-live { pointer-events: auto; }
+.uit-click-layer { position: fixed; inset: 0; z-index: 2; cursor: crosshair; }
+.uit-page > .uit-first-click { position: fixed; z-index: 3; left: 50%; bottom: 16px; translate: -50% 0; width: min(520px, calc(100vw - 32px)); padding: 16px 20px; gap: 8px; }
+.uit-first-click h1 { font-size: 17px; line-height: 1.35; font-weight: 500; }
+.uit-first-click .uit-actions { margin-top: 4px; }
+
+/* The join screen: who asked, how long, what is recorded, then Start (sources-section.html, the link's picture). */
+.uit-join { max-width: 460px; }
+.uit-join h1, .uit-join h2, .uit-join h3 { font-size: 17px; line-height: 1.35; font-weight: 500; text-wrap: pretty; }
+.uit-join > p:not(.uit-progress) { font-size: 15px; line-height: 1.5; text-wrap: pretty; }
+.uit-join .uit-actions { margin-top: 4px; }
+
+/* The invitation on a live page: a small card bottom right, on the chrome's surface, two answers (sources-section.html, the visitors' picture). */
+.uit-invite { position: fixed; z-index: 2147483646; right: 16px; bottom: max(16px, env(safe-area-inset-bottom)); width: min(320px, calc(100vw - 32px)); padding: 14px 16px; display: grid; gap: 8px; background: var(--uit-surface); color: var(--uit-ink); border-radius: calc(var(--uit-radius) + 4px); box-shadow: 0 0 0 1px var(--uit-hair), 0 10px 28px rgba(21, 26, 33, .3); }
+.uit-invite.uit-contained { position: absolute; z-index: 1; right: 16px; bottom: 16px; }
+.uit-invite h2 { font-size: 15px; line-height: 1.35; font-weight: 500; text-wrap: pretty; }
+.uit-invite p { font-size: 13px; line-height: 1.45; color: var(--uit-dim); text-wrap: pretty; }
+.uit-invite-actions { display: flex; gap: 8px; margin-top: 2px; }
+.uit-invite-actions button { min-height: 32px; font-size: 13px; }
+@container (max-width: 600px) { .uit-invite.uit-contained { left: 8px; right: 8px; width: auto; } }
 /* The player page: consent, the card, the questions and the upload wait, centred on the host's own background. */
 .uit-page { min-height: 100vh; background: var(--uit-host); display: grid; place-items: center; padding: 48px 16px; }
 .uit-consent { max-width: 520px; }

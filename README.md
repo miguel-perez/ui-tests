@@ -32,10 +32,6 @@ A run reports the problems it found, or that it found none this time. There is n
 
 You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.
 
-Where the people come from.
-
-Friends are kind and coworkers know too much. Three ways to reach people who are neither.
-
 In the pull request.
 
 Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request with a report page anyone on the team can open. Your other tests prove the code works. This one shows whether a person can use it.
@@ -208,7 +204,7 @@ users · purpose · catch
 
 Six questions, one per screen; press Next to see them all. The first three come from `users`: `did` and `within` become a recency question with bands, `uses` a multi-select with one decoy, `not` an item among neutral ones, so nobody can tell what disqualifies. The last three come from `purpose`: when they last needed it, how they do it today, how much it matters. Write `users` as the sentence alone and the first three are drafted from it.
 
-The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $54, under a cap you set before it starts; your own link and your own visitors cost nothing.
+The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $55, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
 
 screened 20 · matched 5 · fit: 3 of 5 had the need this month · how they do it today, in their words
 
@@ -270,7 +266,7 @@ Chance of seeing a 1-in-3 problem
 
 Cost
 
-about $54 · cap $60 · results within 48 hours
+about $55 · cap $70 · first people within minutes, usually all five within a few hours
 
 Person 3, after Done
 
@@ -374,29 +370,145 @@ Person 3 · 00:23 → 00:32
 
 ## Where the people come from
 
+Where the people come from.
+
+Friends are kind and coworkers know too much. Three ways to reach people who are neither, and what each one can and cannot tell you. Open a row to see how it works and what the person sees.
+
+Source
+
+Who
+
+Cost
+
+Time
+
+Good for
+
+How it works
+
+link
+
 Your link
 
-Anyone you send it to: a customer, a community, the person at the next desk
+A link to your run that anyone can open. Nothing to install.
+
+Anyone outside your team: a customer, a community, a friend's friend
 
 Free
 
+Pay them if you like; the consent says so either way
+
 As each person finishes
 
-A paid panel
+Closes at the deadline, 48 h unless you set one
 
-People matched to the `users` line in your file, found for you
+What almost anybody would stumble on, today, and every week
 
-About $54 for a short task, under a cap you set
+`npx ui-tests run` prints the link. It can point at a branch preview, at your laptop through a tunnel, or at your live site.
 
-Within 48 hours
+You send it. Ask a friend to pass it on rather than take it themselves.
+
+Whoever opens it answers the same short screener, so the report still says who they were. Each attempt lands as the person finishes.
+
+Friends are kind and people in tech know too much.
+
+Send it beyond your team and beyond tech where you can, and for each problem ask whether your users would hit it too.
+
+visitors
 
 Your visitors
 
-On the hosted version: people already on your live site, invited the moment they are visibly struggling
+On the hosted version: people already on your live site, invited when a page has given them trouble twice.
 
-Free
+Real visitors who seemed stuck and said yes, on their own device
 
-As each person finishes
+Paid like the panel
+
+Under a daily cap you set
+
+Depends on your traffic
+
+A page with trouble and a few hundred visitors a day gives one or two
+
+Real tasks, real devices, the moment it went wrong
+
+One script tag on your site. It watches for the same trouble the attempt view shows: a dead click, a rage click, a U-turn, a long pause.
+
+Mark the pages it must never interrupt. Checkout, payment and a form in progress are never interrupted anyway.
+
+The second sign of trouble on the same page invites the person. Nothing from before a yes is kept. Their attempt is kept beside the five, not inside.
+
+They show where real users get stuck, not how many do.
+
+Treat their problems as leads, and confirm them with a link or a panel run.
+
+paid-panel
+
+A paid panel
+
+Five strangers who match your `users` block, found for you and paid by the run.
+
+People who say they did what `users` describes; nobody who works in UX, design or marketing
+
+About $11 a person
+
+Five about $55; a cap of $70 holds the reserve
+
+First people within minutes
+
+Usually all five within a few hours; a narrow audience a day or more
+
+People like your users when you don't know any
+
+Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token.
+
+`npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends.
+
+People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back.
+
+Panel people answer screeners for money.
+
+Read the fit line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not.
+
+One run filling across two panels
+
+k2m9
+
+5 people wanted
+
+2 h 10 m
+
+prolific
+
+Prolific
+
+3 of 3
+
+first at 6 min
+
+300,000+ active participants, 300+ filters, plus the screener from `users`
+
+First person usually within minutes; five within a few hours; a narrow audience a day or more, and the plan says so
+
+connect
+
+CloudResearch Connect
+
+2 of 2
+
+first at 11 min
+
+Thousands of vetted, census-matched participants; profiled, screened and custom audiences
+
+First person within minutes; five within a few hours; a narrow audience needs a prescreen project, which adds time and cost
+
+$55
+
+$70
+
+$15
+
+Each attempt labelled with its panel
 
 ## This page runs this test
 
@@ -567,8 +679,15 @@ Trace: http://127.0.0.1:43210/00000000-0000-4000-8000-000000000000/0000000000000
 ```text
 Run k2m9 started
 Send this link to anyone: https://ui-tests.com/t/k2m9
-Paid panel: 5 people matched to "people who signed up this week and want a colleague on their board"
-Cap: $60 · results within 48 hours
+Paid panel: 5 people on Prolific and CloudResearch Connect · cap $70
+First people within minutes. Usually all five within a few hours; a narrow audience a day or more.
+The run closes at its deadline, 48 hours unless you set one.
+Person 1 · Prolific · first at 6 min
+Person 2 · Prolific
+Person 3 · CloudResearch Connect · first at 11 min
+Person 4 · Prolific
+Person 5 · CloudResearch Connect
+Paid $55 of the $70 cap · $15 back
 ```
 
 ## Contributing and automation

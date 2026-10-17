@@ -199,7 +199,7 @@ context({
 
 **Note.** Six questions, one per screen; press Next to see them all. The first three come from `users`: `did` and `within` become a recency question with bands, `uses` a multi-select with one decoy, `not` an item among neutral ones, so nobody can tell what disqualifies. The last three come from `purpose`: when they last needed it, how they do it today, how much it matters. Write `users` as the sentence alone and the first three are drafted from it.
 
-The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $54, under a cap you set before it starts; your own link and your own visitors cost nothing.
+The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $55, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
 
 **Lines.** `users · purpose · catch`
 
@@ -218,7 +218,7 @@ The `catch` line sets how many: one in three at 85% confidence means five people
 
 **Screens.** Six, one per screen, each with Next. "A few questions first · n of 6". (1) When did you last sign up for a tool to plan work with a team? In the past week · In the past month · Earlier this year · I haven't. (2) Which of these do you use to plan work? Pick all that apply. Trello · Asana · Notion · Linear · Basecamp · None of these. (3) Which of these have you done? Pick all that apply. Managed a team of more than five · Used Weekboard · Taken a course on planning or project management · None of these. (4) When did you last need to plan a week with other people? This week · This month · Earlier this year · I don't. (5) How do you do it today? A shared document or spreadsheet · A planning tool · Chat and email · In my head. (6) How much does it matter to you to get this right? A lot: it costs me time every week · Some · Not much.
 
-**Worked out on your side.** People: 5 from the panel, matched to `users` · Chance of seeing a 1-in-3 problem: 87% · Cost: about $54 · cap $60 · results within 48 hours.
+**Worked out on your side.** People: 5 from the paid panel, matched to `users` · Chance of seeing a 1-in-3 problem: 87% · Cost: about $55 · cap $70 · first people within minutes, usually all five within a few hours.
 
 **Comes back.** screened 20 · matched 5 · fit: 3 of 5 had the need this month · how they do it today, in their words
 
@@ -306,15 +306,25 @@ When they press Done, the `outcome` runs against the page as they left it. What 
 
 *I don't know anyone who isn't a friend.*
 
+Rebuilt in round seven (issue #31) from [`../../design/artefacts/sources-section.html`](../../design/artefacts/sources-section.html); the copy below is the artefact's, verbatim. The research is [`../discovery/sources-research.md`](../discovery/sources-research.md) and [`../discovery/sources-desk-research.md`](../discovery/sources-desk-research.md).
+
 **Heading.** Where the people come from.
 
-**Lead.** Friends are kind and coworkers know too much. Three ways to reach people who are neither.
+**Lead.** Friends are kind and coworkers know too much. Three ways to reach people who are neither, and what each one can and cannot tell you. Open a row to see how it works and what the person sees.
 
-| | Who | Cost | Results |
-| --- | --- | --- | --- |
-| Your link | Anyone you send it to: a customer, a community, the person at the next desk | Free | As each person finishes |
-| A panel | People matched to the `users` line in your file, found for you | About $54 for a short task, under a cap you set | Within 48 hours |
-| Your visitors | On the hosted version: people already on your live site, invited the moment they are visibly struggling | Free | As each person finishes |
+| Source | Who | Cost | Time | Good for |
+| --- | --- | --- | --- | --- |
+| **Your link** · A link to your run that anyone can open. Nothing to install. | Anyone outside your team: a customer, a community, a friend's friend | Free · Pay them if you like; the consent says so either way | As each person finishes · Closes at the deadline, 48 h unless you set one | What almost anybody would stumble on, today, and every week |
+| **Your visitors** · On the hosted version: people already on your live site, invited when a page has given them trouble twice. | Real visitors who seemed stuck and said yes, on their own device | Paid like the panel · Under a daily cap you set | Depends on your traffic · A page with trouble and a few hundred visitors a day gives one or two | Real tasks, real devices, the moment it went wrong |
+| **A paid panel** · Five strangers who match your `users` block, found for you and paid by the run. | People who say they did what `users` describes; nobody who works in UX, design or marketing | About $11 a person · Five about $55; a cap of $70 holds the reserve | First people within minutes · Usually all five within a few hours; a narrow audience a day or more | People like your users when you don't know any |
+
+One row is open at a time; each opens to how it works, the caveat and one picture.
+
+**Your link.** How it works: (1) `npx ui-tests run` prints the link. It can point at a branch preview, at your laptop through a tunnel, or at your live site. (2) You send it. Ask a friend to pass it on rather than take it themselves. (3) Whoever opens it answers the same short screener, so the report still says who they were. Each attempt lands as the person finishes. Caveat: **Friends are kind and people in tech know too much.** Send it beyond your team and beyond tech where you can, and for each problem ask whether your users would hit it too. Picture: the join screen a person sees when they open the link, from the real player: "Weekboard · about 10 minutes". "Weekboard asked for your help with one thing on their site." "You'll try it the way you normally would, then answer two short questions. There are no wrong moves. The website is being tested, not you." What you do on their page is recorded (always) · Your screen, as a video (needed) · Your voice, only if you choose to talk (optional). "A few questions about you first." [ Start ]
+
+**Your visitors.** How it works: (1) One script tag on your site. It watches for the same trouble the attempt view shows: a dead click, a rage click, a U-turn, a long pause. (2) Mark the pages it must never interrupt. Checkout, payment and a form in progress are never interrupted anyway. (3) The second sign of trouble on the same page invites the person. Nothing from before a yes is kept. Their attempt is kept beside the five, not inside. Caveat: **They show where real users get stuck, not how many do.** Treat their problems as leads, and confirm them with a link or a panel run. Picture: the invitation over the Weekboard page, in the chrome's surface, from the real player: "This page seems to be giving you trouble. Would you show us where? Five minutes, paid, in your own words. The site is being tested, not you." [ Sure ] [ No thanks ]
+
+**A paid panel.** How it works: (1) Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token. (2) `npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends. (3) People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back. Caveat: **Panel people answer screeners for money.** Read the fit line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not. Picture: run k2m9 filling, 5 people wanted, 2 h 10 m. Prolific (its wordmark): 3 of 3, first at 6 min; Pool: 300,000+ active participants, 300+ filters, plus the screener from `users`; Speed: First person usually within minutes; five within a few hours; a narrow audience a day or more, and the plan says so. CloudResearch Connect (its wordmark): 2 of 2, first at 11 min; Pool: Thousands of vetted, census-matched participants; profiled, screened and custom audiences; Speed: First person within minutes; five within a few hours; a narrow audience needs a prescreen project, which adds time and cost. Paid $55 of the $70 cap · $15 back · Each attempt labelled with its panel.
 
 ---
 
@@ -338,7 +348,7 @@ Under it: the report page opens on the ranked problems, each with the moments to
 
 ## 6. Three commands
 
-Folded into block 3 in round six (issue #28). The commands are the section's three cards; the closing copy moves into the screener piece's note (the panel's cost and cap, and that your own link and your own visitors cost nothing) and into the note under the commands (the bare `npx ui-tests` runs every screen on you first). The page no longer shows its own test file.
+Folded into block 3 in round six (issue #28). The commands are the section's three cards; the closing copy moves into the screener piece's note (the panel's cost and cap, and, from round seven (issue #31), that the paid panel and your visitors are the only things you pay for: your visitors are paid like the panel, under a daily cap you set, and only your own link is free) and into the note under the commands (the bare `npx ui-tests` runs every screen on you first). The page no longer shows its own test file.
 
 ---
 
@@ -434,8 +444,15 @@ You see:
 ```text
 Run k2m9 started
 Send this link to anyone: https://ui-tests.com/t/k2m9
-Panel: 5 people matched to "people who signed up this week and want a colleague on their board"
-Cap: $60 · results within 48 hours
+Paid panel: 5 people on Prolific and CloudResearch Connect · cap $70
+First people within minutes. Usually all five within a few hours; a narrow audience a day or more.
+The run closes at its deadline, 48 hours unless you set one.
+Person 1 · Prolific · first at 6 min
+Person 2 · Prolific
+Person 3 · CloudResearch Connect · first at 11 min
+Person 4 · Prolific
+Person 5 · CloudResearch Connect
+Paid $55 of the $70 cap · $15 back
 ```
 
 **6. Read what came back**
