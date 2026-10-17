@@ -6,6 +6,9 @@ The page written out in reading order, one block at a time. One example run (inv
 
 **The agent round (issue #49).** Block 2 is "How it works." with no lead, and its report is the list ([`../../design/artefacts/run-report-list.html`](../../design/artefacts/run-report-list.html)); the sources table opens with no row open; the agent section is [`../../design/artefacts/agents-section.html`](../../design/artefacts/agents-section.html)'s, written out under "The agent section" below; the guide's steps 5 and 6 are "Run it with people" and "Test your API with an agent".
 
+
+**The worth round (issue #53).** A section between where the people come from and the agent section: what a run is worth, in one sentence, from [`../../design/artefacts/roi-section.html`](../../design/artefacts/roi-section.html) and [`../discovery/roi-research.md`](../discovery/roi-research.md), written out under "What a run is worth" below. The page is now seven sections: the promise, how it works, what you write, where the people come from, what a run is worth, the agent section, the hosted section.
+
 ---
 
 ## The visitor
@@ -296,6 +299,24 @@ No row is open on arrival (issue #49); the first click opens one. One row is ope
 **Your visitors.** How it works: (1) One script tag on your site. It watches for the same trouble the attempt view shows: a dead click, a rage click, a U-turn, a long pause. (2) Mark the pages it must never interrupt. Checkout, payment and a form in progress are never interrupted anyway. (3) The second sign of trouble on the same page invites the person. Nothing from before a yes is kept. Their attempt is kept beside the five, not inside. Caveat: **They show where real users get stuck, not how many do.** Treat their problems as leads, and confirm them with a link or a panel run. Picture: the invitation over the Weekboard page, in the chrome's surface, from the real player: "This page seems to be giving you trouble. Would you show us where? Five minutes, paid, in your own words. The site is being tested, not you." [ Sure ] [ No thanks ]
 
 **A paid panel.** How it works: (1) Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token. (2) `npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends. (3) People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back. Caveat: **Panel people answer screeners for money.** Read the Who took part line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not. Picture: run k2m9 filling, 5 people wanted, 2 h 10 m. Prolific (its wordmark): 3 of 3, first at 6 min; Pool: 300,000+ active participants, 300+ filters, plus the screener from `users`; Speed: First person usually within minutes; five within a few hours; a narrow audience a day or more, and the plan says so. CloudResearch Connect (its wordmark): 2 of 2, first at 11 min; Pool: Thousands of vetted, census-matched participants; profiled, screened and custom audiences; Speed: First person within minutes; five within a few hours; a narrow audience needs a prescreen project, which adds time and cost. Paid $55 of the $70 cap · $15 back · Each attempt labelled with its panel.
+
+---
+
+## What a run is worth
+
+*Is it worth paying for?*
+
+Added in the worth round (issue #53) from [`../../design/artefacts/roi-section.html`](../../design/artefacts/roi-section.html) and [`../discovery/roi-research.md`](../discovery/roi-research.md); the words are the artefact's, verbatim. The smallest section on the page: no figure and no calculator, the heading in the first five columns and the rest in the right seven. It weighs the price in a developer's hours, never as an ROI figure, the rule of ten, "studies show", "doubles conversion" or "saves money".
+
+**Heading.** What a run is worth.
+
+**The sentence.** Five people cost about **$60**, about **39 minutes** of a US developer's time. If one problem they show you would have taken longer than that to find from bug reports, reproduce and fix after release, the run has paid for itself.
+
+**The arithmetic.** The arithmetic: `$135,980 ÷ 2,080 h = $65` an hour in wages. Wages are `70%` of what employers pay, so about `$93` an hour. `$60 ÷ $93 = 0.65 h`, about 39 minutes.
+
+The four given numbers, $135,980 (US median pay for software developers, a year), 2,080 (working hours a year), 70 (wages as a share of what employers pay, per cent) and $60 (what the run cost: five people at $12 each), can be edited in place; $65, $93, 0.65 h and the time, in the arithmetic and the sentence, follow. Nothing is kept: a reload brings the defaults back.
+
+**Sources.** [BLS, software developers, May 2025](https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm) · [BLS, employer costs, March 2026](https://www.bls.gov/news.release/archives/ecec_03202026.htm)
 
 ---
 

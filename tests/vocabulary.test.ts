@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { parseHTML } from 'linkedom'
-import { was, shown, offences, verbatim } from './vocabulary'
+import { was, shown, unsaid, offences, verbatim } from './vocabulary'
 
 const exec = promisify(execFile)
 
@@ -32,6 +32,18 @@ it('finds none of the old words in apps/web, packages/ui-tests/src or the genera
     text.split('\n').forEach((line, index) => { const rest = verbatim.reduce((left, phrase) => left.replaceAll(phrase, ''), line.replaceAll("\\'", "'")); for (const name of offences(rest, was)) found.push(`${file}:${index + 1} ${name}`) })
   }
   expect(found).toEqual([])
+})
+
+it('never weighs a run in the words the ROI research rules out, in apps/web, packages/ui-tests/src or the README', async () => {
+  const found: string[] = []
+  for (const file of [...await files('apps/web'), ...await files('packages/ui-tests/src'), 'README.md']) {
+    (await readFile(file, 'utf8')).split('\n').forEach((line, index) => { for (const name of offences(line, unsaid)) found.push(`${file}:${index + 1} ${name}`) })
+  }
+  expect(found).toEqual([])
+  // Each word is caught where it would be said, and the section's own words pass.
+  for (const said of ['A 9,900% ROI', 'By the rule of ten', 'Studies show it', 'It doubles conversion', 'This saves money']) expect(offences(said, unsaid), said).not.toEqual([])
+  const { worth } = await import('../apps/web/lib/copy')
+  expect(offences(`${worth.heading} ${worth.sentence} ${worth.arithmetic}`, unsaid)).toEqual([])
 })
 
 it('keeps every verbatim exception in the sources artefact, word for word', async () => {

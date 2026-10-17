@@ -40,3 +40,14 @@ export const offences = (text: string, words: [string, RegExp][]) => words.filte
  * list. These are the artefact's phrases that use a word of the list; each must stay in design/artefacts/sources-section.html word for word.
  */
 export const verbatim = ['Paid like the panel', 'brings the panel accounts', "each panel's filters", 'a link or a panel run', 'Panel people answer screeners for money.', 'Each attempt labelled with its panel', 'a dead click']
+/**
+ * Issue #53, item 3: what a run is worth is said as hours of a developer's time, never in the words docs/discovery/roi-research.md
+ * rules out: an ROI figure, the rule of ten as fact, "studies show", "doubles conversion" or "saves money".
+ */
+export const unsaid: [string, RegExp][] = [
+  ['ROI', /\bROI\b/],
+  ['rule of ten', /rule of (?:ten|10)\b/i],
+  ['studies show', /studies show/i],
+  ['doubles conversion', /doubles? (?:the )?conversions?/i],
+  ['saves money', /saves? (?:you )?money/i],
+]

@@ -24,7 +24,7 @@ async function read(page: Page): Promise<Reading[]> {
 const near = (value: number, target: number) => Math.abs(value - target) <= 2
 const readings: Record<string, unknown> = {}
 
-for (const [name, route, count] of [['landing', '/', 5], ['guide', '/docs/getting-started', 10]] as const) {
+for (const [name, route, count] of [['landing', '/', 6], ['guide', '/docs/getting-started', 10]] as const) {
   test(`the ${name} sits on one grid at 1440: headings at 96, leads at 630, figures 1248 or 714`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 })
     await page.goto(route)
@@ -40,8 +40,8 @@ for (const [name, route, count] of [['landing', '/', 5], ['guide', '/docs/gettin
     }
     const height = await page.evaluate(() => document.documentElement.scrollHeight)
     if (name === 'landing') {
-      // Six sections in order (the hero, then these five), and the whole page no taller than 9,000px.
-      expect(sections.map(section => section.section)).toEqual(['what-comes-back', 'compilation', 'sources', 'agents', 'hosted'])
+      // Seven sections in order (the hero, then these six; issue #53 puts what a run is worth before the agents), and the whole page no taller than 9,000px.
+      expect(sections.map(section => section.section)).toEqual(['what-comes-back', 'compilation', 'sources', 'worth', 'agents', 'hosted'])
       expect(height).toBeLessThanOrEqual(9000)
     }
     readings[`${name}-1440`] = { height, sections: sections.map(({ section, heading, lead, figures }) => ({ section, heading: heading.x, lead: lead?.x ?? null, widest: figures.length ? Math.max(...figures.map(figure => figure.width)) : null, figures: figures.map(figure => `${figure.x}+${figure.width}`) })) }

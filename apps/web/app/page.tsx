@@ -8,6 +8,7 @@ import { WhatComesBack } from '../components/artefacts/what-comes-back'
 import { Compilation } from '../components/artefacts/compilation'
 import { Sources } from '../components/artefacts/sources'
 import { Agents } from '../components/artefacts/agents'
+import { Worth } from '../components/artefacts/worth'
 import { Dashboard } from '../components/artefacts/dashboard'
 import { Icon } from '../components/icon'
 import { promise, intro, landing, hosted } from '../lib/copy'
@@ -16,8 +17,8 @@ function Actions() { return <div className="actions"><Link className="button pri
 
 /**
  * The landing page: a sequence of typed content per docs/design/site-schema.md, every section on one grid per docs/design/grid-plan.md
- * (design/artefacts/README.md, "The page grid, in one place"): hero, how it works, what you write, where the people come from, the
- * agent section, the hosted section.
+ * (design/artefacts/README.md, "The page grid, in one place"): hero, how it works, what you write, where the people come from, what a
+ * run is worth, the agent section, the hosted section.
  */
 export default function Home() {
   return <SiteShell><main id="content">
@@ -26,6 +27,7 @@ export default function Home() {
       <WhatComesBack />
       <Compilation />
       <Sources />
+      <Worth />
       <Agents />
       <section className="block" aria-labelledby="hosted" data-section="hosted">
         <SectionHead id="hosted" heading={hosted.heading} lead={hosted.lead} />

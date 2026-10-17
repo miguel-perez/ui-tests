@@ -61,7 +61,8 @@ it('says 48 hours only as the deadline, and has no $60 cap, no $54 and no "visib
     const lines = (await readFile(file, 'utf8')).split('\n')
     lines.forEach((line, i) => {
       if (/48 hours/.test(line.replaceAll(deadlineSentence, '').replaceAll("'The run closes at its deadline, 48 hours unless you set one.'", ''))) found.push(`${file}:${i + 1} 48 hours`)
-      if (/\$60\b/.test(line)) found.push(`${file}:${i + 1} $60`)
+      // Issue #53: $60 is the run's price in what a run is worth (five people at $12); it is never the cap, which is $70.
+      if (/\$60\b/.test(line) && /\bcap\b|\bbudget\b|max: 60\b/i.test(line)) found.push(`${file}:${i + 1} $60 cap`)
       if (/\$54\b/.test(line)) found.push(`${file}:${i + 1} $54`)
       if (/visibly struggling/i.test(line)) found.push(`${file}:${i + 1} visibly struggling`)
     })
