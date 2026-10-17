@@ -4,7 +4,8 @@
  */
 export const was: [string, RegExp][] = [
   ['P3 as a person', /\bP[1-5]\b/],
-  ['panel without paid', /(?<!paid[ -])\bpanel\b/i],
+  // `--panel` is the `host` command's flag (issue #56), a literal and not the word.
+  ['panel without paid', /(?<!paid[ -]|--)\bpanel\b/i],
   ['SEQ', /\bSEQ\b/],
   ['UX-Lite', /\bUX-?Lite\b/i],
   ['confident failure', /confident failure/i],
@@ -39,7 +40,22 @@ export const offences = (text: string, words: [string, RegExp][]) => words.filte
  * Issue #31, item 2: the sources section's copy is the artefact's, every cell, step and caveat as written, and the item wins over this
  * list. These are the artefact's phrases that use a word of the list; each must stay in design/artefacts/sources-section.html word for word.
  */
-export const verbatim = ['Like the panel, under a daily cap you set', 'brings the panel accounts', "each panel's filters", 'a link or a panel run', 'Panel people answer screeners for money.', 'Each attempt labelled with its panel', 'a dead click']
+export const verbatim = ['Like the panel, under a daily cap you set', 'your own panel account', "each panel's filters", 'a link or a panel run', 'Panel people answer screeners for money.', 'Each attempt labelled with its panel', 'a dead click']
+/**
+ * Issue #56: the host section's terminal, as design/artefacts/hosted-section.html draws it, names its last row `panel`; the phrase is
+ * taken out before the list is checked and must stay in that artefact word for word (whitespace collapsed).
+ */
+export const hostVerbatim = ['panel       no key yet']
+/**
+ * Issue #56, item 5: there is no hosted service. ui-tests.com is never "the hosted version", and nothing says it keeps people's
+ * recordings or money: the deploy, the bucket and the panel wallet are the author's.
+ */
+export const hosting: [string, RegExp][] = [
+  ['hosted version', /hosted version/i],
+  ['our servers', /\bour servers?\b/i],
+  ['we store', /\bwe store\b/i],
+  ['our wallet', /\bour wallet\b/i],
+]
 /**
  * Issue #53, item 3: what a run is worth is said as hours of a developer's time, never in the words docs/discovery/roi-research.md
  * rules out: an ROI figure, the rule of ten as fact, "studies show", "doubles conversion" or "saves money".

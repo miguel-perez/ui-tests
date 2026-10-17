@@ -189,7 +189,7 @@ Under it: Fix problem 3 first. Two people believed they had finished, and their 
 | --- | --- | --- | --- |
 | Your link | Anyone you send it to: customers, a community, the person at the next desk | Free | As each person finishes |
 | A panel | Five people matched to `users`, found for you | From $60 for five on Prolific and CloudResearch Connect, under a cap of $70 that holds the reserve. | First people within minutes; usually all five within a few hours |
-| Your visitors | On the hosted version: people already on your live site, invited when a page has given them trouble twice | Paid like the panel, under a daily cap you set | Depends on your traffic |
+| Your visitors | On your deploy: people already on your live site, invited when a page has given them trouble twice | Paid like the panel, under a daily cap you set | Depends on your traffic |
 
 ---
 

@@ -8,8 +8,8 @@ export { impacts, ranked, legend, legendLine, caveat, problemsLine, type Impact 
  * three problems to fix first with a link to the moment, the links and a footer; the rest go in `output.text` inside `<details>`.
  * No annotations (problems are on pages, not lines, and GitHub cannot clear old ones) and no images. One sticky comment of three
  * to five lines, updated in place and posted only when the outcome changes, unless the author turns it off.
- * The self-hosted track calls `publishCheck` with the job's `GITHUB_TOKEN` (`checks: write`, `pull-requests: write` when the sticky comment is on); the hosted
- * App calls the same function with its installation token.
+ * The self-hosted track calls `publishCheck` with the job's `GITHUB_TOKEN` (`checks: write`, `pull-requests: write` when the sticky comment is on); a GitHub
+ * App on the author's own deploy (`ui-tests host`) calls the same function with its installation token.
  */
 
 /** One problem as the check shows it: the sentence about the design, the page and element, how many people, the impact and the moment to watch. */

@@ -9,6 +9,8 @@ The page written out in reading order, one block at a time. One example run (inv
 
 **The worth round (issue #53).** A section between where the people come from and the agent section: what a run is worth, in one sentence, from [`../../design/artefacts/roi-section.html`](../../design/artefacts/roi-section.html) and [`../discovery/roi-research.md`](../discovery/roi-research.md), written out under "What a run is worth" below. The page is now seven sections: the promise, how it works, what you write, where the people come from, what a run is worth, the agent section, the hosted section.
 
+**The host round (issue #56).** There is no hosted service ([`../discovery/hosting-decision.md`](../discovery/hosting-decision.md)): the no-repo path is a one-command deploy the author owns. The last section is [`../../design/artefacts/hosted-section.html`](../../design/artefacts/hosted-section.html)'s, written out under "No repo to put it in? One command." below; the dashboard leaves the landing; the visitors row says "On your deploy"; the guide's "Without a repository" is one paragraph on `ui-tests host` with its caveat line.
+
 ---
 
 ## The visitor
@@ -232,7 +234,7 @@ Rebuilt in round seven (issue #31) from [`../../design/artefacts/sources-section
 | Source | Who | Cost | Time | Good for |
 | --- | --- | --- | --- | --- |
 | **Your link** · A link to your run that anyone can open. Nothing to install. | Anyone outside your team: a customer, a community, a friend's friend | Free · Pay them if you like; the consent says so either way | As each person finishes · Closes at the deadline, 48 h unless you set one | What almost anybody would stumble on, today, and every week |
-| **Your visitors** · On the hosted version: people already on your live site, invited when a page has given them trouble twice. | Real visitors who seemed stuck and said yes, on their own device | Paid · Like the panel, under a daily cap you set | Depends on your traffic · A page with trouble and a few hundred visitors a day gives one or two | Real tasks, real devices, the moment it went wrong |
+| **Your visitors** · On your deploy: people already on your live site, invited when a page has given them trouble twice. | Real visitors who seemed stuck and said yes, on their own device | Paid · Like the panel, under a daily cap you set | Depends on your traffic · A page with trouble and a few hundred visitors a day gives one or two | Real tasks, real devices, the moment it went wrong |
 | **A paid panel** · Five strangers who match your `users` block, found for you and paid by the run. | People who say they did what `users` describes; nobody who works in UX, design or marketing | Starting at $12 a person · Five from $60; a cap of $70 holds the reserve | First people within minutes · Usually all five within a few hours; a narrow audience a day or more | People like your users when you don't know any |
 
 No row is open on arrival (issue #49); the first click opens one. One row is open at a time; each opens to how it works, the caveat and one picture.
@@ -241,7 +243,7 @@ No row is open on arrival (issue #49); the first click opens one. One row is ope
 
 **Your visitors.** How it works: (1) One script tag on your site. It watches for the same trouble the attempt view shows: a dead click, a rage click, a U-turn, a long pause. (2) Mark the pages it must never interrupt. Checkout, payment and a form in progress are never interrupted anyway. (3) The second sign of trouble on the same page invites the person. Nothing from before a yes is kept. Their attempt is kept beside the five, not inside. Caveat: **They show where real users get stuck, not how many do.** Treat their problems as leads, and confirm them with a link or a panel run. Picture: the invitation over the Weekboard page, in the chrome's surface, from the real player: "This page seems to be giving you trouble. Would you show us where? Five minutes, paid, in your own words. The site is being tested, not you." [ Sure ] [ No thanks ]
 
-**A paid panel.** How it works: (1) Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token. (2) `npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends. (3) People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back. Caveat: **Panel people answer screeners for money.** Read the Who took part line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not. Picture: run k2m9 filling, 5 people wanted, 2 h 10 m. Prolific (its wordmark): 3 of 3, first at 6 min; Pool: 300,000+ active participants, 300+ filters, plus the screener from `users`; Speed: First person usually within minutes; five within a few hours; a narrow audience a day or more, and the plan says so. CloudResearch Connect (its wordmark): 2 of 2, first at 11 min; Pool: Thousands of vetted, census-matched participants; profiled, screened and custom audiences; Speed: First person within minutes; five within a few hours; a narrow audience needs a prescreen project, which adds time and cost. Paid $60 of the $70 cap · $10 back · Each attempt labelled with its panel.
+**A paid panel.** How it works: (1) Put a cap in the config. Your deploy and your machine both use your own panel account: add a token once. (2) `npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends. (3) People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back. Caveat: **Panel people answer screeners for money.** Read the Who took part line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not. Picture: run k2m9 filling, 5 people wanted, 2 h 10 m. Prolific (its wordmark): 3 of 3, first at 6 min; Pool: 300,000+ active participants, 300+ filters, plus the screener from `users`; Speed: First person usually within minutes; five within a few hours; a narrow audience a day or more, and the plan says so. CloudResearch Connect (its wordmark): 2 of 2, first at 11 min; Pool: Thousands of vetted, census-matched participants; profiled, screened and custom audiences; Speed: First person within minutes; five within a few hours; a narrow audience needs a prescreen project, which adds time and cost. Paid $60 of the $70 cap · $10 back · Each attempt labelled with its panel.
 
 ---
 
@@ -280,6 +282,35 @@ Rebuilt in the agent round (issue #49) from [`../../design/artefacts/agents-sect
 | Your API | `target: { http }` | Endpoint names, schemas and error bodies are its whole page. A `400` with no reason is a dead end. |
 | Your MCP server | `target: { mcp }` | Tool names and their descriptions are the only labels it reads. If two tools sound alike, it picks one. |
 | Your CLI | `target: { cli }` | Flags, help text and exit codes are what it sees. A `--help` that lies costs it the run. |
+
+---
+
+## No repo to put it in? One command.
+
+*I have no repository. Can I still use it?*
+
+Rebuilt in the host round (issue #56) from [`../../design/artefacts/hosted-section.html`](../../design/artefacts/hosted-section.html) and [`../discovery/hosting-decision.md`](../discovery/hosting-decision.md); the words are the artefact's, verbatim. Two pieces, unnumbered; no dashboard.
+
+**Lead.** `npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.
+
+**The command.** Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.
+
+```text
+$ npx ui-tests host
+Deploying to your account…
+  collector   https://ui-tests.weekboard.workers.dev
+  player      https://ui-tests.weekboard.workers.dev/t
+  store       weekboard-ui-tests, your bucket, 0 recordings
+  panel       no key yet · add one with ui-tests host --panel prolific
+```
+
+**The line.** One script tag, pointing at your deploy. It records only while a run is open and a person has said yes; the rest of the time it is forty lines that do nothing.
+
+```html
+<script src="https://ui-tests.weekboard.workers.dev/s.js" async></script>
+```
+
+**Closing.** Same test, same report, on a box you own.
 
 ---
 

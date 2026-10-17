@@ -5,17 +5,17 @@
 | Piece | Runner track | Hosted track |
 | --- | --- | --- |
 | Recorder, taskbar, player | SDK mounted in the author's Next.js app through a root-layout component, active only when a run cookie is present | One snippet through a tag manager or `<script>` on the live site, companion mode |
-| Collector | Route handler in the author's app, writes to the run store | Our collector |
-| Run store | SQLite file in dev; Postgres on previews and in CI; independent of any deployment | Our store |
-| Hooks | Run by `ui-tests verify` in CI or on the dev machine against stored end-state snapshots; never inside the app under test | Success checks by URL, element or question, evaluated by our service |
-| Context definition | `*.ui.test.ts` | Hosted UI with the same inputs |
-| Participants | link, panel by the author's key | link, panel by held accounts, intercept |
-| Payment | author's panel wallet, cap per run | our wallet, cap per run for the paid panel; for intercept, a cap per day, since it runs on the live site with no run to cap |
+| Collector | Route handler in the author's app, writes to the run store | the author's deploy |
+| Run store | SQLite file in dev; Postgres on previews and in CI; independent of any deployment | the deploy's store, recordings in the author's bucket |
+| Hooks | Run by `ui-tests verify` in CI or on the dev machine against stored end-state snapshots; never inside the app under test | Success checks by URL, element or question, evaluated on the deploy |
+| Context definition | `*.ui.test.ts` | a form on the deploy with the same inputs |
+| Participants | link, panel by the author's key | link, panel by the author's key, intercept |
+| Payment | author's panel wallet, cap per run | author's panel wallet, cap per run; for intercept a cap per day, on the deploy |
 | Output | the run record, trace, shareable report page, GitHub check | the same record, trace and report page |
 
 The candidate build can record and store attempts; it cannot judge them. Hooks, happy paths and expected answers never ship to the app or the player. The run record outlives any preview because it lives in the store, and `ui-tests status`, `verify` and the GitHub check read the store, not the preview.
 
-Any framework can implement the recorder and collector contract; it is a handful of HTTP endpoints with JSON schemas. Next.js is the one shipped. The hosted track is the same compiler, lint, sentence, issues and trace with a different install path and host.
+Any framework can implement the recorder and collector contract; it is a handful of HTTP endpoints with JSON schemas. Next.js is the one shipped. The hosted track is the same compiler, lint, sentence, issues and trace with a different install path and host: the author's deploy, made by `ui-tests host` ([`01-dx-contract.md`](01-dx-contract.md); [`../discovery/hosting-decision.md`](../discovery/hosting-decision.md)). There is no service operated by ui-tests.com; recordings, panel accounts and payment are the author's.
 
 ## Reachability
 
@@ -25,6 +25,7 @@ Participants have to reach the build. The mode is declared in the config, shown 
 | --- | --- | --- | --- |
 | Public preview | A Vercel preview with the protection-bypass token in the invite link | In the app; the Postgres store | Needs a deployment |
 | Tunnel from a local machine | `ui-tests run --tunnel` opens a short-lived cloudflared or ngrok tunnel to `localhost`, scoped to the run and closed at the deadline or when the process exits, whichever is first | On the dev machine; SQLite | The machine must stay up; fits link runs and rehearsal, not a paid-panel run, which stays open until its deadline (48 hours unless the author sets one) |
+| The author's deploy | Participants reach the live site | The collector and store live on the deploy | The provider's free tier |
 | Inside the perimeter | Invite links on the internal hostname; collector, store and runner all run inside; nothing crosses the boundary unless the author exports the record | Inside | Participants must be inside too: employees, a lab, a LAN; panels and the hosted track do not apply |
 | Local only | As inside, with the runner on the same box and participants in the room | On the box | Hallway testing with a recorder and a trace |
 

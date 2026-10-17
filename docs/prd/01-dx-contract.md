@@ -177,6 +177,7 @@ Lint failures block a run and name the fix. Warnings appear in the trace.
 | `ui-tests trace <run>` | Opens the trace viewer |
 | `ui-tests lint` | Lint only, no run |
 | `ui-tests estimate` | Derived n, minutes, incentive, and cost per source before anything is spent |
+| `ui-tests host [--panel prolific\|connect]` | The no-repo path ([`../discovery/hosting-decision.md`](../discovery/hosting-decision.md)): deploys the collector, the player and the store to a free tier in the author's own account (first provider: Cloudflare Workers with R2 and D1; the contract is provider-agnostic, a container plus a bucket); prints the collector and player URLs, the store name and the panel state, and the one line to paste on the live site. `--panel` adds the author's own Prolific token or Connect key to the deploy. Idempotent: run it again to update. Until the deploy ships ([#59](https://github.com/miguel-perez/ui-tests/issues/59)) it prints what it will do and where, and exits 2 with "host: not shipped yet; see https://github.com/miguel-perez/ui-tests/issues/59" |
 | `ui-tests mcp` | Serves the commands above as MCP tools with the same arguments, outputs and guards; see [`05-integration.md`](05-integration.md) |
 
 `--json` keeps stdout for structure and stderr for diagnostics.

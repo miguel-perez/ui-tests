@@ -3,7 +3,8 @@ import { writeFile, mkdir } from 'node:fs/promises'
 
 /**
  * The page grid (design/artefacts/README.md, "The page grid, in one place"; issue #46, item 1). Every landing and guide section sits on
- * the 1248px container: at 1440 its heading starts at 96, its lead at 630 where it has one, and every figure takes all twelve columns
+ * the 1248px container: at 1440 its heading starts at 96, its lead at 630 where it has one (or, in the host section, ends flush with the
+ * container at 1344 inside the right seven; issue #56), and every figure takes all twelve columns
  * (96, 1248 wide) or the right seven (630, 714 wide), so the widest is 1248 or 714; at 375 everything is one 343px column, 16px in,
  * with no horizontal scroll. A section is a `[data-section]`; its heading, lead and figures are the `[data-heading]`, `[data-lead]`
  * and outermost `[data-figure]` that belong to it and not to a section inside it.
@@ -24,7 +25,7 @@ async function read(page: Page): Promise<Reading[]> {
 const near = (value: number, target: number) => Math.abs(value - target) <= 2
 const readings: Record<string, unknown> = {}
 
-for (const [name, route, count] of [['landing', '/', 6], ['guide', '/docs/getting-started', 10]] as const) {
+for (const [name, route, count] of [['landing', '/', 6], ['guide', '/docs/getting-started', 8]] as const) {
   test(`the ${name} sits on one grid at 1440: headings at 96, leads at 630, figures 1248 or 714`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 })
     await page.goto(route)
@@ -34,7 +35,11 @@ for (const [name, route, count] of [['landing', '/', 6], ['guide', '/docs/gettin
     for (const { section, heading, lead, figures } of sections) {
       expect(near(heading.x, 96), `${section} heading at ${heading.x}`).toBe(true)
       expect(heading.width, `${section} heading in the first five columns`).toBeLessThanOrEqual(512)
-      if (lead) expect(near(lead.x, 630), `${section} lead at ${lead.x}`).toBe(true)
+      if (lead && section === 'hosted') {
+        // Issue #56: the host section's lead keeps to 64ch in the right seven and ends flush with the container's right edge.
+        expect(near(lead.x + lead.width, 1344), `${section} lead ends at ${lead.x + lead.width}`).toBe(true)
+        expect(lead.x, `${section} lead in the right seven`).toBeGreaterThanOrEqual(630 - 2)
+      } else if (lead) expect(near(lead.x, 630), `${section} lead at ${lead.x}`).toBe(true)
       for (const figure of figures) expect((near(figure.x, 96) && near(figure.width, 1248)) || (near(figure.x, 630) && near(figure.width, 714)), `${section} figure at ${figure.x}, ${figure.width} wide`).toBe(true)
       if (figures.length) expect([1248, 714].some(width => near(Math.max(...figures.map(figure => figure.width)), width)), `${section} widest figure`).toBe(true)
     }
@@ -44,7 +49,7 @@ for (const [name, route, count] of [['landing', '/', 6], ['guide', '/docs/gettin
       expect(sections.map(section => section.section)).toEqual(['what-comes-back', 'compilation', 'sources', 'worth', 'agents', 'hosted'])
       expect(height).toBeLessThanOrEqual(9000)
     }
-    readings[`${name}-1440`] = { height, sections: sections.map(({ section, heading, lead, figures }) => ({ section, heading: heading.x, lead: lead?.x ?? null, widest: figures.length ? Math.max(...figures.map(figure => figure.width)) : null, figures: figures.map(figure => `${figure.x}+${figure.width}`) })) }
+    readings[`${name}-1440`] = { height, sections: sections.map(({ section, heading, lead, figures }) => ({ section, heading: heading.x, lead: lead?.x ?? null, leadRight: lead ? Math.round(lead.x + lead.width) : null, widest: figures.length ? Math.max(...figures.map(figure => figure.width)) : null, figures: figures.map(figure => `${figure.x}+${figure.width}`) })) }
   })
 
   test(`the ${name} is one column at 375 with no horizontal scroll`, async ({ page }) => {

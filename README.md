@@ -74,91 +74,44 @@ sent the email in the query string, 400
 
 ## Without a repository
 
-No repo to put it in? Paste one line.
+No repo to put it in? One command.
 
-One script tag on your live site, through your tag manager if that is how you ship. Then the same test in a form instead of a file: who the users are, what they are trying to do, and how you can tell they did it, by a page they reach, an element they see or a question they answer. People come from your link, a paid panel or your own visitors, and the report is a page you can share.
+`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.
 
-Same test, same report, no install.
+The command
 
-```html
-<script src="https://ui-tests.com/s.js" data-site="weekboard" async></script>
+Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.
+
+Terminal
+
+Example
+
+```text
+$ npx ui-tests host
+Deploying to your account…
+  collector   https://ui-tests.weekboard.workers.dev
+  player      https://ui-tests.weekboard.workers.dev/t
+  store       weekboard-ui-tests, your bucket, 0 recordings
+  panel       no key yet · add one with ui-tests host --panel prolific
 ```
 
-people who signed up this week and want a colleague on their board
+The line
 
-plan the week together without emailing screenshots around
+One script tag, pointing at your deploy. It records only while a run is open and a person has said yes; the rest of the time it is forty lines that do nothing.
 
-invite a colleague
+index.html
 
-signed up for a tool to plan work with a team
+or your tag manager
 
-7 days
+```html
+<script src="https://ui-tests.weekboard.workers.dev/s.js" async></script>
+```
 
-Trello, Asana, Notion, Linear
+Same test, same report, on a box you own.
 
-has used Weekboard
+No repository? `npx ui-tests host` deploys the collector, the player and the store to a free tier in an account you own, Cloudflare Workers first, and prints the one line to paste on your live site, through your tag manager if that is how you ship. Then the same test in a form on your deploy instead of a file; the recordings stay in your bucket. Run it again to update.
 
-Paste the line
-
-You see the script in your live site’s markup, or in the tag manager that publishes it.
-
-Fill the form
-
-You see the run on your dashboard, and a report page you can share once the attempts are in.
-
-## The hosted dashboard
-
-16 Oct
-
-3 of 5
-
-running
-
-change the plan to Team
-
-15 Oct
-
-5 of 5
-
-done
-
-Reached 5 of 5 · 1 problem
-
-great
-
-export last month’s board
-
-12 Oct
-
-8 of 8
-
-done
-
-Reached 6 of 8 · 3 problems
-
-check
-
-start a board from a template
-
-9 Oct
-
-5 of 5
-
-done
-
-Reached 5 of 5 · none found
-
-great
-
-find a card from last week
-
-—
-
-0 of 5
-
-draft
-
-archive a finished board
+host: not shipped yet; see https://github.com/miguel-perez/ui-tests/issues/59
 
 ## What you write, what they see
 
@@ -486,7 +439,7 @@ visitors
 
 Your visitors
 
-On the hosted version: people already on your live site, invited when a page has given them trouble twice.
+On your deploy: people already on your live site, invited when a page has given them trouble twice.
 
 Real visitors who seemed stuck and said yes, on their own device
 
@@ -528,7 +481,7 @@ Usually all five within a few hours; a narrow audience a day or more
 
 People like your users when you don't know any
 
-Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token.
+Put a cap in the config. Your deploy and your machine both use your own panel account: add a token once.
 
 `npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends.
 
@@ -649,9 +602,9 @@ Run it with people
 
 Test your API with an agent
 
-Node 22. Paste one line on any site, or install the package in a Next.js app.
+Node 22. Install the package in a Next.js app, or run one command if you have no repository.
 
-In a Next.js app, install the package. On any other site, paste one line instead: Without a repository.
+In a Next.js app, install the package. With no repository, run one command instead: Without a repository.
 
 You see "ui-tests" in `devDependencies`.
 

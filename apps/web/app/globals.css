@@ -579,50 +579,18 @@ main { position: relative; isolation: isolate; }
 /* L5 · AgentRun: the terminal in the right seven, the caption in the first five beside it. */
 .figure-right .terminal-body { font-size: 13px; }
 
-/* L7 · Snippet and Dashboard. Fixed fields first (date, people, status, result), the name last. */
-.dashboard-scroll { overflow-x: auto; }
-.dashboard table { width: 100%; border-collapse: collapse; font-size: 14px; }
-.dashboard col, .dashboard th, .dashboard td { text-align: left; }
-.dashboard th { padding: 10px 16px; font: 400 11px var(--font-mono), monospace; color: var(--muted); border-bottom: 1px solid var(--line); }
-.dashboard td { padding: 14px 16px; border-bottom: 1px solid var(--line); vertical-align: middle; }
-.dashboard tr:last-child td { border-bottom: 0; }
-.dashboard th:nth-child(-n+4), .dashboard td:nth-child(-n+4) { width: 16.66%; }
-.dashboard .num { text-align: right; font-size: 13px; white-space: nowrap; }
-.dashboard td.num { font-variant-numeric: tabular-nums; }
-.dashboard td:nth-child(2) { display: table-cell; }
-.run-progress { display: block; width: 72px; height: 3px; margin: 6px 0 0 auto; border-radius: 2px; background: linear-gradient(to right, var(--path) calc(var(--progress) * 100%), var(--line) 0); }
-.status-chip { padding: 2px 10px; border-radius: 10px; background: var(--canvas); border: 1px solid var(--line); font: 12px var(--font-mono), monospace; color: var(--muted); }
-.status-chip[data-status="running"] { color: var(--path); }
-.band-chip { margin-left: 8px; padding: 1px 8px; border-radius: 10px; font: 11px var(--font-mono), monospace; border: 1px solid currentColor; }
-.band-chip[data-band="great"] { color: var(--done); }
-.band-chip[data-band="check"] { color: var(--pause); }
-.band-chip[data-band="rework"] { color: var(--dead); }
-.empty { color: var(--muted); }
-.run-name { font-weight: 500; }
+/* L7 · The host section (design/artefacts/hosted-section.html; issue #56): the lead flush to the container's right edge, then two
+   unnumbered pieces with no hairline above them, the terminal and the script tag as white windows across twelve columns. */
+.host .section-head p { justify-self: end; }
+.piece.host-piece { border-top: 0; padding-top: 0; }
+.host-piece .piece-intro h3::before { content: none; }
+.host-window .window-chrome { min-height: 0; padding: 10px 14px; font: 400 12px/1 var(--font-mono), monospace; }
+.host-term, .host-snip { padding: 18px 20px; font: 400 13.5px/1.75 var(--font-mono), monospace; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
+.host-snip { padding: 16px 20px; font-size: 14px; line-height: 1.6; }
+.host-term .p { color: var(--muted); } .host-term .a { color: var(--green); } .host-term .u { color: var(--blue); } .host-term .k { color: var(--muted); } .host-term b { font-weight: 500; color: var(--ink); }
+.host-snip .t { color: var(--purple); } .host-snip .at { color: var(--teal); } .host-snip .s { color: var(--green); }
 
-/* The hosted form (guide). A white window, on the site tokens. */
-.hosted-form form { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: var(--space-1) var(--gutter); padding: var(--space-1); }
-.hosted-form .wide { grid-column: 1 / -1; }
-.hosted-field label { display: block; font-size: 13px; color: var(--muted); }
-.hosted-form input:not([type=checkbox]), .hosted-form textarea, .hosted-form select { display: block; width: 100%; padding: 10px 12px; margin-top: 8px; color: var(--ink); background: var(--canvas); border: 1px solid var(--line); border-radius: 4px; }
-.hosted-form textarea { resize: vertical; }
-.hosted-sources, .hosted-screen { border: 1px solid var(--line); border-radius: 6px; padding: 8px 16px 16px; margin: 0; min-width: 0; }
-.hosted-screen { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 16px var(--gutter); }
-.hosted-sources legend, .hosted-screen legend { padding: 0 8px; font-size: 13px; color: var(--muted); }
-.source-toggle { display: flex; align-items: center; gap: 10px; min-height: 48px; font-size: 14px; border-bottom: 1px solid var(--line); }
-.source-toggle:last-child { border-bottom: 0; }
-.source-toggle > label:first-child { display: flex; align-items: center; gap: 10px; }
-.source-toggle .line-icon { color: var(--muted); }
-.hosted-form input[role=switch] { appearance: none; -webkit-appearance: none; position: relative; flex-shrink: 0; width: 32px; height: 18px; margin: 0; border-radius: 9px; background: var(--line); border: 1px solid var(--muted); cursor: pointer; }
-.hosted-form input[role=switch]::before { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--muted); }
-.hosted-form input[role=switch]:checked { background: var(--done); border-color: var(--done); }
-.hosted-form input[role=switch]:checked::before { transform: translateX(14px); background: var(--surface); }
-.hosted-form .source-cap { display: flex; align-items: center; gap: 6px; margin-left: auto; font: 12px var(--font-mono), monospace; color: var(--muted); }
-.hosted-form .source-cap input { width: 72px; margin: 0 !important; padding: 4px 8px !important; }
-.hosted-submit { display: flex; flex-wrap: wrap; align-items: center; gap: 12px var(--space-1); }
-.hosted-status { margin: 0; font-size: 12px; color: var(--muted); }
-
-/* The guide: the step index, then Step × 6 and the hosted track as Step × 2. */
+/* The guide: the step index, then Step × 6 and "Without a repository" as one paragraph with the CLI's caveat (issue #56). */
 .guide { padding-bottom: var(--space-3); }
 .guide-head { padding-top: var(--space-3); align-items: baseline; }
 .guide-head h1 { font-size: 48px; line-height: 1.1; font-weight: 500; letter-spacing: -.04em; }
@@ -647,6 +615,8 @@ main { position: relative; isolation: isolate; }
 .guide-track { padding-top: var(--space-3); }
 .guide-track > h2 { grid-column: 1; }
 .guide-track > .step { grid-column: 1 / -1; }
+.guide-host { display: grid; gap: 12px; max-width: 64ch; color: var(--muted); }
+.guide-caveat { font: 13px var(--font-mono), monospace; overflow-wrap: anywhere; }
 
 /* States change paint only: no size, weight, margin, padding or position changes on hover, focus or active. */
 @media (hover: hover) {
@@ -726,8 +696,8 @@ main { position: relative; isolation: isolate; }
   .rr-hd .rr-impact { grid-row: 1; }
   .rr-where { overflow-wrap: anywhere; }
   .report-column { width: calc(100% - 48px); }
-  .hosted-form form, .hosted-screen { grid-template-columns: 1fr; padding: 16px; }
-  .hosted-form form > *, .hosted-screen > * { grid-column: 1 !important; }
+  .host .section-head p { justify-self: start; }
+  .host-term, .host-snip { padding: 16px; font-size: 12px; }
   .guide-head h1 { font-size: 40px; }
   .step > h2 { font-size: 26px; }
   /* The compilation stacks: commands one per row, the code wraps, the frames fit their sheets, the pill docks across the bottom. */

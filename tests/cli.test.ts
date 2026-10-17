@@ -90,3 +90,17 @@ it('lint prints the screener it drafted from users as TypeScript to paste in, an
   const { stdout: pinned } = await exec(process.execPath, [cli, 'lint', '--file', file], { cwd, timeout: 10000 })
   expect(pinned).not.toContain('users-')
 }, 30000)
+it('host prints its contract with --help, and until the deploy ships prints the plan and exits 2 with the caveat (issue #56)', async () => {
+  const { hostHelp, hostCaveat, hostIssue } = await import('../packages/ui-tests/src/host')
+  const { stdout: help } = await exec(process.execPath, [cli, 'host', '--help'], { timeout: 10000 })
+  expect(help.trim()).toBe(hostHelp)
+  for (const line of ['Usage: ui-tests host [--panel prolific|connect]', 'Cloudflare Workers with R2 and D1', 'provider-agnostic', 'collector and player URLs, the store name', 'one line to paste', 'run it again to update', hostIssue]) expect(help).toContain(line)
+  for (const extra of [[], ['--panel', 'prolific']]) {
+    const failed = await exec(process.execPath, [cli, 'host', ...extra], { timeout: 10000 }).then(() => null, error => error as { code: number; stdout: string; stderr: string })
+    expect(failed).toMatchObject({ code: 2 })
+    expect(failed!.stderr.trim()).toBe(`host: not shipped yet; see ${hostIssue}`)
+    expect(failed!.stderr.trim()).toBe(hostCaveat)
+    expect(failed!.stdout).toContain('free tier in your account')
+  }
+  await expect(exec(process.execPath, [cli, 'host', '--panel', 'mturk'], { timeout: 10000 })).rejects.toMatchObject({ code: 1, stderr: expect.stringContaining('--panel takes one of: prolific, connect') })
+}, 30000)
