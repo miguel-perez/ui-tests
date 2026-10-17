@@ -14,7 +14,7 @@ There is no hosted service. The no-repo path is **a one-command deploy that the 
 
 - **PRD 05, "Where things run".** The hosted column stops saying "our": collector, store and hooks run on the author's deploy; payment is the author's panel wallet in both tracks; the intercept cap per day stays, on the deploy. The reachability table gains a row, "The author's deploy": participants reach the live site; the collector and store live on the deploy; the limit is the provider's free tier.
 - **PRD 03.** The `intercept` source's "hosted" becomes "the author's deploy"; the panel rows already say "the author's token / key".
-- **The landing's hosted section.** Heading "No repo to put it in? One command." The lead names the deploy and that it is the author's. The three pieces: the command and what it deploys, the line it prints, the dashboard it serves. Closing: "Same test, same report, on a box you own."
+- **The landing's hosted section.** Heading "No repo to put it in? One command." The lead names the deploy and that it is the author's. Two pieces, unnumbered: the command and what it deploys, and the line it prints. The dashboard the deploy serves is not on the landing (dropped in review to keep the section small; the deploy still serves it). Closing: "Same test, same report, on a box you own."
 - **The sources table.** The visitors row's "On the hosted version" becomes "On your deploy".
 - **Words to keep.** "Hosted" no longer describes ui-tests.com; the only hosted thing is the author's deploy. Nothing on the page says "our servers" or "we store".
 
