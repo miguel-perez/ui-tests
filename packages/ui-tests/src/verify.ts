@@ -14,7 +14,7 @@ async function execute(hook: Hook, snapshot: Snapshot | undefined, answers: Reco
   if (!snapshot?.url || !snapshot.dom) return { reached: "couldn't tell", reason: 'Missing end-state snapshot' }
   try {
     const { document } = parseHTML(snapshot.dom)
-    await hook({ page: { url: () => snapshot.url, query: selector => document.querySelector(selector) }, participant: { answer: async (question, options) => {
+    await hook({ page: { url: () => snapshot.url, query: selector => document.querySelector(selector), textContent: async selector => document.querySelector(selector)?.textContent ?? undefined }, participant: { answer: async (question, options) => {
       if (!options.choices.includes(options.expected) || options.choices.length < 2) throw new Error('A validation question needs an expected answer and distractors')
       if (!(question in answers)) throw Object.assign(new MissingEvidence('Participant validation answer needed'), { question: { question, ...options } })
       return answers[question]

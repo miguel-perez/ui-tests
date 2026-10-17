@@ -92,3 +92,37 @@ it('carries the derived card text in all four places and no old bar label anywhe
     expect(text, file).not.toContain('Imagine you want to invite a colleague')
   }
 })
+
+it('shows the file init writes, verbatim, in the artefact, the landing copy, the guide and the README', async () => {
+  const { exampleFile } = await import('../packages/ui-tests/src/example')
+  const { inviteExample, inviteFile, compilation } = await import('../apps/web/lib/copy')
+  const { parseHTML } = await import('linkedom')
+  const artefact = parseHTML(await readFile('design/artefacts/compile-section.html', 'utf8')).document
+  expect([...artefact.querySelectorAll('#code li .src')].map(line => line.textContent!.replace(/^ $/, '')).join('\n')).toBe(exampleFile)
+  expect(inviteExample).toBe(exampleFile)
+  expect(inviteFile).toBe('ui-tests/invite.ui.test.ts')
+  expect(await readFile('README.md', 'utf8')).toContain(exampleFile)
+  expect(await readFile('apps/web/app/docs/getting-started/page.tsx', 'utf8')).toContain('code={inviteExample} title={inviteFile}')
+  // Each piece shows the lines the artefact names, in participant order.
+  const pieces = [...artefact.querySelectorAll('li.pair')]
+  expect(compilation.pieces.map(p => p.lines.join(' '))).toEqual(pieces.map(p => p.getAttribute('data-lines')))
+  expect(compilation.pieces.map(p => p.notes.join(' ').replaceAll('`', ''))).toEqual(pieces.map(p => [...p.querySelectorAll('.intro .from')].map(from => from.textContent).join(' ').replace("the ones that gave up", "the ones that ended with I couldn't do this")))
+  expect(compilation.pieces.map(p => p.returns)).toEqual(pieces.map(p => p.querySelector('.back-line')!.textContent!.replace(/^Comes back/, '')))
+})
+
+it('carries the contract changes in the PRDs and the taskbar sentence in PRD 06', async () => {
+  const prd01 = await readFile('docs/prd/01-dx-contract.md', 'utf8'), prd02 = await readFile('docs/prd/02-study-and-verdict.md', 'utf8')
+  expect(await readFile('docs/prd/06-nonfunctional.md', 'utf8')).toContain("styled as a distinct overlay, the inverse of the host page with the author's font and accent, never sharing the host page's panel colour.")
+  for (const text of ['video: true', 'impression: { page }', '`start`', 'What was that page for?']) expect(prd01, text).toContain(text)
+  expect(prd01).not.toContain("record: 'screen'`")
+  expect(prd02).toContain('What was that page for?')
+  expect(prd02).not.toMatch(/"What is this for\?" with the (context's )?purpose/)
+})
+
+it('the demo bar steps aside while a field has focus, drags by its grip, and Done asks in place', async () => {
+  const demo = await readFile('apps/web/public/demo/weekboard.html', 'utf8')
+  expect(demo).toMatch(/\.bar\.typing \{ visibility: hidden; \}/)
+  expect(demo).toContain("document.addEventListener('focusin'")
+  expect(demo).toContain("grip.addEventListener('pointermove'")
+  expect(demo).toMatch(/aria-label="Finished this task\?"[^>]*hidden><p>Finished this task\?<\/p><button class="yes" id="doneYes" type="button">Yes, I've finished<\/button><button class="no" id="doneNo" type="button">Not yet<\/button>/)
+})

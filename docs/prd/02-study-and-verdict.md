@@ -6,10 +6,11 @@
 
 | Compiled field | From | Goes to the player |
 | --- | --- | --- |
-| `users`, `purpose`, `environment` | the context's inputs | the purpose, as the answer among distractors in the impression stage |
-| `screener` | the `users` sentence; one behavioural question; panel filters where available; the three fit questions derived from the purpose; three persona-placement questions | yes |
-| `impression` | derived: the first goal's starting page, 500 ms, one appeal item, "What is this for?" with the purpose and distractors from the generator, first click toward the first goal | yes |
-| `goals[].scenario` | goal plus fixture names, linted; pinned by `scenario` after review | yes |
+| `users`, `purpose`, `environment` | the context's inputs; `users` as a sentence or as the object `{ are, did, within, … }` | no; the purpose is never shown as an answer or a hint, and reaches the participant only through the scenario card's situation sentence |
+| `screener` | the `users` object, or a draft inferred from the `users` sentence; panel filters where available; the three fit questions derived from the purpose; three persona-placement questions | the questions, one per screen with nothing preselected; never the labels, fields or rules |
+| `impression` | derived: `impression.page`, else the first goal's `start`, 500 ms, one appeal item, the open question "What was that page for?", first click toward the first goal; the answers coded against the purpose | the page, the appeal item and the open question; not the purpose or the codes |
+| `goals[].start` | the goal's `start`; default the first page of `happyPath`, else the target's root | yes |
+| `goals[].scenario` | the situation from `users.are` and `purpose`, the action from the goal's name, the data from `beforeEach`, linted; pinned by `scenario` after review | yes |
 | `goals[].shape` | goal-only, happy-path, steps, or time-boxed, from what the author wrote | no |
 | `goals[].tasks[]` | the steps, when the goal has them, each with its wording and optional check | wording only, one at a time |
 | `goals[].happyPath`, `goals[].answer`, `goals[].outcome` | the inputs | no |
@@ -18,7 +19,7 @@
 | `questions` | UX-Lite, two items, usefulness and ease | yes |
 | `sample` | n, derived (below) | no |
 | `sentenceRule` | derived (below) | no |
-| `consent`, `instructions` | standing text with recording level, incentive and purposes filled in | yes |
+| `consent`, `instructions` | standing text with the recording level (event replay always, screen video when `video: true`), incentive and purposes filled in | yes |
 
 ## The ladder the report reads
 
@@ -35,11 +36,13 @@ A finding is reported at the level it belongs to: the UI (issues), the goal (peo
 
 ## The impression stage
 
-On by default, derived entirely from the context, for the question an outcome hook cannot answer: do these users recognise the purpose in the page. The page may be any public URL, including a README on GitHub, because the flash is a screenshot and the stage needs no recorder; only the first click requires the author's own site. In order: a fixation point, the first goal's starting page flashed for 500 ms, one appeal item on a 1 to 9 scale, "What is this for?" with the context's purpose among generated distractors, then the real page for a first click toward the first goal. It runs on the same participants as the goals, takes under a minute, and needs no fixture. `impression: false` on the context turns it off.
+On by default, derived entirely from the context, for the question an outcome hook cannot answer: do these users recognise the purpose in the page. The page is the first goal's `start` unless `impression: { page }` names another; it may be any public URL, including a README on GitHub, because the flash is a screenshot and the stage needs no recorder; only the first click requires the author's own site. In order: a fixation point, the page flashed for 500 ms, one appeal item on a 1 to 9 scale, one open question, "What was that page for?", answered by typing or talking, then the real page for a first click toward the first goal. There are no distractors, and the purpose is never shown in the stage, neither as an option nor as a hint; the consent does not show it either. It runs on the same participants as the goals, takes under a minute, and needs no fixture. `impression: false` on the context turns it off.
+
+Each answer is coded against the context's `purpose`: the configured model proposes the code, or a deterministic word-overlap rule does when no model is configured, and the code is labelled "named the purpose", "did not name it" or "no answer". Every code sits in the trace beside the person's words, where the author can review and change it as a revision.
 
 What it reports, and what it may say, follows [`../discovery/impression-research.md`](../discovery/impression-research.md):
 
-- **Recognition:** how many of n chose the purpose. It says whether the headline and hero carry the purpose, nothing deeper.
+- **Recognition:** how many of n named the purpose, with their words. It says whether the headline and hero carry the purpose, nothing deeper.
 - **Appeal:** the distribution. It is reliable at 500 ms and predicts the attitude participants bring into the goal through a halo; it is reported as a covariate beside the issues and never as an outcome.
 - **First click:** how many of n clicked on the happy path. On a live page this predicts goal success weakly (about 78% versus 70% in the replication), strongly only when the goal is pure findability; the report says which.
 
@@ -51,7 +54,7 @@ Three screener questions derived from the purpose, asked of everyone who arrives
 
 ## Participant flow
 
-Consent → screener with the fit questions → one practice screen → impression stage unless turned off → for each goal: scenario card, target opens top-level with a floating taskbar, participant presses done or can't do it (a goal with steps shows them one at a time, each with its own done), SEQ and confidence → UX-Lite → completion code or thank-you. Goals run in the declared order; when the context sets `independent: true`, order is randomised; either way the order is recorded per participant. Every screen works with a keyboard and a screen reader; the taskbar never covers the target's primary content. All of it is white-labelled: the author's name and theme, no ui-tests branding unless the author opts in (see [`06-nonfunctional.md`](06-nonfunctional.md)).
+Consent → screener, one question per screen, with the fit questions → one practice screen → impression stage unless turned off → for each goal: scenario card ending in "Start task", the target opens top-level at the goal's `start` with the bar, the participant presses Done (confirmed in place: "Finished this task?") or "I couldn't do this" (a goal with steps shows them one at a time, each with its own done), then "Overall, how difficult or easy did you find this task?" and, at 4 or below, "What made it difficult?", with confidence only when the outcome cannot be verified → once after all goals, "Would {product} be useful to you?", "{product} is easy to use." and "Anything you want to tell {product}?" → completion code or thank-you. Every question is one per screen with nothing preselected. The person ends the task: there is no completion screen and no auto-advance when the end state is reached, because ending the task then would hide what happens after it and reveal the success condition. Goals run in the declared order; when the context sets `independent: true`, order is randomised; either way the order is recorded per participant. Every screen works with a keyboard and a screen reader; the taskbar never covers the target's primary content. All of it is white-labelled: the author's name and theme, no ui-tests branding unless the author opts in (see [`06-nonfunctional.md`](06-nonfunctional.md)).
 
 Time on goal starts when the scenario card is dismissed and the target is ready, and ends at done, can't do it, timeout, or close. Questions are outside the timer. The participant may ask for more time once without penalty.
 
@@ -69,7 +72,7 @@ Time on goal starts when the scenario card is dismissed and the target is ready,
 | Environment | usual browser, device and assistive technology from the screener; accommodation is never a quality flag |
 | Quality flags | speeder under half the median, failed attention item; flagged, never auto-excluded. A duplicate device or IP across runs of the same project is the one exception: excluded from n and still paid |
 
-Screen recording, when `record: 'screen'`, attaches to the attempt and raises the incentive multiplier. Event replay is always available.
+Event replay (what the person does on the page: clicks, typing without its values, pages) is always recorded. Screen video, when the context sets `video: true`, needs the browser's prompt, attaches to the attempt and applies the 1.5× incentive multiplier. Voice is the person's choice and the camera is off; neither is an author field.
 
 ## Sample size
 
@@ -121,7 +124,7 @@ The counts say how many got through. Issues say what stopped the rest, which is 
 | Gave up, timed out | terminal reason | Blocked |
 | Said done but the outcome says incorrect | outcome and claim | Wrong mental model; a disaster when confidence is also high |
 | SEQ of 3 or below, free-text comment | questions | The person's own account of the trouble |
-| Recording segment, when opted in | recording | The clip |
+| Screen video segment, when `video: true` | recording | The clip |
 
 **Across attempts:** signals are clustered by location (page, element, step) into issue candidates. An issue carries the participants who hit it as a count of n, never a percentage at small n; the worst impact seen (blocked, slowed, confused); the participants' words; the access conditions of those who hit it; and a trace link to each moment. A participant who hit a problem and recovered within the attempt is tagged recovered, so novelty is visible. Issues are ranked by impact then frequency, and the report names the three most serious per goal and says so, following Krug's rule that finite effort goes to the worst problems first. The rest stay in the list.
 

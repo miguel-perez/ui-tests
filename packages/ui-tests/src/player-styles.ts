@@ -104,7 +104,7 @@ export const playerCss = `
 .uit-card .uit-primary { margin-top: 6px; justify-self: end; padding: 0 18px; }
 
 /* The bar: one 40px pill, bottom right, the recording state as its leading segment. */
-.uit-bar { position: fixed; z-index: 2147483646; right: 16px; display: grid; justify-items: end; gap: 8px; max-width: calc(100vw - 32px); }
+.uit-bar { position: fixed; z-index: 2147483646; right: 16px; display: grid; justify-items: end; gap: 8px; max-width: calc(100vw - 32px); translate: var(--uit-dx, 0) var(--uit-dy, 0); }
 .uit-bar.uit-bottom { bottom: max(16px, env(safe-area-inset-bottom)); }
 .uit-bar.uit-top { top: 16px; }
 .uit-bar.uit-top .uit-task { order: 2; }
@@ -150,31 +150,42 @@ export const playerCss = `
 .uit-scale label { position: relative; display: block; }
 .uit-scale input, .uit-choices input { position: absolute; inset: 0; opacity: 0; margin: 0; width: 100%; height: 100%; cursor: pointer; }
 .uit-scale span { display: grid; place-items: center; height: 44px; border-radius: 6px; box-shadow: inset 0 0 0 1px var(--uit-hair); font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; }
-.uit-scale input:checked + span, .uit-choices input:checked + span { background: var(--uit-accent); box-shadow: none; color: var(--uit-accent-ink); }
+.uit-scale input:checked + span { background: var(--uit-accent); box-shadow: none; color: var(--uit-accent-ink); }
 .uit-scale input:focus-visible + span, .uit-choices input:focus-visible + span { outline: 2px solid var(--uit-ink); outline-offset: 2px; }
 .uit-anchors { display: flex; justify-content: space-between; gap: 16px; font-size: 13px; color: var(--uit-dim); }
 .uit-choices { display: grid; gap: 4px; }
 .uit-choices label { position: relative; display: block; }
-.uit-choices span { display: flex; align-items: center; min-height: 44px; padding: 0 14px; border-radius: var(--uit-radius); box-shadow: inset 0 0 0 1px var(--uit-hair); }
+/* An option row (player-chrome.html): a hairline row with a ring that fills with the accent when chosen; square for pick-all. */
+.uit-choices span { display: flex; align-items: center; gap: 10px; min-height: 36px; padding: 7px 11px; border-radius: var(--uit-radius); box-shadow: inset 0 0 0 1px var(--uit-hair); font-size: 14px; }
+.uit-choices span::before { content: ''; width: 14px; height: 14px; flex: none; border-radius: 50%; box-shadow: inset 0 0 0 1px var(--uit-dim); }
+.uit-choices.uit-multi span::before { border-radius: 3px; }
+.uit-choices input:checked + span { box-shadow: inset 0 0 0 1px var(--uit-accent); }
+.uit-choices input:checked + span::before { box-shadow: inset 0 0 0 4px var(--uit-accent); }
 .uit-questions textarea { display: block; width: 100%; min-height: 96px; padding: 10px 12px; border: 0; box-shadow: inset 0 0 0 1px var(--uit-hair); border-radius: var(--uit-radius); background: transparent; resize: vertical; font-size: 16px; }
 .uit-questions textarea::placeholder { color: var(--uit-dim); }
 .uit-questions textarea[readonly] { box-shadow: inset 0 0 0 1px var(--uit-dim); }
-.uit-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
-.uit-actions > span { display: flex; gap: 8px; margin-left: auto; }
+.uit-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 18px; }
+.uit-actions > .uit-primary { margin-left: auto; }
+.uit-actions .uit-talk-wrap { flex: 1 1 auto; }
 .uit-talk { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; min-height: 36px; }
 .uit-talk .uit-live { display: inline-flex; align-items: center; gap: 8px; font-weight: 500; font-variant-numeric: tabular-nums; }
 .uit-talk-consent { display: grid; gap: 12px; padding: 14px; border-radius: var(--uit-radius); box-shadow: inset 0 0 0 1px var(--uit-hair); }
 .uit-talk-consent > span { display: flex; flex-wrap: wrap; gap: 8px; }
 
+/* Consent: what is recorded as a list, each with its state on the right (player-chrome.html). */
+.uit-list { list-style: none; display: grid; gap: 6px; font-size: 14px; }
+.uit-list li { display: grid; grid-template-columns: 18px 1fr auto; gap: 10px; align-items: baseline; }
+.uit-list i { width: 8px; height: 8px; border-radius: 50%; background: var(--uit-accent); display: inline-block; justify-self: center; }
+.uit-list i.uit-off { background: none; box-shadow: inset 0 0 0 1px var(--uit-dim); }
+.uit-list em { font-style: normal; font-size: 13px; color: var(--uit-dim); }
+/* The first impression: the page fills the window for half a second, nothing over it. */
+.uit-flash { position: fixed; inset: 0; width: 100vw; height: 100vh; border: 0; background: var(--uit-host); visibility: hidden; pointer-events: none; z-index: 1; }
+.uit-flash.uit-flash-on { visibility: visible; }
+.uit-page > .uit-sheet { position: relative; z-index: 2; }
 /* The player page: consent, the card, the questions and the upload wait, centred on the host's own background. */
 .uit-page { min-height: 100vh; background: var(--uit-host); display: grid; place-items: center; padding: 48px 16px; }
-.uit-consent { max-width: 600px; padding: 28px; }
-.uit-consent h1, .uit-page > .uit-questions h1, .uit-wait h1 { font-size: 22px; line-height: 1.25; font-weight: 500; }
-.uit-consent table { border-collapse: collapse; width: 100%; font-size: 14px; }
-.uit-consent th, .uit-consent td { text-align: left; padding: 8px 12px 8px 0; border-bottom: 1px solid var(--uit-hair); vertical-align: top; }
-.uit-consent th { font-weight: 500; white-space: nowrap; }
-.uit-consent td:nth-child(2) { white-space: nowrap; color: var(--uit-dim); }
-.uit-reassure { font-weight: 500; }
+.uit-consent { max-width: 520px; }
+.uit-consent h1, .uit-page > .uit-questions h1, .uit-wait h1 { font-size: 19px; line-height: 1.3; font-weight: 500; text-wrap: balance; }
 .uit-stack { display: grid; gap: 16px; justify-items: center; width: 100%; }
 .uit-wait { max-width: 520px; }
 

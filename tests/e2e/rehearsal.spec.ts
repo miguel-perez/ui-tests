@@ -27,15 +27,39 @@ async function start(body?: string) {
   await expect.poll(() => output, { timeout: 5000, message: 'CLI must open player within five seconds' }).toContain('Player: ')
   player = /Player: (\S+)/.exec(output)![1]; trace = /Trace: (\S+)/.exec(output)![1]
 }
-/** Walks consent and the scenario card with the keyboard, checking axe at each stage, until the task bar appears. */
-async function begin(page: Page) {
+/** Walks consent, the screener, the first impression and the scenario card with the keyboard, checking axe at each stage, until the task bar appears. */
+async function begin(page: Page, impression = 'A way to find out whether people can use what I built') {
   await page.goto(player)
-  await expect(page.getByRole('heading', { level: 1, name: 'Before you start' })).toBeVisible()
-  await expect(page.getByText('The website is being tested, not you.')).toBeVisible()
-  await expect(page.getByRole('row', { name: /Webcam Off/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'I consent' })).toBeEnabled({ timeout: 15_000 })
+  await expect(page.getByRole('heading', { level: 1, name: 'This website would like to watch you try something on their site.' })).toBeVisible()
+  await expect(page.getByText('The website is being tested, not you.', { exact: false })).toBeVisible()
+  // What is always recorded comes first, in plain words; no screen video without video: true; voice optional; camera off.
+  await expect(page.getByRole('list', { name: 'What is recorded' }).getByRole('listitem')).toHaveText([/What you do on their page: where you click, what you type, which pages you open\s*always/, /Your voice, only if you choose to talk later\s*optional/, /Your camera\s*off/])
+  await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled({ timeout: 15_000 })
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
-  await page.getByRole('button', { name: 'I consent' }).focus(); await page.keyboard.press('Enter')
+  await page.getByRole('button', { name: 'Continue' }).focus(); await page.keyboard.press('Enter')
+  // The screener, one question per screen, nothing preselected and no drafting notes.
+  const progress = page.getByText(/^A few questions first · \d+ of \d+$/)
+  await expect(progress).toBeVisible()
+  const total = Number(/of (\d+)/.exec(await progress.innerText())![1])
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  for (let i = 1; i <= total; i++) {
+    await expect(page.getByText(`A few questions first · ${i} of ${total}`)).toBeVisible()
+    await expect(page.locator('.uit-choices input:checked')).toHaveCount(0)
+    await expect(page.locator('main')).not.toContainText(/inferred|accept|reject|may-select/)
+    await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled()
+    await page.locator('.uit-choices label').first().click()
+    await page.getByRole('button', { name: 'Next', exact: true }).click()
+  }
+  // The first impression: the page for half a second, then one open question; the purpose is nowhere on the screen.
+  await expect(page.getByRole('heading', { name: 'You will see a page for half a second, then one question about it.' })).toBeVisible()
+  await page.getByRole('button', { name: 'Show the page' }).click({ timeout: 15_000 })
+  const answer = page.getByLabel('What was that page for?')
+  await expect(answer).toBeVisible()
+  await expect(answer).toHaveAttribute('placeholder', 'In your own words. There is no right answer.')
+  await expect(page.locator('main')).not.toContainText('without a researcher')
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  await answer.fill(impression)
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1, name: 'Task 1 of 1' })).toBeVisible()
   await expect(page.getByText("When you think you've finished, press Done. If you get stuck, press I couldn't do this.")).toBeVisible()
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
@@ -43,11 +67,11 @@ async function begin(page: Page) {
   await expect(page.getByRole('complementary', { name: 'Your task' })).toBeVisible()
   await expect(page.getByRole('complementary', { name: 'Your task' }).getByRole('group', { name: 'Recording', exact: true })).toContainText('Screen not recorded · Voice off · Webcam off')
 }
-/** Chooses a point on the current scale with its number key, retrying until the page has hydrated and the point is checked. */
+/** Chooses a point or a choice on the current question with its number key, retrying until the page has hydrated and it is checked. */
 async function choose(page: Page, key: string) {
   await expect(async () => {
     await page.keyboard.press(key)
-    await expect(page.locator('.uit-scale input:checked')).toHaveValue(key, { timeout: 500 })
+    await expect(page.locator('.uit-q input:checked')).toHaveValue(key, { timeout: 500 })
   }).toPass({ timeout: 10_000 })
 }
 /** Ends the task with Done and its confirmation. */
@@ -58,34 +82,40 @@ async function finish(page: Page) {
 }
 /** Answers the questions one per screen, choosing every scale point with the number keys, and waits for the thank-you page and the CLI outcome. */
 async function questions(page: Page, { seq = '3', confidence, validation }: { seq?: string; confidence?: string; validation?: string } = {}) {
-  // The landing page shows an example of the same questions; wait for the player itself.
   await expect(page).toHaveURL(/\/ui-tests\//, { timeout: 15_000 })
-  await expect(page.getByText('Question 1 of', { exact: false })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('After the task · 1 of', { exact: false })).toBeVisible({ timeout: 15_000 })
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   await expect(page.getByRole('group', { name: 'Overall, how difficult or easy did you find this task?' })).toBeVisible()
+  // Nothing is preselected.
+  await expect(page.locator('.uit-q input:checked')).toHaveCount(0)
   await choose(page, seq)
   await expect(page.getByRole('radio', { name: seq === '1' ? '1 Very difficult' : seq, exact: true })).toBeChecked()
   await page.keyboard.press('Enter')
   if (Number(seq) <= 4) {
-    await expect(page.getByText('Question 2 of', { exact: false })).toBeVisible()
+    await expect(page.getByText('After the task · 2 of', { exact: false })).toBeVisible()
     await page.getByLabel('What made it difficult?').fill('I could not tell where people were added.')
     await page.getByRole('button', { name: 'Next', exact: true }).click()
   }
   if (confidence) { await expect(page.getByRole('group', { name: 'How confident are you that you completed the task?' })).toBeVisible(); await choose(page, confidence); await page.keyboard.press('Enter') }
   if (validation) { await page.getByRole('radio', { name: validation }).check(); await page.getByRole('button', { name: 'Next', exact: true }).click() }
-  await expect(page.getByRole('group', { name: 'This website is easy to use.' })).toBeVisible()
-  // The after-goal agreement scale has five points: keys beyond it choose nothing.
+  await expect(page.getByText('After all goals · 1 of 3')).toBeVisible()
+  await expect(page.getByRole('group', { name: 'Would this website be useful to you?' })).toBeVisible()
+  await expect(page.locator('.uit-q input:checked')).toHaveCount(0)
+  // The agreement choices are five: keys beyond them choose nothing.
   await page.keyboard.press('7')
   await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled()
+  await choose(page, '4'); await expect(page.getByRole('radio', { name: 'Agree', exact: true })).toBeChecked(); await page.keyboard.press('Enter')
+  await expect(page.getByRole('group', { name: 'This website is easy to use.' })).toBeVisible()
   await choose(page, '2'); await page.keyboard.press('Enter')
-  await choose(page, '4'); await page.keyboard.press('Enter')
-  await page.getByLabel('Anything else you want to tell us?').fill('Share seemed like the place for people. <script>not markup</script>')
+  await page.getByLabel('Anything you want to tell us?').fill('Share seemed like the place for people. <script>not markup</script>')
   // The CLI verifies snapshots asynchronously; disabled buttons cannot receive keyboard focus.
-  await expect(page.getByRole('button', { name: 'Send answers' })).toBeEnabled({ timeout: 15_000 })
-  await page.getByRole('button', { name: 'Send answers' }).focus(); await page.keyboard.press('Enter')
+  await expect(page.getByRole('button', { name: 'Finish' })).toBeEnabled({ timeout: 15_000 })
+  await page.getByRole('button', { name: 'Finish' }).focus(); await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
   await expect.poll(() => output).toContain('Reached the goal:')
 }
+// next dev compiles a route on its first visit; on a cold CI runner that alone can outlast an assertion, so the guide the rehearsals walk to is built first.
+test.beforeAll(async ({ playwright }) => { const site = await playwright.request.newContext({ baseURL: test.info().project.use.baseURL }); expect((await site.get('/docs/getting-started', { timeout: 60_000 })).ok()).toBe(true); await site.dispose() })
 test.afterEach(async () => { if (child) { child.kill('SIGTERM'); await new Promise<void>(resolve => { if (child.exitCode !== null) resolve(); else { child.once('exit', () => resolve()); setTimeout(resolve, 3000) } }) } })
 
 test('keyboard rehearsal, privacy projection, a click that did nothing, off your path, separate trace and the goal reached', async ({ page, request }) => {
@@ -104,6 +134,21 @@ test('keyboard rehearsal, privacy projection, a click that did nothing, off your
   await taskbar.getByRole('button', { name: 'Pause recording' }).click()
   await expect(taskbar.getByRole('group', { name: 'Recording', exact: true })).toContainText('Paused')
   await taskbar.getByRole('button', { name: 'Resume recording' }).click()
+  // While the person types in the page the bar steps aside, and it comes back when they leave the field.
+  await page.evaluate(() => { const input = document.createElement('input'); input.id = 'typing-probe'; document.body.prepend(input) })
+  await page.locator('#typing-probe').focus()
+  await expect(page.locator('aside[aria-label="Your task"]')).toBeHidden()
+  await page.locator('#typing-probe').blur()
+  await expect(taskbar).toBeVisible()
+  // The grip drags the pill anywhere; where it was put is remembered.
+  const before = (await pill.boundingBox())!
+  const grip = (await taskbar.getByRole('button', { name: 'Move the task bar to the top' }).boundingBox())!
+  await page.mouse.move(grip.x + grip.width / 2, grip.y + grip.height / 2); await page.mouse.down()
+  await page.mouse.move(grip.x - 150, grip.y - 120, { steps: 8 }); await page.mouse.up()
+  const after = (await pill.boundingBox())!
+  expect(before.x - after.x).toBeGreaterThan(100); expect(before.y - after.y).toBeGreaterThan(80)
+  await expect(taskbar).toHaveClass(/uit-bottom/)
+  expect(await page.evaluate(() => sessionStorage.getItem('ui-tests-bar-offset'))).toMatch(/"x":-\d+/)
   // The bar moves to the top and back, and is never removable.
   await taskbar.getByRole('button', { name: 'Move the task bar to the top' }).click()
   await expect(taskbar).toHaveClass(/uit-top/)
@@ -120,7 +165,7 @@ test('keyboard rehearsal, privacy projection, a click that did nothing, off your
   await page.evaluate(() => { const input = document.createElement('input'); input.id = 'private'; input.value = 'DO-NOT-RECORD'; document.body.append(input); input.dispatchEvent(new Event('input', { bubbles: true })); history.pushState({}, '', '/detour') })
   await page.waitForTimeout(350)
   await page.getByRole('link', { name: 'Get started' }).first().focus(); await page.keyboard.press('Enter')
-  await expect(page).toHaveURL(/\/docs\/getting-started$/)
+  await expect(page).toHaveURL(/\/docs\/getting-started$/, { timeout: 15_000 })
   await expect(taskbar).toBeVisible()
   await taskbar.getByRole('button', { name: 'Done', exact: true }).focus(); await page.keyboard.press('Enter')
   await taskbar.getByRole('button', { name: 'Not yet' }).click()
@@ -135,6 +180,10 @@ test('keyboard rehearsal, privacy projection, a click that did nothing, off your
   expect(html).toContain('nothing happened'); expect(html).toContain('Off your path · opened /detour'); expect(html).toContain('Last page: http://localhost:3000/docs/getting-started')
   expect(html).not.toContain('DO-NOT-RECORD')
   expect(html).toContain('Their words: Share seemed like the place for people. <script>not markup</script>')
+  // The open first-impression answer, with the code proposed against the purpose and how it was made.
+  expect(html).toContain('Their words: A way to find out whether people can use what I built')
+  expect(html).toContain('words in common: find, out, whether, people, use, built')
+  expect(html).toContain('proposed by word overlap (no model configured)')
   expect(html).toContain('What made it difficult: I could not tell where people were added.')
   expect(html).toContain('After the goal: Easy to use? 2 of 5 · Would it help them? 4 of 5')
   expect(html).toContain("How sure they'd done it: not asked")
@@ -180,15 +229,15 @@ test('task steps advance individually and run checks against their own snapshots
   try {
     await finish(page)
     await expect(page).toHaveURL(/\/ui-tests\//, { timeout: 15_000 })
-    await expect(page.getByText('Question 1 of', { exact: false })).toBeVisible()
+    await expect(page.getByText('After the task · 1 of', { exact: false })).toBeVisible()
     await choose(page, '3'); await page.keyboard.press('Enter')
     await page.getByRole('button', { name: 'Next', exact: true }).click()
-    await choose(page, '2'); await page.keyboard.press('Enter')
     await choose(page, '4'); await page.keyboard.press('Enter')
-    if (canPauseVerifier) await expect(page.getByRole('button', { name: 'Send answers' })).toBeDisabled()
+    await choose(page, '2'); await page.keyboard.press('Enter')
+    if (canPauseVerifier) await expect(page.getByRole('button', { name: 'Finish' })).toBeDisabled()
   } finally { if (canPauseVerifier) child.kill('SIGCONT') }
-  await expect(page.getByRole('button', { name: 'Send answers' })).toBeEnabled({ timeout: 15_000 })
-  await page.getByRole('button', { name: 'Send answers' }).click()
+  await expect(page.getByRole('button', { name: 'Finish' })).toBeEnabled({ timeout: 15_000 })
+  await page.getByRole('button', { name: 'Finish' }).click()
   await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
   await expect.poll(() => output).toContain('Reached the goal:')
   expect(traceText(await (await request.get(trace)).text())).toContain('"reached": "yes"')
@@ -221,7 +270,7 @@ test('non-observable outcome asks its validation question without sending the ex
   await start(`goal('choose a plan',()=>outcome(async({participant})=>expect(await participant.answer('Which plan?',{choices:['April','May'],expected:'April'})).toBe('April')))`)
   await begin(page); await finish(page)
   await expect(page).toHaveURL(/\/ui-tests\//, { timeout: 15_000 })
-  await expect(page.getByText('Question 1 of', { exact: false })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('After the task · 1 of', { exact: false })).toBeVisible({ timeout: 15_000 })
   await expect.poll(async () => JSON.parse(await page.evaluate(async () => (await fetch('/api/ui-tests')).text())).validation?.question, { timeout: 15_000 }).toBe('Which plan?')
   const projection = await page.evaluate(async () => (await fetch('/api/ui-tests')).text())
   expect(projection).not.toContain('expected')
@@ -245,10 +294,10 @@ test('Talk instead asks for the microphone once, records with a live indicator a
   })
   await start(); await begin(page); await finish(page)
   await expect(page).toHaveURL(/\/ui-tests\//, { timeout: 15_000 })
-  await expect(page.getByText('Question 1 of', { exact: false })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByText('After the task · 1 of', { exact: false })).toBeVisible({ timeout: 15_000 })
   await choose(page, '6'); await page.keyboard.press('Enter')
-  await choose(page, '3'); await page.keyboard.press('Enter')
   await choose(page, '4'); await page.keyboard.press('Enter')
+  await choose(page, '2'); await page.keyboard.press('Enter')
   const indicator = page.getByRole('group', { name: 'Recording', exact: true })
   await expect(indicator).toContainText('Voice off')
   await page.getByRole('button', { name: 'Talk instead' }).click()
@@ -258,10 +307,10 @@ test('Talk instead asks for the microphone once, records with a live indicator a
   await page.getByRole('button', { name: 'Use the microphone' }).click()
   await expect(page.getByRole('status').filter({ hasText: /Recording \d:\d\d/ })).toBeVisible()
   await expect(indicator).toContainText('Voice recording now')
-  const box = page.getByLabel('Anything else you want to tell us?')
+  const box = page.getByLabel('Anything you want to tell us?')
   await expect(box).toHaveValue('Share seemed like the place for people.')
   await expect(box).toHaveAttribute('readonly', '')
-  await expect(page.getByRole('button', { name: 'Send answers' })).toBeDisabled()
+  await expect(page.getByRole('button', { name: 'Finish' })).toBeDisabled()
   await page.waitForTimeout(600)
   await page.getByRole('button', { name: 'Stop' }).click()
   await expect(page.getByText(/Voice recorded · \d:\d\d/)).toBeVisible()
@@ -278,8 +327,8 @@ test('Talk instead asks for the microphone once, records with a live indicator a
   await page.waitForTimeout(500)
   await expect(box).toHaveValue('Share seemed like the place for people!')
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
-  await expect(page.getByRole('button', { name: 'Send answers' })).toBeEnabled({ timeout: 15_000 })
-  await page.getByRole('button', { name: 'Send answers' }).click()
+  await expect(page.getByRole('button', { name: 'Finish' })).toBeEnabled({ timeout: 15_000 })
+  await page.getByRole('button', { name: 'Finish' }).click()
   await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
   await expect.poll(() => output).toContain('Reached the goal:')
   const html = await (await request.get(trace)).text()

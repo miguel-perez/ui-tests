@@ -4,6 +4,7 @@ import { promisify } from 'node:util'
 import { mkdir, mkdtemp, readFile, writeFile, rm } from 'node:fs/promises'
 import path from 'node:path'
 import { SQLiteAdapter } from '../packages/ui-tests/src/storage'
+import { configFile, exampleFile } from '../packages/ui-tests/src/example'
 
 const exec = promisify(execFile)
 const cli = path.resolve('packages/ui-tests/bin/ui-tests.mjs')
@@ -43,8 +44,26 @@ it('init preserves author files and existing Vitest settings, adds the exclusion
   expect(updated).toContain("environment: 'node'")
   await exec(process.execPath, [cli, 'init'], { cwd, timeout: 10000 })
   expect(await readFile(path.join(cwd, 'vitest.config.ts'), 'utf8')).toBe(updated)
-  expect(await readFile(path.join(cwd, 'landing.ui.test.ts'), 'utf8')).toContain("goal('start trying ui-tests'")
+  // The file is the one the landing, the guide and the README show, verbatim, with Weekboard filled in.
+  expect(await readFile(path.join(cwd, 'ui-tests/invite.ui.test.ts'), 'utf8')).toBe(`${exampleFile}\n`)
+  expect(stdout).toContain('Created ui-tests/invite.ui.test.ts')
 }, 30000)
+it('init writes the recording hint as a comment, and lint prints the recording level in the plan', async () => {
+  const cwd = await fixture()
+  await exec(process.execPath, [cli, 'init'], { cwd, timeout: 10000 })
+  const config = await readFile(path.join(cwd, 'ui-tests.config.ts'), 'utf8')
+  expect(config).toBe(configFile)
+  expect(config).toMatch(/^\/\/ .*video: true/m)
+  const { stdout } = await exec(process.execPath, [cli, 'lint', '--file', path.join(cwd, 'ui-tests/invite.ui.test.ts')], { cwd, timeout: 10000 })
+  expect(stdout).toContain('Recording: event replay (what people do on the page) and screen video (video: true; the browser asks first; incentive 1.5×).')
+  expect(stdout).toContain('Goal: invite a colleague · starts at /board · 5 people')
+  expect(stdout).not.toMatch(/error \[|warning \[/)
+  await writeFile(path.join(cwd, 'ui-tests/invite.ui.test.ts'), exampleFile.replace('  video: true,\n', ''))
+  const { stdout: replay } = await exec(process.execPath, [cli, 'lint', '--file', path.join(cwd, 'ui-tests/invite.ui.test.ts')], { cwd, timeout: 10000 })
+  expect(replay).toContain('Recording: event replay (what people do on the page). Add video: true to record the screen as a video too.')
+  // run prints the same plan before it says what this slice can do.
+  await expect(exec(process.execPath, [cli, 'run', '--file', path.join(cwd, 'ui-tests/invite.ui.test.ts')], { cwd, timeout: 10000 })).rejects.toMatchObject({ code: 1, stdout: expect.stringContaining('Recording: event replay') })
+}, 40000)
 it('lint compiles in a separate CLI process and prints actionable source diagnostics', async () => {
   const cwd = await fixture(), file = path.join(cwd, 'bad.ui.test.ts')
   await writeFile(file, `import { context, goal, outcome, expect } from 'ui-tests'\ncontext({users:'people',purpose:'use ui-tests'},()=>{goal('click the Docs link and open getting started',()=>outcome(({page})=>expect(page.url()).toContain('/')));goal('understand what ui-tests does and start',()=>outcome(({page})=>expect(page.url()).toContain('/')))})`)
@@ -59,15 +78,15 @@ it('lint compiles in a separate CLI process and prints actionable source diagnos
   const { stdout } = await exec(process.execPath, [cli, 'lint', '--file', file], { cwd, timeout: 10000 })
   expect(stdout).toContain('Compiled'); expect(stdout).not.toContain('error [')
 }, 30000)
-it('lint prints the screener it drafted from users as TypeScript to paste in, and is quiet about it once screen is written', async () => {
+it('lint prints the screener it drafted from users as TypeScript to paste in, and is quiet about it once users carries the facts', async () => {
   const cwd = await fixture(), file = path.join(cwd, 'draft.ui.test.ts')
-  const body = (screen: string) => `import { context, goal, outcome, expect } from 'ui-tests'\ncontext({users:'people who signed up this week and want a colleague on their board',purpose:'plan the week together'${screen}},()=>goal('invite a colleague',()=>outcome(({page})=>expect(page.url()).toContain('/members'))))`
-  await writeFile(file, body(''))
+  const body = (users: string) => `import { context, goal, outcome, expect } from 'ui-tests'\ncontext({users:${users},purpose:'plan the week together'},()=>goal('invite a colleague',()=>outcome(({page})=>expect(page.url()).toContain('/members'))))`
+  await writeFile(file, body("'people who signed up this week and want a colleague on their board'"))
   const { stdout } = await exec(process.execPath, [cli, 'lint', '--file', file], { cwd, timeout: 10000 })
-  expect(stdout).toContain('warning [screen-inferred]')
-  expect(stdout).toContain("  screen: {\n    did: 'signed up', // inferred\n    within: '7 days', // inferred\n  },")
+  expect(stdout).toContain('warning [users-inferred]')
+  expect(stdout).toContain("  users: {\n    are: 'people who signed up this week and want a colleague on their board',\n    did: 'signed up', // inferred\n    within: '7 days', // inferred\n  },")
   expect(stdout).toContain('Compiled')
-  await writeFile(file, body(",screen:{did:'signed up for a tool to plan work with a team',within:'7 days'}"))
+  await writeFile(file, body("{are:'people who signed up this week and want a colleague on their board',did:'signed up for a tool to plan work with a team',within:'7 days'}"))
   const { stdout: pinned } = await exec(process.execPath, [cli, 'lint', '--file', file], { cwd, timeout: 10000 })
-  expect(pinned).not.toContain('screen-')
+  expect(pinned).not.toContain('users-')
 }, 30000)

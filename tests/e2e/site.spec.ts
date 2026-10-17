@@ -1,11 +1,11 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { mkdir } from 'node:fs/promises'
-import { example, inviteExample, promise, intro, landing, guide, agent, hosted, runs } from '../../apps/web/lib/copy'
+import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, runs } from '../../apps/web/lib/copy'
 import { shown, offences } from '../vocabulary'
 
 /** Every content type's component on the landing page (docs/design/site-schema.md). */
-const artefacts = ['terminal-window', 'code-window', 'attempt-view', 'player-card', 'player-bar', 'player-questions', 'invite-link', 'cap-control', 'visitor-invitation', 'checks-box', 'findings-list', 'reel-frame', 'dashboard']
+const artefacts = ['terminal-window', 'code-window', 'attempt-view', 'compilation', 'invite-link', 'cap-control', 'visitor-invitation', 'checks-box', 'findings-list', 'reel-frame', 'dashboard']
 /** Relative luminance of a computed rgb() colour. */
 const luminance = (rgb: string) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return r * .2126 + g * .7152 + b * .0722 }
 /** The distinct colours of the text inside each matched element. */
@@ -45,14 +45,16 @@ for (const width of [1440, 375]) {
       expect(await page.locator('.theme-light').count()).toBe(0)
       // The participant chrome over the light Weekboard is its inverse: Weekboard's ink, opaque, never a panel colour of the page or the app.
       const panels = new Set(['rgb(26, 27, 38)', 'rgb(31, 35, 53)', 'rgb(225, 226, 231)', 'rgb(238, 240, 245)'])
-      for (const selector of ['.uit-card', '.uit-pill', '.uit-questions']) {
+      for (const selector of ['.ch-sheet', '.ch-pill']) {
         for (const surface of await page.locator(selector).evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) {
           expect(surface, `${selector} is the inverse of Weekboard`).toBe('rgb(44, 51, 83)')
           expect(panels.has(surface)).toBe(false)
         }
       }
       // The one accent Weekboard's author sets, mint, never the app's orange.
-      for (const accent of await page.locator('.uit-card .uit-primary').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(accent).toBe('rgb(95, 227, 192)')
+      // The frames are the light Weekboard page, constant in the dark section.
+      for (const frame of await page.locator('.compile-frame').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(frame).toBe('rgb(225, 226, 231)')
+      for (const accent of await page.locator('.ch-btn.pri, .ch-pill .done').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(accent).toBe('rgb(95, 227, 192)')
       for (const surface of await page.locator('.terminal-window, .code-window').evaluateAll(nodes => nodes.map(node => getComputedStyle(node).backgroundColor))) expect(luminance(surface)).toBeLessThan(.05)
       // Every component that owns chrome carries "Example run" at most once.
       for (const count of await page.locator('[data-artefact]').evaluateAll(nodes => nodes.map(node => [...node.querySelectorAll('.example-label')].filter(label => label.closest('[data-artefact]') === node).length))) expect(count).toBeLessThanOrEqual(1)
@@ -66,7 +68,10 @@ for (const width of [1440, 375]) {
         await expect(page.getByRole('heading', { level: 1 })).toHaveText(promise)
         await expect(page.getByText(intro)).toBeVisible()
         for (const [key, text] of Object.entries(landing)) if (!['fileCaption', 'moment', 'words', 'scenario', 'priority', 'result', 'reached'].includes(key)) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first(), key).toBeVisible()
-        for (const text of [agent.heading, agent.lead, agent.closing, hosted.heading, hosted.lead, hosted.closing]) await expect(page.getByText(text, { exact: true })).toBeVisible()
+        for (const text of [agent.heading, agent.lead, agent.closing, hosted.heading, hosted.lead, hosted.closing, compilation.heading, compilation.lead]) await expect(page.getByText(text, { exact: true })).toBeVisible()
+        // Round six: one section in place of "What the person sees" and "Three commands".
+        await expect(page.getByRole('heading', { name: 'What the person sees.' })).toHaveCount(0)
+        await expect(page.getByRole('heading', { name: 'Three commands.' })).toHaveCount(0)
         await expect(page.locator('h1')).toHaveCSS('font-size', width === 1440 ? '72px' : '44px')
         for (const artefact of artefacts) await expect(page.locator(`[data-artefact="${artefact}"]`).first(), artefact).toBeVisible()
         // Item 1: the faded session is back with its poster; no labelled gestures, no replay or pause controls.
@@ -101,7 +106,7 @@ for (const width of [1440, 375]) {
         await expect(page.locator('[data-artefact="findings-list"], [data-artefact="attempt-view"]')).toHaveCount(0)
         // Item 5: the guide's first step offers both ways in.
         await expect(page.locator('#install')).toContainText('On any other site, paste one line instead')
-        await expect(page.locator('.guide-head')).toContainText(landing.requirement)
+        await expect(page.locator('.guide-head')).toContainText(guide.requirement)
         for (const text of [guide.install, guide.try, guide.write, guide.next, guide.once, guide.pr, guide.agent]) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first()).toBeVisible()
         // The agent step matches the landing's API example; the hosted form has the screen fields.
         await expect(page.locator('#agent')).toContainText(agent.fileLine)
@@ -117,11 +122,10 @@ for (const width of [1440, 375]) {
         await page.screenshot({ path: `design/screens/${name}-${width}.jpg`, fullPage: true, type: 'jpeg', quality: 80 })
       }
       await context.grantPermissions(['clipboard-read', 'clipboard-write'])
-      const label = name === 'landing' ? 'landing.ui.test.ts' : 'ui-tests/first.ui.test.ts'
-      const copy = page.getByRole('button', { name: `Copy ${label}`, exact: true })
+      const copy = page.getByRole('button', { name: `Copy ${inviteFile}`, exact: true })
       await copy.focus(); await page.keyboard.press('Enter')
       await expect(copy.locator('xpath=ancestor::figure').getByRole('status')).toHaveText('Copied')
-      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(name === 'landing' ? example : inviteExample)
+      expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(inviteExample)
     })
   }
 
@@ -237,44 +241,63 @@ test('the hero session plays dim and slow with in-context sensors only, and the 
   await expect(page.locator('.wordmark svg')).toHaveCSS('color', 'rgb(255, 158, 100)')
 })
 
-test('the player surfaces on the page are the real player: card, bar with its confirmations, and one question per screen', async ({ page }) => {
+for (const width of [1440, 375]) test(`what you write, what they see: one column, the file, six pieces, stepped frames of one height, no console errors at ${width}px`, async ({ page }) => {
+  const errors: string[] = []
+  page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
+  page.on('pageerror', error => errors.push(error.message))
+  await page.setViewportSize({ width, height: 1000 })
   await page.goto('/')
-  const card = page.locator('[data-artefact="player-card"]')
-  await expect(card.getByText('Task 1 of 1')).toBeVisible()
-  await expect(card.getByText(landing.scenario)).toBeVisible()
-  await expect(card.getByText("When you think you've finished, press Done. If you get stuck, press I couldn't do this.")).toBeVisible()
-  await card.getByRole('button', { name: 'Start task' }).click()
-  const bar = card.getByRole('complementary', { name: 'Example task bar' })
-  await expect(bar).toBeVisible()
-  // The recording state is the pill's leading segment: dot, time and pause.
-  await expect(bar.getByRole('group', { name: 'Recording', exact: true })).toContainText('Screen recorded · Voice off · Webcam off')
-  await bar.getByRole('button', { name: 'Pause recording' }).click()
-  await expect(bar.getByRole('group', { name: 'Recording', exact: true })).toContainText('Paused')
-  await bar.getByRole('button', { name: 'Resume recording' }).click()
-  await expect(bar.getByRole('button', { name: 'Done', exact: true })).toHaveCSS('background-color', 'rgb(95, 227, 192)')
-  await bar.getByRole('button', { name: "I couldn't do this" }).click()
-  await expect(bar.getByRole('group', { name: 'Leave this task before trying it?' })).toBeVisible()
-  await bar.getByRole('button', { name: 'Stay and try' }).click()
-  await bar.getByRole('button', { name: 'Done', exact: true }).click()
-  await bar.getByRole('button', { name: "Yes, I've finished" }).click()
-  const questions = card.locator('.uit-questions')
-  await expect(questions.getByText('Question 1 of 4')).toBeVisible()
-  await questions.getByRole('radio', { name: '2', exact: true }).check()
-  await expect(questions.getByText('Question 1 of 5')).toBeVisible()
-  await questions.getByRole('button', { name: 'Next', exact: true }).click()
-  await expect(questions.getByLabel('What made it difficult?')).toBeVisible()
-  await expect(questions.getByRole('button', { name: 'Talk instead' })).toBeVisible()
-  await questions.getByRole('button', { name: 'Skip' }).click()
-  await page.keyboard.press('4'); await expect(questions.getByRole('radio', { name: '4', exact: true })).toBeChecked()
-  await page.keyboard.press('Enter')
-  await page.keyboard.press('5'); await page.keyboard.press('Enter')
-  await expect(questions.getByText('Question 5 of 5')).toBeVisible()
-  await questions.getByRole('button', { name: 'Send answers' }).click()
-  await expect(card.getByRole('status')).toContainText('example run, so your answers and any recording were not saved')
-  const bars = page.locator('[data-artefact="player-bar"]')
-  await expect(bars.getByRole('complementary', { name: 'Example task bar' })).toBeVisible()
-  await bars.getByRole('button', { name: 'Show task' }).click()
-  await expect(bars.locator('.uit-task')).toContainText(landing.scenario)
+  await page.evaluate(() => document.fonts.ready)
+  const section = page.locator('section.compilation')
+  const column = (await section.locator('.compile-column').boundingBox())!
+  // One 800px reading column, centred on the grid: 8 of 12 columns at 1440; the whole width of the 327px column at 375.
+  if (width === 1440) { expect(column.width).toBe(800); expect(Math.abs(column.x + column.width / 2 - 720)).toBeLessThanOrEqual(1) }
+  else expect(column.width).toBe(327)
+  // The three commands as cards, in one row at 1440 and stacked at 375.
+  const commands = await section.locator('.compile-command').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().top))
+  expect(commands).toHaveLength(3)
+  if (width === 1440) expect(new Set(commands).size).toBe(1); else expect(new Set(commands).size).toBe(3)
+  // The whole file, as init writes it, in the site's highlighter.
+  const file = section.locator('.lines-window').first()
+  expect((await file.locator('li code').allInnerTexts()).join('\n')).toBe(inviteExample)
+  // Six pieces in participant order, each with its note, its own lines under their original numbers, a frame and what comes back.
+  await expect(section.locator('.compile-piece h3')).toHaveText(compilation.pieces.map(piece => new RegExp(`^${piece.n}${piece.name}`)))
+  for (const piece of compilation.pieces) {
+    const row = section.locator(`#piece-${piece.id}`)
+    await expect(row.locator('.compile-back')).toHaveText(`Comes back${piece.returns}`)
+    await expect(row.locator('.compile-frame')).toHaveCount(1)
+    if (!piece.lines.length) { await expect(row.locator('.lines-window')).toHaveCount(0); continue }
+    const numbers = (await row.locator('.lines-body .ln').allInnerTexts()).filter(Boolean).map(Number)
+    expect(numbers).toEqual(piece.lines)
+    // A skipped run of lines is one dots row.
+    const gaps = piece.lines.filter((n, i) => i && n - piece.lines[i - 1] > 1).length
+    await expect(row.locator('.lines-body li.gap')).toHaveCount(gaps)
+  }
+  // At 375 the code wraps instead of scrolling.
+  if (width === 375) for (const body of await section.locator('.lines-body').all()) expect(await body.evaluate(node => node.scrollWidth <= node.clientWidth + 1)).toBe(true)
+  // The stepped frames keep one height through every step, by the sheet's own Next and by the control under the frame.
+  for (const [id, count] of [['screener', 6], ['after', 5]] as const) {
+    const row = section.locator(`#piece-${id}`), frame = row.locator('.compile-frame'), stepper = row.locator('.stepper')
+    await frame.scrollIntoViewIfNeeded()
+    const height = (await frame.boundingBox())!.height
+    await expect(stepper.locator('.where')).toHaveText(`1 of ${count}`)
+    await expect(stepper.getByRole('button', { name: /^Previous/ })).toBeDisabled()
+    for (let step = 2; step <= count; step++) {
+      await frame.locator('.car-step.is-current .next-step').click()
+      await expect(stepper.locator('.where')).toHaveText(`${step} of ${count}`)
+      expect((await frame.boundingBox())!.height).toBe(height)
+      await expect(frame.locator('.car-step.is-current')).toHaveCount(1)
+      await expect(frame.locator('.car-step')).toHaveCount(count)
+    }
+    await expect(stepper.getByRole('button', { name: /^Next/ })).toBeDisabled()
+    await stepper.getByRole('button', { name: /^Previous/ }).click()
+    await expect(stepper.locator('.where')).toHaveText(`${count - 1} of ${count}`)
+    expect((await frame.boundingBox())!.height).toBe(height)
+  }
+  await expect(section.locator('#piece-after .car-step').first()).toContainText('Overall, how difficult or easy did you find this task?')
+  await expect(section.locator('#piece-card')).toContainText(landing.scenario)
+  await expect(section.locator('#piece-bar .ch-pill')).toHaveCSS('height', '40px')
+  expect(errors).toEqual([])
 })
 
 for (const width of [1440, 375]) test(`hover, focus and active never move anything at ${width}px`, async ({ page }) => {
@@ -290,7 +313,7 @@ for (const width of [1440, 375]) test(`hover, focus and active never move anythi
     await row.hover()
     expect(await row.boundingBox(), `flow row ${i + 1} hover`).toEqual(before)
   }
-  const targets = ['.moment-press', '.attempt-index a', '.attempt-fold summary', '.finding-toggle', '.cell.hit', '.watch-moment', '.copy-control', '.button', '.visitor-prompt button', '.check-row a', '.nav-links a', '.uit-card button', '.option-card', '.dashboard tbody tr']
+  const targets = ['.moment-press', '.attempt-index a', '.attempt-fold summary', '.finding-toggle', '.cell.hit', '.watch-moment', '.copy-control', '.button', '.visitor-prompt button', '.check-row a', '.nav-links a', '.stepper .nextb', '.option-card', '.dashboard tbody tr']
   for (const selector of targets) {
     const target = page.locator(selector).first()
     await target.scrollIntoViewIfNeeded()
