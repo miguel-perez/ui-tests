@@ -10,23 +10,11 @@ Open source. Nothing to sign up for. Runs on your preview or your live site.
 
 Each line opens to the moment to watch, the person's words, and the smallest change that would fix it.
 
-Person 3 · 00:58 · pressed Add twice
-
-“I wasn’t sure the first Add did anything, so I pressed it again.”
-
 What comes back.
 
 Here is one person’s attempt at one goal as it comes back: whether they reached it, the moments that got in the way, each playing in place, and how it felt.
 
 If you have written a Playwright test, you have written this.
-
-Problems found: 4 across 5 people.
-
-Reached the goal: 2 of 5.
-
-After the goal, typically: Would it help them? 4 of 5 · Easy to use? 2 of 5
-
-Problem 1 is the one to fix first: both people who hit it pressed Done believing they had finished, and their colleague got the same email twice. Problem 3 is one link.
 
 A run reports the problems it found, or that it found none this time. There is no score and no pass.
 
@@ -34,9 +22,7 @@ You plan the week on this board and want your colleague Sam to plan it with you.
 
 In the pull request.
 
-Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request with a report page anyone on the team can open. Your other tests prove the code works. This one shows whether a person can use it.
-
-The report page opens on whether people reached the goal and the ranked problems, each with the moments to watch and what to change, and every person's attempt below.
+Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request. It never fails your build. Its details are the worst problems with the moment to watch, and the full report opens for you, or for anyone you send a link to. Your other tests prove the code works. This one shows whether a person can use it.
 
 ## Agent runs
 
@@ -206,11 +192,11 @@ Six questions, one per screen; press Next to see them all. The first three come 
 
 The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost about $55, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
 
-screened 20 · matched 5 · fit: 3 of 5 had the need this month · how they do it today, in their words
+screened 20 · matched 5 · who took part: 3 of 5 had the need this month · how they do it today, in their words
 
 impression
 
-First impression
+First look
 
 on by default
 
@@ -312,61 +298,135 @@ context({
 
 ## The problems
 
-Pressed Add, saw nothing change, pressed it again; two invitations went out
+Pressed Add, saw nothing change, pressed it again; Sam got two invitations
 
 blocked
 
-2 of 5
+/settings/members
 
-"I wasn't sure the first one did anything."
+button "Add"
 
-Person 3 at 00:58, Person 4 at 00:41
+getByRole('button', { name: 'Add' })
+
+I wasn't sure the first Add did anything, so I pressed it again.
+
+Person 3, after the task
 
 On press, change the button to "Invited sam@acme.co" and disable it.
 
-Person 3 · 00:58 → 01:04
-
-Stopped at a grey Add button and pressed I couldn't do this
+The Add button looked switched off; Person 2 pressed I couldn't do this
 
 blocked
 
-1 of 5
+/settings/members
 
-"It looked switched off."
+button "Add"
 
-Person 2 at 00:49
+getByRole('button', { name: 'Add' })
 
-Keep the button solid. Validate the address on press, with a message.
+It looked switched off.
 
-Person 2 · 00:45 → 00:54
+Person 2, after the task
+
+Keep the button solid, and check the address on press, with a message.
 
 Looked for Invite in the Share menu and found only link options
 
 slowed
 
-4 of 5
+/board
 
-"Share is where you add people."
+menu "Share"
 
-Person 1 at 00:04, Person 2 at 00:06, Person 3 at 00:03, Person 5 at 00:09
+getByRole('button', { name: 'Share' })
+
+Share is where you add people.
+
+Person 5, after the task
 
 Put "Invite a colleague" at the top of the Share menu.
 
-Person 3 · 00:03 → 00:12
-
-Typed the colleague's email into the board search
+Typed Sam's email into the board search
 
 confused
 
-2 of 5
+/board
 
-"I figured it would find them."
+field "Search"
 
-Person 1 at 00:30, Person 3 at 00:23
+getByRole('textbox', { name: 'Search cards' })
+
+I figured it would find them.
+
+Person 1, after the task
 
 When a search matches no cards, offer "Invite someone with this email".
 
-Person 3 · 00:23 → 00:32
+## What worked
+
+Found Settings, then Members, on their own
+
+/settings
+
+tab "Members"
+
+getByRole('link', { name: 'Members' })
+
+## In the pull request
+
+the-check
+
+The check
+
+One line in the merge box, next to your other checks. Its mark is neutral, never red or green: there is no pass to give, and it never blocks a merge unless you ask it to.
+
+check-page
+
+Its details, on GitHub
+
+Press Details and GitHub shows the check's own page: the sentence, the three problems to fix first with where they are and a link to the moment, and a link to the report. One screen, no pictures, no scrolling.
+
+the-report
+
+The report
+
+The page the check links to, and the one you can share with a link. One line says whether it worked. The five people sit in one line under it, each with their outcome. Then the problems on the left, worst first, each with its impact, where, who hit it and how many; and on the right the evidence of the one you selected, which stays put while the list scrolls: the clip, the words, where as a locator you can paste, the moments, the smallest change, and a copy as an issue. One line closes the page. Everything about one person is on their attempt.
+
+All checks have passed
+
+1 neutral and 2 successful checks
+
+preview
+
+Deployment ready
+
+tests
+
+212 passed
+
+Weekboard
+
+https://ui-tests.com
+
+weekboard-git-invite-flow.vercel.app
+
+80035db
+
+Prolific
+
+Prolific
+
+CloudResearch Connect
+
+Prolific
+
+CloudResearch Connect
+
+screened as signed up for a planning tool this week
+
+Share
+
+Copy as an issue
 
 ## Where the people come from
 
@@ -468,7 +528,7 @@ People are paid as they finish. Anyone you exclude later stays paid. What is not
 
 Panel people answer screeners for money.
 
-Read the fit line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not.
+Read the Who took part line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not.
 
 One run filling across two panels
 
@@ -555,7 +615,7 @@ In a Next.js app, install the package. On any other site, paste one line instead
 
 You see "ui-tests" in `devDependencies`.
 
-You see a link in the terminal, then in your browser the consent, a few questions, the first impression, the scenario card, your own page with the bar over it, and the questions after the task, one at a time. Press "Done". The terminal prints:
+You see a link in the terminal, then in your browser the consent, a few questions, the first look, the scenario card, your own page with the bar over it, and the questions after the task, one at a time. Press "Done". The terminal prints:
 
 You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in, and change it to your own site:
 
@@ -624,13 +684,14 @@ These frames are generated by the CLI’s Ink renderer.
 ### report
 
 ```text
-● Problems found: 4 across 5 people.
+● Problems found: 4, seen across all 5 people.
   Reached the goal: 2 of 5.
+  Pressed Done, but your check failed: 2 of 5.
 
 ▏1  2 of 5  blocked   Pressed Add, saw nothing change, pressed it again
- 2  1 of 5  blocked   Stopped at a grey Add, pressed I couldn't do this
+ 2  1 of 5  blocked   Add looked switched off; pressed I couldn't do this
  3  4 of 5  slowed    Looked for Invite in the Share menu, found only links
- 4  2 of 5  confused  Typed the colleague's email into the board search
+ 4  2 of 5  confused  Typed Sam's email into the board search
 ```
 
 ### agent

@@ -18,8 +18,8 @@ Approved markup exported from the design artifacts. Each file is the spec for th
 | `tokens.css` | The site's tokens: light first, dark alternate, host and chrome tokens. Every artefact below carries the same block. |
 | `attempt-view.html` (+ `attempt-view/`) | One person, one goal: the result, the minute as a flow, clips in place. A white window on the light canvas. |
 | `player-chrome.html` | Every participant surface in order: consent, the screener's six screens, first impression (open question), scenario card, the bar, the five screens after the task. |
-| `pr-section.html` | The landing section "In the pull request": the neutral check, its page on GitHub, and the report. Supersedes `pull-request-check.html` and `report-rows.html`. |
-| `run-report.html` | The run report page alone, the viewer shape. Supersedes `trace-viewer.html` for the run level. |
+| `pr-section.html` | The landing section "In the pull request": the neutral check, its page on GitHub, and the report. Supersedes `pull-request-check.html` and `report-rows.html`. Built in round eight (issue #35) as `PullRequest`; where issue #35, item 4 changes a word, the site follows the issue. |
+| `run-report.html` | The run report page alone, the viewer shape. Supersedes `trace-viewer.html` for the run level. Built as `RunReport` at `/r/<run>`; the selected row and the pane sit on the canvas rather than the raised grey, where every data role holds 4.5:1. |
 | `sources-section.html` | The landing section "Where the people come from": the sources table, its wells and the three pictures. Supersedes `invite-link.html`, `cap-control.html` and `visitor-invitation.html`. |
 | `compile-section.html` | The landing section "What you write, what they see": commands, the whole file, six pieces with their lines, screens and what comes back. |
 | `scenario-card.html`, `taskbar.html`, `ease-question.html` | The same three surfaces on their own, for the components that render them. |

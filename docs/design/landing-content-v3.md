@@ -220,9 +220,9 @@ The `catch` line sets how many: one in three at 85% confidence means five people
 
 **Worked out on your side.** People: 5 from the paid panel, matched to `users` · Chance of seeing a 1-in-3 problem: 87% · Cost: about $55 · cap $70 · first people within minutes, usually all five within a few hours.
 
-**Comes back.** screened 20 · matched 5 · fit: 3 of 5 had the need this month · how they do it today, in their words
+**Comes back.** screened 20 · matched 5 · who took part: 3 of 5 had the need this month · how they do it today, in their words
 
-### 3. First impression
+### 3. First look
 
 **Subtitle.** on by default
 
@@ -324,7 +324,7 @@ One row is open at a time; each opens to how it works, the caveat and one pictur
 
 **Your visitors.** How it works: (1) One script tag on your site. It watches for the same trouble the attempt view shows: a dead click, a rage click, a U-turn, a long pause. (2) Mark the pages it must never interrupt. Checkout, payment and a form in progress are never interrupted anyway. (3) The second sign of trouble on the same page invites the person. Nothing from before a yes is kept. Their attempt is kept beside the five, not inside. Caveat: **They show where real users get stuck, not how many do.** Treat their problems as leads, and confirm them with a link or a panel run. Picture: the invitation over the Weekboard page, in the chrome's surface, from the real player: "This page seems to be giving you trouble. Would you show us where? Five minutes, paid, in your own words. The site is being tested, not you." [ Sure ] [ No thanks ]
 
-**A paid panel.** How it works: (1) Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token. (2) `npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends. (3) People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back. Caveat: **Panel people answer screeners for money.** Read the fit line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not. Picture: run k2m9 filling, 5 people wanted, 2 h 10 m. Prolific (its wordmark): 3 of 3, first at 6 min; Pool: 300,000+ active participants, 300+ filters, plus the screener from `users`; Speed: First person usually within minutes; five within a few hours; a narrow audience a day or more, and the plan says so. CloudResearch Connect (its wordmark): 2 of 2, first at 11 min; Pool: Thousands of vetted, census-matched participants; profiled, screened and custom audiences; Speed: First person within minutes; five within a few hours; a narrow audience needs a prescreen project, which adds time and cost. Paid $55 of the $70 cap · $15 back · Each attempt labelled with its panel.
+**A paid panel.** How it works: (1) Put a cap in the config. The hosted version brings the panel accounts; on your own machine you add a token. (2) `npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends. (3) People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back. Caveat: **Panel people answer screeners for money.** Read the Who took part line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not. Picture: run k2m9 filling, 5 people wanted, 2 h 10 m. Prolific (its wordmark): 3 of 3, first at 6 min; Pool: 300,000+ active participants, 300+ filters, plus the screener from `users`; Speed: First person usually within minutes; five within a few hours; a narrow audience a day or more, and the plan says so. CloudResearch Connect (its wordmark): 2 of 2, first at 11 min; Pool: Thousands of vetted, census-matched participants; profiled, screened and custom audiences; Speed: First person within minutes; five within a few hours; a narrow audience needs a prescreen project, which adds time and cost. Paid $55 of the $70 cap · $15 back · Each attempt labelled with its panel.
 
 ---
 
@@ -334,15 +334,27 @@ One row is open at a time; each opens to how it works, the caveat and one pictur
 
 **Heading.** In the pull request.
 
-**Lead.** Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request with a report page anyone on the team can open. Your other tests prove the code works. This one shows whether a person can use it.
+**Lead.** Put `npx ui-tests run` in the job that deploys your preview. Once the attempts are in, a check lands on the pull request. It never fails your build. Its details are the worst problems with the moment to watch, and the full report opens for you, or for anyone you send a link to. Your other tests prove the code works. This one shows whether a person can use it.
 
-**Artefact.** The check as it appears on the pull request. Frame label: Example run.
+**Artefact** (issue #35; `design/artefacts/pr-section.html`). Three pieces in one column. Frame label: Example run.
+
+1. **The check.** One line in the merge box, next to your other checks, with a neutral mark, never red or green:
 
 ```text
-ui-tests · Problems found: 4 across 5 people · Report
+ui-tests · 4 problems found · 2 of 5 people reached the goal
 ```
 
-Under it: the report page opens on the ranked problems, each with the moments to watch and what to change, and every person's trace below.
+2. **Its details, on GitHub.** The check's page: "5 people tried *invite a colleague* on this preview. 2 of 5 reached the goal; 2 of 5 pressed Done, but your check failed. This check never fails your build. It reports problems, or that none were seen this time." Then the three to fix first, by impact, then by how many people hit them:
+
+| # | Problem | Where | People | Impact | Moment |
+| --- | --- | --- | --- | --- | --- |
+| 1 | Pressed Add, saw nothing change, pressed it again; Sam got two invitations | `/settings/members` · `button "Add"` | 2 of 5 | Blocked | Person 3 · 00:58 |
+| 2 | The Add button looked switched off; Person 2 pressed I couldn't do this | `/settings/members` · `button "Add"` | 1 of 5 | Blocked | Person 2 · 00:49 |
+| 3 | Looked for Invite in the Share menu and found only link options | `/board` · `menu "Share"` | 4 of 5 | Slowed | Person 1 · 00:04 |
+
+Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect. Open the report · +1 more problem · What worked. Footer: 5 people · paid panel (Prolific, CloudResearch Connect) · the preview · the commit · the date.
+
+3. **The report** (`/r/k2m9`; `design/artefacts/run-report.html`). "invite a colleague · Reached the goal: 2 of 5 · Problems found: 4, seen across all 5 people · Pressed Done, but your check failed: 2 of 5". The five people in one line, each linking to their attempt. The problems on the left with the fourth, "Typed Sam's email into the board search" (confused, 2 of 5), then "Found Settings, then Members, on their own" (5 of 5) as what worked; on the right the selected problem's clip, quote, where as a Playwright locator, Moments, Suggested change and Copy as an issue. The closing line ends: "Found automatically from what people did; it can miss problems. Watch the clips."
 
 ---
 
@@ -391,7 +403,7 @@ You type:
 npx ui-tests
 ```
 
-You see a link in the terminal, then in your browser the consent, a few questions, the first impression, the scenario card, your own page with the bar over it, and the questions after the task, one at a time. Press "Done". The terminal prints:
+You see a link in the terminal, then in your browser the consent, a few questions, the first look, the scenario card, your own page with the bar over it, and the questions after the task, one at a time. Press "Done". The terminal prints:
 
 ```text
 Reached the goal: Yes

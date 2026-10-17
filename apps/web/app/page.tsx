@@ -8,8 +8,7 @@ import { CodeWindow } from '../components/artefacts/code-window'
 import { AttemptView } from '../components/artefacts/attempt-view'
 import { Compilation } from '../components/artefacts/compilation'
 import { Sources } from '../components/artefacts/sources'
-import { ChecksBox } from '../components/artefacts/checks-box'
-import { FindingsList } from '../components/artefacts/findings-list'
+import { PullRequest } from '../components/artefacts/pull-request'
 import { Dashboard } from '../components/artefacts/dashboard'
 import { Icon } from '../components/icon'
 import { promise, intro, landing, agent, hosted } from '../lib/copy'
@@ -28,12 +27,7 @@ export default function Home() {
       </section>
       <Compilation />
       <Sources />
-      <section className="block" aria-labelledby="pull-request">
-        <SectionHead id="pull-request" heading={landing.pr} lead={landing.prLead} />
-        <ChecksBox />
-        <div id="findings"><FindingsList /></div>
-        <Caption text={landing.prCaption} />
-      </section>
+      <PullRequest />
       <section className="block" aria-labelledby="agents">
         <SectionHead id="agents" heading={agent.heading} lead={agent.lead} />
         <div className="row-8-4"><TerminalWindow name="agent" title={agent.command} /><Caption side code={agent.fileLine} text={agent.closing} /></div>

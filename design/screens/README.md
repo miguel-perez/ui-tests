@@ -10,14 +10,14 @@ PLAYWRIGHT_BROWSERS_PATH=0 CAPTURE_SITE=1 npm run test:e2e
 
 [Landing at 1440](landing-1440.jpg) · [landing at 375](landing-375.jpg) · [guide at 1440](guide-1440.jpg) · [guide at 375](guide-375.jpg)
 
-Every block of both pages at both widths, measured against [`docs/design/grid-plan.md`](../../docs/design/grid-plan.md),
+Every block of the landing, the guide and the report page (`/r/k2m9`, issue #35) at both widths, measured against [`docs/design/grid-plan.md`](../../docs/design/grid-plan.md),
 with a running site on port 3000:
 
 ```sh
 PLAYWRIGHT_BROWSERS_PATH=0 UI_HARNESS_ROOT=/path/to/ui-harness node apps/web/scripts/measure-blocks.mjs
 ```
 
-That writes `blocks/<page>-<block>-<width>.png` (blocks L1 to L8 on the landing, G0 to G8 on the guide, as named in the plan)
+That writes `blocks/<page>-<block>-<width>.png` (blocks L1 to L7 on the landing, G0 to G8 on the guide and R1 for the report page, as named in the plan)
 and [`grid-readings.json`](grid-readings.json): each block's placed-content area against its empty area (the plan's rule:
 empty never exceeds content), and the ui-harness layout rows computed by the register's own `harness.layout.layout_metrics`
 on the block's leaf boxes (grid quality, balance, density, white space, regularity). The harness readings are feedback, not a

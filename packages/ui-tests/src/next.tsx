@@ -98,10 +98,12 @@ export function ScenarioCard({ scenario, onStart, index = 1, total = 1, level = 
  */
 export function JoinSheet({ name = 'this website', minutes, video = false, onStart, busy = false, level = 2, chrome, accent }: { name?: string; minutes: number; video?: boolean; onStart?: () => void; busy?: boolean; level?: 1 | 2 | 3; chrome?: ChromeInput; accent?: string }) {
   const Heading = (['h1', 'h2', 'h3'] as const)[level - 1]
-  return <section className="uit uit-sheet uit-join" style={useChrome(chrome, accent)} data-research-taskbar aria-labelledby="uit-join-title">
+  // One id per instance, so two join sheets on one page never label each other.
+  const title = `${useId()}-join-title`
+  return <section className="uit uit-sheet uit-join" style={useChrome(chrome, accent)} data-research-taskbar aria-labelledby={title}>
     <PlayerStyles />
     <p className="uit-progress">{capital(name)} · about {minutes} minutes</p>
-    <Heading id="uit-join-title">{capital(name)} asked for your help with one thing on their site.</Heading>
+    <Heading id={title}>{capital(name)} asked for your help with one thing on their site.</Heading>
     <p>You&apos;ll try it the way you normally would, then answer two short questions. There are no wrong moves. The website is being tested, not you.</p>
     <ul className="uit-list" aria-label="What is recorded">
       <li><i aria-hidden="true" /><span>What you do on their page is recorded</span><em>always</em></li>
@@ -121,10 +123,11 @@ export const invitation = { title: 'This page seems to be giving you trouble.', 
 /** The invitation's words as one sentence pair, as PRD 03 and the demo carry them. */
 export const invitationText = `${invitation.title} ${invitation.body}`
 export function Invitation({ name = 'this website', onAccept, onDecline, contained = false, chrome, accent }: { name?: string; onAccept?: () => void; onDecline?: () => void; contained?: boolean; chrome?: ChromeInput; accent?: string }) {
-  return <section className={`uit uit-invite${contained ? ' uit-contained' : ''}`} style={useChrome(chrome, accent)} data-research-taskbar role="dialog" aria-label={`Invitation from ${capital(name)}`} aria-describedby="uit-invite-body">
+  const body = `${useId()}-invite-body`
+  return <section className={`uit uit-invite${contained ? ' uit-contained' : ''}`} style={useChrome(chrome, accent)} data-research-taskbar role="dialog" aria-label={`Invitation from ${capital(name)}`} aria-describedby={body}>
     <PlayerStyles />
     <h2>{invitation.title}</h2>
-    <p id="uit-invite-body">{invitation.body}</p>
+    <p id={body}>{invitation.body}</p>
     <div className="uit-invite-actions"><button type="button" className="uit-primary" onClick={onAccept}>{invitation.accept}</button><button type="button" onClick={onDecline}>{invitation.decline}</button></div>
   </section>
 }

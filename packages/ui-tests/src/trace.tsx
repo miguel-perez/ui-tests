@@ -54,7 +54,7 @@ export function renderTrace(run: Run, events: Event[], recordings?: Pick<Storage
       return <figure key={answer.recording} style={{ margin: '16px 0' }}><figcaption>Spoken answer ({answer.question === 'words' ? 'their words' : answer.question === 'impression' ? 'what the page was for' : 'what made it difficult'}, {answer.seconds.toFixed(1)} s). Transcript: {answer.transcript || 'none'}</figcaption>{audio && <audio controls preload="none" src={`data:${audio.mime};base64,${audio.audio.toString('base64')}`} />}</figure>
     })}
     {run.context.impression && <>
-      <h2>First impression</h2>
+      <h2>First look</h2>
       <p>{run.context.impression.page} was flashed for {run.context.impression.flashMs} ms, then one appeal rating, “{run.context.impression.question}”, and the page back for a first click.</p>
       {run.impression ? <>
         <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>Their words{run.impression.spoken ? ', spoken' : ''}: {run.impression.answer || 'none'}</p>

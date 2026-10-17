@@ -12,6 +12,7 @@ import { verify, reachedLine, type HookResult } from './verify.ts'
 import { renderTrace } from './trace.tsx'
 import type { Context } from './index.ts'
 import { printTerminal, impacts, type Report } from './report.tsx'
+import { parseCheckRun, publishCheck, checkRunPayload, stickyComment, type CheckOptions } from './check.ts'
 const print = (text: string) => printTerminal({ lines: text.split('\n') })
 
 const args = process.argv.slice(2)
@@ -61,15 +62,45 @@ async function init() {
   print(`Mount instructions:\n1. Import { UiTests } from 'ui-tests/next' and mount <UiTests /> in your root layout body.\n2. In app/ui-tests/[run]/page.tsx render <Player runId={run} token={token} /> from 'ui-tests/next'.\n3. In app/api/ui-tests/route.ts export GET and POST = createCollector() from 'ui-tests/server'; export const runtime = 'nodejs'.`)
   print('Next: npm run dev, then npx ui-tests')
 }
-/** Entry point: `init`, `verify <run-id>`, `lint`, or dev mode, which compiles and lints the test file, starts the trace viewer, opens the player and verifies each attempt when it finishes. */
+/** Compiles and loads `ui-tests.config.ts` beside the given bundle path (host apps need not set package.json type=module). */
+async function loadConfig(bundle: string) {
+  const configBundle = bundle.replace(/\.mjs$/, '') + '.config.mjs'
+  await build({ entryPoints: [path.resolve('ui-tests.config.ts')], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: configBundle })
+  return (await import(pathToFileURL(configBundle).href)).default as { check?: CheckOptions }
+}
+/**
+ * `ui-tests check <run.json>`: creates the `ui-tests` check run on the pull request's head commit with the job's `GITHUB_TOKEN`
+ * (`checks: write`; `pull-requests: write` for the sticky comment). `--block-on problems` and `--no-comment` override the config's
+ * `check` settings; `--print` writes the check run and the comment it would send without calling GitHub.
+ */
+async function check() {
+  const file = args[1]
+  if (!file) throw new Error('Usage: ui-tests check <run.json> [--block-on problems] [--no-comment] [--print]')
+  const run = parseCheckRun(JSON.parse(await readFile(file, 'utf8')))
+  const configured = await exists('ui-tests.config.ts') ? (await loadConfig(path.join(dataDirectory(), `check-${process.pid}`))).check ?? {} : {}
+  const blockOn = option('--block-on')
+  if (blockOn !== undefined && blockOn !== 'problems') throw new Error('--block-on takes one value: problems')
+  if (configured.block_on !== undefined && configured.block_on !== 'problems') throw new Error('check.block_on takes one value: problems')
+  const options: CheckOptions = { ...configured, ...(blockOn ? { block_on: 'problems' } : {}), ...(args.includes('--no-comment') ? { comment: false } : {}) }
+  const event = process.env.GITHUB_EVENT_PATH && await exists(process.env.GITHUB_EVENT_PATH) ? JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, 'utf8')) as { pull_request?: { number: number; head: { sha: string } } } : {}
+  // On a pull request GITHUB_SHA is the merge commit; the check belongs on the head commit the author pushed.
+  const headSha = event.pull_request?.head.sha ?? process.env.GITHUB_SHA
+  if (args.includes('--print')) { console.log(JSON.stringify({ checkRun: checkRunPayload(run, headSha ?? '<head sha>', options), comment: options.comment === false ? null : stickyComment(run) }, null, 2)); return }
+  const token = process.env.GITHUB_TOKEN, repository = process.env.GITHUB_REPOSITORY
+  if (!token || !repository || !headSha) throw new Error('ui-tests check needs GITHUB_TOKEN, GITHUB_REPOSITORY and GITHUB_SHA (set by GitHub Actions); use --print to see the check without sending it.')
+  const published = await publishCheck({ token, repository, headSha, pullRequest: event.pull_request?.number, run, options })
+  print(`Check ${published.checkRun.html_url ?? 'created'} · comment: ${published.comment}`)
+}
+/** Entry point: `init`, `check <run.json>`, `verify <run-id>`, `lint`, or dev mode, which compiles and lints the test file, starts the trace viewer, opens the player and verifies each attempt when it finishes. */
 async function main() {
   if (command === 'init') return init()
+  if (command === 'check') return check()
   if (command === 'report') {
     const id = args[1]
     if (!id) throw new Error('Usage: ui-tests report <run-id or report.json> [--json]')
     if (await exists(id)) {
       const report = JSON.parse(await readFile(id, 'utf8')) as Report
-      if (!report || typeof report !== 'object' || Array.isArray(report) || !Number.isInteger(report.people) || report.people < 1 || !Array.isArray(report.problems) || report.problems.some(p => !p || typeof p !== 'object' || Array.isArray(p) || typeof p.title !== 'string' || !Number.isInteger(p.people) || p.people < 1 || p.people > report.people || (p.impact !== undefined && !impacts.includes(p.impact))) || [report.reached, report.wrongAndSure].some(count => count !== undefined && (!Number.isInteger(count) || count < 0 || count > report.people)) || (report.reached !== undefined && report.wrongAndSure !== undefined && report.reached + report.wrongAndSure > report.people)) throw new Error('Invalid report')
+      if (!report || typeof report !== 'object' || Array.isArray(report) || !Number.isInteger(report.people) || report.people < 1 || !Array.isArray(report.problems) || report.problems.some(p => !p || typeof p !== 'object' || Array.isArray(p) || typeof p.title !== 'string' || !Number.isInteger(p.people) || p.people < 1 || p.people > report.people || (p.impact !== undefined && !impacts.includes(p.impact))) || [report.reached, report.pressedDoneFailed, report.wrongAndSure, report.seenBy].some(count => count !== undefined && (!Number.isInteger(count) || count < 0 || count > report.people)) || [report.wrongAndSure, report.pressedDoneFailed].some(count => report.reached !== undefined && count !== undefined && report.reached + count > report.people)) throw new Error('Invalid report')
       if (args.includes('--json')) console.log(JSON.stringify(report, null, 2))
       else printTerminal({ report })
     } else {

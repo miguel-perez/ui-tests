@@ -6,19 +6,22 @@ import { fileURLToPath } from 'node:url'
 import { stripVTControlCharacters } from 'node:util'
 import { TerminalOutput } from '../../../packages/ui-tests/src/report.tsx'
 import { role } from '../../../packages/ui-tests/src/colours.ts'
-import { agent, commands, problems, rehearsal } from '../lib/copy.ts'
+import { agent, commands, rehearsal } from '../lib/copy.ts'
+import { findings, reached, pressedDoneFailed, seenBy, exampleCheck } from '../lib/pull-request.ts'
 import { deadlineSentence, timeStatement } from '../../../packages/ui-tests/src/compiler.ts'
 import metadata from '../public/sessions/sessions.json' with { type: 'json' }
 
-// The run's report: who reached the goal and who was wrong and sure come from the attempts; the problems, in the run's rank, from the copy.
-// Two titles are shortened to fit 80 columns beside the rank, count and impact.
-const short = ['Pressed Add, saw nothing change, pressed it again', "Stopped at a grey Add, pressed I couldn't do this", 'Looked for Invite in the Share menu, found only links']
+// The run's report, from the same rows as the report page: who reached the goal, who pressed Done though the check failed (the goal
+// has a check, so nobody is counted wrong and sure), how many people hit a problem, and the problems in the run's rank.
+// Three titles are shortened to fit 80 columns beside the rank, count and impact.
+const short = { 1: 'Pressed Add, saw nothing change, pressed it again', 2: "Add looked switched off; pressed I couldn't do this", 3: 'Looked for Invite in the Share menu, found only links' }
 export const exampleReport = {
   people: metadata.attempts.length,
-  reached: metadata.attempts.filter(a => a.reached === 'yes').length,
-  wrongAndSure: metadata.attempts.filter(a => a.reached === 'no' && a.sure === 7).length,
+  reached,
+  pressedDoneFailed,
+  seenBy,
   selectedRank: 1,
-  problems: problems.map((p, i) => ({ title: short[i] ?? p.title, people: Number(p.count[0]), impact: p.impact })),
+  problems: findings.map(f => ({ title: short[f.rank] ?? f.title, people: f.people.length, impact: f.impact })),
 }
 const prompt = command => `$ ${command}`
 export const surfaces = {
@@ -102,5 +105,9 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
       if (await readFile(destination, 'utf8') !== html) throw new Error(`Terminal fragment drift: ${name}`)
     } else await writeFile(destination, html)
   }
-  if (!process.argv.includes('--check')) await writeFile(new URL('example-report.json', directory), JSON.stringify(exampleReport, null, 2) + '\n')
+  if (!process.argv.includes('--check')) {
+    await writeFile(new URL('example-report.json', directory), JSON.stringify(exampleReport, null, 2) + '\n')
+    // The run as the pull-request check reads it: `npx ui-tests check apps/web/generated/example-check.json` in .github/workflows/ui-tests.yml.
+    await writeFile(new URL('example-check.json', directory), JSON.stringify(exampleCheck, null, 2) + '\n')
+  }
 }

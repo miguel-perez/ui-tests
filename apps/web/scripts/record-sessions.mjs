@@ -327,7 +327,7 @@ async function publishP3() {
   if (size > 3 * 1024 * 1024) console.warn('Warning: p3.webm is over 3 MB.');
 }
 
-// The other four attempts follow the run's Watch moments: each action at its second, in the words of the attempt view.
+// The other four attempts follow the run's moments: each action at its second, in the words of the attempt view.
 const scripts = [
   { id: 'p1', end: 58, actions: [
     { at: 4, target: '#shareBtn', kind: 'click', what: 'Clicked Share', rest: ' · menu open', route: '/board', issue: 3 },

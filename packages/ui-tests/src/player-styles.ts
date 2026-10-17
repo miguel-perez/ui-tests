@@ -35,8 +35,8 @@ const lightChrome = { surface: [225, 226, 231] as Rgb, ink: [26, 27, 38] as Rgb 
 /** Floors the author cannot override: 4.5:1 for text, 3:1 for the accent and the recording dot. */
 export const floors = { text: 4.5, nonText: 3 } as const
 
-/** What the chrome is drawn from: the host page's text and background colours and the author's accent (`chrome.accent` in the config). */
-export type ChromeInput = { hostInk?: string; hostBackground?: string; accent?: string; font?: string }
+/** What the chrome is drawn from: the host page's text and background colours, the author's accent (`chrome.accent` in the config) and the ink on it, and the font. */
+export type ChromeInput = { hostInk?: string; hostBackground?: string; accent?: string; accentInk?: string; font?: string }
 /** Every colour the chrome paints, as CSS custom properties on `.uit`. */
 export type ChromeTheme = { surface: string; ink: string; dim: string; hair: string; accent: string; accentInk: string; step: string; rec: string; scrim: string; host: string; font: string }
 
@@ -45,7 +45,7 @@ export type ChromeTheme = { surface: string; ink: string; dim: string; hair: str
  * floor falls back to the default for the host's lightness. The accent is never sampled from the host; without one the accent is
  * the chrome's own text colour. Text on the accent flips between the chrome's two colours, then black or white.
  */
-export function chromeTheme({ hostInk, hostBackground, accent, font }: ChromeInput = {}): ChromeTheme {
+export function chromeTheme({ hostInk, hostBackground, accent, accentInk, font }: ChromeInput = {}): ChromeTheme {
   const background = parseColour(hostBackground) ?? [255, 255, 255]
   const fallback = luminance(background) > .18 ? darkChrome : lightChrome
   const inkOfHost = parseColour(hostInk)
@@ -56,7 +56,10 @@ export function chromeTheme({ hostInk, hostBackground, accent, font }: ChromeInp
   while (dimAlpha < 1 && contrast(over(ink, dimAlpha, surface), surface) < floors.text) dimAlpha = Math.round((dimAlpha + .04) * 100) / 100
   const chosen = parseColour(accent)
   const tone = chosen && contrast(chosen, surface) >= floors.nonText ? chosen : ink
-  const onAccent = [surface, ink, [0, 0, 0] as Rgb, [255, 255, 255] as Rgb].reduce((best, candidate) => contrast(candidate, tone) > contrast(best, tone) ? candidate : best)
+  // The ink on the accent: the author's own when it reads, else the accent's deep shade (as the artefacts' #14251f on mint), else the best of the chrome's two colours, black and white.
+  const own = parseColour(accentInk), deep = tone.map(value => Math.round(value * .17)) as Rgb
+  const onAccent = own && tone === chosen && contrast(own, tone) >= floors.text ? own : contrast(deep, tone) >= floors.text ? deep
+    : [surface, ink, [0, 0, 0] as Rgb, [255, 255, 255] as Rgb].reduce((best, candidate) => contrast(candidate, tone) > contrast(best, tone) ? candidate : best)
   const dark = luminance(surface) < .18
   return {
     surface: hex(surface), ink: hex(ink), dim: rgba(ink, Math.min(1, dimAlpha)), hair: rgba(ink, .16),
@@ -71,8 +74,8 @@ export function chromeTheme({ hostInk, hostBackground, accent, font }: ChromeInp
 export function chromeVars(theme: ChromeTheme) {
   return Object.fromEntries(Object.entries(theme).map(([name, value]) => [`--uit-${name.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}`, value])) as Record<string, string>
 }
-/** Weekboard, the demo app under test: its light ink and canvas, its font and the mint accent its author sets. */
-export const weekboardChrome: ChromeInput = { hostInk: '#2c3353', hostBackground: '#e1e2e7', accent: '#5fe3c0', font: '"Fira Sans", sans-serif' }
+/** Weekboard, the demo app under test: its light ink and canvas, its font, the mint accent its author sets and the accent ink the artefacts draw on it (`--ch-accent-ink`). */
+export const weekboardChrome: ChromeInput = { hostInk: '#2c3353', hostBackground: '#e1e2e7', accent: '#5fe3c0', accentInk: '#14251f', font: '"Fira Sans", sans-serif' }
 
 const defaults = Object.entries(chromeVars(chromeTheme(weekboardChrome))).map(([name, value]) => `${name}: ${value};`).join(' ')
 

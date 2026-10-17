@@ -119,7 +119,6 @@ main { position: relative; isolation: isolate; }
 .code-body { display: flex; padding: 16px; gap: 16px; overflow: auto; font: 400 13.5px/1.6 var(--font-mono), monospace; }
 .code-body pre, .code-body code { font: inherit; }
 .line-numbers { display: flex; flex-direction: column; border-right: 1px solid var(--line); padding-right: 16px; color: var(--muted); text-align: right; user-select: none; }
-.video-play { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 48px; height: 48px; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); }
 
 /* L1 · Claim. Copy in 7 columns, the terminal in 5 with its caption under it; only the texture behind. */
 .hero { position: relative; }
@@ -435,56 +434,125 @@ main { position: relative; isolation: isolate; }
 .wordmark.prolific { --mark: url('/marks/prolific.svg'); aspect-ratio: 1180.3 / 275.9; }
 .wordmark.connect { --mark: url('/marks/connect.webp'); aspect-ratio: 770 / 170; height: 18px; }
 
-/* L5 · ChecksBox and FindingsList, both 12 columns. */
-.checks-box h3 { display: flex; align-items: center; gap: 12px; font: 500 15px var(--font-sans), sans-serif; color: var(--ink); }
-.check-pass { display: grid; place-items: center; border-radius: 50%; width: 20px; height: 20px; color: var(--done); }
-.check-row { display: flex; align-items: center; gap: 12px; padding: 12px 16px; border-bottom: 1px solid var(--line); font-size: 14px; }
-.check-row:last-child { border-bottom: 0; }
-.check-row a { margin-left: auto; font-size: 12px; color: var(--accent); }
-.check-row strong { font-weight: 500; }
-.check-summary { color: var(--muted); }
-.issue-symbol { color: var(--moment); }
-.findings-list { background: var(--surface); }
-.findings-head, .finding-line { display: grid; grid-template-columns: 32px 104px 84px 156px minmax(0, 1fr); column-gap: 16px; align-items: center; padding: 0 24px; }
-.findings-head { padding-top: 10px; padding-bottom: 10px; border-bottom: 1px solid var(--line); font: 11px var(--font-mono), monospace; color: var(--muted); }
-.findings-head .num, .finding-line .num { text-align: right; }
-.cells { display: grid; grid-template-columns: repeat(5, 28px); gap: 4px; }
-.findings-head .cells span { text-align: center; }
-.findings-rows { list-style: none; margin: 0; padding: 0; }
-.finding-row { border-bottom: 1px solid var(--line); }
-.finding-line { min-height: 56px; }
-.rank { color: var(--moment); }
-.count { display: grid; justify-items: end; gap: 4px; font-size: 13px; }
-.count-bar { width: 64px; height: 4px; border-radius: 2px; background: linear-gradient(to right, var(--moment) calc(var(--share) * 100%), var(--line) 0); }
-.finding-impact { justify-self: start; padding: 1px 8px; border-radius: 10px; font: 11px/1.6 var(--font-mono), monospace; border: 1px solid var(--line); color: var(--muted); }
-.finding-impact[data-impact="blocked"] { color: var(--dead); border-color: currentColor; }
-.finding-impact[data-impact="confused"] { color: var(--pause); border-color: currentColor; }
-.cell { width: 28px; height: 28px; border-radius: 4px; background: var(--canvas); border: 1px solid var(--line); padding: 0; }
-.cell.hit { background: var(--moment); border-color: var(--moment); }
-.finding-toggle { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 0; border: 0; background: none; text-align: left; font-size: 15px; }
-.finding-toggle .line-icon { color: var(--muted); }
-.expanded .finding-toggle { font-weight: 500; }
-.expanded .finding-toggle .line-icon { transform: rotate(90deg); }
-.finding-detail { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); padding: 0 24px 24px; }
-.finding-detail > .reel-frame { grid-column: 1 / span 4; }
-.finding-evidence { grid-column: 5 / span 8; display: grid; align-content: start; gap: 8px; }
-.finding-evidence blockquote { color: var(--note); font-size: 18px; }
-.evidence-label { margin-top: 8px; font: 11px var(--font-mono), monospace; color: var(--muted); }
-.evidence-moments { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 0; padding: 0; }
-.watch-moment { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--canvas); font: 12px var(--font-mono), monospace; }
-.watch-moment[aria-pressed="true"] { border-color: var(--moment); color: var(--moment); }
-.finding-change { font-size: 15px; }
-.findings-footer { padding: 16px 24px; display: grid; gap: 4px; color: var(--muted); font-size: 14px; }
-.result-line { font: 13px var(--font-mono), monospace; color: var(--ink); }
-.reel-frame { border: 1px solid var(--line); border-radius: 6px; overflow: hidden; background: var(--surface); }
-.reel-chrome { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 2px 12px; padding: 8px 12px; border-bottom: 1px solid var(--line); background: var(--canvas); }
-.reel-label { font: 12px/1.5 var(--font-mono), monospace; color: var(--moment); }
-.reel-words { grid-column: 1 / -1; color: var(--note); font-size: 13px; line-height: 1.5; }
-.reel-player { position: relative; }
-.reel-player video { display: block; width: 100%; aspect-ratio: 16 / 10; object-fit: cover; background: var(--host-bg); }
-.reel-player .video-play { width: 36px; height: 36px; }
-.reel-stamp { position: absolute; left: 8px; bottom: 12px; padding: 1px 8px; border-radius: 10px; background: var(--ch-surface); color: var(--ch-ink); font: 11px var(--font-mono), monospace; }
-.reel-progress { position: absolute; left: 0; right: 0; bottom: 0; height: 3px; background: linear-gradient(to right, var(--moment) calc(var(--progress) * 100%), var(--line) 0); }
+/* L5 · PullRequest (design/artefacts/pr-section.html): three pieces in one column, centred on 10 of the 12 columns, in the order a
+   developer meets them. GitHub's chrome is drawn in the site's neutrals; colour stays on the data. */
+.pr-column { max-width: 1036px; margin: 0 auto; }
+.pr-head { display: grid; gap: 10px; margin-bottom: 36px; max-width: 70ch; }
+.pr-head p { color: var(--muted); font-size: 18px; text-wrap: pretty; }
+.pr-piece { border-top: 1px solid var(--line); padding: 40px 0 48px; display: grid; gap: 18px; }
+.pr-piece:last-child { padding-bottom: 0; }
+.pr-intro { display: grid; gap: 8px; max-width: 64ch; }
+.pr-intro h3 { font: 500 20px/1.25 var(--font-sans), sans-serif; letter-spacing: -.01em; }
+.pr-intro h3::before { content: attr(data-n); color: var(--moment); font: 15px var(--font-mono), monospace; margin-right: 10px; }
+.pr-intro p { color: var(--muted); font-size: 15px; line-height: 1.6; text-wrap: pretty; }
+.pr-gh { font-size: 14px; }
+.pr-gh-hd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); font-weight: 500; }
+.pr-gh-hd .example-label { margin-left: auto; }
+.pr-sub { font-weight: 400; color: var(--muted); font-size: 13px; }
+.pr-chk { display: grid; grid-template-columns: 20px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 16px; border-bottom: 1px solid var(--line); }
+.pr-chk:last-child { border-bottom: 0; }
+.pr-chk.ours { background: var(--raised); }
+.pr-chk b { font-weight: 500; color: var(--ink); }
+.pr-t { color: var(--muted); }
+.pr-chk a, .pr-md a { color: var(--accent); }
+.pr-chk a { font-size: 13px; }
+.pr-ic { width: 16px; height: 16px; display: grid; place-items: center; }
+.pr-ic svg { width: 16px; height: 16px; }
+.pr-ic.ok { color: var(--done); }
+/* The check's own mark is neutral: never green or red. */
+.pr-ic.neutral { color: var(--muted); }
+.pr-cp { display: grid; grid-template-columns: 220px minmax(0, 1fr); }
+.pr-side { border-right: 1px solid var(--line); padding: 16px; font-size: 13px; color: var(--muted); display: grid; gap: 8px; align-content: start; }
+.pr-side b { color: var(--ink); font-weight: 500; }
+.pr-side .on { color: var(--ink); background: var(--raised); margin: 0 -8px; padding: 6px 8px; border-radius: 6px; }
+.pr-side .example-label { margin-top: 8px; }
+.pr-main { padding: 20px 24px 24px; display: grid; gap: 16px; min-width: 0; }
+.pr-main h4 { font: 500 20px/1.3 var(--font-sans), sans-serif; display: flex; gap: 10px; align-items: center; }
+.pr-md { display: grid; gap: 14px; font-size: 14px; line-height: 1.55; }
+.pr-md p { max-width: 72ch; }
+.pr-tbl { overflow-x: auto; }
+.pr-md table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13px; }
+.pr-md th, .pr-md td { text-align: left; padding: 8px 10px; border: 1px solid var(--line); vertical-align: top; }
+.pr-md th { color: var(--muted); font-weight: 500; background: var(--raised); }
+.pr-md td.num, .pr-md td:last-child { white-space: nowrap; }
+.pr-md td code, .rr-pane dd code { font: 12px var(--font-mono), monospace; color: var(--ink); background: var(--raised); border: 1px solid var(--line); border-radius: 4px; padding: 0 5px; white-space: nowrap; }
+.pr-legend { font-size: 12px; color: var(--muted); }
+.pr-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
+.pr-foot { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
+/* The impact words: red for blocked, the moment for slowed, the stop colour for confused, green-teal for what worked. */
+.pr-impact, .rr-impact { font: 500 11px/1 var(--font-mono), monospace; letter-spacing: .06em; text-transform: uppercase; }
+.pr-impact[data-impact="blocked"], .rr-impact[data-impact="blocked"], .rr-legend b[data-impact="blocked"] { color: var(--dead); }
+.pr-impact[data-impact="slowed"], .rr-impact[data-impact="slowed"], .rr-legend b[data-impact="slowed"] { color: var(--moment); }
+.pr-impact[data-impact="confused"], .rr-impact[data-impact="confused"], .rr-legend b[data-impact="confused"] { color: var(--pause); }
+.rr-impact[data-impact="worked"] { color: var(--done); }
+
+/* RunReport (design/artefacts/run-report.html): the viewer. A white window; the selected row and the pane take the canvas, where
+   every data role holds 4.5:1 (the artefact's raised grey drops the moment to 4.45:1); it clips rather than hides its overflow, so the
+   evidence pane can stay put while the list scrolls. */
+.window.run-report { overflow: clip; }
+.rr-addr { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-bottom: 1px solid var(--line); font: 12px var(--font-mono), monospace; color: var(--muted); }
+.rr-dots { display: inline-flex; gap: 8px; }
+.rr-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.rr-url { margin-left: 6px; min-width: 0; overflow-wrap: anywhere; }
+.rr-addr .example-label, .rr-crumb .example-label { margin-left: auto; }
+.rr-body { padding: 26px 28px 28px; display: grid; gap: 22px; }
+.rr-top { display: grid; gap: 8px; }
+.rr-crumb { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
+.rr-crumb b { font-weight: 500; color: var(--ink); }
+.rr-result { font: 500 19px/1.4 var(--font-sans), sans-serif; letter-spacing: -.01em; text-wrap: pretty; }
+.rr-result b { font-weight: 600; }
+.rr-result .no, .rr-people .no { color: var(--no); }
+.rr-people { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 13px; color: var(--muted); }
+.rr-people a { color: var(--accent); }
+.rr-people a b { font-weight: 500; }
+.rr-people .yes { color: var(--done); }
+.rr-viewer { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; }
+.rr-viewer > * { min-width: 0; }
+.rr-legend { font-size: 12px; color: var(--muted); padding: 0 10px 8px; }
+.rr-legend b { font-weight: 500; }
+.rr-list ol { list-style: none; margin: 0; padding: 0; }
+.rr-row { width: 100%; display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 12px 10px; border: 0; border-bottom: 1px solid var(--line); border-radius: 6px; background: none; text-align: left; font-size: 14px; color: var(--ink); }
+.rr-row.is-sel { background: var(--canvas); box-shadow: inset 2px 0 0 var(--moment); }
+.rr-rank { font: 500 13px/1 var(--font-mono), monospace; color: var(--moment); padding-top: 3px; }
+.rr-what b { font-weight: 500; }
+.rr-sub { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; margin-top: 5px; font-size: 12px; color: var(--muted); }
+.rr-sub .rr-impact { font-size: 10px; }
+.rr-where { font-family: var(--font-mono), monospace; }
+.rr-count { font: 12px/1 var(--font-mono), monospace; color: var(--ink); padding-top: 3px; white-space: nowrap; }
+/* The person marks: the accent for the people who hit it, green-teal on what worked. */
+.rr-marks { display: inline-flex; gap: 4px; }
+.rr-marks i { width: 18px; height: 18px; border-radius: 3px; border: 1px solid var(--line); display: inline-grid; place-items: center; font: 500 10px/1 var(--font-mono), monospace; font-style: normal; color: var(--muted); }
+.rr-marks i.on { background: var(--accent); border-color: var(--accent); color: var(--chip-ink); }
+#worked .rr-marks i.on { background: var(--done); border-color: var(--done); }
+.rr-pane { position: sticky; top: 16px; border: 1px solid var(--line); border-radius: 8px; background: var(--canvas); padding: 16px 18px; display: grid; gap: 12px; font-size: 14px; }
+.rr-clip { position: relative; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--host-bg); aspect-ratio: 16 / 10; }
+.rr-clip video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
+.rr-secs { position: absolute; left: 10px; bottom: 10px; font: 500 12px/1 var(--font-mono), monospace; color: var(--ch-ink); background: var(--ch-surface); padding: 6px 8px; border-radius: 4px; }
+.rr-play { position: absolute; right: 10px; bottom: 10px; width: 34px; height: 34px; border-radius: 50%; border: 0; background: var(--moment); color: var(--chip-ink); display: grid; place-items: center; }
+.rr-quote { font-style: italic; font-size: 16px; color: var(--ink); border-left: 2px solid var(--note); padding-left: 12px; }
+.rr-quote small { display: block; font: normal 12px var(--font-sans), sans-serif; color: var(--muted); margin-top: 4px; }
+.rr-pane dl { display: grid; gap: 8px; }
+.rr-pane dl > div { display: grid; grid-template-columns: 100px minmax(0, 1fr); gap: 12px; }
+.rr-pane dt { color: var(--muted); font-size: 12px; letter-spacing: .06em; text-transform: uppercase; padding-top: 2px; }
+.rr-pane dd code { background: var(--surface); }
+.rr-moments { display: flex; flex-wrap: wrap; gap: 6px; }
+.rr-chip { display: inline-flex; align-items: center; gap: 6px; font: 12px/1 var(--font-mono), monospace; border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; background: var(--surface); color: var(--ink); }
+.rr-chip .line-icon { color: var(--moment); }
+.rr-chip[aria-pressed="true"] { border-color: var(--moment); }
+.rr-fix b { font-weight: 500; color: var(--done); }
+.rr-act { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.rr-copy { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); border: 1px solid var(--line); border-radius: 6px; padding: 7px 10px; background: var(--surface); }
+.rr-status { font-size: 13px; color: var(--done); }
+.rr-foot { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; line-height: 1.6; text-wrap: pretty; }
+.rr-foot b { color: var(--ink); font-weight: 500; }
+/* The page /r/<run> and each attempt: the same 10-column reading width; the shared version carries no site header. */
+.report-page { padding: var(--space-2) 0 var(--space-3); }
+.report-page.shared { padding-top: var(--space-1); }
+.report-column { width: calc(100% - 48px); max-width: 1036px; margin: 0 auto; display: grid; gap: 16px; }
+.report-share { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; font-size: 14px; color: var(--muted); }
+.report-back a { color: var(--accent); font-size: 14px; }
+.report-title { font-size: 28px; font-weight: 500; letter-spacing: -.02em; }
+.attempt-none { color: var(--muted); font-size: 14px; }
 
 /* L6 · AgentRun: the terminal in 8 columns, the caption in 4 beside it. */
 .row-8-4 .terminal-body { font-size: 13px; }
@@ -559,12 +627,13 @@ main { position: relative; isolation: isolate; }
 /* States change paint only: no size, weight, margin, padding or position changes on hover, focus or active. */
 @media (hover: hover) {
   .button.primary:hover { filter: brightness(1.08); }
-  .button.quiet:hover, .copy-control:hover, .watch-moment:hover { border-color: var(--muted); color: var(--ink); }
+  .button.quiet:hover, .copy-control:hover, .rr-chip:hover, .rr-copy:hover { border-color: var(--muted); color: var(--ink); }
   .attempt-index a:hover b, .attempt-fold summary:hover b { text-decoration: underline; }
   .moment-press:hover .moment-play { filter: brightness(1.08); }
-  .finding-toggle:hover span { color: var(--accent); }
-  .cell.hit:hover { box-shadow: 0 0 0 2px var(--surface), 0 0 0 4px var(--moment); }
-  .nav-links a:hover, .text-link:hover, .check-row a:hover, .step-index a:hover { color: var(--ink); }
+  .rr-row:not(.is-sel):hover { background: var(--canvas); }
+  .rr-play:hover { filter: brightness(1.08); }
+  .pr-chk a:hover, .pr-md a:hover, .rr-people a:hover, .report-back a:hover { text-decoration: underline; }
+  .nav-links a:hover, .text-link:hover, .step-index a:hover { color: var(--ink); }
   /* A closed source row lights up from the middle; the open one already carries the surface. */
   .src-row:not([aria-expanded="true"]):hover { background: linear-gradient(90deg, transparent, var(--surface) 12%, var(--surface) 88%, transparent); }
 }
@@ -573,9 +642,6 @@ main { position: relative; isolation: isolate; }
   .row-7-5 > :last-child, .row-8-4 > :last-child { grid-column: 8 / span 5; }
   .hero-copy { grid-column: 1 / -1; }
   .hero-artefact { grid-column: 1 / span 9; margin-top: var(--space-2); }
-  .findings-head, .finding-line { grid-template-columns: 24px 96px 76px 156px minmax(0, 1fr); column-gap: 12px; }
-  .finding-detail > .reel-frame { grid-column: 1 / span 5; }
-  .finding-evidence { grid-column: 6 / span 7; }
 }
 /* The attempt view stacks below 900: the result, the felt ratings and each card in one column, the rail at the left edge. */
 @media (max-width: 900px) {
@@ -598,12 +664,18 @@ main { position: relative; isolation: isolate; }
   .src-fill-row { grid-template-columns: minmax(0, 1fr) 48px; }
   .src-fill-row .src-bar, .src-fill-row .src-when { display: none; }
 }
+/* Below 900px the report's two panes stack and the check page's side list goes above it. */
+@media (max-width: 900px) {
+  .rr-viewer, .pr-cp { grid-template-columns: minmax(0, 1fr); }
+  .rr-pane { position: static; }
+  .pr-side { border-right: 0; border-bottom: 1px solid var(--line); }
+}
 /* At 375 everything stacks in source order. */
 @media (max-width: 700px) {
   .site-header nav { height: 64px; }
   .nav-links { gap: 20px; }
-  .row-7-5, .row-8-4, .section-head, .hero-grid, .step-pair, .finding-detail { grid-template-columns: minmax(0, 1fr); }
-  .row-7-5 > *, .row-8-4 > *, .section-head > *, .hero-grid > *, .step-pair > *, .finding-detail > * { grid-column: 1 / -1 !important; }
+  .row-7-5, .row-8-4, .section-head, .hero-grid, .step-pair { grid-template-columns: minmax(0, 1fr); }
+  .row-7-5 > *, .row-8-4 > *, .section-head > *, .hero-grid > *, .step-pair > * { grid-column: 1 / -1 !important; }
   .row-7-5, .row-8-4 { row-gap: var(--space-1); }
   .section-head { row-gap: var(--space-1); }
   .step-pair { row-gap: var(--space-2); }
@@ -620,13 +692,15 @@ main { position: relative; isolation: isolate; }
   .flow-row { grid-template-columns: 46px minmax(0, 1fr); row-gap: 4px; }
   .flow-row .url { grid-column: 2; }
   .attempt-headline { font-size: 28px; }
-  .findings-head { display: none; }
-  .finding-line { grid-template-columns: 20px 76px minmax(0, 1fr); row-gap: 8px; padding: 12px 16px; }
-  .finding-line .finding-impact { grid-column: 3; }
-  .finding-line .cells { grid-column: 2 / -1; }
-  .finding-toggle { grid-column: 1 / -1; padding: 0; }
-  .finding-detail { padding: 0 16px 16px; row-gap: 16px; }
-  .findings-footer { padding: 16px; }
+  .pr-head p { font-size: 16px; }
+  .pr-piece { padding: 32px 0; }
+  .pr-main { padding: 16px; }
+  .rr-body { padding: 20px 16px; }
+  .rr-result { font-size: 17px; }
+  .rr-pane { padding: 14px; }
+  .rr-pane dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
+  .rr-pane dd code { white-space: normal; overflow-wrap: anywhere; }
+  .report-column { width: calc(100% - 48px); }
   .hosted-form form, .hosted-screen { grid-template-columns: 1fr; padding: 16px; }
   .hosted-form form > *, .hosted-screen > * { grid-column: 1 !important; }
   .guide-head h1 { font-size: 40px; }

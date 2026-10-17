@@ -1,0 +1,37 @@
+name: ui-tests check
+
+# The self-hosted track, run on this repository's own pull requests: `ui-tests check` creates the `ui-tests` check run on the head
+# commit with the job's GITHUB_TOKEN. It reports the example run (apps/web/generated/example-check.json), always neutral, so it
+# never blocks a merge. The sticky comment is turned off here so the review threads stay the review's.
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+concurrency:
+  group: ui-tests-check-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Publish the ui-tests check
+    # A fork's token is read-only and cannot create check runs.
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '22.22.0'
+      - run: npm ci
+      - name: Create the check
+        run: node packages/ui-tests/bin/ui-tests.mjs check apps/web/generated/example-check.json --no-comment
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
