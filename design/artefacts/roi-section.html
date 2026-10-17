@@ -59,7 +59,8 @@ h1 { font: 500 30px/1.15 var(--sans); letter-spacing: -.015em; text-wrap: balanc
 .claim p { font: 400 23px/1.4 var(--sans); letter-spacing: -.005em; text-wrap: balance; }
 .claim p b { font-weight: 500; }
 .claim p .u { color: var(--moment); font-weight: 500; }
-.claim footer { font-size: 13px; color: var(--muted); max-width: none; text-wrap: pretty; }
+.claim p { max-width: 600px; }
+.claim footer { font-size: 13px; color: var(--muted); max-width: 600px; text-wrap: pretty; }
 .claim footer code { color: var(--ink); font-size: 12.5px; }
 .claim footer .srcs { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; }
 
@@ -125,17 +126,41 @@ h1 { font: 500 30px/1.15 var(--sans); letter-spacing: -.015em; text-wrap: balanc
   .out p.say { font-size: 19px; }
   .head h1 { font-size: 26px; }
 }
+
+.claim footer input { font: inherit; color: var(--ink); background: transparent; border: 0; border-bottom: 1px dashed var(--comment); padding: 0 1px; margin: 0; width: calc(var(--n, 2) * 1ch + 4px); text-align: center; border-radius: 0; }
+.claim footer input:focus { outline: none; border-bottom-color: var(--accent); color: var(--accent); }
 </style>
 
 <section class="page" aria-labelledby="roi-h">
   <h1 id="roi-h">What a run is worth.</h1>
   <div class="right">
     <blockquote class="claim">
-    <p>Five people cost about <b>$55</b>, about <span class="u">35&nbsp;minutes</span> of a US developer's time. If one problem they show you would have taken longer than that to find from bug reports, reproduce and fix after release, the run has paid for itself.</p>
+    <p>Five people cost about <b>$<span id="o-price">55</span></b>, about <span class="u" id="o-min">35&nbsp;minutes</span> of a US developer's time. If one problem they show you would have taken longer than that to find from bug reports, reproduce and fix after release, the run has paid for itself.</p>
     <footer>
-      The arithmetic: <code>$135,980 ÷ 2,080 h = $65</code> an hour in wages. Wages are 70% of what employers pay, so about <code>$93</code> an hour. <code>$55 ÷ $93 = 0.59 h</code>, about 35&nbsp;minutes.
+      The arithmetic: <code>$<input id="i-pay" type="text" inputmode="numeric" value="135,980" size="7" aria-label="US median pay for software developers, a year"> ÷ <input id="i-hours" type="text" inputmode="numeric" value="2,080" size="5" aria-label="working hours a year"> h = $<span id="o-wage">65</span></code> an hour in wages. Wages are <code><input id="i-share" type="text" inputmode="numeric" value="70" size="2" aria-label="wages as a share of what employers pay, per cent">%</code> of what employers pay, so about <code>$<span id="o-rate">93</span></code> an hour. <code>$<input id="i-price" type="text" inputmode="numeric" value="55" size="2" aria-label="what the run cost"> ÷ $<span id="o-rate2">93</span> = <span id="o-h">0.59</span> h</code>, about <span id="o-min2">35&nbsp;minutes</span>.
       <div class="srcs"><a href="https://www.bls.gov/ooh/computer-and-information-technology/software-developers.htm">BLS, software developers, May 2025</a> <a href="https://www.bls.gov/news.release/archives/ecec_03202026.htm">BLS, employer costs, March 2026</a></div>
     </footer>
   </blockquote>
   </div>
 </section>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+  var inputs = ['i-pay', 'i-hours', 'i-share', 'i-price'].map($);
+  var num = function (el) { var v = parseFloat(String(el.value).replace(/[^0-9.]/g, '')); return isFinite(v) && v > 0 ? v : 0; };
+  var fmt = function (n, d) { return n.toLocaleString('en-US', { maximumFractionDigits: d === undefined ? 0 : d, minimumFractionDigits: d === undefined ? 0 : d }); };
+  function size(el) { el.style.setProperty('--n', Math.max(1, String(el.value).length)); }
+  function render() {
+    var pay = num($('i-pay')), hours = num($('i-hours')), share = num($('i-share')) / 100, price = num($('i-price'));
+    var wage = hours ? pay / hours : 0, rate = share ? wage / share : 0, h = rate ? price / rate : 0, min = Math.round(h * 60);
+    $('o-wage').textContent = fmt(wage); $('o-rate').textContent = fmt(rate); $('o-rate2').textContent = fmt(rate);
+    $('o-h').textContent = fmt(h, 2); $('o-price').textContent = fmt(price);
+    var m = min >= 90 ? fmt(h, 1) + '\u00a0hours' : min + '\u00a0minutes';
+    $('o-min').textContent = m; $('o-min2').textContent = m;
+    inputs.forEach(size);
+  }
+  inputs.forEach(function (el) { el.addEventListener('input', render); el.addEventListener('blur', function () { var v = num(el); if (v) el.value = el.id === 'i-share' ? fmt(v) : fmt(v); render(); }); });
+  render();
+})();
+</script>
