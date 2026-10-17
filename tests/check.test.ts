@@ -88,6 +88,11 @@ describe('the ui-tests check (issue #35, item 3)', () => {
     expect(JSON.parse(await readFile('apps/web/generated/example-check.json', 'utf8'))).toEqual(exampleCheck)
     expect(() => parseCheckRun({ ...exampleCheck, reached: 9 })).toThrow('Invalid run')
     expect(() => parseCheckRun({ ...exampleCheck, problems: [{ title: 'x', page: '/', locator: 'a', people: 1, impact: 'bad' }] })).toThrow('Invalid run')
+    const moment = (url: string) => ({ ...exampleCheck, problems: [{ ...exampleCheck.problems[0], moment: { person: 1, seconds: 4, url } }] })
+    for (const url of ['javascript:alert(1)', 'https://ui-tests.com/r/k2m9 #t=4', 'https://ui-tests.com/r/k2m9)#t=4', '']) expect(() => parseCheckRun(moment(url))).toThrow('Invalid run: problems')
+    expect(parseCheckRun(moment('https://ui-tests.com/r/k2m9#problem-1&t=4'))).toBeTruthy()
+    for (const field of ['people', 'preview', 'commit', 'date'] as const) expect(() => parseCheckRun({ ...exampleCheck, footer: { ...exampleCheck.footer, [field]: '' } })).toThrow('Invalid run: footer')
+    expect(() => parseCheckRun({ ...exampleCheck, footer: {} })).toThrow('Invalid run: footer')
     const { stdout } = await exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'check', 'apps/web/generated/example-check.json', '--block-on', 'problems', '--print'], { env: { ...process.env, GITHUB_EVENT_PATH: '', GITHUB_SHA: 'deadbeef' }, timeout: 15000 })
     const printed = JSON.parse(stdout)
     expect(printed.checkRun).toEqual(checkRunPayload(exampleCheck, 'deadbeef', { block_on: 'problems' }))
@@ -98,6 +103,10 @@ describe('the ui-tests check (issue #35, item 3)', () => {
       await writeFile(event, JSON.stringify({ pull_request: { number: 4, head: { sha: 'headsha' } } }))
       const { stdout: off } = await exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'check', 'apps/web/generated/example-check.json', '--no-comment', '--print'], { env: { ...process.env, GITHUB_EVENT_PATH: event, GITHUB_SHA: 'merge' }, timeout: 15000 })
       expect(JSON.parse(off)).toMatchObject({ checkRun: { head_sha: 'headsha', conclusion: 'neutral' }, comment: null })
+      // The workflow_run publisher: the head commit comes from the triggering run.
+      await writeFile(event, JSON.stringify({ workflow_run: { head_sha: 'runhead', pull_requests: [{ number: 4 }] } }))
+      const { stdout: published } = await exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'check', 'apps/web/generated/example-check.json', '--no-comment', '--print'], { env: { ...process.env, GITHUB_EVENT_PATH: event, GITHUB_SHA: 'main' }, timeout: 15000 })
+      expect(JSON.parse(published)).toMatchObject({ checkRun: { head_sha: 'runhead', conclusion: 'neutral' } })
       await expect(exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'check', 'apps/web/generated/example-check.json'], { env: { ...process.env, GITHUB_TOKEN: '', GITHUB_EVENT_PATH: '', GITHUB_SHA: '' }, timeout: 15000 })).rejects.toMatchObject({ code: 1 })
     } finally { await rm(directory, { recursive: true, force: true }) }
   }, 40000)

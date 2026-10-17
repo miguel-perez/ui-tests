@@ -8,7 +8,7 @@ export { impacts, ranked, legend, legendLine, caveat, problemsLine, type Impact 
  * three problems to fix first with a link to the moment, the links and a footer; the rest go in `output.text` inside `<details>`.
  * No annotations (problems are on pages, not lines, and GitHub cannot clear old ones) and no images. One sticky comment of three
  * to five lines, updated in place and posted only when the outcome changes, unless the author turns it off.
- * The self-hosted track calls `publishCheck` with the job's `GITHUB_TOKEN` (`checks: write`, `pull-requests: write`); the hosted
+ * The self-hosted track calls `publishCheck` with the job's `GITHUB_TOKEN` (`checks: write`, `pull-requests: write` when the sticky comment is on); the hosted
  * App calls the same function with its installation token.
  */
 
@@ -125,13 +125,15 @@ export function parseCheckRun(value: unknown): CheckRun {
   const run = value as CheckRun
   const count = (n: unknown) => Number.isInteger(n) && (n as number) >= 0 && (n as number) <= run.people
   const text = (s: unknown) => typeof s === 'string' && s.length > 0
+  // A moment URL goes inside a Markdown link: HTTP(S), no whitespace and no `)` that would close the link early.
+  const link = (s: unknown) => typeof s === 'string' && /^https?:\/\/[^\s()]+$/.test(s)
   if (!run || typeof run !== 'object' || Array.isArray(run)) throw new Error('Invalid run: not an object')
   if (!text(run.goal) || !Number.isInteger(run.people) || run.people < 1) throw new Error('Invalid run: goal and people')
   if (!count(run.attempted) || !count(run.reached) || (run.pressedDoneFailed !== undefined && !count(run.pressedDoneFailed)) || run.reached + (run.pressedDoneFailed ?? 0) > run.attempted) throw new Error('Invalid run: counts')
   if (!text(run.reportUrl) || !/^https?:\/\//.test(run.reportUrl)) throw new Error('Invalid run: reportUrl')
-  if (!run.footer || typeof run.footer !== 'object') throw new Error('Invalid run: footer')
+  if (!run.footer || typeof run.footer !== 'object' || !text(run.footer.people) || !text(run.footer.preview) || !text(run.footer.commit) || !text(run.footer.date)) throw new Error('Invalid run: footer')
   if (!Array.isArray(run.problems) || run.problems.some(p => !p || typeof p !== 'object' || !text(p.title) || !text(p.page) || !text(p.locator) || !Number.isInteger(p.people) || p.people < 1 || p.people > run.people || !impacts.includes(p.impact)
-    || (p.moment !== undefined && (!Number.isInteger(p.moment.person) || !Number.isInteger(p.moment.seconds) || !text(p.moment.url))))) throw new Error('Invalid run: problems')
+    || (p.moment !== undefined && (!Number.isInteger(p.moment.person) || !Number.isInteger(p.moment.seconds) || !link(p.moment.url))))) throw new Error('Invalid run: problems')
   return run
 }
 

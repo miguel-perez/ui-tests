@@ -70,7 +70,7 @@ async function loadConfig(bundle: string) {
 }
 /**
  * `ui-tests check <run.json>`: creates the `ui-tests` check run on the pull request's head commit with the job's `GITHUB_TOKEN`
- * (`checks: write`; `pull-requests: write` for the sticky comment). `--block-on problems` and `--no-comment` override the config's
+ * (`checks: write`; `pull-requests: write` for the sticky comment), from a `pull_request` or a `workflow_run` event. `--block-on problems` and `--no-comment` override the config's
  * `check` settings; `--print` writes the check run and the comment it would send without calling GitHub.
  */
 async function check() {
@@ -82,13 +82,17 @@ async function check() {
   if (blockOn !== undefined && blockOn !== 'problems') throw new Error('--block-on takes one value: problems')
   if (configured.block_on !== undefined && configured.block_on !== 'problems') throw new Error('check.block_on takes one value: problems')
   const options: CheckOptions = { ...configured, ...(blockOn ? { block_on: 'problems' } : {}), ...(args.includes('--no-comment') ? { comment: false } : {}) }
-  const event = process.env.GITHUB_EVENT_PATH && await exists(process.env.GITHUB_EVENT_PATH) ? JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, 'utf8')) as { pull_request?: { number: number; head: { sha: string } } } : {}
-  // On a pull request GITHUB_SHA is the merge commit; the check belongs on the head commit the author pushed.
-  const headSha = event.pull_request?.head.sha ?? process.env.GITHUB_SHA
+  const event = process.env.GITHUB_EVENT_PATH && await exists(process.env.GITHUB_EVENT_PATH) ? JSON.parse(await readFile(process.env.GITHUB_EVENT_PATH, 'utf8')) as {
+    pull_request?: { number: number; head: { sha: string } }; workflow_run?: { head_sha: string; pull_requests?: { number: number }[] }
+  } : {}
+  // On a pull request GITHUB_SHA is the merge commit; the check belongs on the head commit the author pushed. From a
+  // `workflow_run` publisher (default-branch code holding the write token), the head commit is the triggering run's.
+  const headSha = event.pull_request?.head.sha ?? event.workflow_run?.head_sha ?? process.env.GITHUB_SHA
+  const pullRequest = event.pull_request?.number ?? event.workflow_run?.pull_requests?.[0]?.number
   if (args.includes('--print')) { console.log(JSON.stringify({ checkRun: checkRunPayload(run, headSha ?? '<head sha>', options), comment: options.comment === false ? null : stickyComment(run) }, null, 2)); return }
   const token = process.env.GITHUB_TOKEN, repository = process.env.GITHUB_REPOSITORY
   if (!token || !repository || !headSha) throw new Error('ui-tests check needs GITHUB_TOKEN, GITHUB_REPOSITORY and GITHUB_SHA (set by GitHub Actions); use --print to see the check without sending it.')
-  const published = await publishCheck({ token, repository, headSha, pullRequest: event.pull_request?.number, run, options })
+  const published = await publishCheck({ token, repository, headSha, pullRequest, run, options })
   print(`Check ${published.checkRun.html_url ?? 'created'} · comment: ${published.comment}`)
 }
 /** Entry point: `init`, `check <run.json>`, `verify <run-id>`, `lint`, or dev mode, which compiles and lints the test file, starts the trace viewer, opens the player and verifies each attempt when it finishes. */
