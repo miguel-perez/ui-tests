@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest'
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 import { roles } from '../packages/ui-tests/src/colours'
+import { texture } from '../apps/web/lib/texture'
+import { mixOklab, over } from './oklab'
 
 /** WCAG relative luminance and contrast of two #rrggbb colours. */
 function luminance(hex: string) {
@@ -44,6 +46,21 @@ describe('the token file (design/artefacts/tokens.css), which the artefacts rend
       for (const ground of ['canvas', 'surface']) expect(contrast(tokens.focus, tokens[ground]), `focus on ${ground}`).toBeGreaterThanOrEqual(3)
     })
   }
+
+  it('declares the wave accent as the line with a hint of the accent, and keeps ink and muted at 4.5:1 on it as the texture draws it', async () => {
+    // Issue #51: a new token in both files, word for word, mixed from the line and the accent, so it follows them.
+    const declaration = '--wave-accent: color-mix(in oklab, var(--line) 82%, var(--accent));'
+    expect(/^:root \{([^}]*)\}/m.exec(file)![1]).toContain(declaration)
+    expect(await readFile('apps/web/app/globals.css', 'utf8')).toContain(declaration)
+    const wave = mixOklab(light.line, 0.82, light.accent)
+    // A grey with a hint of blue: lighter than the muted text by far, and bluer than the line.
+    expect(wave).toBe('#c2c9e9')
+    expect(contrast(light.ink, wave), 'ink on the wave accent').toBeGreaterThanOrEqual(4.5)
+    // Text never sits on the token at full strength: the texture draws it at most at its top alpha over the canvas, and crossing
+    // lines darken rather than compound (apps/web/lib/texture.ts). At that strength muted holds 4.5:1 too.
+    const drawn = over(light.canvas, wave, texture.maxAlpha)
+    for (const name of ['ink', 'muted']) expect(contrast(light[name], drawn), `${name} on the wave accent as drawn`).toBeGreaterThanOrEqual(4.5)
+  })
 
   it('gives every CLI colour a code role the token file declares in both themes', () => {
     for (const name of Object.values(roles)) for (const [theme, tokens] of Object.entries(themes)) expect(tokens[name], `${name} in ${theme}`).toMatch(/^#/)

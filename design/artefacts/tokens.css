@@ -6,6 +6,7 @@
   --purple: #7444b4; --cyan: #00757c; --red: #bd1f44; --yellow: #8b6100; --no: #bd1f44; --yes: #007852;
   --done: #007852; --note: #7a41af; --pause: #8b6100; --deviation: #4b3ff0; --dead: #bd1f44; --correct: #007852;
   --incorrect: #bd1f44; --chip-ink: #ffffff; --focus: #4b3ff0;
+  --wave-accent: color-mix(in oklab, var(--line) 82%, var(--accent));
   --host-bg: #e9eaef; --host-panel: #f4f5f8; --host-line: #cfd3de; --host-ink: #2c3353; --host-dim: #4b5a94;
   --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225,226,231,.68); --ch-hair: rgba(225,226,231,.16); --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px;
   --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;

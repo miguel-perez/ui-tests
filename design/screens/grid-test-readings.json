@@ -1,6 +1,6 @@
 {
   "landing-1440": {
-    "height": 8354,
+    "height": 8114,
     "sections": [
       {
         "section": "what-comes-back",
@@ -60,7 +60,7 @@
     ]
   },
   "landing-375": {
-    "height": 13638,
+    "height": 13670,
     "sections": [
       {
         "section": "what-comes-back",
@@ -110,7 +110,7 @@
     ]
   },
   "guide-1440": {
-    "height": 7124,
+    "height": 7241,
     "sections": [
       {
         "section": "guide",
@@ -208,7 +208,7 @@
     ]
   },
   "guide-375": {
-    "height": 8766,
+    "height": 8812,
     "sections": [
       {
         "section": "guide",

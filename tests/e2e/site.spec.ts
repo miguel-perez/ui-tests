@@ -3,6 +3,8 @@ import AxeBuilder from '@axe-core/playwright'
 import { mkdir, readFile } from 'node:fs/promises'
 import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, runs, sources, whatComesBack } from '../../apps/web/lib/copy'
 import { shown, offences } from '../vocabulary'
+import { texture, travel } from '../../apps/web/lib/texture'
+import { mixOklab, over, darken } from '../oklab'
 
 /** Every content type's component on the landing page (docs/design/site-schema.md). */
 const artefacts = ['terminal-window', 'code-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'run-report', 'agents', 'dashboard']
@@ -80,10 +82,11 @@ for (const width of [1440, 375]) {
         await expect(page.getByRole('heading', { name: 'Three commands.' })).toHaveCount(0)
         await expect(page.locator('h1')).toHaveCSS('font-size', width === 1440 ? '72px' : '44px')
         for (const artefact of artefacts) await expect(page.locator(`[data-artefact="${artefact}"]`).first(), artefact).toBeVisible()
-        // Issue #38, item 2: the hero has no session behind it: no recording, no gestures, no sensors; only the texture.
-        await expect(page.locator('.hero video, .hero-session, .hero .sensor, .hero-backdrop figcaption, .hero-backdrop .gesture-scene, .hero-backdrop button')).toHaveCount(0)
-        expect(await page.locator('.hero-backdrop > *').evaluateAll(nodes => nodes.map(node => node.className))).toEqual(['trace-texture'])
-        await expect(page.locator('.hero-backdrop')).toHaveText('')
+        // Issue #38, item 2: the hero has no session behind it: no recording, no gestures, no sensors. Issue #51: and no texture of its
+        // own; the page's texture runs behind it as behind everything else, and holds nothing but its canvas tiles.
+        await expect(page.locator('.hero video, .hero-session, .hero .sensor, .hero canvas, .hero-backdrop, .trace-texture')).toHaveCount(0)
+        expect(new Set(await page.locator('.page-texture').evaluate(node => [...node.children, ...node.shadowRoot!.children].map(child => `${child.tagName} ${child.className}`)))).toEqual(new Set(['CANVAS page-texture-tile']))
+        await expect(page.locator('.page-texture')).toHaveText('')
         await expect(page.getByRole('button', { name: /frustration gestures|texture/i })).toHaveCount(0)
         // Issue #46, item 2: "What comes back." in place of the attempt view block and "In the pull request": the check, its page and
         // the report; the one-person attempt view is off the landing, behind each name in the report's people line.
@@ -155,12 +158,13 @@ for (const width of [1440, 375]) {
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/')
     await page.waitForTimeout(1500)
-    // Under reduced motion the texture's waves hold one still frame.
-    await expect(page.locator('.hero-backdrop')).toHaveAttribute('data-motion', 'still')
+    // Under reduced motion the texture's waves hold one still frame, its clock at zero.
+    await expect(page.locator('.page-texture')).toHaveAttribute('data-motion', 'still')
     expect(await page.evaluate(() => document.getAnimations().length)).toBe(0)
-    const still = await page.locator('.trace-texture').evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())
-    await page.waitForTimeout(250)
-    expect(await page.locator('.trace-texture').evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())).toBe(still)
+    const still = await page.locator('.page-texture-tile').first().evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())
+    await page.waitForTimeout(500)
+    expect(await page.locator('.page-texture-tile').first().evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())).toBe(still)
+    expect(await page.locator('.page-texture').evaluate(node => (node as HTMLElement & { clock: number }).clock)).toBe(0)
     await expect(page.locator('.types-once pre')).toHaveCSS('animation-name', 'none')
 
     // The attempt view (issue #22, item 1), on its own page since issue #46, behind Person 3 in the report's people line: the result,
@@ -233,28 +237,115 @@ for (const width of [1440, 375]) {
   })
 }
 
-test('the texture behind the hero moves slowly and continuously in the line colour, light under either system setting', async ({ page }) => {
+/** The canvas colour, and the strongest pixel the texture may paint: a grey line and a blue centre crossing at the top alpha. */
+const ground = [246, 246, 246]
+const strongest = (() => {
+  const wave = mixOklab('#e2e2e2', 0.82, '#4b3ff0')
+  return darken(over('#f6f6f6', '#e2e2e2', texture.maxAlpha), over('#f6f6f6', wave, texture.maxAlpha)).match(/[\da-f]{2}/gi)!.map(value => parseInt(value, 16))
+})()
+
+/** What the texture's tiles paint between `top` and `bottom` (document px): how many pixels, how many blue and grey, and the darkest. */
+function pixels(page: Page, top: number, bottom: number) {
+  return page.evaluate(([top, bottom, ground]) => {
+    let painted = 0, blue = 0, grey = 0, tiles = 0
+    const darkest = [255, 255, 255]
+    for (const tile of document.querySelector('.page-texture')!.shadowRoot!.querySelectorAll('canvas')) {
+      const y = tile.offsetTop, height = tile.offsetHeight
+      if (!tile.width || y >= bottom || y + height <= top) continue
+      tiles++
+      const scale = tile.width / tile.clientWidth, from = Math.max(0, top - y), to = Math.min(height, bottom - y)
+      const { data } = tile.getContext('2d')!.getImageData(0, Math.floor(from * scale), tile.width, Math.max(1, Math.floor((to - from) * scale)))
+      for (let i = 0; i < data.length; i += 4) {
+        const [r, g, b] = [data[i], data[i + 1], data[i + 2]]
+        if (ground[0] - Math.min(r, g, b) <= 2) continue
+        painted++
+        if (b - r >= 6) blue++; else if (Math.abs(b - r) <= 2) grey++
+        for (let c = 0; c < 3; c++) darkest[c] = Math.min(darkest[c], data[i + c])
+      }
+    }
+    return { painted, blue, grey, darkest, tiles }
+  }, [top, bottom, ground] as const)
+}
+
+// Issue #51, item 1: the waves behind the whole page, in the document, on the landing, the guide and the report, at both widths.
+for (const width of [1440, 375]) for (const [name, route, parts] of [['landing', '/', '.hero, [data-section], .site-footer'], ['guide', '/docs/getting-started', '.guide-head, [data-section], .site-footer'], ['report', '/r/k2m9', '.report-column, .site-footer']] as const) {
+  test(`the waves run behind every section and the footer of the ${name} at ${width}px, at the device pixel ratio`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1000 })
+    await page.goto(route)
+    await page.evaluate(() => document.fonts.ready)
+    const layer = page.locator('.page-texture')
+    await expect(layer).toHaveAttribute('data-motion', 'running')
+    // In the document, not fixed: at its top, under the content, as wide as the page and as tall as the whole document.
+    const box = await layer.evaluate(node => { const style = getComputedStyle(node), rect = node.getBoundingClientRect(); return { position: style.position, events: style.pointerEvents, z: style.zIndex, top: rect.top + scrollY, width: Math.round(rect.width), height: Math.round(rect.height), page: document.documentElement.scrollHeight, view: document.documentElement.clientWidth } })
+    expect(box).toMatchObject({ position: 'absolute', events: 'none', z: '-1', top: 0, width: box.view, height: box.page })
+    // A tall page is not one huge canvas: far from the window the tiles are released.
+    if (name !== 'report') expect(await page.locator('.page-texture-tile').evaluateAll(tiles => tiles.some(tile => (tile as HTMLCanvasElement).width === 0))).toBe(true)
+    const areas = await page.locator(parts).evaluateAll(nodes => nodes.map(node => { const rect = node.getBoundingClientRect(); return { name: node.getAttribute('data-section') ?? node.className, top: rect.top + scrollY, bottom: rect.bottom + scrollY } }))
+    expect(areas.length).toBeGreaterThan(1)
+    for (const area of areas) {
+      await page.evaluate(top => scrollTo(0, top), area.top)
+      await page.waitForTimeout(120)
+      const seen = await pixels(page, area.top, Math.min(area.bottom, area.top + 1000))
+      expect(seen.tiles, `${area.name}: a painted tile behind it`).toBeGreaterThan(0)
+      expect(seen.painted, `${area.name}: lines behind it`).toBeGreaterThan(500)
+      expect(seen.grey, `${area.name}: grey lines`).toBeGreaterThan(0)
+      // Never stronger than a line at the top of the alpha range: crossing lines darken, they do not compound.
+      for (let c = 0; c < 3; c++) expect(seen.darkest[c], `${area.name}: channel ${c} of the darkest pixel`).toBeGreaterThanOrEqual(strongest[c] - 2)
+    }
+    // At the device pixel ratio: each painted tile's backing store is its css size times the ratio.
+    expect(await page.locator('.page-texture-tile').evaluateAll(tiles => tiles.filter(tile => (tile as HTMLCanvasElement).width).every(tile => (tile as HTMLCanvasElement).width === Math.round(tile.clientWidth * devicePixelRatio)))).toBe(true)
+  })
+}
+
+test('the waves are drawn at a device pixel ratio of two, and released far from the window', async ({ browser }) => {
+  const context = await browser.newContext({ deviceScaleFactor: 2, viewport: { width: 1440, height: 1000 } })
+  const page = await context.newPage()
   await page.goto('/')
-  const texture = page.locator('.trace-texture')
-  await expect(page.locator('.hero-backdrop')).toHaveAttribute('data-motion', 'running')
-  // The waves are drawn in the line colour: on the light ground, #e2e2e2. Every strongly painted pixel is that colour, give or take rounding.
-  const offLine = (target: number[]) => texture.evaluate((canvas: HTMLCanvasElement, line) => {
-    const { data } = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height)
-    let painted = 0, worst = 0
-    for (let i = 0; i < data.length; i += 4) if (data[i + 3] > 200) { painted++; worst = Math.max(worst, ...line.map((value, c) => Math.abs(data[i + c] - value))) }
-    return painted > 1000 ? worst : Infinity
-  }, target)
-  expect(await offLine([226, 226, 226])).toBeLessThanOrEqual(2)
-  // It keeps moving: three frames a second apart all differ.
-  const frames: string[] = []
-  for (let i = 0; i < 3; i++) { frames.push(await texture.evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())); await page.waitForTimeout(1000) }
-  expect(new Set(frames).size).toBe(3)
+  await expect.poll(() => page.locator('.page-texture-tile').evaluateAll(nodes => nodes.some(node => (node as HTMLCanvasElement).width > 0))).toBe(true)
+  const tiles = await page.locator('.page-texture-tile').evaluateAll(nodes => nodes.map(node => ({ width: (node as HTMLCanvasElement).width, height: (node as HTMLCanvasElement).height, css: node.clientHeight, drawn: (node as HTMLCanvasElement).width > 0 })))
+  for (const tile of tiles.filter(tile => tile.drawn)) expect(tile).toMatchObject({ width: 2880, height: tile.css * 2 })
+  expect(tiles.filter(tile => !tile.drawn).every(tile => tile.height === 0)).toBe(true)
+  // The texture never changes the markup as it moves, so a click that did nothing still reads as one to the recorder.
+  const markup = await page.evaluate(() => document.querySelector('.page-texture')!.outerHTML)
+  await page.waitForTimeout(600)
+  await page.evaluate(() => scrollTo(0, document.documentElement.scrollHeight))
+  await page.waitForTimeout(600)
+  expect(await page.evaluate(() => document.querySelector('.page-texture')!.outerHTML)).toBe(markup)
+  expect(tiles.filter(tile => tile.drawn).length).toBeLessThan(tiles.length / 2)
+  await context.close()
+})
+
+test('the waves move visibly but slowly, grey with a blue centre, and stay light under either system setting', async ({ page }) => {
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('/')
+  const layer = page.locator('.page-texture')
+  await expect(layer).toHaveAttribute('data-motion', 'running')
+  const clock = () => layer.evaluate(node => (node as HTMLElement & { clock: number }).clock)
+  await expect.poll(clock).toBeGreaterThan(0)
+  // Over two seconds the clock runs two seconds, and in that time a sampled line point travels at least 16px, at most 32.
+  const read = async () => ({ clock: await clock(), frame: await page.locator('.page-texture-tile').first().evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL()) })
+  const before = await read()
+  await page.waitForTimeout(2000)
+  const after = await read()
+  expect(after.clock - before.clock).toBeGreaterThan(1500)
+  expect(after.frame).not.toBe(before.frame)
+  for (const index of [3, 20, 40]) {
+    let most = 0
+    for (let x = 0; x <= 1440; x += texture.step) most = Math.max(most, travel(index, x, before.clock / 1000, before.clock / 1000 + 2))
+    expect(most, `row ${index}`).toBeGreaterThanOrEqual(16)
+    expect(most, `row ${index}`).toBeLessThanOrEqual(32)
+  }
+  // Grey carries the lines and the blue is a tint at their centres: both are on the page, the grey the more.
+  const seen = await pixels(page, 0, 1000)
+  expect(seen.blue).toBeGreaterThan(100)
+  expect(seen.grey).toBeGreaterThan(seen.blue)
   // Under a dark system setting the site stays light, and so do the waves (issue #43).
   await page.emulateMedia({ colorScheme: 'dark' })
   await page.waitForTimeout(500)
-  expect(await offLine([226, 226, 226])).toBeLessThanOrEqual(2)
+  const dark = await pixels(page, 0, 1000)
+  for (let c = 0; c < 3; c++) expect(dark.darkest[c]).toBeGreaterThanOrEqual(strongest[c] - 2)
   await page.emulateMedia({ colorScheme: 'light' })
-  await expect(page.locator('.wordmark svg')).toHaveCSS('color', 'rgb(75, 63, 240)')
+  await expect(page.locator('.wordmark svg').first()).toHaveCSS('color', 'rgb(75, 63, 240)')
   // The header's wordmark is the mark and the name on one line, never painted over by the source logos' masked rule.
   await expect(page.locator('.site-header .wordmark')).toHaveCSS('background-color', 'rgba(0, 0, 0, 0)')
   await expect(page.locator('.site-header .wordmark')).toHaveCSS('display', 'flex')
