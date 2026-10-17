@@ -10,7 +10,7 @@
 - **One split for every section: 5 / 7.** A section's heading takes the first five columns and its lead the right seven, as one `5fr 7fr` split with one 24 px gutter: the heading starts at 96 and is 510 wide, the lead starts at 630 and is 714 wide. The same split carries every pair in a section (a compile step, a guide step, the agent's terminal and its caption, the sources well).
 - **A figure takes all twelve columns (96, 1248 wide) or the right seven (630, 714 wide).** Nothing is centred in a narrower column: the compilation's 800 px column and the pull-request section's 1036 px column are gone (issue #46).
 - Pieces inside a section are numbered with a small mono figure in the moment colour before the heading; each piece's text keeps to 64ch.
-- Vertical rhythm in three steps only (issue #51): `--space-1` 24, `--space-2` 48, `--space-3` 96, which on a phone are 24, 36 and 64. Every section opens with 96 (`padding-block: var(--space-3) 0`) and the last before the footer closes with 96; a head is followed by 48, a figure by 48, a caption or a note by 24, and nothing else spaces a section's top-level children. The hero keeps 96 above and below. No rule or motif separates sections; hairlines stay only inside figures (table rows, the merge box, the check page, the three pieces of "How it works.", the compile tab strip).
+- Vertical rhythm in three steps only (issue #51): `--space-1` 24, `--space-2` 48, `--space-3` 96, which on a phone are 24, 36 and 64. Every section opens with 96 (`padding-block: var(--space-3) 0`) and the last before the footer closes with 96; a head is followed by 48, a figure by 48, a caption or a note by 24, and nothing else spaces a section's top-level children. The hero keeps 96 above and below. No rule or motif separates sections, and since issue #62 no horizontal rule appears anywhere outside a drawn surface: not between the pieces of "How it works.", under the compile tab strip or over its previous and next row, between the sources table's rows or under its last, or around the guide's step index; spacing alone keeps those gaps. Hairlines stay only inside drawn windows (a window's tab bar, the merge box rows, the check page's table, the code windows, the demo frames). `tests/e2e/rules.spec.ts` walks both pages at both widths for any other.
 - The footer closes every page: a 5 / 7 row, the wordmark at 96 and the three links in the right seven ending flush at 1344; at 375 one column, the links left-aligned. 48 above and below it (36 on a phone).
 - The page's texture runs behind everything (issue #51): fine waves 14 px apart down the whole document, in the line colour with a blue tint at each line's centre.
 - At 375 the container is 343 px (16 px margins) and everything stacks in source order in one column, with no horizontal scroll; only the compile section's tab strip scrolls sideways, inside itself.
@@ -32,7 +32,7 @@ Each map shows the 12 columns at 1440 with a ruler; a bracket spans the columns 
 
 ## Landing page
 
-Seven sections, in order: L1 the hero, L2 how it works ("What comes back." until issue #49), L3 what you write, L4 where the people come from, L5 what a run is worth (issue #53), L6 the agent section, L7 the host section (issue #56: no repo, one command). At 1440 the page is 8,016 px tall with the footer after the host round (issue #56; 8,111 px after issue #54, 8,431 px with what a run is worth, issue #53; 8,114 px after issue #51, about 8,350 px after issue #49, 8,253 px after issue #46, 15,385 px before it; the limit is 9,000).
+Seven sections, in order: L1 the hero, L2 how it works ("What comes back." until issue #49), L3 what you write, L4 where the people come from, L5 what a run is worth (issue #53), L6 the agent section, L7 the host section (issue #56: no repo, one command). At 1440 the page is 6,601 px tall with the footer after the replay round (issue #62; 8,016 px after the host round, issue #56; 8,111 px after issue #54, 8,431 px with what a run is worth, issue #53; 8,114 px after issue #51, about 8,350 px after issue #49, 8,253 px after issue #46, 15,385 px before it; the limit is 9,000).
 
 ### L1 · Claim
 
@@ -50,29 +50,20 @@ At 375: h1, standfirst; actions, fine print; the terminal; its caption.
 
 ### L2 · WhatComesBack: how it works
 
-**Rule** (issue #46; issue #49; `design/artefacts/what-comes-back.html`). The heading "How it works." in 5 and no lead: the three pieces follow the hairline directly, each a numbered intro (64ch, from column 1) over its artefact across all 12 columns: the merge box; the check's page on GitHub (a 220 px side list and the page); the report as the list, the same `RunReport` as `/r/<run>` with an address bar (`design/artefacts/run-report-list.html`): the result line and the legend across, then one card per problem, worst first, its text in the card's left and the clip in 300 px on its right, what worked as the last card, the five people in a strip of five, the closing line, and the caption under it. Empty area: the intros leave the right of the row free beside 64ch, and the right of the head row where a lead used to be; both far smaller than the three artefacts.
+**Rule** (issue #46; issue #49; the replay round, issue #62; `design/artefacts/what-comes-back.html`). The heading "How it works." in 5 and no lead, then three numbered pieces, `--space-2` apart with no rule between them, each a numbered intro (64ch, from column 1): the merge box across 12; the check's page on GitHub across 12 (a 220 px side list and the page); and the replay, an illustration with nothing to press: its intro in the first 5 and one compact moment card in the right 7 (Person 3's still at 00:58 in 240 px with "00:58 → 01:04" and a decorative play mark, then who, when and Blocked, what they did, their words and the smallest change), then the rail across 12: a 2 px line in the line colour, a hollow dot at each of the attempt's thirteen events at its second, the three moments as 14 px filled dots ringed in the canvas (slowed at 00:03, confused at 00:23, blocked at 00:58) with their time and word under them, and the two ends. The report as the list is off the landing: it stays at `/r/<run>`, which the check page links to. Empty area: the intros of the first two pieces leave the right of their row free beside 64ch, and the right of the head row where a lead used to be; both far smaller than the artefacts.
 
 At 1440:
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
 [How it works.                      ]                                                            head · 96 above
-----------------------------------------------------------------------------------------------    hairline
-[1 The check: intro, 64ch                           ]                                            intro · 60
+[1 The check: intro, 64ch                           ]                                            intro · 60 · 48 above
 [merge box: heading · ui-tests (neutral) · preview · tests                         Example run]  box · 160
-----------------------------------------------------------------------------------------------    hairline
-[2 Its details, on GitHub: intro                    ]                                            intro · 80
+[2 Its details, on GitHub: intro                    ]                                            intro · 80 · 48 above
 [side 220 |title · sentence · table of three · legend · links · footer                        ]  page · 380
-----------------------------------------------------------------------------------------------    hairline
-[3 The report: intro                                ]                                            intro · 110
-[address bar                                                                       Example run]  34
-[crumb · result line · legend                                                                 ]  120
-[1 BLOCKED sentence, where        marks 2 of 5 | quote · moments · change     ] [clip 300     ]  card · 220
-[2 … 4, the same                                                                              ]  card · 220 × 3
-[  WORKED  sentence, where                                                    marks 5 of 5    ]  card · 76
-[Person 1   ][Person 2   ][Person 3   ][Person 4   ][Person 5   ]  each a link to /r/k2m9/p<n>   strip · 120
-[closing line                                                                                 ]  60
-[Caption under: no score and no pass                                                          ]  32
+[3 The replay: intro, 64ch          ] [still 240 | Person 3 · 00:58 · Blocked; did; said; fix ]  row · 180 · 48 above
+[o-●-o----o-----o--●--o-----o---o---o------------●--o-o  rail: 13 events, 3 moments           ]  rail · 80 · 44 above
+[00:00 Started on /board                                 01:03 Pressed Done · the check failed]
 ```
 
 At 375:
@@ -83,17 +74,14 @@ At 375:
 | 1 The check: intro; merge box                      |
 | 2 Its details: intro; side list above the page;    |
 |   title, sentence, table (scrolls sideways), links |
-| 3 The report: intro; address bar, result line,     |
-|   legend; each card: rank, impact, sentence,       |
-|   where, marks; quote, moments, change; the clip   |
-|   under; what worked; the strip in two columns;    |
-|   closing                                          |
-| Caption                                            |
+| 3 The replay: intro; the card: the still, then     |
+|   who, did, said, fix; the rail across the column; |
+|   the two ends                                     |
 ```
 
 ### L3 · Compilation: what you write, what they see
 
-**Rule** (issue #46; the trim round, issue #54; `design/artefacts/compile-section.html`). The heading in 5, the lead in 7. The three commands as three equal cards across 12, the note under them. Then a tab strip across 12, 1 Consent to 6 After the task, and one step visible at a time as a 5/7 pair: on the left the step's number and name and its note (64ch), and nothing else; on the right the screen in its constant light frame (16:10 over the Weekboard page, or fitted to its sheet), the stepper for steps 2 and 6, the dashed worked-out box for step 2, and the "Comes back" line. Previous and next under the pair, across 12. Then the whole file across 12, `--space-2` below the previous and next row. Nothing is sticky, and the step area takes each step's own height at every width: the closed steps leave the layout (issue #54 removes the shared cell of issue #49). Empty area: under a shorter left column, bounded by the screen's height.
+**Rule** (issue #46; the trim round, issue #54; `design/artefacts/compile-section.html`). The heading in 5, the lead in 7. The three commands as three equal cards across 12, the note under them. Then a tab strip across 12, 1 Consent to 6 After the task, and one step visible at a time as a 5/7 pair: on the left the step's number and name and its note (64ch), and nothing else; on the right the screen in its constant light frame (16:10 over the Weekboard page, or fitted to its sheet), the stepper for steps 2 and 6, and the "Comes back" line (the replay round, issue #62, removes the worked-out box from step 2). Previous and next under the pair, across 12. Then the whole file across 12, `--space-2` below the previous and next row. Nothing is sticky, and the step area takes each step's own height at every width: the closed steps leave the layout (issue #54 removes the shared cell of issue #49). Empty area: under a shorter left column, bounded by the screen's height.
 
 At 1440:
 
@@ -104,7 +92,7 @@ At 1440:
 [note under the commands                                                                      ]  24
 [1 Consent · 2 Screener · 3 First look · 4 Scenario card · 5 Your page, with the bar · 6 After]  tabs · 44
 [n Name · note, 64ch                ] [frame, constant light, chrome at real size              ]  pair · the step's own height
-[                                   ] [(stepper) (worked-out box) · Comes back                 ]
+[                                   ] [(stepper) · Comes back                                  ]
 [← previous step                                                                  next step →]  nav · 48
 [CodeWindow: ui-tests/invite.ui.test.ts, 23 lines                                             ]  file · 620 · 48 above
 ```
@@ -117,7 +105,7 @@ At 375:
 | three command cards, stacked; the note             |
 | tab strip (scrolls sideways inside itself)         |
 | the open step: number, name, note,                 |
-|   frame, (stepper), (box), Comes back             |
+|   frame, (stepper), Comes back                    |
 | previous · next                                    |
 | the whole file (the code wraps)                    |
 ```

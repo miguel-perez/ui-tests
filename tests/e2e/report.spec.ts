@@ -19,7 +19,7 @@ async function open(page: Page, route: string, width: number) {
 }
 
 for (const width of [1440, 375]) {
-  test(`the section "How it works.": a neutral check, its page on GitHub and the report as the list at ${width}px`, async ({ page }) => {
+  test(`the section "How it works.": a neutral check, its page on GitHub and the replay at ${width}px`, async ({ page }) => {
     const errors = await open(page, '/', width)
     const pr = page.locator('section[aria-labelledby="comes-back"]')
     // The artefact's words (design/artefacts/what-comes-back.html), verbatim: issue #49, item 2, the heading "How it works." and no lead.
@@ -30,16 +30,22 @@ for (const width of [1440, 375]) {
     expect(artefact.querySelectorAll('.head p')).toHaveLength(0)
     await expect(pr.getByRole('heading', { level: 2 })).toHaveText(artefact.querySelector('.head h1')!.textContent!)
     await expect(pr.locator('.section-head p, [data-lead]')).toHaveCount(0)
-    // Its third piece is the list, as in run-report-list.html: cards, what worked last, the people in a strip.
-    expect(artefact.querySelectorAll('#report .pcard')).toHaveLength(5)
-    expect(artefact.querySelectorAll('#report .pstrip a')).toHaveLength(5)
-    expect(artefact.querySelectorAll('#report .vpane, #report .vrow')).toHaveLength(0)
+    // Issue #62: its third piece is the replay, and the report list is off the landing (it stays at /r/k2m9).
+    expect(artefact.querySelectorAll('#report, .pcard, .pstrip, .vpane, .vrow')).toHaveLength(0)
+    await expect(pr.locator('[data-artefact="run-report"], .run-report, .rr-card, .rr-strip, video')).toHaveCount(0)
+    await expect(page.locator('[data-artefact="run-report"]')).toHaveCount(0)
     await expect(pr.locator('.piece-intro h3')).toHaveText([...artefact.querySelectorAll('.piece .intro h2')].map(node => node.textContent!))
     await expect(pr.locator('.piece-intro p')).toHaveText([...artefact.querySelectorAll('.piece .intro p')].map(node => node.textContent!))
-    // On the page grid: the three pieces stack in the order a developer meets them, each across all twelve columns at 1440.
-    const boxes = await pr.locator('.piece').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect()).map(r => ({ x: Math.round(r.x), y: r.y, width: Math.round(r.width) })))
+    await expect(pr.locator('.piece-intro h3')).toHaveText(['The check', 'Its details, on GitHub', 'The replay'])
+    // On the page grid: the three pieces stack in the order a developer meets them, each across all twelve columns at 1440, 48 apart
+    // with no rule between them (issue #62).
+    const boxes = await pr.locator('.piece').evaluateAll(nodes => nodes.map(node => ({ rect: node.getBoundingClientRect(), style: getComputedStyle(node) })).map(({ rect, style }) => ({ x: Math.round(rect.x), y: rect.y, bottom: rect.bottom, width: Math.round(rect.width), border: style.borderTopWidth, padding: style.paddingTop })))
     expect(new Set(boxes.map(box => box.x)).size).toBe(1)
     expect(boxes.every((box, i) => i === 0 || box.y > boxes[i - 1].y)).toBe(true)
+    for (const [i, box] of boxes.entries()) {
+      expect([box.border, box.padding]).toEqual(['0px', '0px'])
+      if (i) expect(Math.round(box.y - boxes[i - 1].bottom)).toBe(width === 1440 ? 48 : 36)
+    }
     if (width === 1440) expect(boxes.map(box => [box.x, box.width])).toEqual([[96, 1248], [96, 1248], [96, 1248]])
     // The check in the merge box: neutral, never green or red, beside the team's green checks.
     const ours = pr.locator('.pr-chk.ours')
@@ -58,12 +64,55 @@ for (const width of [1440, 375]) {
     await expect(checkPage.locator('tbody td:last-child a').first()).toHaveAttribute('href', '/r/k2m9#problem-1&t=58')
     await expect(checkPage.locator('.pr-legend')).toHaveText('Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect')
     await expect(checkPage.locator('.pr-links a')).toHaveText(['Open the report', '+1 more problem', 'What worked'])
+    await expect(checkPage.locator('.pr-links a').first()).toHaveAttribute('href', '/r/k2m9')
     await expect(checkPage.locator('.pr-foot')).toContainText('paid panel (Prolific, CloudResearch Connect)')
-    // The report is the list; its people strip links to their attempts; the Details link opens the check page.
-    await expect(pr.locator('.rr-card')).toHaveCount(5)
-    await expect(pr.locator('.rr-strip a')).toHaveCount(5)
-    for (let n = 1; n <= 5; n++) await expect(pr.locator('.rr-strip a').nth(n - 1)).toHaveAttribute('href', `/r/k2m9/p${n}`)
+    // The merge box's Details still opens the check's page, whose links open the report at /r/k2m9.
     await expect(ours.getByRole('link', { name: 'ui-tests details' })).toHaveAttribute('href', '#check-page')
+
+    // The replay (issue #62, item 1), word for word: the moment card's still, span, who, what they did, what they said and the change.
+    const drawn = artefact.querySelector('#replay')!, text = (node: Element | null) => node!.textContent!.replace(/\s+/g, ' ').trim()
+    const replay = pr.locator('#the-replay'), card = replay.locator('figure.replay-moment')
+    await expect(card).toHaveAttribute('aria-label', drawn.querySelector('figure.moment')!.getAttribute('aria-label')!)
+    await expect(card.locator('.replay-clock')).toHaveText(text(drawn.querySelector('.clock')))
+    await expect(card.locator('.replay-who')).toHaveText(text(drawn.querySelector('.who')))
+    await expect(card.locator('h4')).toHaveText(text(drawn.querySelector('.moment h3')))
+    await expect(card.locator('blockquote')).toHaveText(text(drawn.querySelector('blockquote')))
+    await expect(card.locator('.replay-fix')).toHaveText(text(drawn.querySelector('.fix')))
+    expect(text(drawn.querySelector('.fix'))).toBe('Smallest changeOn press, change the button to "Invited sam@acme.co" and disable it.')
+    await expect(card.locator('.replay-clip img')).toHaveAttribute('src', '/sessions/p3-58.jpg')
+    await expect(card.locator('.replay-play')).toHaveAttribute('aria-hidden', 'true')
+    // The rail: a dot at each of the attempt's thirteen events at the artefact's positions, the three moments with their time and word,
+    // and the two ends.
+    const rail = replay.locator('.replay-rail')
+    await expect(rail).toHaveAttribute('aria-label', drawn.querySelector('.rail')!.getAttribute('aria-label')!)
+    const events = [...drawn.querySelectorAll('.rail .dots li')]
+    expect(events).toHaveLength(13)
+    expect(await rail.locator('.replay-dots li').evaluateAll(nodes => nodes.map(node => (node as HTMLElement).style.left))).toEqual(events.map(node => (node as HTMLElement).getAttribute('style')!.replace(/^left:\s*/, '').replace(/;$/, '')))
+    expect(await rail.locator('.replay-dots li').evaluateAll(nodes => nodes.map(node => Number(node.getAttribute('data-at'))))).toEqual([0, 3, 5, 12, 19, 23, 27, 36, 41, 46, 58, 61, 63])
+    expect(await rail.locator('.replay-dots li').evaluateAll(nodes => nodes.map(node => node.className))).toEqual(events.map(node => node.className.replace(/^mo /, '')))
+    await expect(rail.locator('.replay-dots li span')).toHaveText(events.filter(node => node.querySelector('span')).map(node => text(node.querySelector('span'))))
+    await expect(rail.locator('.replay-dots li span')).toHaveText(['00:03Slowed', '00:23Confused', '00:58Blocked'])
+    await expect(rail.locator('.replay-ends > span')).toHaveText([...drawn.querySelectorAll('.rail .ends > span')].map(node => text(node)))
+    // The dots: hollow 8px on the 2px line in the line colour; the moments 14px, filled in yellow, note violet and red, ringed in the canvas.
+    await expect(rail.locator('.replay-line')).toHaveCSS('height', '2px')
+    await expect(rail.locator('.replay-line')).toHaveCSS('background-color', 'rgb(226, 226, 226)')
+    const dots = await rail.locator('.replay-dots li i').evaluateAll(nodes => nodes.map(node => { const style = getComputedStyle(node); return [style.width, style.backgroundColor, style.boxShadow.includes('rgb(246, 246, 246)')] }))
+    expect(dots.filter(([size]) => size === '8px')).toHaveLength(10)
+    expect(dots.filter(([size]) => size === '14px').map(([, colour, ring]) => [colour, ring])).toEqual([['rgb(139, 97, 0)', true], ['rgb(122, 65, 175)', true], ['rgb(189, 31, 68)', true]])
+    // An illustration: nothing in the piece takes focus or a press.
+    await expect(replay.locator('a, button, input, video, [tabindex], [role="button"]')).toHaveCount(0)
+    // The intro and the card on the 5/7 split at 1440, the card in the right seven and its clip 240px; the rail across all twelve.
+    const [intro, moment, clip, line] = await Promise.all([replay.locator('.piece-intro').boundingBox(), card.boundingBox(), card.locator('.replay-clip').boundingBox(), rail.boundingBox()])
+    if (width === 1440) {
+      expect([Math.round(moment!.x), Math.round(moment!.width)]).toEqual([630, 714])
+      expect(Math.round(intro!.x)).toBe(96)
+      expect(Math.round(clip!.width)).toBe(240)
+      expect([Math.round(line!.x), Math.round(line!.width)]).toEqual([96, 1248])
+    } else {
+      expect(moment!.y).toBeGreaterThanOrEqual(intro!.y + intro!.height)
+      expect([Math.round(line!.x), Math.round(line!.width)]).toEqual([16, 343])
+    }
+    expect(line!.y).toBeGreaterThan(moment!.y + moment!.height)
     expect(offences(await pr.innerText(), shown)).toEqual([])
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
     expect((await new AxeBuilder({ page }).include('section[aria-labelledby="comes-back"]').analyze()).violations).toEqual([])

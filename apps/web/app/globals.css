@@ -297,9 +297,9 @@ main { position: relative; isolation: isolate; }
 .compile-note { font-size: 13px; color: var(--muted); }
 .compile-note .code-inline { font-size: 12px; }
 /* The tab strip: the step's number in the moment colour, its name; the open tab underlined in the moment colour. */
-.compile-tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.compile-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
 .compile-tabs::-webkit-scrollbar { display: none; }
-.compile-tabs button { flex: none; display: inline-flex; gap: 8px; align-items: baseline; padding: 10px 14px 12px; margin-bottom: -1px; border: 0; border-bottom: 2px solid transparent; background: none; font-size: 14px; color: var(--muted); white-space: nowrap; }
+.compile-tabs button { flex: none; display: inline-flex; gap: 8px; align-items: baseline; padding: 10px 14px 12px; border: 0; border-bottom: 2px solid transparent; background: none; font-size: 14px; color: var(--muted); white-space: nowrap; }
 .compile-tabs button b, .compile-stepnav b { font: 500 12px/1 var(--font-mono), monospace; color: var(--moment); }
 .compile-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--moment); }
 .compile-tabs button:focus-visible { outline-offset: -2px; }
@@ -311,7 +311,7 @@ main { position: relative; isolation: isolate; }
 .compile-pair { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gutter); align-items: start; scroll-margin-top: 24px; }
 .compile-left { display: grid; gap: 20px; min-width: 0; }
 .compile-stepper > .compile-stepnav { margin-top: 32px; }
-.compile-stepnav { display: flex; justify-content: space-between; gap: 16px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
+.compile-stepnav { display: flex; justify-content: space-between; gap: 16px; padding-top: 16px; font-size: 14px; }
 .compile-stepnav button { display: inline-flex; gap: 8px; align-items: baseline; border: 0; background: none; padding: 0; color: var(--muted); }
 .compile-stepnav button:disabled { visibility: hidden; }
 .lines-window .window-chrome { min-height: 40px; }
@@ -330,11 +330,6 @@ main { position: relative; isolation: isolate; }
 .compile-main { display: grid; gap: 14px; min-width: 0; }
 .compile-back { font: 400 13px/1.6 var(--font-mono), monospace; color: var(--done); }
 .compile-back span { color: var(--muted); font-family: var(--font-sans), sans-serif; margin-right: 8px; }
-.compile-check { border: 1px dashed var(--line); border-radius: 8px; padding: 16px 18px; display: grid; gap: 10px; }
-.compile-check .who { font: 500 11px/1 var(--font-mono), monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--dead); }
-.compile-check dl { display: grid; gap: 6px; font-size: 14px; }
-.compile-check dl > div { display: grid; grid-template-columns: minmax(0, 15em) minmax(0, 1fr); gap: 18px; }
-.compile-check dt { color: var(--muted); }
 /* The frame: constant and light, the host page under test; its address bar and the board drawn as the participant sees them. */
 .compile-frame { position: relative; aspect-ratio: 16 / 10; width: 100%; border-radius: 8px; overflow: hidden; background: var(--host-bg); border: 1px solid var(--line); }
 .compile-frame .frame-shot { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
@@ -406,11 +401,8 @@ main { position: relative; isolation: isolate; }
    open at a time. The open row and its well take the surface token edge to edge (a full-bleed shadow clipped to the row's height,
    so nothing overflows the page); the header sticks on the canvas once scrolled past. Tokens only: the section reads the site's tokens. */
 .src-cols, .src-row { display: grid; grid-template-columns: 28px 3fr 3fr 2fr 2fr 2fr 24px; column-gap: var(--gutter); align-items: center; }
-.src-cols { position: sticky; top: 0; z-index: 5; padding: 12px 0; font: 500 11px/1.4 var(--font-sans), sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line); background: var(--canvas); box-shadow: 0 0 0 100vmax var(--canvas); clip-path: inset(0 -100vmax); }
+.src-cols { position: sticky; top: 0; z-index: 5; padding: 12px 0; font: 500 11px/1.4 var(--font-sans), sans-serif; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); background: var(--canvas); box-shadow: 0 0 0 100vmax var(--canvas); clip-path: inset(0 -100vmax); }
 .src-cols.is-stuck { color: var(--ink); }
-.src-cols:has(+ .src[data-open]) { border-bottom-color: transparent; }
-.src { border-bottom: 1px solid var(--line); }
-.src[data-open] { border-bottom-color: transparent; }
 .src-row { width: 100%; min-height: 152px; padding: 22px 0; border: 0; background: none; text-align: left; font: inherit; font-size: 15px; line-height: 1.5; color: var(--muted); }
 .src-row[aria-expanded="true"] { background: var(--surface); box-shadow: 0 0 0 100vmax var(--surface); clip-path: inset(0 -100vmax); }
 .src-ico { width: 22px; height: 22px; display: grid; place-items: center; color: var(--moment); }
@@ -468,14 +460,45 @@ main { position: relative; isolation: isolate; }
 .wordmark.connect { --mark: url('/marks/connect.webp'); aspect-ratio: 770 / 170; height: 18px; }
 
 /* L2 · WhatComesBack (design/artefacts/what-comes-back.html): three numbered pieces in the order a developer meets them, each a
-   64ch intro over its artefact across all twelve columns, hairlines between them. GitHub's chrome is drawn in the site's neutrals;
+   64ch intro over its artefact, --space-2 between them and no rule (issue #62). GitHub's chrome is drawn in the site's neutrals;
    colour stays on the data. */
-.piece { border-top: 1px solid var(--line); padding-top: 40px; display: grid; gap: 18px; }
+.piece { display: grid; gap: 18px; }
 .piece-intro { display: grid; gap: 8px; max-width: 64ch; }
 .piece-intro h3 { font: 500 20px/1.25 var(--font-sans), sans-serif; letter-spacing: -.01em; }
 .piece-intro h3::before { content: attr(data-n); color: var(--moment); font: 15px var(--font-mono), monospace; margin-right: 10px; }
 .piece-intro p { color: var(--muted); font-size: 15px; line-height: 1.6; text-wrap: pretty; }
 .piece > .caption-under { margin-top: 6px; }
+/* The replay (issue #62): an illustration, nothing to press. The intro and one compact moment card on the 5/7 split; under them the
+   attempt as a rail across twelve columns, a hollow dot at each event and the moments as larger dots filled in their impact's colour. */
+.replay-row { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: var(--gutter); align-items: start; }
+.replay-moment { margin: 0; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 20px; align-items: start; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.replay-clip { position: relative; aspect-ratio: 16 / 10; border-radius: 6px; overflow: hidden; background: var(--host-bg); border: 1px solid var(--line); }
+.replay-clip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top left; }
+.replay-clock { position: absolute; left: 8px; bottom: 8px; font: 500 11px/1 var(--font-mono), monospace; color: var(--ch-ink); background: var(--ch-surface); padding: 5px 7px; border-radius: 4px; }
+.replay-play { position: absolute; right: 8px; bottom: 8px; width: 30px; height: 30px; border-radius: 50%; background: var(--moment); color: var(--chip-ink); display: grid; place-items: center; }
+.replay-play svg { width: 12px; height: 12px; margin-left: 2px; }
+.replay-moment figcaption { display: grid; gap: 8px; padding-top: 2px; }
+.replay-who { font: 400 12px/1 var(--font-mono), monospace; color: var(--muted); }
+.replay-who b { color: var(--ink); font-weight: 500; }
+.replay-impact { color: var(--dead); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; font-size: 11px; }
+.replay-moment h4 { font: 500 16px/1.3 var(--font-sans), sans-serif; letter-spacing: -.01em; text-wrap: balance; }
+.replay-moment blockquote { margin: 0; padding-left: 10px; border-left: 2px solid var(--note); font-style: italic; font-size: 14px; color: var(--ink); }
+.replay-fix { font-size: 14px; color: var(--done); font-weight: 500; line-height: 1.45; }
+.replay-fix span { display: block; font: 500 10px/1 var(--font-mono), monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+.replay-rail { position: relative; margin-top: 44px; padding: 0 8px; }
+.replay-line { height: 2px; background: var(--line); border-radius: 1px; }
+.replay-dots { position: relative; height: 56px; list-style: none; margin: 0; padding: 0; }
+.replay-dots li { position: absolute; top: -5px; transform: translateX(-50%); }
+.replay-dots i { display: block; width: 8px; height: 8px; border-radius: 50%; background: var(--canvas); border: 2px solid var(--comment); }
+.replay-dots li[class] { top: -8px; }
+.replay-dots li[class] i { width: 14px; height: 14px; border: 0; background: currentColor; box-shadow: 0 0 0 3px var(--canvas), 0 0 0 4px currentColor; }
+.replay-dots .slowed { color: var(--yellow); } .replay-dots .confused { color: var(--note); } .replay-dots .blocked { color: var(--dead); }
+.replay-dots span { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 500 12px/1.3 var(--font-sans), sans-serif; color: var(--ink); text-align: center; }
+.replay-dots span b { display: block; font: 400 11px/1.3 var(--font-mono), monospace; color: var(--muted); }
+.replay-dots .blocked span { left: auto; right: 0; transform: none; text-align: right; }
+.replay-ends { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.replay-ends b { font-family: var(--font-mono), monospace; font-weight: 400; margin-right: 6px; }
+.replay-ends em { color: var(--dead); font-style: normal; }
 .pr-gh { font-size: 14px; }
 .pr-gh-hd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); font-weight: 500; }
 .pr-gh-hd .example-label { margin-left: auto; }
@@ -580,9 +603,8 @@ main { position: relative; isolation: isolate; }
 .figure-right .terminal-body { font-size: 13px; }
 
 /* L7 · The host section (design/artefacts/hosted-section.html; issue #56): the lead flush to the container's right edge, then two
-   unnumbered pieces with no hairline above them, the terminal and the script tag as white windows across twelve columns. */
+   unnumbered pieces, the terminal and the script tag as white windows across twelve columns. */
 .host .section-head p { justify-self: end; }
-.piece.host-piece { border-top: 0; padding-top: 0; }
 .host-piece .piece-intro h3::before { content: none; }
 .host-window .window-chrome { min-height: 0; padding: 10px 14px; font: 400 12px/1 var(--font-mono), monospace; }
 .host-term, .host-snip { padding: 18px 20px; font: 400 13.5px/1.75 var(--font-mono), monospace; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
@@ -595,7 +617,7 @@ main { position: relative; isolation: isolate; }
 .guide-head { padding-top: var(--space-3); align-items: baseline; }
 .guide-head h1 { font-size: 48px; line-height: 1.1; font-weight: 500; letter-spacing: -.04em; }
 .guide-head p { color: var(--muted); font-size: 18px; max-width: 64ch; }
-.step-index { margin-top: var(--space-2); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.step-index { margin-top: var(--space-2); }
 .step-index ol { display: flex; flex-wrap: wrap; gap: 0 var(--space-1); list-style: none; margin: 0; padding: 0; }
 .step-index a { display: inline-flex; align-items: center; gap: 10px; padding: 14px 0; font-size: 14px; color: var(--muted); }
 .step-index span { font: 12px var(--font-mono), monospace; }
@@ -655,12 +677,14 @@ main { position: relative; isolation: isolate; }
   .src-fill-row { grid-template-columns: minmax(0, 1fr) 48px; }
   .src-fill-row .src-bar, .src-fill-row .src-when { display: none; }
 }
-/* Below 900px each report card puts its clip under its text, the people strip takes two columns, the agent tiles stack, and the check
-   page's side list goes above it. */
+/* Below 900px each report card puts its clip under its text, the people strip takes two columns, the replay's intro, card and clip
+   stack, the agent tiles stack, and the check page's side list goes above it. */
 @media (max-width: 900px) {
   .compile-pair { grid-template-columns: minmax(0, 1fr); }
   .rr-card, .pr-cp { grid-template-columns: minmax(0, 1fr); }
   .rr-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .replay-row, .replay-moment { grid-template-columns: minmax(0, 1fr); }
+  .replay-dots span { font-size: 11px; }
   .agents-tiles { grid-template-columns: minmax(0, 1fr); gap: 14px; }
   .pr-side { border-right: 0; border-bottom: 1px solid var(--line); }
 }
@@ -686,7 +710,6 @@ main { position: relative; isolation: isolate; }
   .flow-row { grid-template-columns: 46px minmax(0, 1fr); row-gap: 4px; }
   .flow-row .url { grid-column: 2; }
   .attempt-headline { font-size: 28px; }
-  .piece { padding-top: 32px; }
   .pr-main { padding: 16px; }
   .rr-body { padding: 20px 16px; }
   .rr-result { font-size: 17px; }
@@ -708,7 +731,6 @@ main { position: relative; isolation: isolate; }
   .compile-frame:not(.auto) { aspect-ratio: auto; min-height: 360px; }
   .compile-frame:not(.auto) .ch-sheet { width: calc(100% - 24px); }
   .ch-sheet { padding: 14px; }
-  .compile-check dl > div { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .ch-bar { left: 6px; right: 6px; bottom: 8px; }
   .ch-pill { width: 100%; justify-content: space-between; padding: 0 6px 0 8px; }
   /* The summary folds to its chevron: the text takes no width but stays the button's name; the chevron sits inside the 24px button. */

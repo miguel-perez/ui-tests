@@ -54,7 +54,6 @@ export const compilation = {
     { n: 5, id: 'bar', tab: 'Your page, with the bar', name: 'Your page, with the bar, then the check', sub: 'two controls, one check', notes: ['One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from `video`, with a pause; there is no microphone during the task. The summary is the goal\'s name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: the two pages of the `happyPath` set a silent three-minute limit, and the person may ask for more time once. The pill takes your font, inverts your page\'s colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.', 'When they press Done, the `outcome` runs against the page as they left it. What they said does not count; what the page says does. A check that cannot decide returns "couldn\'t tell" and is never rounded either way.'], returns: 'time on this goal · every moment · their path against yours · how it ended · reached the goal: yes / no / couldn\'t tell, with the diff' },
     { n: 6, id: 'after', tab: 'After the task', name: 'After the task', sub: 'not from your file', notes: ['Five screens, one question each; press Next to see them all. The first two come after every attempt, including the ones that ended with I couldn\'t do this: how easy it was, with nothing preselected, and, at 4 or below, what made it difficult. The last three come once, after all goals: would it help them, is it easy to use, and anything they want to say, typed or spoken. Confidence is asked only when a goal has no check, so Weekboard\'s people never see it.'], returns: 'ease 3 of 7 · what made it difficult, in their words · would it help them 4 of 5 · easy to use 2 of 5 · words and audio' },
   ],
-  sample: [['People', '5 from the paid panel, matched to `users`'], ['Chance of seeing a 1-in-3 problem', '87%'], ['Cost', 'from $60 · cap $70 · first people within minutes, usually all five within a few hours']],
 }
 /**
  * The run's problems (design/artefacts/run-report-list.html), each as a sentence about the design, where as the page and the element
@@ -74,14 +73,19 @@ export const worked = { title: 'Found Settings, then Members, on their own', pag
 /**
  * WhatComesBack (docs/design/site-schema.md; design/artefacts/what-comes-back.html): the landing section "How it works.", with no
  * lead (issue #49). Three numbered pieces in the order a developer meets them: the check in the merge box, its page on GitHub, and
- * the report as the list (design/artefacts/run-report-list.html). The heading and the intros are the artefact's.
+ * the replay (issue #62), one person's minute as a rail with the first problem's moment as a card. The words are the artefact's.
  */
 export const whatComesBack = {
   heading: 'How it works.',
   /** The merge box: GitHub's own heading, then our check and two of the team's. */
   check: { n: 1, id: 'the-check', name: 'The check', intro: 'One line in the merge box, next to your other checks. Its mark is neutral, never red or green: there is no pass to give, and it never blocks a merge unless you ask it to.', heading: 'All checks have passed', counts: '1 neutral and 2 successful checks', others: [{ name: 'preview', summary: 'Deployment ready' }, { name: 'tests', summary: '212 passed' }] },
   checkPage: { n: 2, id: 'check-page', name: 'Its details, on GitHub', intro: 'Press Details and GitHub shows the check\'s own page: the sentence, the three problems to fix first with where they are and a link to the moment, and a link to the report. One screen, no pictures, no scrolling.' },
-  report: { n: 3, id: 'the-report', name: 'The report', intro: 'The page the check links to, and the one you can send as a link. One line says whether it worked. Then each problem as one card, worst first, with its evidence inline: who hit it, where, the clip, their words and the smallest change. The five people in a strip, each linking to their attempt. One line closes the page.' },
+  /** The replay (issue #62): an illustration of one person's minute, the first problem's moment as one compact card over the rail. */
+  replay: {
+    n: 3, id: 'the-replay', name: 'The replay', intro: 'Every problem in the report comes with the moment it happened: the person\'s minute as a rail, the moments that got in the way as stops, and at each stop the clip, what they did, what they said afterwards, and the smallest change that would have fixed it.',
+    person: 3, at: 58, to: 64, impact: 'Blocked', did: 'Pressed Add, saw nothing change, pressed it again.', said: problems[0].quote.text, change: problems[0].change,
+    started: 'Started on /board', ended: 'Pressed Done', failed: 'the check failed',
+  },
 }
 /** The example run's facts that are not in the recordings: the product, where the report lives, the preview and commit the check ran on, where each person came from. */
 export const runFacts = {
