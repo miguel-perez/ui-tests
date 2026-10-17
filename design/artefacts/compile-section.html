@@ -263,7 +263,13 @@ img { display: block; max-width: 100%; }
 .tabs button b { font: 500 12px/1 var(--mono); color: var(--moment); }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"] { color: var(--ink); border-color: var(--moment); }
+/* Every step shares one grid cell, so the panel keeps the height of the tallest step and the page never jumps. On a phone the steps stack, so the panel takes each step's own height instead of the tallest. */
 .pair[hidden] { display: none; }
+@media (min-width: 901px) {
+  .pairs { display: grid; }
+  ol.pairs > li.pair { grid-area: 1 / 1; }
+  .pair[hidden] { display: grid; visibility: hidden; pointer-events: none; }
+}
 .stepnav { display: flex; justify-content: space-between; gap: 16px; margin-top: 32px; padding-top: 16px; border-top: 1px solid var(--line); font-size: 14px; }
 .stepnav button { color: var(--muted); display: inline-flex; gap: 8px; align-items: baseline; }
 .stepnav button:hover { color: var(--ink); }
