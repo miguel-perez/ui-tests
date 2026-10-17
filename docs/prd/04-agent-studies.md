@@ -65,7 +65,7 @@ Fewer calls are not better by themselves. Asking a clarifying question when the 
 
 ## Result
 
-Default `reliability: 'all'`: pass if every trial verified correct, fail if any verified incorrect, inconclusive if any unknown and none incorrect. Agent results may be used as an optimisation signal; human results may not. Report the per-trial table with the trace link for each: each trial reads `verified` or `stopped`, with its time and, when it stopped, what stopped it in one line ("called POST /invites, which does not exist"; "sent the email in the query string, 400"). The agent report has its own address and its own check, and never appears inside a human report.
+A trial reads `verified` when the hook says correct, and `stopped` when the hook says incorrect, including a trial that ended on an error, a refusal or its budget before reaching the end state; a stopped trial is `incorrect` for the result. A trial whose hook cannot read its evidence is `unknown`, shown as such, never as stopped. Default `reliability: 'all'`: pass if every trial verified correct, fail if any verified incorrect, inconclusive if any unknown and none incorrect. Agent results may be used as an optimisation signal; human results may not. Report the per-trial table with the trace link for each: each trial reads `verified` or `stopped`, with its time and, when it stopped, what stopped it in one line ("called POST /invites, which does not exist"; "sent the email in the query string, 400"). The agent report has its own address and its own check, and never appears inside a human report.
 
 ## What this does not claim
 

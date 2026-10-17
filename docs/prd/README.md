@@ -31,7 +31,7 @@ Figma prototypes, mobile native, moderated sessions, comparisons between builds,
 
 ## Personas
 
-See [`../personas.md`](../personas.md). The author is persona 1; persona 2 is served by the impression stage, issues and intercept recruiting; persona 3 by `ui-tests host`, the one-command deploy to their own account.
+See [`../personas.md`](../personas.md). The author is persona 1; persona 2 is served by the impression stage, issues and intercept recruiting; persona 3 by `ui-tests host`, the one-command deploy to their own account, once it ships (not shipped yet: [#59](https://github.com/miguel-perez/ui-tests/issues/59)).
 
 ## Riskiest assumptions
 

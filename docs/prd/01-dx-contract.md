@@ -55,7 +55,7 @@ export default defineConfig({
     budget: { max: 70, currency: 'USD' },       // hard cap per run, includes the reserve for the raise and the true-up
   },
   check: { block_on: 'problems' },           // optional: without it the `ui-tests` check is always neutral
-  ci: { on: ['label:ui-test', 'main'] },
+  ci: { on: ['label:ui-test', 'main'] },     // when human runs start; agent runs start on every push
   reporters: ['default', 'github-actions', 'json'],
 })
 ```
@@ -170,7 +170,7 @@ Lint failures block a run and name the fix. Warnings appear in the trace.
 | Command | Does |
 | --- | --- |
 | `ui-tests` | Dev mode: opens the player in your browser with you as a rehearsal participant against `target.url`; the outcome runs; the trace renders; the attempt never counts toward n |
-| `ui-tests run [--actor human\|agent] [--tunnel]` | Async run of one context for one actor: creates the run with an idempotency key derived from commit, context id and actor, returns a durable handle, exits 0; a repeated key returns the existing run. `--tunnel` serves a local build through a run-scoped tunnel for a run the author watches for a few hours; if the machine closes mid-run the link goes dark, and the next `run` with the same key resumes the same run while the deadline keeps counting; a longer or unattended run uses `ui-tests host`. See [`05-integration.md`](05-integration.md#when-the-laptop-closes) |
+| `ui-tests run [--actor human\|agent] [--tunnel]` | Async run of one context for one actor: creates the run with an idempotency key derived from commit, context id and actor, returns a durable handle, exits 0; a repeated key returns the existing run. `--tunnel` serves a local build through a run-scoped tunnel for a run the author watches for a few hours; if the machine closes mid-run the link goes dark, and the next `run` with the same key resumes the same run while the deadline keeps counting; a longer or unattended run uses `ui-tests host` (not shipped yet: [#59](https://github.com/miguel-perez/ui-tests/issues/59)). See [`05-integration.md`](05-integration.md#when-the-laptop-closes) |
 | `ui-tests run --wait` | Same, then polls to completion; exit codes 0 nothing found or estimate passed, 1 problems found or estimate failed, 3 pending or inconclusive, 2 error |
 | `ui-tests verify <run>` | Executes the hooks against stored snapshots for attempts not yet verified; CI runs it on the reconciliation schedule |
 | `ui-tests status <run>` | Independent states: recruitment, collection, verification, payment |
@@ -185,7 +185,7 @@ Lint failures block a run and name the fix. Warnings appear in the trace.
 
 ## CI
 
-A GitHub Action wraps `ui-tests run` and posts one check on the commit: `ui-tests` for a human run, and for an agent run its own check, `ui-tests (agent)`, which never counts with people. While attempts arrive it is pending with the estimate in its summary. When the run completes its conclusion is neutral whatever the outcome, so it never fails the build or blocks a merge, even when a team marks it required, unless the config sets `check: { block_on: 'problems' }`, which makes it fail when problems are found; `check: { comment: false }` turns off its one sticky comment. Its titles and its page are in [`05-integration.md`](05-integration.md#github). The usual arrangement is agent runs on every push, because they are fast and cost only model tokens, and human runs on a label or on merge to main, because those pay people. A scheduled reconciliation workflow runs `ui-tests verify` and updates the check from `ui-tests status` until it completes, the same pattern the factory uses for delivery status. Triggers default to a label or a merge to main; a push never spends money. The Action passes the Vercel protection-bypass token into invite links so participants reach a protected preview.
+A GitHub Action wraps `ui-tests run` and posts one check on the commit: `ui-tests` for a human run, and for an agent run its own check, `ui-tests (agent)`, which never counts with people. While attempts arrive it is pending with the estimate in its summary. When the run completes its conclusion is neutral whatever the outcome, so it never fails the build or blocks a merge, even when a team marks it required, unless the config sets `check: { block_on: 'problems' }`, which makes it fail when a completed run has problems; an inconclusive run, with fewer attempts than it asked for, stays neutral either way; `check: { comment: false }` turns off its one sticky comment. Its titles and its page are in [`05-integration.md`](05-integration.md#github). The usual arrangement is agent runs on every push, because they are fast and cost only model tokens, and human runs on a label or on merge to main, because those pay people. A scheduled reconciliation workflow runs `ui-tests verify` and updates the check from `ui-tests status` until it completes, the same pattern the factory uses for delivery status. `ci.on` sets when human runs start and defaults to a label or a merge to main, so a push never spends money on people; agent runs are not gated by `ci.on` and start on every push, costing only model tokens. The Action passes the Vercel protection-bypass token into invite links so participants reach a protected preview.
 
 ## Reporters
 

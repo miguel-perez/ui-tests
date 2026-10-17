@@ -22,7 +22,7 @@ Everything a participant or a visitor sees is the author's, not ours. The taskba
 
 ## Performance and reliability
 
-Dev mode opens in under five seconds on a fresh clone. The collector stores an attempt's events in bounded batches with an IndexedDB retry buffer so a dropped connection does not lose an attempt. A disconnected attempt is `disconnected`, never `incorrect`.
+Dev mode opens in under five seconds on a fresh clone. The collector stores an attempt's events in bounded batches with an IndexedDB retry buffer in the participant's browser, so a dropped connection does not lose an attempt while the page stays open: buffered events are replayed when the collector is reachable again, and discarded if the person closes the page first. The buffer does not survive the participant leaving, and nothing is buffered on the collector's side. A disconnected attempt is `disconnected`, never `incorrect`.
 
 ## Licensing
 
