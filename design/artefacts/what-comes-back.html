@@ -557,7 +557,7 @@ img { display: block; max-width: 100%; }
 .moment figcaption { display: grid; gap: 8px; padding-top: 2px; }
 .moment .who { font: 400 12px/1 var(--mono); color: var(--muted); }
 .moment .who b { color: var(--ink); font-weight: 500; }
-.moment .impact { color: var(--red); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; font-size: 11px; }
+.moment .impact { color: var(--note); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; font-size: 11px; }
 .moment h3 { font: 500 16px/1.3 var(--sans); letter-spacing: -.01em; text-wrap: balance; }
 .moment blockquote { margin: 0; padding-left: 10px; border-left: 2px solid var(--note); font-style: italic; font-size: 14px; color: var(--ink); }
 .moment .fix { font-size: 14px; color: var(--done); font-weight: 500; line-height: 1.45; }
@@ -573,10 +573,10 @@ img { display: block; max-width: 100%; }
 .rail .dots li.mo i { background: currentColor; }
 .rail .dots li.mo span { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 500 12px/1.3 var(--sans); color: var(--ink); text-align: center; }
 .rail .dots li.mo span b { display: block; font: 400 11px/1.3 var(--mono); color: var(--muted); }
-.rail .dots li.mo.blocked span { left: auto; right: 0; transform: none; text-align: right; }
+.rail .dots li.mo.end span { left: auto; right: 0; transform: none; text-align: right; }
 .rail .ends { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); margin-top: 6px; }
 .rail .ends b { font-family: var(--mono); color: var(--muted); font-weight: 400; margin-right: 6px; }
-.rail .ends em { color: var(--red); font-style: normal; }
+.rail .ends em { color: var(--ink); font-style: normal; }
 @media (max-width: 900px) { .intro-row { grid-template-columns: 1fr; } .moment { grid-template-columns: 1fr; } .rail .dots li.mo span { font-size: 11px; } }
 </style>
 <style>
@@ -771,10 +771,10 @@ img { display: block; max-width: 100%; }
   </header>
 
   <section class="piece">
-    <div class="intro"><h2 data-n="1">The check</h2><p>One line in the merge box, next to your other checks. Its mark is neutral, never red or green: there is no pass to give, and it never blocks a merge unless you ask it to.</p></div>
+    <div class="intro"><h2 data-n="1">The check</h2><p>One line in the merge box, next to your other checks, from <code>npx ui-tests check</code> in your preview job. It waits while people take part and turns neutral when the run closes, never red or green: there is no pass to give. One run per pull request: a push while people are still in starts nothing new, and the line names the commit they&nbsp;saw.</p></div>
     <div class="gh" aria-label="The merge box on the pull request">
       <div class="hd"><span class="ic ok"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M5 8.2l2 2 4-4.2"/></svg></span><span>All checks have passed</span><span class="sub">· 3 successful checks</span><span class="example">Example run</span></div>
-      <div class="chk ours"><span class="ic neutral"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="2.2"/></svg></span><span class="t"><b>ui-tests</b> · 4 problems found · 2 of 5 people reached the goal</span><a href="#details">Details</a></div>
+      <div class="chk ours"><span class="ic neutral"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="2.2"/></svg></span><span class="t"><b>ui-tests</b> · 4 problems found · 4 of 5 people reached the goal</span><a href="#details">Details</a></div>
       <div class="chk"><span class="ic ok"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M5 8.2l2 2 4-4.2"/></svg></span><span class="t"><b>preview</b> · Deployment ready</span><a href="#">Details</a></div>
       <div class="chk"><span class="ic ok"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6.5"/><path d="M5 8.2l2 2 4-4.2"/></svg></span><span class="t"><b>tests</b> · 212 passed</span><a href="#">Details</a></div>
     </div>
@@ -785,15 +785,15 @@ img { display: block; max-width: 100%; }
     <div class="gh cp" aria-label="The check's page on GitHub">
       <div class="side"><b>Checks</b><span class="on">ui-tests</span><span>preview</span><span>tests</span></div>
       <div class="main">
-        <h3><span class="ic neutral"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="2.2"/></svg></span>4 problems found · 2 of 5 people reached the goal</h3>
+        <h3><span class="ic neutral"><svg viewBox="0 0 16 16" fill="currentColor"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="8" cy="8" r="2.2"/></svg></span>4 problems found · 4 of 5 people reached the goal</h3>
         <div class="md">
-          <p>5 people tried <em>invite a colleague</em> on this preview. 2 of 5 reached the goal; 2 of 5 pressed Done, but your check failed. This check never fails your build. It reports problems, or that none were seen this time.</p>
+          <p>5 people tried <em>invite a colleague</em> on this preview. 4 of 5 reached the goal. This check never fails your build. It reports problems, or that none were seen this time.</p>
           <div class="tbl"><table>
             <thead><tr><th>#</th><th>Problem</th><th>Where</th><th>People</th><th>Impact</th><th>Moment</th></tr></thead>
             <tbody>
-              <tr><td>1</td><td>Pressed Add, saw nothing change, pressed it again; Sam got two invitations</td><td><code>/settings/members</code> · <code>button "Add"</code></td><td>2 of 5</td><td><span class="impact blocked">Blocked</span></td><td><a href="#report">Person 3 · 0:58</a></td></tr>
-              <tr><td>2</td><td>The Add button looked switched off; Person 2 gave up</td><td><code>/settings/members</code> · <code>button "Add"</code></td><td>1 of 5</td><td><span class="impact blocked">Blocked</span></td><td><a href="#report">Person 2 · 0:49</a></td></tr>
-              <tr><td>3</td><td>Looked for Invite in the Share menu and found only link options</td><td><code>/board</code> · <code>menu "Share"</code></td><td>4 of 5</td><td><span class="impact slowed">Slowed</span></td><td><a href="#report">Person 1 · 0:04</a></td></tr>
+              <tr><td>1</td><td>The Add button looked switched off; Person 2 pressed I couldn't do this</td><td><code>/settings/members</code> · <code>button "Add"</code></td><td>1 of 5</td><td><span class="impact blocked">Blocked</span></td><td><a href="#report">Person 2 · 0:49</a></td></tr>
+              <tr><td>2</td><td>Looked for Invite in the Share menu and found only link options</td><td><code>/board</code> · <code>menu "Share"</code></td><td>4 of 5</td><td><span class="impact slowed">Slowed</span></td><td><a href="#report">Person 1 · 0:04</a></td></tr>
+              <tr><td>3</td><td>Pressed Add, saw nothing change, pressed it again; Sam got two invitations</td><td><code>/settings/members</code> · <code>button "Add"</code></td><td>2 of 5</td><td><span class="impact confused">Confused</span></td><td><a href="#report">Person 3 · 0:58</a></td></tr>
             </tbody>
           </table></div>
           <p class="links"><a href="#report">Open the report</a><a href="#">+1 more problem</a><a href="#">What worked</a></p>
@@ -809,17 +809,17 @@ img { display: block; max-width: 100%; }
       <figure class="moment" aria-label="The first problem's moment: Person 3 at 00:58">
         <div class="clip"><img src="attempt-view/members.jpg" alt=""><span class="clock">00:58 → 01:04</span><span class="play" aria-hidden="true"><svg viewBox="0 0 20 20"><path d="M5 3v14l12-7z" fill="currentColor"/></svg></span></div>
         <figcaption>
-          <div class="who"><b>Person 3</b> · 00:58 · <span class="impact">Blocked</span></div>
+          <div class="who"><b>Person 3</b> · 00:58 · <span class="impact">Confused</span></div>
           <h3>Pressed Add, saw nothing change, pressed it again.</h3>
           <blockquote>I wasn't sure the first Add did anything, so I pressed it again.</blockquote>
-          <p class="fix"><span>Smallest change</span>On press, change the button to "Invited sam@acme.co" and disable it.</p>
+          <p class="fix"><span>Smallest change</span>On press, change the button to "Invited sam@acme.example" and disable it.</p>
         </figcaption>
       </figure>
     </div>
     <div class="rail" aria-label="Person 3's attempt, 1 minute 3 seconds, with three moments">
       <div class="line"></div>
-      <ul class="dots"><li style="left:0%"><i></i></li><li class="mo slowed" style="left:4.8%"><i></i><span><b>00:03</b>Slowed</span></li><li style="left:7.9%"><i></i></li><li style="left:19%"><i></i></li><li style="left:30.2%"><i></i></li><li class="mo confused" style="left:36.5%"><i></i><span><b>00:23</b>Confused</span></li><li style="left:42.9%"><i></i></li><li style="left:57.1%"><i></i></li><li style="left:65.1%"><i></i></li><li style="left:73%"><i></i></li><li class="mo blocked" style="left:92.1%"><i></i><span><b>00:58</b>Blocked</span></li><li style="left:96.8%"><i></i></li><li style="left:100%"><i></i></li></ul>
-      <div class="ends"><span><b>00:00</b> Started on /board</span><span><b>01:03</b> Pressed Done · <em>the check failed</em></span></div>
+      <ul class="dots"><li style="left:0%"><i></i></li><li class="mo slowed" style="left:4.8%"><i></i><span><b>00:03</b>Slowed</span></li><li style="left:7.9%"><i></i></li><li style="left:19%"><i></i></li><li style="left:30.2%"><i></i></li><li class="mo confused" style="left:36.5%"><i></i><span><b>00:23</b>Confused</span></li><li style="left:42.9%"><i></i></li><li style="left:57.1%"><i></i></li><li style="left:65.1%"><i></i></li><li style="left:73%"><i></i></li><li class="mo confused end" style="left:92.1%"><i></i><span><b>00:58</b>Confused</span></li><li style="left:96.8%"><i></i></li><li style="left:100%"><i></i></li></ul>
+      <div class="ends"><span><b>00:00</b> Started on /board</span><span><b>01:03</b> Pressed Done · <em>reached the goal, with two invitations</em></span></div>
     </div>
   </section>
 </div>

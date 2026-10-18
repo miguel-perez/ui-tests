@@ -4,6 +4,7 @@ import { run, clock, attempt } from '../../lib/attempts'
 import { problems, runFacts, whatComesBack } from '../../lib/copy'
 import { exampleCheck, checkLead, reportPath, findings } from '../../lib/pull-request'
 import { SectionHead } from '../site/section-head'
+import { Prose } from '../site/code'
 
 /** GitHub's marks, drawn in the current colour: the check's neutral dot in a ring, and the tick of a successful check. */
 function Neutral() { return <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" /><circle cx="8" cy="8" r="2.2" /></svg> }
@@ -47,7 +48,7 @@ function CheckPage() {
 
 type Piece = { n: number; id: string; name: string; intro: string }
 /** A numbered piece's intro: the mono number in the moment colour, the name, at most 64ch of text. */
-function Intro({ piece }: { piece: Piece }) { return <div className="piece-intro"><h3 id={`${piece.id}-h`} data-n={piece.n}>{piece.name}</h3><p>{piece.intro}</p></div> }
+function Intro({ piece }: { piece: Piece }) { return <div className="piece-intro"><h3 id={`${piece.id}-h`} data-n={piece.n}>{piece.name}</h3><p><Prose text={piece.intro} /></p></div> }
 /** A numbered piece: its intro over its artefact, all twelve columns. */
 function Piece({ piece, children }: { piece: Piece; children: ReactNode }) {
   return <section className="piece" id={piece.id} aria-labelledby={`${piece.id}-h`}><Intro piece={piece} />{children}</section>
@@ -66,6 +67,8 @@ function Replay() {
   const { replay } = whatComesBack, person = attempt(`p${replay.person}`), total = person.time
   const stops = new Map((person.blockers ?? []).map(blocker => [blocker.from, problems[blocker.problem - 1].impact]))
   const still = person.blockers!.find(blocker => blocker.from === replay.at)!.poster
+  // The last moment's label aligns to its right edge, so it stays inside the rail at the end of the minute.
+  const last = Math.max(...stops.keys())
   return <section className="piece replay" id={replay.id} aria-labelledby={`${replay.id}-h`}>
     <div className="replay-row">
       <Intro piece={replay} />
@@ -83,11 +86,11 @@ function Replay() {
       <div className="replay-line" />
       <ol className="replay-dots">{person.moments.map(moment => {
         const impact = stops.get(moment.seconds)
-        return <li key={moment.seconds} className={impact} data-at={moment.seconds} style={{ left: along(moment.seconds, total) }} aria-hidden={impact ? undefined : true}>
+        return <li key={moment.seconds} className={impact && (moment.seconds === last ? `${impact} end` : impact)} data-at={moment.seconds} style={{ left: along(moment.seconds, total) }} aria-hidden={impact ? undefined : true}>
           <i />{impact && <span><b>{clock(moment.seconds)}</b>{impact[0].toUpperCase() + impact.slice(1)}</span>}
         </li>
       })}</ol>
-      <p className="replay-ends"><span><b>{clock(0)}</b> {replay.started}</span><span><b>{clock(total)}</b> {replay.ended} · <em>{replay.failed}</em></span></p>
+      <p className="replay-ends"><span><b>{clock(0)}</b> {replay.started}</span><span><b>{clock(total)}</b> {replay.ended} · <em>{replay.reached}</em></span></p>
     </div>
   </section>
 }

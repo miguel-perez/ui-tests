@@ -8,8 +8,8 @@
     "/board",
     "/settings/members"
   ],
-  "check": "expect(await page.textContent('main')).toContain('1 invitation pending')",
-  "expects": "1 invitation pending",
+  "check": "expect(invitations.map(i => i.email)).toContain(setup.email)",
+  "expects": "an invitation for Sam",
   "attempts": [
     {
       "id": "p1",
@@ -61,7 +61,7 @@
         {
           "timestamp": "00:13",
           "seconds": 13,
-          "actualSeconds": 13,
+          "actualSeconds": 13.002,
           "kind": "off-path",
           "what": "Off your path",
           "rest": " · opened Link settings",
@@ -70,7 +70,7 @@
         {
           "timestamp": "00:22",
           "seconds": 22,
-          "actualSeconds": 22.001,
+          "actualSeconds": 22.002,
           "kind": "went-back",
           "what": "Went back",
           "rest": " to the board",
@@ -81,7 +81,7 @@
           "seconds": 30,
           "actualSeconds": 30.001,
           "kind": "type",
-          "what": "Typed sam@acme.co",
+          "what": "Typed sam@acme.example",
           "rest": " into Search",
           "route": "/board",
           "issue": 4
@@ -105,7 +105,7 @@
         {
           "timestamp": "00:44",
           "seconds": 44,
-          "actualSeconds": 44,
+          "actualSeconds": 44.001,
           "kind": "click",
           "what": "Clicked Members",
           "route": "/settings/members"
@@ -113,7 +113,7 @@
         {
           "timestamp": "00:49",
           "seconds": 49,
-          "actualSeconds": 49.001,
+          "actualSeconds": 49,
           "kind": "type",
           "what": "Typed the email",
           "route": "/settings/members"
@@ -121,7 +121,7 @@
         {
           "timestamp": "00:54",
           "seconds": 54,
-          "actualSeconds": 54.002,
+          "actualSeconds": 54.001,
           "kind": "press",
           "what": "Pressed Add",
           "rest": " · 1 invitation pending",
@@ -130,7 +130,7 @@
         {
           "timestamp": "00:57",
           "seconds": 57,
-          "actualSeconds": 57,
+          "actualSeconds": 57.002,
           "kind": "ended",
           "what": "Pressed Done",
           "rest": " · the check ran and passed",
@@ -197,7 +197,7 @@
         {
           "timestamp": "00:25",
           "seconds": 25,
-          "actualSeconds": 25,
+          "actualSeconds": 25.001,
           "kind": "went-back",
           "what": "Went back",
           "rest": " to the board",
@@ -206,7 +206,7 @@
         {
           "timestamp": "00:34",
           "seconds": 34,
-          "actualSeconds": 34.002,
+          "actualSeconds": 34.001,
           "kind": "click",
           "what": "Clicked the avatar",
           "route": "/board"
@@ -230,7 +230,7 @@
         {
           "timestamp": "00:45",
           "seconds": 45,
-          "actualSeconds": 45.001,
+          "actualSeconds": 45.002,
           "kind": "type",
           "what": "Typed sam@",
           "rest": ", an incomplete email",
@@ -239,7 +239,7 @@
         {
           "timestamp": "00:49",
           "seconds": 49,
-          "actualSeconds": 48.999,
+          "actualSeconds": 49.001,
           "kind": "stopped",
           "what": "Stopped 4 s",
           "rest": " on a grey Add button",
@@ -265,7 +265,7 @@
       "browser": "Chromium",
       "window": "1280×800",
       "today": "a spreadsheet",
-      "reached": "no",
+      "reached": "yes",
       "ended": "done",
       "time": 63,
       "sure": 6,
@@ -352,7 +352,7 @@
           "timestamp": "00:23",
           "seconds": 23,
           "kind": "type",
-          "what": "Typed sam@acme.co",
+          "what": "Typed sam@acme.example",
           "rest": " into Search",
           "route": "/board",
           "issue": 4,
@@ -438,7 +438,7 @@
           "seconds": 63,
           "kind": "ended",
           "what": "Pressed Done",
-          "rest": " · the check ran and failed: 2 invitations pending",
+          "rest": " · the check ran and passed: Sam has an invitation, sent twice",
           "route": "/settings/members",
           "at": [
             0.865,
@@ -450,7 +450,7 @@
         {
           "n": 1,
           "problem": 1,
-          "impact": "wrong end state",
+          "impact": "confused",
           "from": 58,
           "to": 63,
           "poster": "/sessions/p3-58.jpg",
@@ -460,7 +460,7 @@
             "when": "after",
             "text": "I wasn't sure the first Add did anything, so I pressed it again."
           },
-          "change": "On press, change the button to \"Invited sam@acme.co\" and disable it."
+          "change": "On press, change the button to \"Invited sam@acme.example\" and disable it."
         },
         {
           "n": 2,
@@ -500,7 +500,7 @@
       "browser": "Chromium",
       "window": "1280×800",
       "today": "Notion",
-      "reached": "no",
+      "reached": "yes",
       "ended": "done",
       "time": 47,
       "sure": 4,
@@ -531,7 +531,7 @@
         {
           "timestamp": "00:07",
           "seconds": 7,
-          "actualSeconds": 7,
+          "actualSeconds": 7.001,
           "kind": "click",
           "what": "Clicked the avatar",
           "route": "/board"
@@ -539,7 +539,7 @@
         {
           "timestamp": "00:09",
           "seconds": 9,
-          "actualSeconds": 9,
+          "actualSeconds": 9.001,
           "kind": "click",
           "what": "Clicked Settings",
           "route": "/settings"
@@ -555,7 +555,7 @@
         {
           "timestamp": "00:36",
           "seconds": 36,
-          "actualSeconds": 36.002,
+          "actualSeconds": 36.001,
           "kind": "type",
           "what": "Typed the email",
           "route": "/settings/members"
@@ -583,10 +583,10 @@
         {
           "timestamp": "00:47",
           "seconds": 47,
-          "actualSeconds": 47.001,
+          "actualSeconds": 47,
           "kind": "ended",
           "what": "Pressed Done",
-          "rest": " · the check ran and failed: 2 invitations pending",
+          "rest": " · the check ran and passed: Sam has an invitation, sent twice",
           "route": "/settings/members"
         }
       ]
@@ -659,7 +659,7 @@
         {
           "timestamp": "00:34",
           "seconds": 34,
-          "actualSeconds": 34,
+          "actualSeconds": 34.002,
           "kind": "click",
           "what": "Clicked the avatar",
           "route": "/board"
@@ -675,7 +675,7 @@
         {
           "timestamp": "00:39",
           "seconds": 39,
-          "actualSeconds": 39,
+          "actualSeconds": 39.001,
           "kind": "click",
           "what": "Clicked Members",
           "route": "/settings/members"
@@ -683,7 +683,7 @@
         {
           "timestamp": "00:45",
           "seconds": 45,
-          "actualSeconds": 45.002,
+          "actualSeconds": 45.001,
           "kind": "type",
           "what": "Typed the email",
           "route": "/settings/members"
@@ -691,7 +691,7 @@
         {
           "timestamp": "00:49",
           "seconds": 49,
-          "actualSeconds": 49.001,
+          "actualSeconds": 49,
           "kind": "press",
           "what": "Pressed Add",
           "rest": " · 1 invitation pending",

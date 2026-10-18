@@ -5,15 +5,16 @@ import { pathToFileURL } from 'node:url'
 import path from 'node:path'
 import { userInfo } from 'node:os'
 import { build } from 'esbuild'
-import { compileFile, plan } from './compiler.ts'
+import { compileFile, forAttempt, plan } from './compiler.ts'
 import { configFile, exampleFile, exampleFileName } from './example.ts'
 import { SQLiteAdapter, dataDirectory, recordingRetentionMs } from './storage.ts'
 import { verify, reachedLine, type HookResult } from './verify.ts'
 import { renderTrace } from './trace.tsx'
-import type { Context } from './index.ts'
+import { runSetup, type Context, type Fixtures } from './index.ts'
 import { printTerminal, impacts, type Report } from './report.tsx'
 import { parseCheckRun, publishCheck, checkRunPayload, stickyComment, type CheckOptions } from './check.ts'
 import { hostArgs, hostHelp, hostPlan, hostCaveat } from './host.ts'
+import { agentIssue, recruitIssue } from './slice.ts'
 const print = (text: string) => printTerminal({ lines: text.split('\n') })
 
 const args = process.argv.slice(2)
@@ -104,11 +105,40 @@ function host() {
   console.error(hostCaveat)
   process.exit(2)
 }
-/** Entry point: `init`, `check <run.json>`, `host`, `verify <run-id>`, `lint`, or dev mode, which compiles and lints the test file, starts the trace viewer, opens the player and verifies each attempt when it finishes. */
+/** The commands, by what they cost: `npx ui-tests --help`. */
+export const help = `Usage: ui-tests [command] [options]
+
+  npx ui-tests init        Writes a study file and a config, and prints the three lines to mount in your app.
+  npx ui-tests             Runs the whole study on you, in your browser. Recruits nobody, costs nothing.
+  npx ui-tests recruit     Runs it with real people. Shows the plan and the price, and asks first.
+                           Not shipped yet: prints the plan and stops (issue #71).
+  npx ui-tests check <run.json>
+                           In the job that deploys your preview: a check on the pull request.
+                           Today it publishes the check from a run summary; starting the run is issue #69.
+
+  npx ui-tests lint        Compiles the study file and prints the plan.
+  npx ui-tests report <id> Prints a run's report.
+  npx ui-tests host        Deploys the collector, the player and the store to an account you own.
+
+Options:
+  --file <path>            the study file (default: the first *.ui.test.ts)
+  --actor human|agent      who takes the study (default: human); agent runs are not shipped yet (issue #72)
+  --no-open                print the links instead of opening them
+  --help                   print this help`
+/** Opens Playwright's `request` against the target, for `setup` and `outcome`. */
+async function targetRequest(baseURL: string) {
+  const { request } = await import('playwright-core')
+  return request.newContext({ baseURL })
+}
+/** Entry point: `init`, `check <run.json>`, `host`, `verify <run-id>`, `lint`, `recruit`, or dev mode, which compiles and lints the test file, starts the trace viewer, runs each attempt's setup, opens the player and runs the outcome when the attempt finishes. */
 async function main() {
+  if (command === 'help' || (args.includes('--help') && !['host', 'check'].includes(command))) { console.log(help); return }
   if (command === 'init') return init()
   if (command === 'host') return host()
   if (command === 'check') return check()
+  if (command === 'run') { console.error('`run` is now `recruit`.'); process.exit(1) }
+  const actor = option('--actor') ?? 'human'
+  if (!['human', 'agent'].includes(actor)) throw new Error('--actor takes one value: human or agent. A run has one actor.')
   if (command === 'report') {
     const id = args[1]
     if (!id) throw new Error('Usage: ui-tests report <run-id or report.json> [--json]')
@@ -136,7 +166,10 @@ async function main() {
       const run = store.get(id); if (!run) throw new Error('Run not found')
       if (!run.hooksBundle || !await exists(run.hooksBundle)) throw new Error('The stored hooks bundle is missing; repeat the rehearsal to restore the authored evidence.')
       const authored = (await import(pathToFileURL(run.hooksBundle).href)).default as Context[]
-      run.result = await verify(run, authored[run.authoredContextIndex ?? 0].goals[run.goalIndex], store.events(run.id)); store.update(run)
+      // The outcome reads the app's state again, against the target the attempt ran on.
+      const request = run.target ? await targetRequest(run.target) : undefined
+      try { run.result = await verify(run, authored[run.authoredContextIndex ?? 0].goals[run.goalIndex], store.events(run.id), { request }) } finally { await request?.dispose() }
+      store.update(run)
       console.log(JSON.stringify(run.result, null, 2))
     } finally { store.close() }
     return
@@ -154,10 +187,11 @@ async function main() {
     await build({ entryPoints: [configFile], bundle: true, platform: 'node', format: 'esm', packages: 'external', outfile: configBundle })
     config = (await import(pathToFileURL(configBundle).href)).default
   }
-  // The plan: who, what is recorded and where each goal starts, before anything runs; `run` adds where the people come from and the cap.
-  console.log(plan(result.compiled, command === 'run' ? { cap: config.budget?.max } : undefined))
+  // The plan: who, what is recorded and where each task starts, before anything runs; `recruit` adds where the people come from and the cap.
+  console.log(plan(result.compiled, command === 'recruit' ? { cap: config.budget?.max } : undefined))
   if (command === 'lint') { console.log(`Compiled ${file}: ${result.bundle.replace(/hooks-.*$/, 'context.json')}`); return }
-  if (command === 'run') throw new Error('Runs with people are not part of this slice yet. npx ui-tests rehearses the plan above on you.')
+  if (command === 'recruit') throw new Error(`Runs with people are not part of this slice yet. npx ui-tests rehearses the plan above on you. See ${recruitIssue}`)
+  if (actor === 'agent') throw new Error(`Agent runs are not part of this slice yet. npx ui-tests rehearses the plan above on you. See ${agentIssue}`)
   if (command !== 'dev') throw new Error(`Unknown command: ${command}`)
   const store = new SQLiteAdapter()
   const selectedContext = option('--context'), selectedGoal = option('--goal')
@@ -166,21 +200,29 @@ async function main() {
   if (!pending.length) throw new Error('No matching context/goal; --context and --goal are zero-based indices.')
   const total = pending.length
   let active = pending.shift()!
-  /** Creates the next rehearsal run for the active context and goal and records its hooks bundle. */
-  function createRun() {
+  const target = new URL(config.target.url)
+  if (!['localhost', '127.0.0.1', '[::1]'].includes(target.hostname)) throw new Error('This slice supports local dev targets only.')
+  // Playwright's request against the target: setup provisions each attempt with it, and the outcome reads the app's state with it.
+  const request = await targetRequest(target.href)
+  /**
+   * Creates the next rehearsal run for the active study and task: runs the study's `setup` once for this attempt against the target,
+   * starts the attempt where it says and writes the card from what it returned, and records the hooks bundle.
+   */
+  async function createRun() {
     active.compiled.author = config.author ?? result.authored[active.contextIndex].author ?? userInfo().username
     active.compiled.accent = config.chrome?.accent
     active.compiled.siteName = config.chrome?.name
-    const created = store.create(active.compiled, active.goalIndex)
+    let values: Fixtures
+    try { values = await runSetup(result.authored[active.contextIndex], request) } catch (error) { throw new Error(`setup failed against ${target.origin}: ${error instanceof Error ? error.message : error}`) }
+    const created = store.create(forAttempt(active.compiled, values), active.goalIndex)
     created.hooksBundle = result.bundle; created.authoredContextIndex = active.contextIndex
+    created.target = target.href; created.setup = values
     // "Task n of N" on the card and the bar counts the tasks of this session (participant-overlay research, progress).
     created.sequence = { index: total - pending.length, total }
     store.update(created)
     return created
   }
-  const target = new URL(config.target.url)
-  if (!['localhost', '127.0.0.1', '[::1]'].includes(target.hostname)) throw new Error('This slice supports local dev targets only.')
-  let run = createRun()
+  let run = await createRun()
   const owned = new Set([run.id])
   const server = createServer((request, response) => {
     const [, id, token] = request.url?.split('/') ?? []
@@ -209,22 +251,30 @@ async function main() {
     const previous = structuredClone(current)
     verifying = true
     try {
-      current.result = await verify(current, result.authored[active.contextIndex].goals[active.goalIndex], store.events(current.id))
-      if (!store.update(current, previous)) return
+      // The outcome runs once the attempt has ended, and again only when the answer to its validation question has come in.
+      const asked = (current.result as HookResult | undefined)?.question?.question
+      if (!current.result || (asked && current.answers && asked in current.answers)) {
+        current.result = await verify(current, result.authored[active.contextIndex].goals[active.goalIndex], store.events(current.id), { request })
+        if (!store.update(current, previous)) return
+      }
       if (current.status === 'finished' && !(current.result as { question?: unknown }).question) {
         print(`${reachedLine(current.result as HookResult)}\n${active.compiled.goals[active.goalIndex].resultSentence ?? 'Issues-only exploration; no result sentence.'}\nTrace: ${traceUrl()}`)
         open(traceUrl())
         if (pending.length) {
           active = pending.shift()!
-          run = createRun(); owned.add(run.id); launch()
+          // A setup that fails for a later task ends the session: no task is skipped silently, and nothing is reported for it.
+          try { run = await createRun() } catch (error) { completed = true; fail(error); return }
+          owned.add(run.id); launch()
         } else completed = true
       }
     } catch (error) { console.error(error) } finally { verifying = false }
   }, 100)
   // A dev session can stay open for days: sweep expired recordings hourly, whether or not the player sends anything.
   const retention = setInterval(() => store.purgeRecordings(Date.now() - recordingRetentionMs), 60 * 60 * 1000)
-  /** Shuts down the viewer and storage and exits. */
-  function stop() { clearInterval(interval); clearInterval(retention); server.close(); store.close(); process.exit(0) }
-  process.on('SIGINT', stop); process.on('SIGTERM', stop)
+  /** Shuts down the viewer and storage and exits with the given code. */
+  function stop(code = 0) { clearInterval(interval); clearInterval(retention); server.close(); store.close(); void request.dispose().finally(() => process.exit(code)) }
+  /** Reports why the session cannot go on and stops it with a non-zero exit. */
+  function fail(error: unknown) { console.error(error instanceof Error ? error.message : error); stop(1) }
+  process.on('SIGINT', () => stop()); process.on('SIGTERM', () => stop())
 }
 main().catch(error => { console.error(error instanceof Error ? error.message : error); process.exit(1) })

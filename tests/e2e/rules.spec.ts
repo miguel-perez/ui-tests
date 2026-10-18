@@ -6,10 +6,10 @@ import { test, expect, type Page } from '@playwright/test'
  * an `hr`, or be a filled strip 1 to 2px tall, nor may its ::before or ::after. At 375 the column is 343px, so nothing is 500 wide:
  * there the walk takes every element wider than 300px, the width of a rule across the column. Hairlines stay inside the drawn surfaces
  * below: a window (terminal, code, host and file windows, GitHub's merge box and check page), the Weekboard frames and their chrome, the
- * open source row's well, the compile commands, the agent tiles, an inline code chip, the replay's moment card and its rail, which is
+ * open source row's well, the compile commands' list (one drawn box since issue #68), the agent tiles, an inline code chip, the replay's moment card and its rail, which is
  * the drawing itself.
  */
-const surfaces = ['.window', '.pr-gh', '.compile-frame', '.src-frame', '.src-well', '.compile-command', '.agents-tile', '.code-inline', '.replay-moment', '.replay-rail', '.ch-sheet', '.ch-pill', '.terminal-window', '.code-window', '.host-window']
+const surfaces = ['.window', '.pr-gh', '.compile-frame', '.src-frame', '.src-well', '.compile-commands', '.compile-command', '.agents-tile', '.code-inline', '.replay-moment', '.replay-rail', '.ch-sheet', '.ch-pill', '.terminal-window', '.code-window', '.host-window']
 
 type Rule = { element: string; what: string; width: number }
 

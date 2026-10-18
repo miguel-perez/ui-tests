@@ -166,7 +166,10 @@ export function AttemptView({ id = 'p3' }: { id?: string }) {
       <details className="attempt-fold">
         <summary><b>What the check saw</b><span>outcome() ran after Done</span></summary>
         <div className="fold-body">
-          <pre className="attempt-diff"><span className="c">{`// ${run.check}`}</span>{'\n'}<span className="m">{`− ${run.expects}`}</span>{'\n'}<span className="p">{`+ ${shown.endState}`}</span>{'\n'}<span className="c">{`// end state: ${ended.route}, ${clock(ended.seconds)}`}</span></pre>
+          {/* A check that passed shows what it found; one that failed shows what it expected against what the app held. */}
+          <pre className="attempt-diff"><span className="c">{`// ${run.check}`}</span>{'\n'}{shown.reached === 'yes'
+            ? <><span className="p">{`✓ ${run.expects}`}</span>{'\n'}<span>{`  ${shown.endState}`}</span></>
+            : <><span className="m">{`− ${run.expects}`}</span>{'\n'}<span className="p">{`+ ${shown.endState}`}</span></>}{'\n'}<span className="c">{`// end state: ${ended.route}, ${clock(ended.seconds)}`}</span></pre>
         </div>
       </details>
 

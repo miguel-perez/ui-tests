@@ -62,18 +62,18 @@ img { display: block; max-width: 100%; }
 .head p { color: var(--muted); max-width: 64ch; justify-self: end; }
 .head p em { font-style: normal; color: var(--ink); border-bottom: 1px dashed var(--comment); }
 
-/* Commands strip */
-.cmds { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-bottom: 12px; }
-.cmd { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 14px 16px; display: grid; gap: 6px; }
-.cmd code { font-size: 14px; }
+/* The commands, by what they cost (issue #68): one stacked list, the command on the left (22ch) and what it does on the right, one
+   row each; at phone width each row stacks. Nothing under it. */
+.cmds { display: grid; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin-bottom: 36px; }
+.cmd { padding: 12px 16px; display: grid; grid-template-columns: minmax(0, 22ch) minmax(0, 1fr); gap: 6px 24px; align-items: baseline; }
+.cmd + .cmd { border-top: 1px solid var(--line); }
+.cmd code { font-size: 14px; white-space: nowrap; }
 .cmd code .p { color: var(--comment); margin-right: 8px; }
 .cmd code .f { color: var(--yellow); }
 .cmd code .a { color: var(--green); }
 .cmd .does { font-size: 13px; color: var(--muted); }
 .cmd .does b { font-weight: 500; color: var(--ink); }
 .cmd .does .arrow { color: var(--moment); margin-right: 6px; }
-.cmds-note { font-size: 13px; color: var(--comment); margin-bottom: 36px; }
-.cmds-note code { color: var(--muted); }
 
 /* Two panels */
 .panels { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; }
@@ -258,7 +258,7 @@ img { display: block; max-width: 100%; }
 .stepnav button:hover { color: var(--ink); }
 .stepnav button b { font: 500 12px/1 var(--mono); color: var(--moment); }
 .stepnav button:disabled { visibility: hidden; }
-@media (max-width: 900px) { .cmds { grid-template-columns: 1fr; } .pair { grid-template-columns: 1fr; } .pair > .left { position: static; } .head { grid-template-columns: 1fr; gap: 10px; } }
+@media (max-width: 900px) { .cmd { grid-template-columns: 1fr; } .pair { grid-template-columns: 1fr; } .pair > .left { position: static; } .head { grid-template-columns: 1fr; gap: 10px; } }
 
 
 .pair .intro { display: grid; gap: 10px; margin-bottom: 18px; max-width: 64ch; }
@@ -296,7 +296,6 @@ img { display: block; max-width: 100%; }
 /* Review pass: frames on a blank host page fit their sheet; notes separated; phone code wraps */
 .frame.auto { aspect-ratio: auto; padding: 62px 24px 36px; }
 .frame.auto .sheet { position: relative; left: auto; top: auto; z-index: 1; transform: none; margin: 0 auto; max-height: none; }
-.cmds-note { margin-bottom: 48px; }
 .whole-top { margin-top: 0; }
 .pair .intro { margin-bottom: 20px; }
 .pair .side { margin-bottom: 16px; }
@@ -307,7 +306,6 @@ img { display: block; max-width: 100%; }
   .frame.auto { padding: 50px 12px 24px; }
 }
 
-.cmds-note { margin-bottom: 24px; }
 .whole-top { margin: 0 0 40px; }
 
 .stepper { display: flex; align-items: center; gap: 10px; margin-top: 10px; font: 400 13px/1 var(--mono); color: var(--muted); }
@@ -343,20 +341,21 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
     <p>Every screen a person meets, in the order they meet it, and what comes back from each, then the whole test that produces them. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.</p>
   </header>
 
-  <div class="cmds" aria-label="Three commands">
+  <div class="cmds" aria-label="The commands">
     <div class="cmd"><code><span class="p">$</span>npm install <span class="f">-D</span> <span class="a">ui-tests</span></code><span class="does">Adds the package.</span></div>
-    <div class="cmd"><code><span class="p">$</span>npx ui-tests <span class="a">init</span></code><span class="does">Creates <b>the file</b> below, with the example filled in.</span></div>
-    <div class="cmd"><code><span class="p">$</span>npx ui-tests <span class="a">run</span></code><span class="does">Turns it into <b>these screens</b> and puts people in front of them.</span></div>
+    <div class="cmd"><code><span class="p">$</span>npx ui-tests <span class="a">init</span></code><span class="does">Writes <b>a study file</b> and a config, and prints the three lines to mount in your app.</span></div>
+    <div class="cmd"><code><span class="p">$</span>npx ui-tests</code><span class="does">Runs the whole study <b>on you</b>, in your browser: the consent, the scenario card, your page with the bar, and your own trace. Recruits nobody, costs nothing.</span></div>
+    <div class="cmd"><code><span class="p">$</span>npx ui-tests <span class="a">recruit</span></code><span class="does">Runs it with <b>real people</b>: your link, your visitors or a paid panel. Shows the plan and the price, and asks first.</span></div>
+    <div class="cmd"><code><span class="p">$</span>npx ui-tests <span class="a">check</span></code><span class="does">In the job that deploys your preview: the same run, with the cap in your config as the yes, and <b>a check on the pull request</b>.</span></div>
   </div>
-  <p class="cmds-note"><code>npx ui-tests</code> on its own runs every screen on you first, so you see the card, the bar and your own trace before anyone else does.</p>
 
     
 
   <div class="tabs" role="tablist" aria-label="The screens, one at a time" id="tabs"></div>
   <ol class="pairs" id="rows">
 
-      <li class="pair" id="r1" data-fields="video" data-lines="12" data-name="Consent">
-        <div class="left"><div class="intro"><h3 data-n="1">Consent <span>· before anything loads</span></h3><p class="from">What the person does on the page is always recorded, and the consent says so in plain words. <code>video: true</code> adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they&nbsp;set.</p></div></div>
+      <li class="pair" id="r1" data-fields="record" data-lines="13" data-name="Consent">
+        <div class="left"><div class="intro"><h3 data-n="1">Consent <span>· before anything loads</span></h3><p class="from">What the person does on the page is always recorded, and the consent says so in plain words. <code>record: 'video'</code> adds the screen as a video, which is what needs the browser's prompt and raises the incentive to 1.5×, and the plan shows that price; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they&nbsp;set.</p></div></div>
         
         <div class="main">
           <figure class="frame auto" aria-label="Consent screen">
@@ -379,8 +378,8 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
         </div>
       </li>
 
-      <li class="pair" id="r2" data-fields="users · purpose · catch" data-lines="4 5 6 7 8 9 10 11 17" data-name="Screener">
-        <div class="left"><div class="intro"><h3 data-n="2">Who gets in, and how many <span>· the sample</span></h3><p class="from">Six questions, one per screen; press Next to see them all. The first three come from <code>users</code>: <code>did</code> and <code>within</code> become a recency question with bands, <code>uses</code> a multi-select with one decoy, <code>not</code> an item among neutral ones, so nobody can tell what disqualifies. The last three come from <code>purpose</code>: when they last needed it, how they do it today, how much it matters. Write <code>users</code> as the sentence alone and the first three are drafted from it.</p><p class="from">The <code>catch</code> line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost from $60, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.</p></div></div>
+      <li class="pair" id="r2" data-fields="users · purpose · sample" data-lines="4 5 6 7 8 9 10 11 12" data-name="Screener">
+        <div class="left"><div class="intro"><h3 data-n="2">Who gets in, and how many <span>· the sample</span></h3><p class="from">Six questions, one per screen; press Next to see them all. The first three come from <code>users</code>: <code>did</code> and <code>within</code> become a recency question with bands, <code>uses</code> a multi-select with one decoy, <code>not</code> an item among neutral ones, so nobody can tell what disqualifies. The last three come from <code>purpose</code>: when they last needed it, how they do it today, how much it matters. Write <code>users</code> as the sentence alone and the first three are drafted from it.</p><p class="from">The <code>sample</code> line sets how many, for the whole study: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost from $60, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.</p></div></div>
         
         <div class="main">
           <figure class="frame auto multi" aria-label="Screener questions, one at a time">
@@ -388,8 +387,8 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
             <div class="addr"><i></i><i></i><i></i><span>ui-tests.com/t/k2m9</span></div>
             <div class="sheet ch car-step" data-step="1">
               <span class="step">A few questions first · 1 of 6</span>
-              <h4>When did you last sign up for a tool to plan work with a team?</h4>
-              <ul class="opts"><li class="on "><i></i>In the past week</li><li class=""><i></i>In the past month</li><li class=""><i></i>Earlier this year</li><li class=""><i></i>I haven't</li></ul>
+              <h4>When did you last use a shared tool to plan work with a team?</h4>
+              <ul class="opts"><li class=""><i></i>In the past week</li><li class="on "><i></i>In the past month</li><li class=""><i></i>In the past 3 months</li><li class=""><i></i>Longer ago, or never</li></ul>
               <div class="actions"><span class="small">Pick one.</span><button class="btn pri next-step" type="button">Next</button></div>
             </div>
             <div class="sheet ch car-step" data-step="2" hidden>
@@ -428,8 +427,8 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
         </div>
       </li>
 
-      <li class="pair" id="r3" data-fields="purpose · happyPath" data-lines="11 16" data-name="First look">
-        <div class="left"><div class="intro"><h3 data-n="3">First look <span>· on by default</span></h3><p class="from">The page the task starts on is flashed for 500 ms, then one open question. The start is the first page of the <code>happyPath</code> unless the goal names a <code>start</code>; name another page for the flash with <code>impression: { page }</code> when the task begins behind a login and the purpose lives on the public page. The answers are read against the <code>purpose</code>, which the person never sees, and you can re-read any of them. Then the page comes back for one click.</p></div></div>
+      <li class="pair" id="r3" data-fields="purpose · firstLook" data-lines="11 23" data-name="First look">
+        <div class="left"><div class="intro"><h3 data-n="3">First look <span>· on for public pages</span></h3><p class="from">A page is flashed for 500 ms, then one open question. It is the page the task starts on when that page is public, and off when the start is behind a sign-in, as Weekboard's board is; <code>firstLook: { page }</code> names the public page where the purpose lives, here the home page. The answers are read against the <code>purpose</code>, which the person never sees, and you can re-read any of them. Then the page comes back for one click.</p></div></div>
         
         <div class="main">
           <figure class="frame" aria-label="First look question over the flashed page">
@@ -447,8 +446,8 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
         </div>
       </li>
 
-      <li class="pair" id="r4" data-fields="users · purpose · beforeEach · goal" data-lines="5 11 14 15" data-name="Scenario card">
-        <div class="left"><div class="intro"><h3 data-n="4">Scenario card <span>· from the goal, never the path</span></h3><p class="from">The situation from <code>users.are</code> and <code>purpose</code>, the action from the goal's name, the name and email from <code>beforeEach</code>. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with <code>scenario</code>.</p></div></div>
+      <li class="pair" id="r4" data-fields="users · purpose · setup · task" data-lines="5 11 16 17 18 20" data-name="Scenario card">
+        <div class="left"><div class="intro"><h3 data-n="4">Scenario card <span>· from the task, never the path</span></h3><p class="from">The situation from <code>users.are</code> and <code>purpose</code>, the action from the task's name, the name and email from what <code>setup</code> returns. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with <code>scenario</code>.</p></div></div>
         
         <div class="main">
           <figure class="frame" aria-label="Scenario card over the dimmed page">
@@ -457,7 +456,7 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
             <div class="addr"><i></i><i></i><i></i><span>weekboard.app/board</span></div>
             <div class="sheet ch">
               <span class="step">Task 1 of 1</span>
-              <p>You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.</p>
+              <p>You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.example.</p>
               <p class="small">When you think you've finished, press <b>Done</b>. If you get stuck, press <b>I couldn't do this</b>.</p>
               <div class="actions"><span></span><button class="btn pri">Start task</button></div>
             </div>
@@ -466,8 +465,8 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
         </div>
       </li>
 
-      <li class="pair" id="r5" data-fields="goal · happyPath · video · outcome" data-lines="12 15 16 19 20 21" data-name="Your page, with the bar">
-        <div class="left"><div class="intro"><h3 data-n="5">Your page, with the bar, then the check <span>· two controls, one check</span></h3><p class="from">One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from <code>video</code>, with a pause; there is no microphone during the task. The summary is the goal's name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: the two pages of the <code>happyPath</code> set a silent three-minute limit, and the person may ask for more time once. The pill takes your font, inverts your page's colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.</p><p class="from">When they press Done, the <code>outcome</code> runs against the page as they left it. What they said does not count; what the page says does. A check that cannot decide returns "couldn't tell" and is never rounded either way.</p></div></div>
+      <li class="pair" id="r5" data-fields="task · path · timeLimit · record · outcome" data-lines="13 20 21 22 25 26 27" data-name="Your page, with the bar">
+        <div class="left"><div class="intro"><h3 data-n="5">Your page, with the bar, then the check <span>· two controls, one check</span></h3><p class="from">One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from <code>record: 'video'</code>, with a pause; there is no microphone during the task. The summary is the goal's name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: <code>timeLimit</code> is silent, and the person may ask for more time once. The <code>path</code> is only what you expect them to take; it sets nothing else. The pill takes your font, inverts your page's colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.</p><p class="from">When they press Done, the <code>outcome</code> asks your app what happened, whatever page they ended on: here, whether this board has an invitation for Sam. What they said does not count; what your app holds does. Pressing Add twice still invited Sam; the second invitation comes back as a problem, not as a failure. A check that cannot decide returns "couldn't tell" and is never rounded either way.</p></div></div>
         
         <div class="main">
           <figure class="frame" aria-label="The page under test with the bar">
@@ -489,7 +488,7 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
 
       
       <li class="pair" id="r7" data-lines="" data-name="After the task">
-        <div class="left"><div class="intro"><h3 data-n="6">After the task <span>· not from your file</span></h3><p class="from">Five screens, one question each; press Next to see them all. The first two come after every attempt, including the ones that gave up: how easy it was, with nothing preselected, and, at 4 or below, what made it difficult. The last three come once, after all goals: would it help them, is it easy to use, and anything they want to say, typed or spoken. Confidence is asked only when a goal has no check, so Weekboard's people never see it.</p></div></div>
+        <div class="left"><div class="intro"><h3 data-n="6">After the task <span>· not from your file</span></h3><p class="from">Five screens, one question each; press Next to see them all. The first two come after every attempt, including the ones that ended with I couldn't do this: how easy it was, with nothing preselected, and, at 4 or below, what made it difficult. The last three come once, after all goals: would it help them, is it easy to use, and anything they want to say, typed or spoken. Confidence is asked only when a goal has no check, so Weekboard's people never see it.</p></div></div>
         <div class="main">
           <figure class="frame auto multi" aria-label="The questions after the task, one at a time">
             <div class="blank"></div>
@@ -537,32 +536,39 @@ ol.pairs > li.pair, .pairs .pair, .pair { border-top: 0 !important; padding: 8px
 
   <section class="whole-top after-steps" aria-label="The file">
       <div class="window">
-        <div class="tab"><span>ui-tests/invite.ui.test.ts</span><span class="legend">23 lines</span></div>
+        <div class="tab"><span>ui-tests/invite.ui.test.ts</span><span class="legend">30 lines</span></div>
         <div class="code">
           <ol id="code">
-            <li data-l="1"><span class="ln">1</span><span class="marks"></span><span class="src"><span class="k">import</span> <span class="pu">{</span> <span class="id">context, beforeEach, goal, outcome, expect</span> <span class="pu">}</span> <span class="k">from</span> <span class="s">'ui-tests'</span></span></li>
-            <li data-l="2"><span class="ln">2</span><span class="marks"></span><span class="src"> </span></li>
-            <li data-l="3"><span class="ln">3</span><span class="marks"></span><span class="src"><span class="fn">context</span><span class="pu">({</span></span></li>
-            <li data-l="4" data-rows="2 4"><span class="ln">4</span><span class="marks"></span><span class="src">  <span class="pr">users</span><span class="pu">: {</span></span></li>
-            <li data-l="5" data-rows="2 4"><span class="ln">5</span><span class="marks"></span><span class="src">    <span class="pr">are</span><span class="pu">:</span> <span class="s">'people who signed up this week and want a colleague on their board'</span><span class="pu">,</span></span></li>
-            <li data-l="6" data-rows="2"><span class="ln">6</span><span class="marks"></span><span class="src">    <span class="pr">did</span><span class="pu">:</span> <span class="s">'signed up for a tool to plan work with a team'</span><span class="pu">,</span></span></li>
-            <li data-l="7" data-rows="2"><span class="ln">7</span><span class="marks"></span><span class="src">    <span class="pr">within</span><span class="pu">:</span> <span class="s">'7 days'</span><span class="pu">,</span></span></li>
-            <li data-l="8" data-rows="2"><span class="ln">8</span><span class="marks"></span><span class="src">    <span class="pr">uses</span><span class="pu">: [</span><span class="s">'Trello'</span><span class="pu">,</span> <span class="s">'Asana'</span><span class="pu">,</span> <span class="s">'Notion'</span><span class="pu">,</span> <span class="s">'Linear'</span><span class="pu">],</span></span></li>
-            <li data-l="9" data-rows="2" class="hidden-line"><span class="ln">9</span><span class="marks"></span><span class="src">    <span class="pr">not</span><span class="pu">: [</span><span class="s">'has used Weekboard'</span><span class="pu">],</span></span></li>
-            <li data-l="10" data-rows="2"><span class="ln">10</span><span class="marks"></span><span class="src">  <span class="pu">},</span></span></li>
-            <li data-l="11" data-rows="2 3 4"><span class="ln">11</span><span class="marks"></span><span class="src">  <span class="pr">purpose</span><span class="pu">:</span> <span class="s">'plan the week together without emailing screenshots around'</span><span class="pu">,</span></span></li>
-            <li data-l="12" data-rows="1 5"><span class="ln">12</span><span class="marks"></span><span class="src">  <span class="pr">video</span><span class="pu">:</span> <span class="nu">true</span><span class="pu">,</span></span></li>
-            <li data-l="13"><span class="ln">13</span><span class="marks"></span><span class="src"><span class="pu">}, () => {</span></span></li>
-            <li data-l="14" data-rows="4"><span class="ln">14</span><span class="marks"></span><span class="src">  <span class="fn">beforeEach</span><span class="pu">(</span><span class="k">async</span> <span class="pu">() => ({</span> <span class="pr">colleague</span><span class="pu">:</span> <span class="s">'Sam'</span><span class="pu">,</span> <span class="pr">email</span><span class="pu">:</span> <span class="s">'sam@acme.co'</span> <span class="pu">}))</span></span></li>
-            <li data-l="15" data-rows="4 5"><span class="ln">15</span><span class="marks"></span><span class="src">  <span class="fn">goal</span><span class="pu">(</span><span class="s">'invite a colleague'</span><span class="pu">, {</span></span></li>
-            <li data-l="16" data-rows="3 5" class="hidden-line"><span class="ln">16</span><span class="marks"></span><span class="src">    <span class="pr">happyPath</span><span class="pu">: [</span><span class="s">'/board'</span><span class="pu">,</span> <span class="s">'/settings/members'</span><span class="pu">],</span></span></li>
-            <li data-l="17" data-rows="n"><span class="ln">17</span><span class="marks"></span><span class="src">    <span class="pr">catch</span><span class="pu">: {</span> <span class="pr">affecting</span><span class="pu">:</span> <span class="s">'1 in 3'</span><span class="pu">,</span> <span class="pr">confidence</span><span class="pu">:</span> <span class="nu">0.85</span> <span class="pu">},</span></span></li>
-            <li data-l="18"><span class="ln">18</span><span class="marks"></span><span class="src">  <span class="pu">}, () => {</span></span></li>
-            <li data-l="19" data-rows="6" class="hidden-line"><span class="ln">19</span><span class="marks"></span><span class="src">    <span class="fn">outcome</span><span class="pu">(</span><span class="k">async</span> <span class="pu">({</span> <span class="id">page</span> <span class="pu">}) => {</span></span></li>
-            <li data-l="20" data-rows="6"><span class="ln">20</span><span class="marks"></span><span class="src">      <span class="fn">expect</span><span class="pu">(</span><span class="k">await</span> <span class="id">page</span><span class="pu">.</span><span class="fn">textContent</span><span class="pu">(</span><span class="s">'main'</span><span class="pu">)).</span><span class="fn">toContain</span><span class="pu">(</span><span class="s">'1 invitation pending'</span><span class="pu">)</span></span></li>
-            <li data-l="21" data-rows="6"><span class="ln">21</span><span class="marks"></span><span class="src">    <span class="pu">})</span></span></li>
-            <li data-l="22"><span class="ln">22</span><span class="marks"></span><span class="src">  <span class="pu">})</span></span></li>
-            <li data-l="23"><span class="ln">23</span><span class="marks"></span><span class="src"><span class="pu">})</span></span></li>
+            <li data-l="1"><span class="ln">1</span><span class="marks"></span><span class="src">import { study, setup, task, outcome, expect } from 'ui-tests'</span></li>
+            <li data-l="2"><span class="ln">2</span><span class="marks"></span><span class="src"></span></li>
+            <li data-l="3"><span class="ln">3</span><span class="marks"></span><span class="src">study('invite flow', {</span></li>
+            <li data-l="4"><span class="ln">4</span><span class="marks"></span><span class="src">  users: {</span></li>
+            <li data-l="5"><span class="ln">5</span><span class="marks"></span><span class="src">    are: 'people who plan work with a team in a shared tool',</span></li>
+            <li data-l="6"><span class="ln">6</span><span class="marks"></span><span class="src">    did: 'used a shared tool to plan work with a team',</span></li>
+            <li data-l="7"><span class="ln">7</span><span class="marks"></span><span class="src">    within: '3 months',</span></li>
+            <li data-l="8"><span class="ln">8</span><span class="marks"></span><span class="src">    uses: ['Trello', 'Asana', 'Notion', 'Linear'],</span></li>
+            <li data-l="9"><span class="ln">9</span><span class="marks"></span><span class="src">    not: ['has used Weekboard'],</span></li>
+            <li data-l="10"><span class="ln">10</span><span class="marks"></span><span class="src">  },</span></li>
+            <li data-l="11"><span class="ln">11</span><span class="marks"></span><span class="src">  purpose: 'plan the week together without emailing screenshots around',</span></li>
+            <li data-l="12"><span class="ln">12</span><span class="marks"></span><span class="src">  sample: { affecting: 1 / 3, confidence: 0.85 }, // five people</span></li>
+            <li data-l="13"><span class="ln">13</span><span class="marks"></span><span class="src">  record: 'video',</span></li>
+            <li data-l="14"><span class="ln">14</span><span class="marks"></span><span class="src">}, () => {</span></li>
+            <li data-l="15"><span class="ln">15</span><span class="marks"></span><span class="src">  // Each attempt gets its own signed-in board. A .example address is never delivered.</span></li>
+            <li data-l="16"><span class="ln">16</span><span class="marks"></span><span class="src">  setup(async ({ request }) => {</span></li>
+            <li data-l="17"><span class="ln">17</span><span class="marks"></span><span class="src">    const board = await (await request.post('/api/test/boards', { data: { cards: 'sample-week' } })).json()</span></li>
+            <li data-l="18"><span class="ln">18</span><span class="marks"></span><span class="src">    return { start: board.signInUrl, board: board.id, colleague: 'Sam', email: 'sam@acme.example' }</span></li>
+            <li data-l="19"><span class="ln">19</span><span class="marks"></span><span class="src">  })</span></li>
+            <li data-l="20"><span class="ln">20</span><span class="marks"></span><span class="src">  task('invite a colleague', {</span></li>
+            <li data-l="21"><span class="ln">21</span><span class="marks"></span><span class="src">    path: ['/board', '/settings/members'],</span></li>
+            <li data-l="22"><span class="ln">22</span><span class="marks"></span><span class="src">    timeLimit: '3 min',</span></li>
+            <li data-l="23"><span class="ln">23</span><span class="marks"></span><span class="src">    firstLook: { page: '/' },</span></li>
+            <li data-l="24"><span class="ln">24</span><span class="marks"></span><span class="src">  }, () => {</span></li>
+            <li data-l="25"><span class="ln">25</span><span class="marks"></span><span class="src">    outcome(async ({ request, setup }) => {</span></li>
+            <li data-l="26"><span class="ln">26</span><span class="marks"></span><span class="src">      const invitations = await (await request.get(`/api/test/boards/${setup.board}/invitations`)).json()</span></li>
+            <li data-l="27"><span class="ln">27</span><span class="marks"></span><span class="src">      expect(invitations.map(i => i.email)).toContain(setup.email)</span></li>
+            <li data-l="28"><span class="ln">28</span><span class="marks"></span><span class="src">    })</span></li>
+            <li data-l="29"><span class="ln">29</span><span class="marks"></span><span class="src">  })</span></li>
+            <li data-l="30"><span class="ln">30</span><span class="marks"></span><span class="src">})</span></li>
           </ol>
         </div>
       </div>

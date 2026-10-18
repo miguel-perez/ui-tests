@@ -59,7 +59,7 @@ context({
   },
   record: 'screen',
 }, () => {
-  beforeEach(async () => ({ colleague: 'Sam', email: 'sam@acme.co' }))
+  beforeEach(async () => ({ colleague: 'Sam', email: 'sam@acme.example' }))
   goal('invite a colleague', {
     happyPath: ['/board', '/settings/members'],
     catch: { affecting: '1 in 3', confidence: 0.85 },
@@ -125,7 +125,7 @@ Rules: character, motive, action and data, nothing more, and "trim any detail th
 
 **Final card text.**
 
-> You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.
+> You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.example.
 >
 > When you think you've finished, press **Done**. If you get stuck, press **I couldn't do this**.
 >

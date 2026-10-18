@@ -2,21 +2,9 @@
   "goal": "invite a colleague",
   "people": 5,
   "attempted": 5,
-  "reached": 2,
-  "pressedDoneFailed": 2,
+  "reached": 4,
+  "pressedDoneFailed": 0,
   "problems": [
-    {
-      "title": "Pressed Add, saw nothing change, pressed it again; Sam got two invitations",
-      "page": "/settings/members",
-      "locator": "button \"Add\"",
-      "people": 2,
-      "impact": "blocked",
-      "moment": {
-        "person": 3,
-        "seconds": 58,
-        "url": "https://ui-tests.com/r/k2m9#problem-1&t=58"
-      }
-    },
     {
       "title": "The Add button looked switched off; Person 2 pressed I couldn't do this",
       "page": "/settings/members",
@@ -26,7 +14,7 @@
       "moment": {
         "person": 2,
         "seconds": 49,
-        "url": "https://ui-tests.com/r/k2m9#problem-2&t=49"
+        "url": "https://ui-tests.com/r/k2m9#problem-1&t=49"
       }
     },
     {
@@ -38,7 +26,19 @@
       "moment": {
         "person": 1,
         "seconds": 4,
-        "url": "https://ui-tests.com/r/k2m9#problem-3&t=4"
+        "url": "https://ui-tests.com/r/k2m9#problem-2&t=4"
+      }
+    },
+    {
+      "title": "Pressed Add, saw nothing change, pressed it again; Sam got two invitations",
+      "page": "/settings/members",
+      "locator": "button \"Add\"",
+      "people": 2,
+      "impact": "confused",
+      "moment": {
+        "person": 3,
+        "seconds": 58,
+        "url": "https://ui-tests.com/r/k2m9#problem-3&t=58"
       }
     },
     {

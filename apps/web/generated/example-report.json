@@ -1,15 +1,10 @@
 {
   "people": 5,
-  "reached": 2,
-  "pressedDoneFailed": 2,
+  "reached": 4,
+  "pressedDoneFailed": 0,
   "seenBy": 5,
   "selectedRank": 1,
   "problems": [
-    {
-      "title": "Pressed Add, saw nothing change, pressed it again",
-      "people": 2,
-      "impact": "blocked"
-    },
     {
       "title": "Add looked switched off; pressed I couldn't do this",
       "people": 1,
@@ -19,6 +14,11 @@
       "title": "Looked for Invite in the Share menu, found only links",
       "people": 4,
       "impact": "slowed"
+    },
+    {
+      "title": "Pressed Add, saw nothing change, pressed it again",
+      "people": 2,
+      "impact": "confused"
     },
     {
       "title": "Typed Sam's email into the board search",

@@ -23,13 +23,13 @@ export async function Compilation() {
   const all = lines.map((line, i) => ({ n: i + 1, html: line }))
   return <section className="block compilation" aria-labelledby="what-you-write" data-artefact="compilation" data-section="compilation">
     <SectionHead id="what-you-write" heading={compilation.heading} lead={compilation.lead} />
-    <div className="compile-commands" role="list" aria-label="Three commands" data-figure>
+    <div className="compile-commands" role="list" aria-label="The commands" data-figure>
       {compilation.commands.map(({ command, does, strong }) => <div className="compile-command" role="listitem" key={command}>
         <code>{segments(`$ ${command}`).map((part, i) => <span key={i} style={{ color: role(part.color) }}>{part.text}</span>)}</code>
         <span>{strong ? <>{does.slice(0, does.indexOf(strong))}<b>{strong}</b>{does.slice(does.indexOf(strong) + strong.length)}</> : does}</span>
       </div>)}
     </div>
-    <p className="compile-note"><Prose text={compilation.note} /></p>
+    {compilation.note && <p className="compile-note"><Prose text={compilation.note} /></p>}
     <CompileSteps label="The screens, one at a time" steps={compilation.pieces.map(piece => ({ n: piece.n, name: piece.tab }))}>
       {compilation.pieces.map(piece => <div className="compile-pair" id={`piece-${piece.id}`} key={piece.id}>
         <div className="compile-left">
@@ -95,7 +95,7 @@ const screens: Record<string, ReactNode> = {
   </figure>,
   screener: <>
     <Stepped label="Screener questions, one at a time" url="ui-tests.com/t/k2m9" what="question">
-      <Sheet step="A few questions first · 1 of 6" title="When did you last sign up for a tool to plan work with a team?"><Options items={['*In the past week', 'In the past month', 'Earlier this year', "I haven't"]} /><div className="ch-actions"><span className="ch-small">Pick one.</span><Next /></div></Sheet>
+      <Sheet step="A few questions first · 1 of 6" title="When did you last use a shared tool to plan work with a team?"><Options items={['In the past week', '*In the past month', 'In the past 3 months', 'Longer ago, or never']} /><div className="ch-actions"><span className="ch-small">Pick one.</span><Next /></div></Sheet>
       <Sheet step="A few questions first · 2 of 6" title="Which of these do you use to plan work? Pick all that apply."><Options square items={['Trello', '*Asana', 'Notion', 'Linear', 'Basecamp', 'None of these']} /><div className="ch-actions"><span className="ch-small">Pick all that apply.</span><Next /></div></Sheet>
       <Sheet step="A few questions first · 3 of 6" title="Which of these have you done? Pick all that apply."><Options square items={['Managed a team of more than five', 'Used Weekboard', '*Taken a course on planning or project management', 'None of these']} /><div className="ch-actions"><span className="ch-small">Pick all that apply.</span><Next /></div></Sheet>
       <Sheet step="A few questions first · 4 of 6" title="When did you last need to plan a week with other people?"><Options items={['*This week', 'This month', 'Earlier this year', "I don't"]} /><div className="ch-actions"><span className="ch-small">Pick one.</span><Next /></div></Sheet>

@@ -48,7 +48,7 @@
 > 2. Reached the goal: 2 of 5 (Person 1, Person 5). Your check looked for "1 invitation pending".
 > 3. Pressed Done, but your check failed: 2 of 5.
 > 4. Fix first, by impact, then by how many people hit it:
-> 5. 1 · Blocked · 2 of 5 · /settings/members, button "Add": pressed Add, saw nothing change, pressed it again; Sam got two invitations. Suggested change: on press, show "Invited sam@acme.co" and disable the button.
+> 5. 1 · Blocked · 2 of 5 · /settings/members, button "Add": pressed Add, saw nothing change, pressed it again; Sam got two invitations. Suggested change: on press, show "Invited sam@acme.example" and disable the button.
 > 6. 2 · Blocked · 1 of 5 · /settings/members, button "Add": the button looked switched off; Person 2 pressed I couldn't do this. Suggested change: keep it solid and check the address on press.
 > 7. 3 · Slowed · 4 of 5 · /board, menu "Share": looked for Invite and found only link options. Suggested change: put "Invite a colleague" at the top of the Share menu.
 > 8. The rest · 4 · Confused · 2 of 5 · /board, field "Search": typed Sam's email into the board search.
