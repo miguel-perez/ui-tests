@@ -258,15 +258,19 @@ async function main() {
         open(traceUrl())
         if (pending.length) {
           active = pending.shift()!
-          run = await createRun(); owned.add(run.id); launch()
+          // A setup that fails for a later task ends the session: no task is skipped silently, and nothing is reported for it.
+          try { run = await createRun() } catch (error) { completed = true; fail(error); return }
+          owned.add(run.id); launch()
         } else completed = true
       }
     } catch (error) { console.error(error) } finally { verifying = false }
   }, 100)
   // A dev session can stay open for days: sweep expired recordings hourly, whether or not the player sends anything.
   const retention = setInterval(() => store.purgeRecordings(Date.now() - recordingRetentionMs), 60 * 60 * 1000)
-  /** Shuts down the viewer and storage and exits. */
-  function stop() { clearInterval(interval); clearInterval(retention); server.close(); store.close(); void request.dispose().finally(() => process.exit(0)) }
-  process.on('SIGINT', stop); process.on('SIGTERM', stop)
+  /** Shuts down the viewer and storage and exits with the given code. */
+  function stop(code = 0) { clearInterval(interval); clearInterval(retention); server.close(); store.close(); void request.dispose().finally(() => process.exit(code)) }
+  /** Reports why the session cannot go on and stops it with a non-zero exit. */
+  function fail(error: unknown) { console.error(error instanceof Error ? error.message : error); stop(1) }
+  process.on('SIGINT', () => stop()); process.on('SIGTERM', () => stop())
 }
 main().catch(error => { console.error(error instanceof Error ? error.message : error); process.exit(1) })

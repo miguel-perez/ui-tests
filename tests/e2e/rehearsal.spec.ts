@@ -28,7 +28,7 @@ async function start(body?: string) {
   player = /Player: (\S+)/.exec(output)![1]; trace = /Trace: (\S+)/.exec(output)![1]
 }
 /** Walks consent, the screener, the first impression and the scenario card with the keyboard, checking axe at each stage, until the task bar appears. */
-async function begin(page: Page, impression = 'A way to find out whether people can use what I built') {
+async function begin(page: Page, impression = 'A way to find out whether people can use what I built', tasks = 1) {
   await page.goto(player)
   await expect(page.getByRole('heading', { level: 1, name: 'This website would like to watch you try something on their site.' })).toBeVisible()
   await expect(page.getByText('The website is being tested, not you.', { exact: false })).toBeVisible()
@@ -72,7 +72,7 @@ async function begin(page: Page, impression = 'A way to find out whether people 
   // The page is back for one click, asked toward the goal in its own words.
   await expect(page.getByRole('heading', { name: /^Where would you click first to [a-z ]+\?$/ })).toBeVisible()
   await page.frameLocator('iframe.uit-flash').getByRole('link', { name: 'Get started', exact: true }).first().click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Task 1 of 1' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: `Task 1 of ${tasks}` })).toBeVisible()
   await expect(page.getByText("When you think you've finished, press Done. If you get stuck, press I couldn't do this.")).toBeVisible()
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   await page.getByRole('button', { name: 'Start task' }).focus(); await page.keyboard.press('Enter')
@@ -243,6 +243,21 @@ task('start trying',{path:['/','/docs/getting-started'],firstLook:{page:'/'}},()
   expect(html).toContain('"reached": "yes"')
   expect(html).toContain("Setup, run once for this attempt: started at /; the card's values: colleague Sam, email sam@acme.example, heading Getting started.")
   expect(output).toContain('Reached the goal: Yes')
+})
+test('a setup that fails for a later task stops the session with its reason, and reports nothing for the task it could not start', async ({ page }) => {
+  await start(`let attempts=0
+setup(async()=>{if(++attempts>1)throw new Error('no second board');return {colleague:'Sam'}})
+task('start trying',{path:['/','/docs/getting-started']},()=>outcome(({page})=>expect(page.url()).toContain('/')))
+task('read the guide',{path:['/docs/getting-started']},()=>outcome(({page})=>expect(page.url()).toContain('/docs/getting-started')))`)
+  await begin(page, undefined, 2); await finish(page)
+  await expect(page).toHaveURL(/\/ui-tests\//, { timeout: 15_000 })
+  await expect(page.getByText('After the task · 1 of', { exact: false })).toBeVisible({ timeout: 15_000 })
+  await choose(page, '6')
+  await expect(async () => { await page.keyboard.press('Enter'); await expect.poll(() => child.exitCode, { timeout: 1000 }).toBe(1) }).toPass({ timeout: 30_000 })
+  expect(output).toContain('setup failed against http://localhost:3000: no second board')
+  // The first task's result is printed once; the second task never starts, and no result is printed for it.
+  expect(output.match(/Reached the goal:/g)).toHaveLength(1)
+  expect(output.match(/Player: /g)).toHaveLength(1)
 })
 test('a single task verifies its outcome through the CLI verify subcommand', async ({ page, request }) => {
   await start(`task('start trying',()=>outcome(({page})=>expect(page.url()).toContain('/docs/getting-started')))`)

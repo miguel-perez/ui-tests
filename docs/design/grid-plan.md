@@ -50,7 +50,7 @@ At 375: h1, standfirst; actions, fine print; the terminal; its caption.
 
 ### L2 · WhatComesBack: how it works
 
-**Rule** (issue #46; issue #49; the replay round, issue #62; `design/artefacts/what-comes-back.html`). The heading "How it works." in 5 and no lead, then three numbered pieces, `--space-2` apart with no rule between them, each a numbered intro (64ch, from column 1): the merge box across 12; the check's page on GitHub across 12 (a 220 px side list and the page); and the replay, an illustration with nothing to press: its intro in the first 5 and one compact moment card in the right 7 (Person 3's still at 00:58 in 240 px with "00:58 → 01:04" and a decorative play mark, then who, when and Blocked, what they did, their words and the smallest change), then the rail across 12: a 2 px line in the line colour, a hollow dot at each of the attempt's thirteen events at its second, the three moments as 14 px filled dots ringed in the canvas (slowed at 00:03, confused at 00:23, blocked at 00:58) with their time and word under them, and the two ends. The report as the list is off the landing: it stays at `/r/<run>`, which the check page links to. Empty area: the intros of the first two pieces leave the right of their row free beside 64ch, and the right of the head row where a lead used to be; both far smaller than the artefacts.
+**Rule** (issue #46; issue #49; the replay round, issue #62; `design/artefacts/what-comes-back.html`). The heading "How it works." in 5 and no lead, then three numbered pieces, `--space-2` apart with no rule between them, each a numbered intro (64ch, from column 1): the merge box across 12; the check's page on GitHub across 12 (a 220 px side list and the page); and the replay, an illustration with nothing to press: its intro in the first 5 and one compact moment card in the right 7 (Person 3's still at 00:58 in 240 px with "00:58 → 01:04" and a decorative play mark, then who, when and Confused, what they did, their words and the smallest change), then the rail across 12: a 2 px line in the line colour, a hollow dot at each of the attempt's thirteen events at its second, the three moments as 14 px filled dots ringed in the canvas (slowed at 00:03, confused at 00:23, confused at 00:58; since issue #68 the double Add reached the goal) with their time and word under them, the last label aligned to its right edge, and the two ends, the second "01:03 Pressed Done · reached the goal, with two invitations". The report as the list is off the landing: it stays at `/r/<run>`, which the check page links to. Empty area: the intros of the first two pieces leave the right of their row free beside 64ch, and the right of the head row where a lead used to be; both far smaller than the artefacts.
 
 At 1440:
 
@@ -61,9 +61,9 @@ At 1440:
 [merge box: heading · ui-tests (neutral) · preview · tests                         Example run]  box · 160
 [2 Its details, on GitHub: intro                    ]                                            intro · 80 · 48 above
 [side 220 |title · sentence · table of three · legend · links · footer                        ]  page · 380
-[3 The replay: intro, 64ch          ] [still 240 | Person 3 · 00:58 · Blocked; did; said; fix ]  row · 180 · 48 above
+[3 The replay: intro, 64ch          ] [still 240 | Person 3 · 00:58 · Confused; did; said; fix]  row · 180 · 48 above
 [o-●-o----o-----o--●--o-----o---o---o------------●--o-o  rail: 13 events, 3 moments           ]  rail · 80 · 44 above
-[00:00 Started on /board                                 01:03 Pressed Done · the check failed]
+[00:00 Started on /board        01:03 Pressed Done · reached the goal, with two invitations]
 ```
 
 At 375:
@@ -81,20 +81,23 @@ At 375:
 
 ### L3 · Compilation: what you write, what they see
 
-**Rule** (issue #46; the trim round, issue #54; `design/artefacts/compile-section.html`). The heading in 5, the lead in 7. The three commands as three equal cards across 12, the note under them. Then a tab strip across 12, 1 Consent to 6 After the task, and one step visible at a time as a 5/7 pair: on the left the step's number and name and its note (64ch), and nothing else; on the right the screen in its constant light frame (16:10 over the Weekboard page, or fitted to its sheet), the stepper for steps 2 and 6, and the "Comes back" line (the replay round, issue #62, removes the worked-out box from step 2). Previous and next under the pair, across 12. Then the whole file across 12, `--space-2` below the previous and next row. Nothing is sticky, and the step area takes each step's own height at every width: the closed steps leave the layout (issue #54 removes the shared cell of issue #49). Empty area: under a shorter left column, bounded by the screen's height.
+**Rule** (issue #46; the trim round, issue #54; `design/artefacts/compile-section.html`). The heading in 5, the lead in 7. The commands by cost (issue #68): five rows in one stacked list across 12, the command on the left (22ch) and what it does on the right, and nothing under it. Then a tab strip across 12, 1 Consent to 6 After the task, and one step visible at a time as a 5/7 pair: on the left the step's number and name and its note (64ch), and nothing else; on the right the screen in its constant light frame (16:10 over the Weekboard page, or fitted to its sheet), the stepper for steps 2 and 6, and the "Comes back" line (the replay round, issue #62, removes the worked-out box from step 2). Previous and next under the pair, across 12. Then the whole file across 12, `--space-2` below the previous and next row. Nothing is sticky, and the step area takes each step's own height at every width: the closed steps leave the layout (issue #54 removes the shared cell of issue #49). Empty area: under a shorter left column, bounded by the screen's height.
 
 At 1440:
 
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
 [Section heading                    ]          [lead, 64ch, ends flush at 1344                ]  head
-[cmd: npm install         ] [cmd: npx ui-tests init    ] [cmd: npx ui-tests run               ]  cards · 84
-[note under the commands                                                                      ]  24
+[$ npm install -D ui-tests | Adds the package.                                               ]  row · 46
+[$ npx ui-tests init       | Writes a study file and a config, and prints the three lines …   ]  row · 46
+[$ npx ui-tests            | Runs the whole study on you, in your browser … costs nothing.    ]  row · 46
+[$ npx ui-tests recruit    | Runs it with real people … Shows the plan and the price …        ]  row · 46
+[$ npx ui-tests check      | In the job that deploys your preview … a check on the pull request]  row · 46
 [1 Consent · 2 Screener · 3 First look · 4 Scenario card · 5 Your page, with the bar · 6 After]  tabs · 44
 [n Name · note, 64ch                ] [frame, constant light, chrome at real size              ]  pair · the step's own height
 [                                   ] [(stepper) · Comes back                                  ]
 [← previous step                                                                  next step →]  nav · 48
-[CodeWindow: ui-tests/invite.ui.test.ts, 23 lines                                             ]  file · 620 · 48 above
+[CodeWindow: ui-tests/invite.ui.test.ts, 30 lines                                             ]  file · 800 · 48 above
 ```
 
 At 375:
@@ -102,7 +105,7 @@ At 375:
 ```text
 |----------------------------------------------------| 343 px, one column
 | Section heading, lead                              |
-| three command cards, stacked; the note             |
+| five command rows, each stacked in itself         |
 | tab strip (scrolls sideways inside itself)         |
 | the open step: number, name, note,                 |
 |   frame, (stepper), Comes back                    |
