@@ -70,7 +70,7 @@ img { display: block; max-width: 100%; }
 /* Headline: did they reach it */
 .result { display: grid; grid-template-columns: 7fr 5fr; gap: 24px; align-items: end; margin-bottom: 40px; }
 .result h1 { font: 500 34px/1.15 var(--sans); letter-spacing: -.015em; text-wrap: balance; }
-.result h1 .no { color: var(--no); }
+.result h1 .no { color: var(--no); } .result h1 .yes, .facts .yes { color: var(--yes); }
 .result .lede { color: var(--muted); margin-top: 12px; max-width: 58ch; }
 .facts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px 24px; border-left: 1px solid var(--line); padding-left: 24px; }
 .facts dt { font-size: 13px; color: var(--muted); }
@@ -231,11 +231,11 @@ pre .c { color: var(--comment); }
 
   <header class="result">
     <div>
-      <h1>Person 3 <span class="no">did not reach the goal</span>, and was sure they had.</h1>
-      <p class="lede">They pressed Done after two invitations had gone out. The check expects one. Nobody would have reported this: it looked finished from their side.</p>
+      <h1>Person 3 <span class="yes">reached the goal</span>.</h1>
+      <p class="lede">Pressed Done with 2 invitations pending. The check expects an invitation for Sam.</p>
     </div>
     <dl class="facts">
-      <div><dt>Reached the goal?</dt><dd><span class="no" style="color: var(--no)">No</span><small>the check failed</small></dd></div>
+      <div><dt>Reached the goal?</dt><dd><span class="yes">Yes</span></dd></div>
       <div><dt>How it ended</dt><dd>Pressed Done<small>at 1:03</small></dd></div>
       <div><dt>How sure they'd done it</dt><dd>6 of 7<span class="scale" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></span></dd></div>
       <div><dt>Time on this goal</dt><dd>1 min 3 s<small>stops at Done</small></dd></div>
@@ -246,7 +246,7 @@ pre .c { color: var(--comment); }
     <div class="sec-h">
       <h2 id="blockers-h">What got in the way</h2>
       <ol class="rank" aria-label="The three moments, worst first">
-        <li><a href="#m1"><span class="n blocked" aria-hidden="true">1</span><b>Wrong end state</b> at 00:58</a></li>
+        <li><a href="#m1"><span class="n" aria-hidden="true">1</span><b>Confused 5 s</b> at 00:58</a></li>
         <li><a href="#m2"><span class="n" aria-hidden="true">2</span><b>Slowed 16 s</b> at 00:03</a></li>
         <li><a href="#m3"><span class="n" aria-hidden="true">3</span><b>Confused 13 s</b> at 00:23</a></li>
       </ol>
@@ -294,7 +294,7 @@ pre .c { color: var(--comment); }
             <h3>Typed the colleague's email into the board search.</h3>
             <p class="where">/board · Search cards</p>
             <ol class="steps">
-              <li class="is-now"><time>00:23</time><span><span class="k">Typed sam@acme.co</span> into Search</span></li>
+              <li class="is-now"><time>00:23</time><span><span class="k">Typed sam@acme.example</span> into Search</span></li>
               <li><time>00:27</time><span><span class="k stop">Stopped 9 s</span> on "No cards match"</span></li>
               <li><time>00:36</time><span><span class="k dead">Pressed Enter, nothing happened</span></span></li>
             </ol>
@@ -305,18 +305,18 @@ pre .c { color: var(--comment); }
       </li>
       <li class="row"><time>00:41</time><span></span><span class="what"><span class="k">Clicked the avatar</span>, then Settings</span><span class="url">/settings</span></li>
       <li class="row"><time>00:46</time><span></span><span class="what"><span class="k">Clicked Members</span></span><span class="url">/settings/members</span></li>
-      <li class="moment blocked" data-n="1" id="m1">
+      <li class="moment confused" data-n="1" id="m1">
         <article class="card" data-start="58" data-end="63">
           <div>
             <button class="clip" aria-label="Play 00:58 to 01:03: pressed Add twice">
-              <img class="frame is-on" data-t="58" src="attempt-view/add1.jpg" alt="Weekboard Members page: sam@acme.co in the invite field, Add just pressed, 1 invitation pending"><img class="frame" data-t="61" src="attempt-view/add2.jpg" alt="The same page after the second press: 2 invitations pending">
+              <img class="frame is-on" data-t="58" src="attempt-view/add1.jpg" alt="Weekboard Members page: sam@acme.example in the invite field, Add just pressed, 1 invitation pending"><img class="frame" data-t="61" src="attempt-view/add2.jpg" alt="The same page after the second press: 2 invitations pending">
               <span class="secs"><span class="now">00:58</span> → 01:03</span>
               <span class="play"><svg class="play-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 2.5v15l13-7.5z" fill="currentColor"/></svg><svg class="pause-ico" viewBox="0 0 20 20" aria-hidden="true"><path d="M4 3h4v14H4zM12 3h4v14h-4z" fill="currentColor"/></svg></span>
             </button>
             <div class="scrub" aria-hidden="true"><div class="track"></div><div class="fill" style="--now: 0%"></div><i class="tick" style="--l: 60%"></i><div class="dot" style="--now: 0%"></div></div>
           </div>
           <div class="text">
-            <span class="impact blocked">Wrong end state</span>
+            <span class="impact confused">Confused · 5 s</span>
             <h3>Pressed Add, saw nothing change, pressed it again. Two invitations went out.</h3>
             <p class="where">/settings/members · the Add button</p>
             <ol class="steps">
@@ -324,11 +324,11 @@ pre .c { color: var(--comment); }
               <li><time>01:01</time><span><span class="k">Pressed Add again</span> · 2 invitations pending</span></li>
             </ol>
             <p class="said"><time>after</time><q>I wasn't sure the first Add did anything, so I pressed it again.</q></p>
-            <p class="fix"><b>Smallest change.</b> On press, change the button to "Invited sam@acme.co" and disable it.</p>
+            <p class="fix"><b>Smallest change.</b> On press, change the button to "Invited sam@acme.example" and disable it.</p>
           </div>
         </article>
       </li>
-      <li class="row ended"><time>01:03</time><span></span><span class="what"><span class="k">Pressed Done</span> · the check ran and failed: 2 invitations pending</span><span class="url">/settings/members</span></li>
+      <li class="row ended"><time>01:03</time><span></span><span class="what"><span class="k">Pressed Done</span> · the check ran and passed: Sam has an invitation, sent twice</span><span class="url">/settings/members</span></li>
     </ol>
   </section>
 
@@ -360,9 +360,9 @@ pre .c { color: var(--comment); }
   <details class="fold">
     <summary><b>What the check saw</b><span>outcome() ran after Done</span></summary>
     <div class="body">
-<pre><span class="c">// expect(await page.textContent('main')).toContain('1 invitation pending')</span>
-<span class="m">− 1 invitation pending</span>
-<span class="p">+ 2 invitations pending</span>
+<pre><span class="c">// expect(invitations.map(i => i.email)).toContain(setup.email)</span>
+<span class="p">✓ an invitation for Sam</span>
+<span>  2 invitations pending</span>
 <span class="c">// end state: /settings/members, 01:03</span></pre>
     </div>
   </details>

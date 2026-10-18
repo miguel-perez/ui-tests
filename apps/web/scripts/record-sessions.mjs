@@ -23,7 +23,7 @@ const tmpDir = join(outDir, '.tmp');
 if (!resolve(chromium.executablePath()).startsWith(root + '/')) throw new Error('Set PLAYWRIGHT_BROWSERS_PATH=0 and install bundled Chromium inside this worktree.');
 
 const SIZE = { width: 1280, height: 800 };
-const EMAIL = 'sam@acme.co';
+const EMAIL = 'sam@acme.example';
 
 mkdirSync(outDir, { recursive: true });
 rmSync(tmpDir, { recursive: true, force: true });
@@ -95,15 +95,15 @@ const run = {
   date: '14 Oct 2026',
   people: 5,
   yourPath: ['/board', '/settings/members'],
-  check: "expect(await page.textContent('main')).toContain('1 invitation pending')",
-  expects: '1 invitation pending',
+  check: "expect(invitations.map(i => i.email)).toContain(setup.email)",
+  expects: 'an invitation for Sam',
 };
 /** Who each person is, how their attempt ended and what they answered. The moments are what the recording below captures. */
 const people = {
   p1: { today: 'Trello', reached: 'yes', ended: 'done', time: 57, sure: 6, ease: 4, afterGoals: { help: 4, easy: 4 }, consent: { screen: true, voice: false, camera: false }, words: 'I figured it would find them.', endState: '1 invitation pending' },
   p2: { today: 'email', reached: 'no', ended: "couldn't do this", time: 53, sure: 4, ease: 2, afterGoals: { help: 4, easy: 2 }, consent: { screen: true, voice: false, camera: false }, words: 'It looked switched off.', endState: 'no invitation' },
-  p3: { today: 'a spreadsheet', reached: 'no', ended: 'done', time: 63, sure: 6, ease: 3, afterGoals: { help: 4, easy: 2 }, consent: { screen: true, voice: true, camera: false }, words: "Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.", wordsWhere: 'Said aloud after the questions. Nothing was said during the attempt.', endState: '2 invitations pending' },
-  p4: { today: 'Notion', reached: 'no', ended: 'done', time: 47, sure: 4, ease: 4, afterGoals: { help: 4, easy: 2 }, consent: { screen: true, voice: false, camera: false }, words: "I wasn't sure the first one did anything.", endState: '2 invitations pending' },
+  p3: { today: 'a spreadsheet', reached: 'yes', ended: 'done', time: 63, sure: 6, ease: 3, afterGoals: { help: 4, easy: 2 }, consent: { screen: true, voice: true, camera: false }, words: "Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.", wordsWhere: 'Said aloud after the questions. Nothing was said during the attempt.', endState: '2 invitations pending' },
+  p4: { today: 'Notion', reached: 'yes', ended: 'done', time: 47, sure: 4, ease: 4, afterGoals: { help: 4, easy: 2 }, consent: { screen: true, voice: false, camera: false }, words: "I wasn't sure the first one did anything.", endState: '2 invitations pending' },
   p5: { today: 'a whiteboard', reached: 'yes', ended: 'done', time: 52, sure: 6, ease: 5, afterGoals: { help: 4, easy: 4 }, consent: { screen: true, voice: false, camera: false }, words: 'Share is where you add people.', endState: '1 invitation pending' },
 };
 /** One attempt's record: the person, the result, the setup and consent, then the recording and its moments. */
@@ -118,7 +118,7 @@ const attempt = (id, extra) => ({
  * moment and the smallest change.
  */
 const blockers = [
-  { n: 1, problem: 1, impact: 'wrong end state', from: 58, to: 63, poster: '/sessions/p3-58.jpg', title: 'Pressed Add, saw nothing change, pressed it again. Two invitations went out.', where: '/settings/members · the Add button', said: { when: 'after', text: "I wasn't sure the first Add did anything, so I pressed it again." }, change: 'On press, change the button to "Invited sam@acme.co" and disable it.' },
+  { n: 1, problem: 1, impact: 'confused', from: 58, to: 63, poster: '/sessions/p3-58.jpg', title: 'Pressed Add, saw nothing change, pressed it again. Two invitations went out.', where: '/settings/members · the Add button', said: { when: 'after', text: "I wasn't sure the first Add did anything, so I pressed it again." }, change: 'On press, change the button to "Invited sam@acme.example" and disable it.' },
   { n: 2, problem: 3, impact: 'slowed', from: 3, to: 19, poster: '/sessions/p3-03.jpg', title: 'Looked for Invite in the Share menu and found only link options.', where: '/board · the Share menu', said: { when: 'after', text: 'Share seemed like the place for people.' }, change: 'Put "Invite a colleague" at the top of the Share menu.' },
   { n: 3, problem: 4, impact: 'confused', from: 23, to: 36, poster: '/sessions/p3-23.jpg', title: "Typed the colleague's email into the board search.", where: '/board · Search cards', said: null, change: 'When a search matches no cards, offer "Invite someone with this email".' },
 ];
@@ -251,7 +251,7 @@ async function recordP3() {
   await clickAt(63, '#done', { lead: 1.0 });
   // Done asks "Finished this task?" in place; the person confirms.
   await page.locator('#doneYes').click();
-  moment(63, 'ended', 'Pressed Done', ' · the check ran and failed: 2 invitations pending', { route: '/settings/members' });
+  moment(63, 'ended', 'Pressed Done', ' · the check ran and passed: Sam has an invitation, sent twice', { route: '/settings/members' });
 
   await sleep(1200);
   await Promise.all(pending);
@@ -359,7 +359,7 @@ const scripts = [
     { at: 36, target: '#inviteEmail', kind: 'type', what: 'Typed the email', route: '/settings/members', text: EMAIL },
     { at: 41, target: '#inviteAdd', kind: 'press', what: 'Pressed Add', rest: ' · 1 invitation pending', route: '/settings/members', issue: 1 },
     { at: 44, target: '#inviteAdd', kind: 'press', what: 'Pressed Add again', rest: ' · 2 invitations pending', route: '/settings/members', issue: 1 },
-    { at: 47, target: '#done', kind: 'ended', what: 'Pressed Done', rest: ' · the check ran and failed: 2 invitations pending', route: '/settings/members' },
+    { at: 47, target: '#done', kind: 'ended', what: 'Pressed Done', rest: ' · the check ran and passed: Sam has an invitation, sent twice', route: '/settings/members' },
   ] },
   { id: 'p5', end: 53, actions: [
     { at: 9, target: '#shareBtn', kind: 'click', what: 'Clicked Share', rest: ' · menu open', route: '/board', issue: 3 },

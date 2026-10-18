@@ -2,6 +2,8 @@
 
 The criterion for every field: a developer who has written a Playwright test already knows the answer. Anything else is derived, shown in the trace, and editable but never required.
 
+**Since the contract round (issue #68)** the shipped names differ from the ones below, and the old ones are lint errors whose fix names the new one: `context` is `study(name, options, fn)`; `goal` is `task(name, { path, timeLimit, firstLook }, fn)`; `beforeEach` is `setup(async ({ request }) => ({ start, ...values }))`, run once per attempt with Playwright's `request` against the target, its `start` the attempt's first URL; `happyPath` is `path`, the route you expect, which decides nothing; `catch` is `sample: { affecting, confidence }` on the study; `video: true` is `record: 'video'`; `impression` is `firstLook`, off when the start comes from `setup` unless `firstLook: { page }` names a public page; and `outcome(async ({ request, setup }) => …)` reads the app's state, whatever page the person ended on. The commands go by cost: `npx ui-tests` rehearses on you, `npx ui-tests recruit` (once `run`) puts real people in front of the study, and `npx ui-tests check` is the one CI command (starting the run from CI is issue #69). The file `init` writes is `packages/ui-tests/src/example.ts`.
+
 ## Inputs
 
 | Input | Where | Why the author knows it |
@@ -113,7 +115,7 @@ context({
   purpose: 'plan the week together without emailing screenshots around',
   video: true,
 }, () => {
-  beforeEach(async () => ({ colleague: 'Sam', email: 'sam@acme.co' }))
+  beforeEach(async () => ({ colleague: 'Sam', email: 'sam@acme.example' }))
   goal('invite a colleague', {
     happyPath: ['/board', '/settings/members'],
     catch: { affecting: '1 in 3', confidence: 0.85 },
@@ -125,7 +127,7 @@ context({
 })
 ```
 
-The impression stage runs before the goal with nothing written: the goal's `start`, here `/board` because it is the first page of the `happyPath`, flashed for 500 ms, one appeal item, the open question "What was that page for?" with the answers coded against the purpose, a first click toward the goal. The scenario card is derived from `users.are`, `purpose`, the goal's name and what `beforeEach` returns, never from `happyPath`, `outcome` or the screener: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.", then "When you think you've finished, press Done. If you get stuck, press I couldn't do this." and "Start task".
+The impression stage runs before the goal with nothing written: the goal's `start`, here `/board` because it is the first page of the `happyPath`, flashed for 500 ms, one appeal item, the open question "What was that page for?" with the answers coded against the purpose, a first click toward the goal. The scenario card is derived from `users.are`, `purpose`, the goal's name and what `beforeEach` returns, never from `happyPath`, `outcome` or the screener: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.example.", then "When you think you've finished, press Done. If you get stuck, press I couldn't do this." and "Start task".
 
 **Four shapes of a goal, one primitive.** What you write decides which question a goal asks, and the report names it.
 

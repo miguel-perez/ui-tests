@@ -197,11 +197,11 @@ for (const width of [1440, 375]) {
     // the index worst first, the flow, how it felt, the folds closed, the footer.
     await page.goto('/r/k2m9/p3')
     const view = page.locator('.attempt-view')
-    await expect(view.locator('.attempt-headline')).toHaveText('Person 3 did not reach the goal.')
-    for (const [term, value] of [['Reached the goal?', 'No'], ['How it ended', 'Pressed Done'], ["How sure they'd done it", '6 of 7'], ['Time on this goal', '1 min 3 s']]) await expect(view.locator('.attempt-facts div').filter({ hasText: term })).toContainText(value)
+    await expect(view.locator('.attempt-headline')).toHaveText('Person 3 reached the goal.')
+    for (const [term, value] of [['Reached the goal?', 'Yes'], ['How it ended', 'Pressed Done'], ["How sure they'd done it", '6 of 7'], ['Time on this goal', '1 min 3 s']]) await expect(view.locator('.attempt-facts div').filter({ hasText: term })).toContainText(value)
     await expect(view.locator('.attempt-facts')).toContainText('at 1:03')
-    await expect(view.locator('.attempt-result .lede')).toHaveText('Pressed Done with 2 invitations pending. The check expects 1 invitation pending.')
-    await expect(view.locator('.attempt-index li')).toHaveText([/1\s*Wrong end state at 00:58/, /2\s*Slowed 16 s at 00:03/, /3\s*Confused 13 s at 00:23/])
+    await expect(view.locator('.attempt-result .lede')).toHaveText('Pressed Done with 2 invitations pending. The check expects an invitation for Sam.')
+    await expect(view.locator('.attempt-index li')).toHaveText([/1\s*Confused 5 s at 00:58/, /2\s*Slowed 16 s at 00:03/, /3\s*Confused 13 s at 00:23/])
     await view.locator('.attempt-index a').first().click()
     await expect(page).toHaveURL(/#moment-1$/)
     // The flow: every moment in time order, the three cards set in at their own time, the last row how it ended.
@@ -251,7 +251,7 @@ for (const width of [1440, 375]) {
     // reduced motion too.
     await page.goto('/r/k2m9')
     const report = page.locator('.run-report')
-    const clipVideo = report.locator('#problem-1 .rr-clip video')
+    const clipVideo = report.locator('#problem-3 .rr-clip video')
     expect(await clipVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
     await report.getByRole('button', { name: /^Play Person 3 · 00:58/ }).click()
     await expect.poll(() => clipVideo.evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThan(58)
@@ -381,10 +381,17 @@ for (const width of [1440, 375]) test(`what you write, what they see: the comman
   await page.goto('/')
   await page.evaluate(() => document.fonts.ready)
   const section = page.locator('section.compilation')
-  // The three commands as cards, in one row at 1440 and stacked at 375.
-  const commands = await section.locator('.compile-command').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect().top))
-  expect(commands).toHaveLength(3)
-  if (width === 1440) expect(new Set(commands).size).toBe(1); else expect(new Set(commands).size).toBe(3)
+  // Issue #68: the five commands by cost, one stacked list, one row each in this order, the command on the left and what it does on
+  // the right at 1440, stacked inside its row at 375; nothing under the list, and `npx ui-tests run` nowhere.
+  const rows = section.locator('.compile-command')
+  await expect(rows.locator('code')).toHaveText(compilation.commands.map(({ command }) => `$ ${command}`))
+  expect(compilation.commands.map(({ command }) => command)).toEqual(['npm install -D ui-tests', 'npx ui-tests init', 'npx ui-tests', 'npx ui-tests recruit', 'npx ui-tests check'])
+  await expect(rows.locator(':scope > span')).toHaveText(compilation.commands.map(({ does }) => does))
+  const commands = await rows.evaluateAll(nodes => nodes.map(node => { const [code, does] = [...node.children].map(child => child.getBoundingClientRect()); return { top: node.getBoundingClientRect().top, side: does.left > code.right, below: does.top >= code.bottom - 1 } }))
+  expect(new Set(commands.map(row => row.top)).size).toBe(5)
+  expect(commands.every(row => width === 1440 ? row.side : row.below)).toBe(true)
+  await expect(section.locator('.compile-note')).toHaveCount(0)
+  expect(await page.locator('body').innerText()).not.toContain('ui-tests run')
   // Issue #54: the whole file, as init writes it, in the site's highlighter, after the steps' previous and next row, across all
   // twelve columns with --space-2 above it; the only code window in the section.
   await expect(section.locator('.lines-window')).toHaveCount(1)
@@ -619,11 +626,11 @@ test('failed playback restores the attempt clip and reel play controls without a
   })
   const view = page.locator('.attempt-view')
   const report = page.locator('.run-report')
-  for (const [route, container, play, pause] of [['/r/k2m9/p3', view, /^Play 00:03 to 00:19/, /^Pause 00:03 to 00:19/], ['/r/k2m9', report, /^Play Person 3 · 00:58/, /^Pause Person 3 · 00:58/]] as const) {
+  for (const [route, container, play, pause, clip] of [['/r/k2m9/p3', view, /^Play 00:03 to 00:19/, /^Pause 00:03 to 00:19/, 'video'], ['/r/k2m9', report, /^Play Person 3 · 00:58/, /^Pause Person 3 · 00:58/, '#problem-3 .rr-clip video']] as const) {
     await page.goto(route)
     await container.getByRole('button', { name: play }).click()
     await expect(container.getByRole('button', { name: pause })).toBeVisible()
-    const video = container.locator('video').first()
+    const video = container.locator(clip).first()
     await expect.poll(() => video.evaluate(element => 'rejectPlay' in element)).toBe(true)
     await video.evaluate((element: HTMLVideoElement & { rejectPlay: () => void }) => element.rejectPlay())
     await expect(container.getByRole('button', { name: play })).toBeVisible()
@@ -632,8 +639,8 @@ test('failed playback restores the attempt clip and reel play controls without a
   await report.getByRole('button', { name: 'Person 4 · 00:41', exact: true }).click()
   await report.getByRole('button', { name: /^Play Person 4 · 00:41/ }).click()
   await expect(report.getByRole('button', { name: /^Pause Person 4 · 00:41/ })).toBeVisible()
-  await expect.poll(() => report.locator('#problem-1 .rr-clip video').evaluate(element => 'rejectPlay' in element)).toBe(true)
-  await report.locator('#problem-1 .rr-clip video').evaluate((video: HTMLVideoElement & { rejectPlay: () => void }) => video.rejectPlay())
+  await expect.poll(() => report.locator('#problem-3 .rr-clip video').evaluate(element => 'rejectPlay' in element)).toBe(true)
+  await report.locator('#problem-3 .rr-clip video').evaluate((video: HTMLVideoElement & { rejectPlay: () => void }) => video.rejectPlay())
   await expect(report.getByRole('button', { name: /^Play Person 4 · 00:41/ })).toBeVisible()
   expect(errors).toEqual([])
 })
@@ -664,13 +671,15 @@ for (const width of [1440, 375]) test(`the agent section is the artefact, word f
     expect(Math.round((await icon.boundingBox())!.width)).toBe(56)
   }
   await expect(section.locator('pre, code, .terminal-window, .code-window, video')).toHaveCount(0)
-  // The command sits under the heading in the first five columns; the lead in the right seven; the tiles across twelve, one row at 1440.
+  // The command sits under the heading in the first five columns; the lead in the right seven, ending flush at 1344 (issue #65); the
+  // tiles across twelve, one row at 1440.
   const [heading, command, lead] = await Promise.all([section.locator('h2').boundingBox(), section.locator('.agents-cmd').boundingBox(), section.locator('[data-lead]').boundingBox()])
   expect(command!.y).toBeGreaterThanOrEqual(heading!.y + heading!.height - 1)
   const boxes = await section.locator('.agents-tile').evaluateAll(nodes => nodes.map(node => node.getBoundingClientRect()).map(r => ({ x: Math.round(r.x), y: Math.round(r.y), width: Math.round(r.width) })))
   const figure = (await section.locator('.agents-tiles').boundingBox())!
   if (width === 1440) {
-    expect([Math.round(command!.x), Math.round(lead!.x)]).toEqual([96, 630])
+    expect([Math.round(command!.x), Math.round(lead!.x + lead!.width)]).toEqual([96, 1344])
+    expect(lead!.x).toBeGreaterThanOrEqual(630 - 2)
     expect([Math.round(figure.x), Math.round(figure.width)]).toEqual([96, 1248])
     expect(new Set(boxes.map(box => box.y)).size).toBe(1)
     expect(boxes.map(box => box.width)).toEqual([400, 400, 400])

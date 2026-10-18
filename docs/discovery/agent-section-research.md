@@ -46,7 +46,7 @@ context({
 }, () => {
   goal('add a member through the API', { trials: 5 }, () => {
     outcome(async ({ api }) => {
-      expect(await api.get('/members')).toContainEqual(expect.objectContaining({ email: 'sam@acme.co' }))
+      expect(await api.get('/members')).toContainEqual(expect.objectContaining({ email: 'sam@acme.example' }))
     })
   })
 })
@@ -61,7 +61,7 @@ add a member through the API · http · 5 trials · model and harness pinned
 2  0:22  verified
 3  0:41  stopped   POST /invites 404: the agent guessed an endpoint your docs don't rule out
 4  0:17  verified
-5  0:35  stopped   POST /members?email=sam@acme.co 400
+5  0:35  stopped   POST /members?email=sam@acme.example 400
                    ↳ response body: "Bad Request"   ← the agent could not tell what to fix
 pass^5  fail · 3 of 5 verified · 0 false successes
 Check: ui-tests (agent) · Report: https://ui-tests.com/r/k2m9-agent

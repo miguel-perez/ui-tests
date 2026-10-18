@@ -35,7 +35,7 @@ p { text-wrap: pretty; }
 .head .cmd .a { color: var(--green); }
 .head > div:first-of-type { grid-column: 1; }
 .head p { grid-column: 2; grid-row: 1 / span 2; }
-.head p { color: var(--muted); max-width: 64ch; }
+.head p { color: var(--muted); max-width: 64ch; justify-self: end; }
 .head p code { color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; font-size: 13px; }
 
 .tiles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
@@ -61,7 +61,7 @@ p { text-wrap: pretty; }
 <section class="page" aria-labelledby="agents-h">
   <header class="head">
     <h1 id="agents-h">Agents use some interfaces, too.</h1>
-    <div class="cmd"><span class="p">$</span>npx ui-tests run <span class="a">--actor agent</span></div>
+    <div class="cmd"><span class="p">$</span>npx ui-tests <span class="a">--actor agent</span></div>
     <p>Your API, your MCP server and your CLI have a second kind of user: an agent that reads text, not pixels. Point the same file at that surface and five trials show whether it gets through. It is a capability test, not a usability one, and it never counts with people.</p>
   </header>
 

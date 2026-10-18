@@ -14,10 +14,10 @@ const inconclusive: CheckRun = { ...exampleCheck, attempted: 3, reached: 1, pres
 describe('the ui-tests check (issue #35, item 3)', () => {
   it('titles the three outcomes as the research words them', () => {
     expect(outcomeOf(exampleCheck)).toBe('problems')
-    expect(checkTitle(exampleCheck)).toBe('4 problems found · 2 of 5 people reached the goal')
+    expect(checkTitle(exampleCheck)).toBe('4 problems found · 4 of 5 people reached the goal')
     expect(checkTitle(none)).toBe('No problems found with 5 people · 5 of 5 reached the goal')
     expect(checkTitle(inconclusive)).toBe('Inconclusive · only 3 of 5 attempts completed')
-    expect(checkTitle({ ...exampleCheck, problems: exampleCheck.problems.slice(0, 1) })).toBe('1 problem found · 2 of 5 people reached the goal')
+    expect(checkTitle({ ...exampleCheck, problems: exampleCheck.problems.slice(0, 1) })).toBe('1 problem found · 4 of 5 people reached the goal')
   })
 
   it('is neutral for all three outcomes, and fails only with block_on: problems when problems were found', () => {
@@ -31,14 +31,14 @@ describe('the ui-tests check (issue #35, item 3)', () => {
 
   it("writes the artefact's check page as the summary: sentence, the three to fix first with moment links, the links and the footer", () => {
     const blocks = checkSummary(exampleCheck).split('\n\n')
-    expect(blocks[0]).toBe('5 people tried *invite a colleague* on this preview. 2 of 5 reached the goal; 2 of 5 pressed Done, but your check failed. This check never fails your build. It reports problems, or that none were seen this time.')
+    expect(blocks[0]).toBe('5 people tried *invite a colleague* on this preview. 4 of 5 reached the goal. This check never fails your build. It reports problems, or that none were seen this time.')
     const table = blocks[1].split('\n')
     expect(table[0]).toBe('| # | Problem | Where | People | Impact | Moment |')
     expect(table).toHaveLength(5)
-    // Ranked by impact, then by how many: the Share menu, 4 of 5 but slowed, is third.
-    expect(table[2]).toBe('| 1 | Pressed Add, saw nothing change, pressed it again; Sam got two invitations | `/settings/members` · `button "Add"` | 2 of 5 | Blocked | [Person 3 · 00:58](https://ui-tests.com/r/k2m9#problem-1&t=58) |')
-    expect(table[3]).toContain('| 2 | The Add button looked switched off')
-    expect(table[4]).toBe('| 3 | Looked for Invite in the Share menu and found only link options | `/board` · `menu "Share"` | 4 of 5 | Slowed | [Person 1 · 00:04](https://ui-tests.com/r/k2m9#problem-3&t=4) |')
+    // Ranked by impact, then by how many: the switched-off Add blocks, the Share menu slows, the double Add confuses.
+    expect(table[2]).toBe('| 1 | The Add button looked switched off; Person 2 pressed I couldn\'t do this | `/settings/members` · `button "Add"` | 1 of 5 | Blocked | [Person 2 · 00:49](https://ui-tests.com/r/k2m9#problem-1&t=49) |')
+    expect(table[3]).toBe('| 2 | Looked for Invite in the Share menu and found only link options | `/board` · `menu "Share"` | 4 of 5 | Slowed | [Person 1 · 00:04](https://ui-tests.com/r/k2m9#problem-2&t=4) |')
+    expect(table[4]).toBe('| 3 | Pressed Add, saw nothing change, pressed it again; Sam got two invitations | `/settings/members` · `button "Add"` | 2 of 5 | Confused | [Person 3 · 00:58](https://ui-tests.com/r/k2m9#problem-3&t=58) |')
     expect(blocks[2]).toBe('Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect')
     expect(blocks[3]).toBe('[Open the report](https://ui-tests.com/r/k2m9) · [+1 more problem](https://ui-tests.com/r/k2m9#problem-4) · [What worked](https://ui-tests.com/r/k2m9#worked)')
     expect(blocks[4]).toBe('<sub>5 people · paid panel (Prolific, CloudResearch Connect) · weekboard-git-invite-flow.vercel.app · 80035db · 14 Oct 2026</sub>')
@@ -60,7 +60,7 @@ describe('the ui-tests check (issue #35, item 3)', () => {
   it('keeps one sticky comment of three lines under its marker, created once, updated when the outcome changes, and off when asked', async () => {
     const body = stickyComment(exampleCheck)
     expect(body.split('\n')).toHaveLength(4)
-    expect(body.split('\n').slice(1)).toEqual(['**ui-tests** · 4 problems found · 2 of 5 people reached the goal', expect.stringMatching(/^Fix first: Pressed Add/), '[Open the report](https://ui-tests.com/r/k2m9)'])
+    expect(body.split('\n').slice(1)).toEqual(['**ui-tests** · 4 problems found · 4 of 5 people reached the goal', expect.stringMatching(/^Fix first: The Add button looked switched off/), '[Open the report](https://ui-tests.com/r/k2m9)'])
     expect(stickyOutcome(body)).toBe('problems')
     const calls: { method: string; url: string; body?: unknown }[] = []
     function github(comments: { id: number; body: string }[]) {

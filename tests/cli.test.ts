@@ -53,34 +53,36 @@ it('init writes the recording hint as a comment, and lint prints the recording l
   await exec(process.execPath, [cli, 'init'], { cwd, timeout: 10000 })
   const config = await readFile(path.join(cwd, 'ui-tests.config.ts'), 'utf8')
   expect(config).toBe(configFile)
-  expect(config).toMatch(/^\/\/ .*video: true/m)
+  expect(config).toMatch(/\/\/ .*record: 'video'/m)
   const { stdout } = await exec(process.execPath, [cli, 'lint', '--file', path.join(cwd, 'ui-tests/invite.ui.test.ts')], { cwd, timeout: 10000 })
-  expect(stdout).toContain('Recording: event replay (what people do on the page) and screen video (video: true; the browser asks first; incentive 1.5×).')
-  expect(stdout).toContain('Goal: invite a colleague · starts at /board · 5 people')
+  expect(stdout).toContain("Recording: event replay (what people do on the page) and screen video (record: 'video'; the browser asks first; incentive 1.5×).")
+  expect(stdout).toContain('Task: invite a colleague · starts at /board · 5 people')
   expect(stdout).not.toMatch(/error \[|warning \[/)
-  await writeFile(path.join(cwd, 'ui-tests/invite.ui.test.ts'), exampleFile.replace('  video: true,\n', ''))
+  await writeFile(path.join(cwd, 'ui-tests/invite.ui.test.ts'), exampleFile.replace("  record: 'video',\n", ''))
   const { stdout: replay } = await exec(process.execPath, [cli, 'lint', '--file', path.join(cwd, 'ui-tests/invite.ui.test.ts')], { cwd, timeout: 10000 })
-  expect(replay).toContain('Recording: event replay (what people do on the page). Add video: true to record the screen as a video too.')
-  // run prints the same plan before it says what this slice can do.
-  await expect(exec(process.execPath, [cli, 'run', '--file', path.join(cwd, 'ui-tests/invite.ui.test.ts')], { cwd, timeout: 10000 })).rejects.toMatchObject({ code: 1, stdout: expect.stringContaining('Recording: event replay') })
+  expect(replay).toContain("Recording: event replay (what people do on the page). Add record: 'video' to record the screen as a video too.")
+  // recruit prints the same plan before it says what this slice can do.
+  await expect(exec(process.execPath, [cli, 'recruit', '--file', path.join(cwd, 'ui-tests/invite.ui.test.ts')], { cwd, timeout: 10000 })).rejects.toMatchObject({ code: 1, stdout: expect.stringContaining('Recording: event replay') })
+  // run is the retired command and says so.
+  await expect(exec(process.execPath, [cli, 'run'], { cwd, timeout: 10000 })).rejects.toMatchObject({ code: 1, stderr: expect.stringContaining('`run` is now `recruit`.') })
 }, 40000)
 it('lint compiles in a separate CLI process and prints actionable source diagnostics', async () => {
   const cwd = await fixture(), file = path.join(cwd, 'bad.ui.test.ts')
-  await writeFile(file, `import { context, goal, outcome, expect } from 'ui-tests'\ncontext({users:'people',purpose:'use ui-tests'},()=>{goal('click the Docs link and open getting started',()=>outcome(({page})=>expect(page.url()).toContain('/')));goal('understand what ui-tests does and start',()=>outcome(({page})=>expect(page.url()).toContain('/')))})`)
+  await writeFile(file, `import { study, task, outcome, expect } from 'ui-tests'\nstudy('s',{users:'people',purpose:'use ui-tests'},()=>{task('click the Docs link and open getting started',()=>outcome(({page})=>expect(page.url()).toContain('/')));task('understand what ui-tests does and start',()=>outcome(({page})=>expect(page.url()).toContain('/')))})`)
   try { await exec(process.execPath, [cli, 'lint', '--file', file], { cwd, timeout: 10000 }); throw new Error('Lint unexpectedly passed') }
   catch (error) {
     expect(error).toMatchObject({ code: 1 })
     const output = (error as { stdout: string }).stdout
-    expect(output).toContain('[goal-no-interface]'); expect(output).toContain('[person-purpose]'); expect(output).toContain('[outcome-strength]')
+    expect(output).toContain('[task-no-interface]'); expect(output).toContain('[person-purpose]'); expect(output).toContain('[outcome-strength]')
     expect(output).toContain('Fix:'); expect(output).toContain('bad.ui.test.ts')
   }
-  await writeFile(file, `import { context, goal, task, outcome, expect } from 'ui-tests'\ncontext({users:'people',purpose:'finish my work'},()=>goal('finish',()=>{task('click the Docs link and open getting started');task('understand what ui-tests does and start');outcome(({page})=>expect(page.url()).toContain('/'))}))`)
+  await writeFile(file, `import { study, task, outcome, expect } from 'ui-tests'\nstudy('s',{users:'people',purpose:'finish my work'},()=>task('finish',()=>outcome(({page})=>expect(page.url()).toContain('/'))))`)
   const { stdout } = await exec(process.execPath, [cli, 'lint', '--file', file], { cwd, timeout: 10000 })
   expect(stdout).toContain('Compiled'); expect(stdout).not.toContain('error [')
 }, 30000)
 it('lint prints the screener it drafted from users as TypeScript to paste in, and is quiet about it once users carries the facts', async () => {
   const cwd = await fixture(), file = path.join(cwd, 'draft.ui.test.ts')
-  const body = (users: string) => `import { context, goal, outcome, expect } from 'ui-tests'\ncontext({users:${users},purpose:'plan the week together'},()=>goal('invite a colleague',()=>outcome(({page})=>expect(page.url()).toContain('/members'))))`
+  const body = (users: string) => `import { study, task, outcome, expect } from 'ui-tests'\nstudy('s',{users:${users},purpose:'plan the week together'},()=>task('invite a colleague',()=>outcome(({page})=>expect(page.url()).toContain('/members'))))`
   await writeFile(file, body("'people who signed up this week and want a colleague on their board'"))
   const { stdout } = await exec(process.execPath, [cli, 'lint', '--file', file], { cwd, timeout: 10000 })
   expect(stdout).toContain('warning [users-inferred]')
@@ -104,3 +106,19 @@ it('host prints its contract with --help, and until the deploy ships prints the 
   }
   await expect(exec(process.execPath, [cli, 'host', '--panel', 'mturk'], { timeout: 10000 })).rejects.toMatchObject({ code: 1, stderr: expect.stringContaining('--panel takes one of: prolific, connect') })
 }, 30000)
+it('names the commands by cost in its help, never run; recruit and --actor agent print the plan and say what this slice does; old names fail lint', async () => {
+  const cwd = await fixture()
+  await exec(process.execPath, [cli, 'init'], { cwd, timeout: 10000 })
+  const file = path.join(cwd, 'ui-tests/invite.ui.test.ts')
+  const { stdout: help } = await exec(process.execPath, [cli, '--help'], { cwd, timeout: 10000 })
+  for (const command of ['npx ui-tests init', 'npx ui-tests  ', 'npx ui-tests recruit', 'npx ui-tests check', '--actor human|agent']) expect(help).toContain(command)
+  expect(help).not.toMatch(/ui-tests run\b/)
+  await expect(exec(process.execPath, [cli, 'recruit', '--file', file], { cwd, timeout: 10000 })).rejects.toMatchObject({ code: 1, stdout: expect.stringContaining('People: 5'), stderr: expect.stringContaining('Runs with people are not part of this slice yet.') })
+  await expect(exec(process.execPath, [cli, '--actor', 'agent', '--file', file], { cwd, timeout: 10000 })).rejects.toMatchObject({ code: 1, stdout: expect.stringContaining('Task: invite a colleague'), stderr: expect.stringContaining('Agent runs are not part of this slice yet.') })
+  await expect(exec(process.execPath, [cli, '--actor', 'both', '--file', file], { cwd, timeout: 10000 })).rejects.toMatchObject({ code: 1, stderr: expect.stringContaining('--actor takes one value: human or agent') })
+  // A file in the old words still loads, and lint fails with the fix naming the replacement.
+  await writeFile(file, `import { context, beforeEach, goal, outcome, expect } from 'ui-tests'\ncontext({users:'people',purpose:'finish my work'},()=>{beforeEach(async()=>({colleague:'Sam'}));goal('finish',{happyPath:['/']},()=>outcome(({page})=>expect(page.url()).toContain('/')))})`)
+  const failed = await exec(process.execPath, [cli, 'lint', '--file', file], { cwd, timeout: 10000 }).then(() => null, error => error as { code: number; stdout: string })
+  expect(failed).toMatchObject({ code: 1 })
+  for (const line of ['error [goal-renamed]', "Fix: Write task('invite a colleague'", 'error [beforeEach-renamed]', 'Fix: Write setup(async ({ request })', 'error [context-renamed]', 'error [happyPath-renamed]']) expect(failed!.stdout).toContain(line)
+}, 40000)

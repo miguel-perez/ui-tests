@@ -17,7 +17,7 @@ async function start(body?: string) {
   if (body) {
     await mkdir(path.join(root, '.ui-tests'), { recursive: true })
     file = path.join(root, '.ui-tests', `fixture-${Date.now()}.ui.test.ts`)
-    await writeFile(file, `import {context, goal, task, outcome, expect} from 'ui-tests'\ncontext({users:'developers',purpose:'finish my work'},()=>{${body}})`)
+    await writeFile(file, `import {study, setup, task, outcome, expect} from 'ui-tests'\nstudy('s',{users:'developers',purpose:'finish my work'},()=>{${body}})`)
   }
   authoredFile = file
   output = ''
@@ -28,7 +28,7 @@ async function start(body?: string) {
   player = /Player: (\S+)/.exec(output)![1]; trace = /Trace: (\S+)/.exec(output)![1]
 }
 /** Walks consent, the screener, the first impression and the scenario card with the keyboard, checking axe at each stage, until the task bar appears. */
-async function begin(page: Page, impression = 'A way to find out whether people can use what I built') {
+async function begin(page: Page, impression = 'A way to find out whether people can use what I built', tasks = 1) {
   await page.goto(player)
   await expect(page.getByRole('heading', { level: 1, name: 'This website would like to watch you try something on their site.' })).toBeVisible()
   await expect(page.getByText('The website is being tested, not you.', { exact: false })).toBeVisible()
@@ -72,7 +72,7 @@ async function begin(page: Page, impression = 'A way to find out whether people 
   // The page is back for one click, asked toward the goal in its own words.
   await expect(page.getByRole('heading', { name: /^Where would you click first to [a-z ]+\?$/ })).toBeVisible()
   await page.frameLocator('iframe.uit-flash').getByRole('link', { name: 'Get started', exact: true }).first().click()
-  await expect(page.getByRole('heading', { level: 1, name: 'Task 1 of 1' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: `Task 1 of ${tasks}` })).toBeVisible()
   await expect(page.getByText("When you think you've finished, press Done. If you get stuck, press I couldn't do this.")).toBeVisible()
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   await page.getByRole('button', { name: 'Start task' }).focus(); await page.keyboard.press('Enter')
@@ -226,43 +226,49 @@ test('leaving before the first interaction confirms and records an early abandon
   const html = traceText(await (await request.get(trace)).text())
   expect(html).toContain('How it ended: left before trying')
 })
-test('wrong happy path has an expected/actual URL diff', async ({ page, request }) => {
-  await start(`goal('start trying', {happyPath:['/','/wrong']},()=>outcome(({page})=>expect(page.url()).toContain('/docs/getting-started')))`)
+test('the path is only the route you expect: ending off it still reaches the goal, and the trace marks the pages off it', async ({ page, request }) => {
+  await start(`task('start trying', {path:['/','/wrong']},()=>outcome(({page})=>expect(page.url()).toContain('/docs/getting-started')))`)
   await begin(page); await page.getByRole('link', { name: 'Get started' }).first().click(); await expect(page).toHaveURL(/\/docs\/getting-started$/); await finish(page); await questions(page)
   const html = traceText(await (await request.get(trace)).text())
-  expect(html).toContain('"reached": "no"'); expect(html).toContain('"expected": "/wrong"'); expect(html).toContain('"actual": "http://localhost:3000/docs/getting-started"')
+  expect(html).toContain('"reached": "yes"'); expect(html).not.toContain('"expected": "/wrong"'); expect(html).toContain('Off your path · opened /docs/getting-started')
 })
-test('task steps advance individually and run checks against their own snapshots', async ({ page, request }) => {
-  await start(`goal('start trying',()=>{task('Read the promise',({page})=>expect(page.url()).toContain('localhost:3000/'));task('Find the instructions',({page})=>expect(page.url()).toContain('/docs/getting-started'));outcome(({page})=>expect(page.url()).toContain('/docs/getting-started'))})`)
-  await begin(page); await expect(page.getByText('Read the promise', { exact: true })).toBeVisible()
-  await page.getByRole('button', { name: 'Done with this step' }).click()
-  await expect(page.getByText('Find the instructions', { exact: true })).toBeVisible()
-  await page.getByRole('link', { name: 'Get started' }).first().click(); await expect(page).toHaveURL(/\/docs\/getting-started$/)
-  // POSIX-only: Windows cannot suspend the verifier with SIGSTOP/SIGCONT.
-  // Keep the normal completion and saved-hook checks on every platform.
-  const canPauseVerifier = process.platform !== 'win32'
-  if (canPauseVerifier) child.kill('SIGSTOP')
-  try {
-    await finish(page)
-    await expect(page).toHaveURL(/\/ui-tests\//, { timeout: 15_000 })
-    await expect(page.getByText('After the task · 1 of', { exact: false })).toBeVisible()
-    await choose(page, '3'); await page.keyboard.press('Enter')
-    await page.getByRole('button', { name: 'Next', exact: true }).click()
-    await choose(page, '4'); await page.keyboard.press('Enter')
-    await choose(page, '2'); await page.keyboard.press('Enter')
-    if (canPauseVerifier) await expect(page.getByRole('button', { name: 'Finish' })).toBeDisabled()
-  } finally { if (canPauseVerifier) child.kill('SIGCONT') }
-  await expect(page.getByRole('button', { name: 'Finish' })).toBeEnabled({ timeout: 15_000 })
-  await page.getByRole('button', { name: 'Finish' }).click()
-  await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
-  await expect.poll(() => output).toContain('Reached the goal:')
+test('setup runs once for the attempt with request against the target, and the outcome reads the app with request and setup, whatever page they ended on', async ({ page, request }) => {
+  await start(`setup(async({request})=>{const guide=await (await request.get('/docs/getting-started')).text();return {start:'/',colleague:'Sam',email:'sam@acme.example',heading:guide.includes('Getting started')?'Getting started':'missing'}})
+task('start trying',{path:['/','/docs/getting-started'],firstLook:{page:'/'}},()=>outcome(async({request,setup})=>{expect(setup.email).toBe('sam@acme.example');expect(await (await request.get('/docs/getting-started')).text()).toContain(setup.heading)}))`)
+  await begin(page)
+  // They never open the guide: the outcome asks the app, not the page they ended on.
+  await expect(page).toHaveURL(/localhost:3000\/$/)
+  await finish(page); await questions(page)
+  const html = traceText(await (await request.get(trace)).text())
+  expect(html).toContain('"reached": "yes"')
+  expect(html).toContain("Setup, run once for this attempt: started at /; the card's values: colleague Sam, email sam@acme.example, heading Getting started.")
+  expect(output).toContain('Reached the goal: Yes')
+})
+test('a setup that fails for a later task stops the session with its reason, and reports nothing for the task it could not start', async ({ page }) => {
+  await start(`let attempts=0
+setup(async()=>{if(++attempts>1)throw new Error('no second board');return {colleague:'Sam'}})
+task('start trying',{path:['/','/docs/getting-started']},()=>outcome(({page})=>expect(page.url()).toContain('/')))
+task('read the guide',{path:['/docs/getting-started']},()=>outcome(({page})=>expect(page.url()).toContain('/docs/getting-started')))`)
+  await begin(page, undefined, 2); await finish(page)
+  await expect(page).toHaveURL(/\/ui-tests\//, { timeout: 15_000 })
+  await expect(page.getByText('After the task · 1 of', { exact: false })).toBeVisible({ timeout: 15_000 })
+  await choose(page, '6')
+  await expect(async () => { await page.keyboard.press('Enter'); await expect.poll(() => child.exitCode, { timeout: 1000 }).toBe(1) }).toPass({ timeout: 30_000 })
+  expect(output).toContain('setup failed against http://localhost:3000: no second board')
+  // The first task's result is printed once; the second task never starts, and no result is printed for it.
+  expect(output.match(/Reached the goal:/g)).toHaveLength(1)
+  expect(output.match(/Player: /g)).toHaveLength(1)
+})
+test('a single task verifies its outcome through the CLI verify subcommand', async ({ page, request }) => {
+  await start(`task('start trying',()=>outcome(({page})=>expect(page.url()).toContain('/docs/getting-started')))`)
+  await begin(page); await page.getByRole('link', { name: 'Get started' }).first().click(); await expect(page).toHaveURL(/\/docs\/getting-started$/); await finish(page); await questions(page)
   expect(traceText(await (await request.get(trace)).text())).toContain('"reached": "yes"')
   await rm(authoredFile)
   const { stdout } = await promisify(execFile)(process.execPath, [path.resolve('packages/ui-tests/bin/ui-tests.mjs'), 'verify', new URL(player).pathname.split('/').at(-1)!])
   expect(JSON.parse(stdout).reached).toBe('yes')
 })
-test('minutes-only exploration warns, records evidence and has no result sentence', async ({ page, request }) => {
-  await start(`goal('explore possibilities',{minutes:1})`)
+test('a time-limited task warns, records evidence and has no result sentence', async ({ page, request }) => {
+  await start(`task('explore possibilities',{timeLimit:'1 min'})`)
   expect(output).toContain('warning [outcome-required]')
   await begin(page); await finish(page); await questions(page, { confidence: '6' })
   const html = await (await request.get(trace)).text()
@@ -270,7 +276,7 @@ test('minutes-only exploration warns, records evidence and has no result sentenc
   expect(html).toContain('Issues-only exploration'); expect(parseHTML(html).document.querySelector('main > p > strong')).toBeNull()
 })
 test('running out of time keeps questions available, records a stop and masks final input evidence', async ({ page, request }) => {
-  await start(`goal('explore possibilities',{minutes:0.18})`)
+  await start(`task('explore possibilities',{timeLimit:'0.18 min'})`)
   await begin(page)
   await page.evaluate(() => {
     const input = document.createElement('input'); input.id = 'secret-input'; input.setAttribute('value', 'PRIVATE-VALUE'); input.value = 'PRIVATE-VALUE'
@@ -283,7 +289,7 @@ test('running out of time keeps questions available, records a stop and masks fi
   expect(html).not.toMatch(/PRIVATE-VALUE|PRIVATE-TEXT/)
 })
 test('non-observable outcome asks its validation question without sending the expected answer', async ({ page, request }) => {
-  await start(`goal('choose a plan',()=>outcome(async({participant})=>expect(await participant.answer('Which plan?',{choices:['April','May'],expected:'April'})).toBe('April')))`)
+  await start(`task('choose a plan',()=>outcome(async({participant})=>expect(await participant.answer('Which plan?',{choices:['April','May'],expected:'April'})).toBe('April')))`)
   await begin(page); await finish(page)
   await expect(page).toHaveURL(/\/ui-tests\//, { timeout: 15_000 })
   await expect(page.getByText('After the task · 1 of', { exact: false })).toBeVisible({ timeout: 15_000 })

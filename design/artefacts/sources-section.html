@@ -57,7 +57,7 @@ button { font: inherit; color: inherit; background: none; border: 0; padding: 0;
 code, .mono { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 img { display: block; max-width: 100%; }
 :focus-visible { outline: 2px solid var(--focus); outline-offset: 3px; }
-.page { max-width: 1200px; margin: 0 auto; }
+.page { max-width: 1248px; margin: 0 auto; }
 
 /* Section head: heading 5 columns, lead 7 */
 .head { display: grid; grid-template-columns: 5fr 7fr; gap: 24px; align-items: start; margin-bottom: 36px; }
@@ -248,10 +248,8 @@ img { display: block; max-width: 100%; }
   .pair .side { position: static; }
 }
 
-/* Single column: one 800px reading column; each pair stacks the lines above the screen they produce. */
-.page { max-width: 1200px; }
-.head { grid-template-columns: 1fr; gap: 10px; margin-bottom: 28px; }
-.head p { max-width: 64ch; }
+/* Each pair stacks the lines above the screen they produce; the lead keeps to 64ch, flush with the container's right edge (issue #65). */
+.head p { max-width: 64ch; justify-self: end; }
 .pairs { gap: 56px; }
 .pair { grid-template-columns: 1fr; gap: 12px; }
 .pair .side { position: static; }
@@ -377,7 +375,6 @@ img { display: block; max-width: 100%; }
 </style>
 <style>
 /* Section as a table: one row per source with who, cost, time and good for; a row expands to the steps, the caveat and one picture. */
-.head { grid-template-columns: 1fr; gap: 10px; margin-bottom: 28px; max-width: 64ch; }
 .srcs { border-top: 0; }
 .cols:has(+ .src .row-h[aria-expanded="false"]) { border-bottom-color: transparent; }
 .cols, .row-h { display: grid; grid-template-columns: 28px 3fr 3fr 2fr 2fr 2fr 24px; gap: 0 24px; align-items: center; }
@@ -510,7 +507,7 @@ img { display: block; max-width: 100%; }
       <div class="row-b" id="link-b" hidden>
         <div class="how">
           <h4>How it works</h4>
-          <ol class="steps3"><li><span><code>npx ui-tests run</code> prints the link. It can point at a branch preview, at your laptop through a tunnel, or at your live site.</span></li><li><span>You send it. Ask a friend to pass it on rather than take it themselves.</span></li><li><span>Whoever opens it answers the same short screener, so the report still says who they were. Each attempt lands as the person finishes.</span></li></ol>
+          <ol class="steps3"><li><span><code>npx ui-tests recruit</code> prints the link. It can point at a branch preview, at your laptop through a tunnel, or at your live site.</span></li><li><span>You send it. Ask a friend to pass it on rather than take it themselves.</span></li><li><span>Whoever opens it answers the same short screener, so the report still says who they were. Each attempt lands as the person finishes.</span></li></ol>
           <p class="caveat"><b>Friends are kind and people in tech know too much.</b> Send it beyond your team and beyond tech where you can, and for each problem ask whether your users would hit it too.</p>
         </div>
         <div class="show"><figure class="frame auto" aria-label="What a person sees when they open your link">
@@ -568,7 +565,7 @@ img { display: block; max-width: 100%; }
       <div class="row-b" id="panel-b" hidden>
         <div class="how">
           <h4>How it works</h4>
-          <ol class="steps3"><li><span>Put a cap in the config. Your deploy and your machine both use your own panel account: add a token once.</span></li><li><span><code>npx ui-tests run</code> turns <code>users</code> into each panel's filters and a short screener, prints the plan, and asks before it spends.</span></li><li><span>People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back.</span></li></ol>
+          <ol class="steps3"><li><span>Put a cap in the config. Your deploy and your machine both use your own panel account: add a token once.</span></li><li><span><code>npx ui-tests recruit</code> turns <code>users</code> into each panel's filters and a short screener, prints the plan, and asks before it spends. In CI, <code>npx ui-tests check</code> asks nothing: the cap in the config is the yes.</span></li><li><span>People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back.</span></li></ol>
           <p class="caveat"><b>Panel people answer screeners for money.</b> Read the Who took part line in the report, and exclude anyone who is plainly not your audience. They stay paid; the count does not.</p>
         </div>
         <div class="show"><div class="fill" aria-label="One run filling across two panels">

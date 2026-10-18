@@ -33,6 +33,9 @@ figure, blockquote { margin: 0; }
 h1, h2, h3, h4, p, dl, dd { margin: 0; }
 h2 { font-size: 36px; font-weight: 500; line-height: 1.2; letter-spacing: -.025em; }
 h3, h4 { font-weight: 500; }
+/* How text wraps (issue #65, item 1): headings balance their lines; running text never ends on one word where it can avoid it. */
+h1, h2, h3 { text-wrap: balance; }
+p, li, figcaption, blockquote, dd, caption { text-wrap: pretty; }
 /* The container: 1248px centred, 96px margins at 1440 and 16px on a phone. */
 .site-width { width: calc(100% - 32px); max-width: 1248px; margin: auto; }
 .site-header nav { height: 80px; display: flex; align-items: center; justify-content: space-between; }
@@ -84,6 +87,9 @@ main { position: relative; isolation: isolate; }
 .section-head { align-items: baseline; }
 .section-head h2, .section-title { grid-column: 1; }
 .section-head p { grid-column: 2; color: var(--muted); font-size: 18px; max-width: 64ch; text-wrap: pretty; }
+/* One rule for section leads (issue #65, item 3; the host section's since issue #56): 64ch inside the right seven, ending flush with
+   the container's right edge; left-aligned in one column on a phone. */
+.section-head > p { justify-self: end; }
 
 /* The agent section (design/artefacts/agents-section.html): the command under the heading, then three tiles across twelve columns. */
 .agents-cmd { margin-top: 14px; font: 400 14px/1.5 var(--font-mono), monospace; color: var(--ink); }
@@ -118,6 +124,8 @@ main { position: relative; isolation: isolate; }
 /* Caption: beside an artefact of 8 columns or fewer, or under a wider one in one or two lines. */
 .caption { color: var(--muted); font-size: 15px; }
 .caption p + p { margin-top: 8px; }
+/* A caption's sentences keep to the reading measure (issue #65, item 2); a line of code keeps its own width. */
+.caption p:not(.caption-code) { max-width: 64ch; }
 .caption-under { max-width: 824px; }
 .caption-side { max-width: 42ch; }
 .caption-title { color: var(--ink); font-size: 17px; }
@@ -289,12 +297,13 @@ main { position: relative; isolation: isolate; }
 /* L3 · Compilation (design/artefacts/compile-section.html), on the page grid: the commands across twelve columns, then the six steps
    as tabs, one open at a time, each a 5/7 pair: the text on the left, the screen on the right; then the whole file across twelve.
    The frames are the light Weekboard page; the chrome over it is that page's inverse with its mint accent, at real size. */
-.compile-commands { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); }
-.compile-command { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.compile-commands { display: grid; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.compile-command { padding: 12px 16px; display: grid; grid-template-columns: minmax(0, 22ch) minmax(0, 1fr); gap: 6px var(--gutter); align-items: baseline; }
+.compile-command + .compile-command { border-top: 1px solid var(--line); }
 .compile-command code { font-size: 14px; white-space: nowrap; overflow-wrap: normal; }
 .compile-command > span { font-size: 13px; color: var(--muted); }
 .compile-command b { font-weight: 500; color: var(--ink); }
-.compile-note { font-size: 13px; color: var(--muted); }
+.compile-note { font-size: 13px; color: var(--muted); max-width: 64ch; }
 .compile-note .code-inline { font-size: 12px; }
 /* The tab strip: the step's number in the moment colour, its name; the open tab underlined in the moment colour. */
 .compile-tabs { display: flex; gap: 2px; overflow-x: auto; scrollbar-width: none; }
@@ -480,12 +489,14 @@ main { position: relative; isolation: isolate; }
 .replay-moment figcaption { display: grid; gap: 8px; padding-top: 2px; }
 .replay-who { font: 400 12px/1 var(--font-mono), monospace; color: var(--muted); }
 .replay-who b { color: var(--ink); font-weight: 500; }
-.replay-impact { color: var(--dead); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; font-size: 11px; }
+.replay-impact { color: var(--note); font-weight: 500; letter-spacing: .04em; text-transform: uppercase; font-size: 11px; }
 .replay-moment h4 { font: 500 16px/1.3 var(--font-sans), sans-serif; letter-spacing: -.01em; text-wrap: balance; }
 .replay-moment blockquote { margin: 0; padding-left: 10px; border-left: 2px solid var(--note); font-style: italic; font-size: 14px; color: var(--ink); }
 .replay-fix { font-size: 14px; color: var(--done); font-weight: 500; line-height: 1.45; }
 .replay-fix span { display: block; font: 500 10px/1 var(--font-mono), monospace; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
-.replay-rail { position: relative; margin-top: 44px; padding: 0 8px; }
+/* The rail's line is inset by half the largest dot with its ring (14px and 4px each side), so a dot at 0% or 100% sits inside the
+   container at every width (issue #65, item 4). */
+.replay-rail { position: relative; margin-top: 44px; padding: 0 11px; }
 .replay-line { height: 2px; background: var(--line); border-radius: 1px; }
 .replay-dots { position: relative; height: 56px; list-style: none; margin: 0; padding: 0; }
 .replay-dots li { position: absolute; top: -5px; transform: translateX(-50%); }
@@ -495,10 +506,10 @@ main { position: relative; isolation: isolate; }
 .replay-dots .slowed { color: var(--yellow); } .replay-dots .confused { color: var(--note); } .replay-dots .blocked { color: var(--dead); }
 .replay-dots span { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); white-space: nowrap; font: 500 12px/1.3 var(--font-sans), sans-serif; color: var(--ink); text-align: center; }
 .replay-dots span b { display: block; font: 400 11px/1.3 var(--font-mono), monospace; color: var(--muted); }
-.replay-dots .blocked span { left: auto; right: 0; transform: none; text-align: right; }
+.replay-dots .end span { left: auto; right: 0; transform: none; text-align: right; }
 .replay-ends { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 16px; font-size: 12px; color: var(--muted); margin-top: 6px; }
 .replay-ends b { font-family: var(--font-mono), monospace; font-weight: 400; margin-right: 6px; }
-.replay-ends em { color: var(--dead); font-style: normal; }
+.replay-ends em { color: var(--ink); font-style: normal; }
 .pr-gh { font-size: 14px; }
 .pr-gh-hd { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; padding: 14px 16px; border-bottom: 1px solid var(--line); font-weight: 500; }
 .pr-gh-hd .example-label { margin-left: auto; }
@@ -524,6 +535,7 @@ main { position: relative; isolation: isolate; }
 .pr-main h4 { font: 500 20px/1.3 var(--font-sans), sans-serif; display: flex; gap: 10px; align-items: center; }
 .pr-md { display: grid; gap: 14px; font-size: 14px; line-height: 1.55; }
 .pr-md p { max-width: 72ch; }
+.pr-md > p:first-child { max-width: 64ch; }
 .pr-tbl { overflow-x: auto; }
 .pr-md table { border-collapse: collapse; width: 100%; min-width: 560px; font-size: 13px; }
 .pr-md th, .pr-md td { text-align: left; padding: 8px 10px; border: 1px solid var(--line); vertical-align: top; }
@@ -604,7 +616,6 @@ main { position: relative; isolation: isolate; }
 
 /* L7 · The host section (design/artefacts/hosted-section.html; issue #56): the lead flush to the container's right edge, then two
    unnumbered pieces, the terminal and the script tag as white windows across twelve columns. */
-.host .section-head p { justify-self: end; }
 .host-piece .piece-intro h3::before { content: none; }
 .host-window .window-chrome { min-height: 0; padding: 10px 14px; font: 400 12px/1 var(--font-mono), monospace; }
 .host-term, .host-snip { padding: 18px 20px; font: 400 13.5px/1.75 var(--font-mono), monospace; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
@@ -638,7 +649,7 @@ main { position: relative; isolation: isolate; }
 .guide-track > h2 { grid-column: 1; }
 .guide-track > .step { grid-column: 1 / -1; }
 .guide-host { display: grid; gap: 12px; max-width: 64ch; color: var(--muted); }
-.guide-caveat { font: 13px var(--font-mono), monospace; overflow-wrap: anywhere; }
+.guide-caveat { font: 13px var(--font-mono), monospace; overflow-wrap: anywhere; max-width: 64ch; }
 
 /* States change paint only: no size, weight, margin, padding or position changes on hover, focus or active. */
 @media (hover: hover) {
@@ -699,7 +710,7 @@ main { position: relative; isolation: isolate; }
   .footer-links { justify-content: flex-start; }
   .step > h2 { position: static; }
   .hero h1 { font-size: 44px; max-width: none; }
-  .worth .worth-say { font-size: 20px; }
+  .worth .worth-say { font-size: 20px; text-wrap: pretty; }
   .hero-artefact { margin-top: var(--space-2); }
   .hero-artefact .terminal-body, .terminal-body { padding: 16px; font-size: 12px; }
   .window-chrome { gap: 8px; flex-wrap: wrap; }
@@ -719,12 +730,12 @@ main { position: relative; isolation: isolate; }
   .rr-hd .rr-impact { grid-row: 1; }
   .rr-where { overflow-wrap: anywhere; }
   .report-column { width: calc(100% - 48px); }
-  .host .section-head p { justify-self: start; }
+  .section-head > p { justify-self: start; }
   .host-term, .host-snip { padding: 16px; font-size: 12px; }
   .guide-head h1 { font-size: 40px; }
   .step > h2 { font-size: 26px; }
   /* The compilation stacks: commands one per row, the code wraps, the frames fit their sheets, the pill docks across the bottom. */
-  .compile-commands { grid-template-columns: minmax(0, 1fr); }
+  .compile-command { grid-template-columns: minmax(0, 1fr); }
   .lines-body li { white-space: pre-wrap; overflow-wrap: anywhere; grid-template-columns: 34px minmax(0, 1fr); padding-right: 12px; font-size: 12px; }
   .lines-body .ln { padding-right: 10px; }
   .compile-frame.auto { padding: 50px 12px 24px; }
