@@ -8,8 +8,8 @@
     "/board",
     "/settings/members"
   ],
-  "check": "expect(await page.textContent('main')).toContain('1 invitation pending')",
-  "expects": "1 invitation pending",
+  "check": "expect(invitations.map(i => i.email)).toContain(setup.email)",
+  "expects": "an invitation for Sam",
   "attempts": [
     {
       "id": "p1",
@@ -265,7 +265,7 @@
       "browser": "Chromium",
       "window": "1280×800",
       "today": "a spreadsheet",
-      "reached": "no",
+      "reached": "yes",
       "ended": "done",
       "time": 63,
       "sure": 6,
@@ -438,7 +438,7 @@
           "seconds": 63,
           "kind": "ended",
           "what": "Pressed Done",
-          "rest": " · the check ran and failed: 2 invitations pending",
+          "rest": " · the check ran and passed: Sam has an invitation, sent twice",
           "route": "/settings/members",
           "at": [
             0.865,
@@ -450,7 +450,7 @@
         {
           "n": 1,
           "problem": 1,
-          "impact": "wrong end state",
+          "impact": "confused",
           "from": 58,
           "to": 63,
           "poster": "/sessions/p3-58.jpg",
@@ -500,7 +500,7 @@
       "browser": "Chromium",
       "window": "1280×800",
       "today": "Notion",
-      "reached": "no",
+      "reached": "yes",
       "ended": "done",
       "time": 47,
       "sure": 4,
@@ -586,7 +586,7 @@
           "actualSeconds": 47.001,
           "kind": "ended",
           "what": "Pressed Done",
-          "rest": " · the check ran and failed: 2 invitations pending",
+          "rest": " · the check ran and passed: Sam has an invitation, sent twice",
           "route": "/settings/members"
         }
       ]

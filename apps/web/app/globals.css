@@ -297,8 +297,9 @@ main { position: relative; isolation: isolate; }
 /* L3 · Compilation (design/artefacts/compile-section.html), on the page grid: the commands across twelve columns, then the six steps
    as tabs, one open at a time, each a 5/7 pair: the text on the left, the screen on the right; then the whole file across twelve.
    The frames are the light Weekboard page; the chrome over it is that page's inverse with its mint accent, at real size. */
-.compile-commands { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gutter); }
-.compile-command { border: 1px solid var(--line); border-radius: 8px; background: var(--surface); padding: 14px 16px; display: grid; gap: 6px; align-content: start; }
+.compile-commands { display: grid; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
+.compile-command { padding: 12px 16px; display: grid; grid-template-columns: minmax(0, 22ch) minmax(0, 1fr); gap: 6px var(--gutter); align-items: baseline; }
+.compile-command + .compile-command { border-top: 1px solid var(--line); }
 .compile-command code { font-size: 14px; white-space: nowrap; overflow-wrap: normal; }
 .compile-command > span { font-size: 13px; color: var(--muted); }
 .compile-command b { font-weight: 500; color: var(--ink); }
@@ -734,7 +735,7 @@ main { position: relative; isolation: isolate; }
   .guide-head h1 { font-size: 40px; }
   .step > h2 { font-size: 26px; }
   /* The compilation stacks: commands one per row, the code wraps, the frames fit their sheets, the pill docks across the bottom. */
-  .compile-commands { grid-template-columns: minmax(0, 1fr); }
+  .compile-command { grid-template-columns: minmax(0, 1fr); }
   .lines-body li { white-space: pre-wrap; overflow-wrap: anywhere; grid-template-columns: 34px minmax(0, 1fr); padding-right: 12px; font-size: 12px; }
   .lines-body .ln { padding-right: 10px; }
   .compile-frame.auto { padding: 50px 12px 24px; }

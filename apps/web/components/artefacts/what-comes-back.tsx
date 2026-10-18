@@ -4,6 +4,7 @@ import { run, clock, attempt } from '../../lib/attempts'
 import { problems, runFacts, whatComesBack } from '../../lib/copy'
 import { exampleCheck, checkLead, reportPath, findings } from '../../lib/pull-request'
 import { SectionHead } from '../site/section-head'
+import { Prose } from '../site/code'
 
 /** GitHub's marks, drawn in the current colour: the check's neutral dot in a ring, and the tick of a successful check. */
 function Neutral() { return <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><circle cx="8" cy="8" r="6.5" fill="none" stroke="currentColor" strokeWidth="1.6" /><circle cx="8" cy="8" r="2.2" /></svg> }
@@ -47,7 +48,7 @@ function CheckPage() {
 
 type Piece = { n: number; id: string; name: string; intro: string }
 /** A numbered piece's intro: the mono number in the moment colour, the name, at most 64ch of text. */
-function Intro({ piece }: { piece: Piece }) { return <div className="piece-intro"><h3 id={`${piece.id}-h`} data-n={piece.n}>{piece.name}</h3><p>{piece.intro}</p></div> }
+function Intro({ piece }: { piece: Piece }) { return <div className="piece-intro"><h3 id={`${piece.id}-h`} data-n={piece.n}>{piece.name}</h3><p><Prose text={piece.intro} /></p></div> }
 /** A numbered piece: its intro over its artefact, all twelve columns. */
 function Piece({ piece, children }: { piece: Piece; children: ReactNode }) {
   return <section className="piece" id={piece.id} aria-labelledby={`${piece.id}-h`}><Intro piece={piece} />{children}</section>
