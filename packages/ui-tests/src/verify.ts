@@ -1,5 +1,5 @@
 import { parseHTML } from 'linkedom'
-import { AssertionFailure, MissingEvidence, type Goal, type Hook, type Snapshot } from './index.ts'
+import { AssertionFailure, MissingEvidence, offline, type Evidence, type Fixtures, type Goal, type Hook, type Request, type Snapshot } from './index.ts'
 import type { Event, Reason, Run } from './storage.ts'
 
 /** Whether the person reached the goal, as the check decided: yes, no (with a diff), or couldn't tell (the check had no evidence). */
@@ -9,12 +9,23 @@ export type HookResult = { reached: Reached; reason?: string; diff?: { expected:
 const yesNo: Record<Reached, string> = { yes: 'Yes', no: 'No', "couldn't tell": "Couldn't tell" }
 /** The line the CLI prints for an attempt: "Reached the goal: Yes", "No" or "Couldn't tell", or pending before the check has run. */
 export function reachedLine(result?: HookResult) { return `Reached the goal: ${result?.reached ? yesNo[result.reached] : 'pending'}` }
-/** Runs one hook against a snapshot, exposing a DOM query and the participant's recorded answers. Assertion failures become `no`; missing evidence becomes `couldn't tell`. */
-async function execute(hook: Hook, snapshot: Snapshot | undefined, answers: Record<string, string> = {}): Promise<HookResult> {
-  if (!snapshot?.url || !snapshot.dom) return { reached: "couldn't tell", reason: 'Missing end-state snapshot' }
+/** Where an outcome reads the app's state: Playwright's `request` against the target, and the values this attempt's `setup` returned. */
+export type AppState = { request?: Request; setup?: Fixtures }
+/**
+ * Runs one outcome against the app's state (`request`, `setup`) and the page the person ended on (`page`, from the stored snapshot),
+ * exposing the participant's recorded answers. Assertion failures become `no`; missing evidence, a page the snapshot does not hold or
+ * an app that cannot be reached become `couldn't tell`.
+ */
+async function execute(hook: Hook, snapshot: Snapshot | undefined, answers: Record<string, string> = {}, state: AppState = {}): Promise<HookResult> {
   try {
-    const { document } = parseHTML(snapshot.dom)
-    await hook({ page: { url: () => snapshot.url, query: selector => document.querySelector(selector), textContent: async selector => document.querySelector(selector)?.textContent ?? undefined }, participant: { answer: async (question, options) => {
+    const document = snapshot?.dom ? parseHTML(snapshot.dom).document : undefined
+    const missing = (): never => { throw new MissingEvidence('Missing end-state snapshot') }
+    const page: Evidence['page'] = {
+      url: () => snapshot?.url || missing(),
+      query: selector => document ? document.querySelector(selector) : missing(),
+      textContent: async selector => document ? document.querySelector(selector)?.textContent ?? undefined : missing(),
+    }
+    await hook({ request: state.request ?? offline, setup: state.setup ?? {}, page, participant: { answer: async (question, options) => {
       if (!options.choices.includes(options.expected) || options.choices.length < 2) throw new Error('A validation question needs an expected answer and distractors')
       if (!(question in answers)) throw Object.assign(new MissingEvidence('Participant validation answer needed'), { question: { question, ...options } })
       return answers[question]
@@ -26,17 +37,16 @@ async function execute(hook: Hook, snapshot: Snapshot | undefined, answers: Reco
     return { reached: "couldn't tell", reason: error instanceof Error ? error.message : String(error) }
   }
 }
-/** Runs the goal's outcome and task checks against the stored evidence, then applies the terminal-reason and happy-path rules. Returns the outcome result with per-task results. */
-export async function verify(run: Run, goal: Goal, events: Event[] = []) {
-  const compiled = run.context.goals[run.goalIndex]
-  let result: HookResult = goal.outcomes[0] ? await execute(goal.outcomes[0], run.snapshot, run.answers) : { reached: "couldn't tell", reason: 'Issues-only exploration: no outcome' }
-  const tasks = await Promise.all(goal.tasks.map(async (task, index): Promise<HookResult & { name: string }> => ({ name: task.name, ...(task.check ? await execute(task.check, events.find(e => e.type === 'step' && e.step === index)?.snapshot, run.answers) : { reached: "couldn't tell", reason: 'No check authored' }) })))
-  const finalPath = run.snapshot ? new URL(run.snapshot.url).pathname : undefined
-  if (goal.outcomes.length && run.reason && run.reason !== 'done') result = { reached: 'no', reason: `How it ended: ${ended[run.reason]}` }
-  else if (goal.outcomes.length && compiled.happyPath?.length && finalPath && finalPath !== compiled.happyPath.at(-1)) result = { reached: 'no', reason: 'They ended on a different page from the last page of your path', diff: { expected: compiled.happyPath.at(-1), actual: run.snapshot?.url } }
-  else if (tasks.some(task => task.reached === 'no')) result = { reached: 'no', reason: 'A task check failed' }
-  else if (tasks.some((task, index) => task.reached === "couldn't tell" && goal.tasks[index].check)) result = { reached: "couldn't tell", reason: 'Evidence for a task check is missing', question: tasks.find(task => task.question)?.question }
-  return { ...result, tasks }
+/**
+ * Runs the task's outcome after the attempt, against the app's state and whatever page the person ended on; an attempt that ended
+ * other than by Done did not reach the goal. The path is only the route you expect: it never decides the result.
+ */
+export async function verify(run: Run, goal: Goal, _events: Event[] = [], state: AppState = {}): Promise<HookResult> {
+  if (!goal.outcomes[0]) return { reached: "couldn't tell", reason: 'Issues-only exploration: no outcome' }
+  if (run.reason && run.reason !== 'done') return { reached: 'no', reason: `How it ended: ${ended[run.reason]}` }
+  // Before the attempt ends there is nothing to check yet.
+  if (!run.snapshot?.url) return { reached: "couldn't tell", reason: 'Missing end-state snapshot' }
+  return execute(goal.outcomes[0], run.snapshot, run.answers, { setup: run.setup, ...state })
 }
 /** How an attempt ended, in the report's words. */
 export const ended: Record<Reason, string> = { done: 'pressed Done', "couldn't do this": "pressed I couldn't do this", 'abandoned early': 'left before trying', 'ran out of time': 'ran out of time' }

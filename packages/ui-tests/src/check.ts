@@ -12,6 +12,14 @@ export { impacts, ranked, legend, legendLine, caveat, problemsLine, type Impact 
  * App on the author's own deploy (`ui-tests host`) calls the same function with its installation token.
  */
 
+/**
+ * `check` in CI (issue #68): the landing and the guide put `npx ui-tests check` in the preview job, starting one run per pull request
+ * under the config's cap. Today it publishes the check from a run summary you pass it; starting the run itself is issue #69, and the
+ * guide says so in one line until then, as `host` does with #59.
+ */
+export const checkIssue = 'https://github.com/miguel-perez/ui-tests/issues/69'
+export const checkCaveat = `check: starting the run from CI is not shipped yet; today it publishes the check from a run summary. See ${checkIssue}`
+
 /** One problem as the check shows it: the sentence about the design, the page and element, how many people, the impact and the moment to watch. */
 export type CheckProblem = { title: string; page: string; locator: string; people: number; impact: Impact; moment?: { person: number; seconds: number; url: string } }
 /** What one run says to the pull request. `attempted` below `people` makes it inconclusive. */

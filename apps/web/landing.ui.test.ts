@@ -1,6 +1,6 @@
-import { context, goal, outcome, expect } from 'ui-tests'
+import { study, task, outcome, expect } from 'ui-tests'
 
-context({
+study('getting started', {
   users: {
     are: 'developers who ship UI and have no researcher',
     did: 'shipped a user interface you built yourself',
@@ -10,7 +10,7 @@ context({
   },
   purpose: 'find out whether people can use what I built, without a researcher',
 }, () => {
-  goal('start trying ui-tests', { happyPath: ['/', '/docs/getting-started'] }, () => {
+  task('start trying ui-tests', { path: ['/', '/docs/getting-started'] }, () => {
     outcome(async ({ page }) => {
       expect(page.url()).toContain('/docs/getting-started')
     })
