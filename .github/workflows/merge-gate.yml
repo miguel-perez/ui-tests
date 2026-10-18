@@ -7,6 +7,8 @@ on:
   workflow_run:
     workflows: [CI, PR review event]
     types: [completed]
+  # The model reviewer records its verdict as a commit status; wake on it.
+  status:
   workflow_dispatch:
   schedule:
     - cron: '7,22,37,52 * * * *'
@@ -24,6 +26,7 @@ concurrency:
 
 jobs:
   reconcile:
+    if: github.event_name != 'status' || github.event.context == 'Model review'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -32,8 +35,9 @@ jobs:
         with:
           ref: ${{ github.event.repository.default_branch }}
           persist-credentials: false
-      - name: Require current CodeRabbit approval and enable auto-merge
+      - name: Require the current model review report and enable auto-merge
         run: python3 factory/automation/merge_gate.py
         env:
           GH_TOKEN: ${{ github.token }}
           AUTOMERGE_ENABLED: ${{ vars.AUTOMERGE_ENABLED }}
+          MODEL_REVIEWER_LOGINS: ${{ vars.MODEL_REVIEWER_LOGINS }}

@@ -35,7 +35,7 @@ test('fresh install writes rendered managed files, seeds, ignores and scripts', 
   assert.doesNotMatch(gate, /\{\{[A-Z]+\}\}/);
   const wait = readFileSync(join(root, '.archon/workflows/automation/review/scripts/wait-for-review.ts'), 'utf8');
   assert.match(wait, /'factory\/automation\/review-state\.mjs'/);
-  assert.ok(existsSync(join(root, '.coderabbit.yaml')));
+  assert.ok(existsSync(join(root, '.github/workflows/merge-gate.yml')));
   assert.ok(existsSync(join(root, '.archon/config.yaml')));
   const opencode = JSON.parse(readFileSync(join(root, 'opencode.json'), 'utf8'));
   assert.ok(Object.keys(opencode.permission.external_directory).includes('~/.archon/workspaces/owner/name/artifacts/**'));
@@ -90,8 +90,8 @@ test('install run from a subdirectory still targets the git top level', t => {
   process.chdir(join(root, 'factory'));
   t.after(() => process.chdir(previous));
   install({ prefix: 'factory', log() {} });
-  assert.ok(existsSync(join(root, '.coderabbit.yaml')));
-  assert.ok(!existsSync(join(root, 'factory/.coderabbit.yaml')));
+  assert.ok(existsSync(join(root, '.github/workflows/merge-gate.yml')));
+  assert.ok(!existsSync(join(root, 'factory/.github/workflows/merge-gate.yml')));
 });
 
 test('an empty prefix renders factory paths as ./', t => {

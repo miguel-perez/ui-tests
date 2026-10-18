@@ -13,7 +13,7 @@ const output = execFileSync('node', [
   '{{FACTORY}}/automation/review-state.mjs', 'wait', '--pr', number, '--timeout-seconds', '1800',
 ], { encoding: 'utf8', maxBuffer: 8 * 1024 * 1024, timeout: 1830000 });
 const state = JSON.parse(output);
-if (!['approved', 'fix', 'merged'].includes(state.state)) {
+if (!['approved', 'fix', 'merged', 'review'].includes(state.state)) {
   throw new Error('The deterministic review check returned an unsupported state.');
 }
 console.log(JSON.stringify(state));

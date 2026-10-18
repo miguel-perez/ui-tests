@@ -796,4 +796,4 @@ The autonomous factory is vendored in [`factory/`](factory/README.md) from `migu
 @archon /workflow run autonomous-delivery Implement this issue and satisfy its acceptance criteria.
 ```
 
-Edit factory behavior in `factory/`, run `node factory/install.mjs`, and commit both. The host, status and recovery commands are the `automation:*` npm scripts; see the factory README for GitHub configuration and the local host. CodeRabbit review and protected merge requirements remain in force.
+Edit factory behavior in `factory/`, run `node factory/install.mjs`, and commit both. The host, status and recovery commands are the `automation:*` npm scripts; see the factory README for GitHub configuration and the local host. The model reviewer's report and the protected merge requirements remain in force.

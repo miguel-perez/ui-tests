@@ -13,9 +13,9 @@
   ".archon/workflows/automation/retry/scripts/resolve-pr.ts",
   ".archon/workflows/automation/review/autonomous-review.yaml",
   ".archon/workflows/automation/review/commands/address-review.md",
+  ".archon/workflows/automation/review/commands/review-head.md",
   ".archon/workflows/automation/review/scripts/enable-auto-merge.ts",
   ".archon/workflows/automation/review/scripts/wait-for-review.ts",
-  ".coderabbit.yaml",
   ".github/workflows/delivery-status.yml",
   ".github/workflows/merge-gate.yml",
   ".github/workflows/review-event.yml"

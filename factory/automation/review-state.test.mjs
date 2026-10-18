@@ -4,16 +4,13 @@ import { readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
-import { enableAutoMerge, evaluate, latestReview } from './review-state.mjs';
+import { enableAutoMerge, evaluate, latestModelReview, reviewerLogins } from './review-state.mjs';
 
+process.env.MODEL_REVIEWER_LOGINS = 'owner';
 const pr = { state: 'open', draft: false, head: { sha: 'current', repo: { full_name: 'owner/repo' } }, base: { repo: { full_name: 'owner/repo' } } };
-const review = { id: 1, user: { login: 'coderabbitai[bot]', type: 'Bot' }, submitted_at: '2026-10-13T00:00:00Z', state: 'APPROVED', commit_id: 'current' };
+const verdict = { id: 10, context: 'Model review', state: 'success', creator: { login: 'owner', type: 'User' }, description: 'No open finding', target_url: 'https://example.test/report' };
 const ci = { id: 1, head_sha: 'current', name: 'Automation CI', app: { slug: 'github-actions' }, started_at: '2026-10-13T00:00:00Z', status: 'completed', conclusion: 'success' };
-const comments = [
-  { ...review, id: 2, state: 'COMMENTED', submitted_at: '2026-10-13T00:01:00Z', body: '' },
-  { ...review, id: 3, state: 'COMMENTED', submitted_at: '2026-10-13T00:02:00Z', body: 'Review evidence requiring ordinary handling' },
-];
-const approvedWithComments = [review, ...comments];
+const human = { id: 3, user: { login: 'human' }, submitted_at: '2026-10-13T00:02:00Z', state: 'CHANGES_REQUESTED' };
 
 test('five-round review graph and correction fixture retain cumulative policy and protected merge path', () => {
   const graph = readFileSync(new URL('../payload/.archon/workflows/automation/review/autonomous-review.yaml', import.meta.url), 'utf8');
@@ -21,6 +18,7 @@ test('five-round review graph and correction fixture retain cumulative policy an
   assert.match(graph, /five total cumulative correction rounds across\s+runs and continuations without reset \(never a sixth\)/);
   assert.match(graph, /provider: opencode\s+model: openai\/gpt-6\.1-sol/);
   assert.match(graph, /until_bash: test \$verify.output.state = "approved" \|\| test \$verify.output.state = "merged"/);
+  assert.match(graph, /command: review-head[\s\S]*provider: claude[\s\S]*model: opus/);
   assert.match(graph, /script: enable-auto-merge/);
   assert.match(graph, /depends_on: \[review-loop\]/);
   const fixture = readFileSync(new URL('../payload/.archon/workflows/automation/deliver/fixtures/correction.stubs.yaml', import.meta.url), 'utf8');
@@ -29,61 +27,58 @@ test('five-round review graph and correction fixture retain cumulative policy an
   assert.match(fixture, /reached: \[implement, resolve, observe, repair, verify, review__merge\]/);
 });
 
-test('requires an affirmative current-head bot review and successful CI', () => {
-  assert.equal(evaluate(pr, [review], [ci]).state, 'approved');
-  assert.equal(evaluate(pr, [], [ci]).state, 'pending');
-  assert.equal(evaluate(pr, [{ ...review, commit_id: 'old' }], [ci]).state, 'pending');
-  assert.equal(evaluate(pr, [{ ...review, user: { login: 'coderabbitai[bot]', type: 'User' } }], [ci]).state, 'pending');
-  assert.equal(evaluate(pr, [review], []).state, 'pending');
+test('requires an affirmative current-head model review verdict and successful CI', () => {
+  assert.equal(evaluate(pr, [verdict], [ci]).state, 'approved');
+  assert.equal(evaluate(pr, [], [ci]).state, 'review');
+  assert.equal(evaluate(pr, [verdict], []).state, 'pending');
+  assert.equal(evaluate(pr, [{ ...verdict, context: 'Other review' }], [ci]).state, 'review');
 });
 
-test('dismissed approval cannot fall back; ordinary comments preserve approval', () => {
-  assert.equal(evaluate(pr, [{ ...review, state: 'DISMISSED' }], [ci]).state, 'pending');
-  assert.equal(evaluate(pr, approvedWithComments, [ci]).state, 'approved');
-  assert.equal(evaluate(pr, comments, [ci]).state, 'pending');
+test('only a user-created verdict counts; workflow-created statuses never do', () => {
+  for (const creator of [{ login: 'github-actions[bot]', type: 'Bot' }, { login: 'github-actions[bot]', type: 'User' }, { login: 'other[bot]', type: 'Bot' }, undefined]) {
+    assert.equal(evaluate(pr, [{ ...verdict, creator }], [ci]).state, 'review');
+  }
 });
 
-test('decision chronology uses time then ID, regardless of page or input order', () => {
-  for (const state of ['APPROVED', 'CHANGES_REQUESTED', 'DISMISSED', 'UNKNOWN']) {
-    const decision = { ...review, id: 4, state };
-    for (const rows of [[review, decision, ...comments], [...comments, decision, review]]) {
-      assert.equal(latestReview(rows), decision);
-      assert.equal(evaluate(pr, rows, [ci]).state, state === 'APPROVED' ? 'approved' : state === 'CHANGES_REQUESTED' ? 'fix' : 'pending');
-    }
+test('only allowlisted logins count, and an empty allowlist fails closed', () => {
+  const other = { ...verdict, creator: { login: 'implementer', type: 'User' } };
+  assert.equal(evaluate(pr, [other], [ci]).state, 'review');
+  assert.equal(evaluate(pr, [other], [ci], [], [], reviewerLogins('Implementer')).state, 'approved');
+  assert.equal(evaluate(pr, [verdict, { ...other, id: 20, state: 'failure' }], [ci]).state, 'approved');
+  for (const raw of ['', ' , ']) {
+    const result = evaluate(pr, [verdict], [ci], [], [], reviewerLogins(raw));
+    assert.equal(result.state, 'blocked');
+    assert.match(result.summary, /MODEL_REVIEWER_LOGINS/);
   }
-  const newer = { ...review, id: 0, state: 'DISMISSED', submitted_at: '2026-10-13T00:03:00Z' };
-  assert.equal(latestReview([newer, ...approvedWithComments]), newer);
-  // The REST reader flattens pages before evaluation; comments on either side
-  // of the boundary must not replace the decision.
-  for (const pages of [[Array(100).fill(comments[0]), [review, comments[1]]],
-    [[review, ...Array(99).fill(comments[0])], [comments[1]]]]) {
-    assert.equal(evaluate(pr, pages.flat(), [ci]).state, 'approved');
-  }
+});
+
+test('the newest verdict decides, regardless of input order', () => {
+  const failure = { ...verdict, id: 11, state: 'failure' };
+  const recovered = { ...verdict, id: 12 };
+  assert.equal(latestModelReview([verdict, failure]), failure);
+  assert.equal(latestModelReview([failure, verdict]), failure);
+  assert.equal(evaluate(pr, [failure, verdict], [ci]).state, 'fix');
+  assert.equal(evaluate(pr, [verdict, failure, recovered], [ci]).state, 'approved');
+  assert.equal(evaluate(pr, [{ ...verdict, state: 'pending' }], [ci]).state, 'fix');
 });
 
 test('CI failure needs repair; skipped CI never passes', () => {
   for (const conclusion of ['failure', 'skipped', 'neutral']) {
-    assert.equal(evaluate(pr, approvedWithComments, [ci, { ...ci, id: 2, conclusion }]).state, 'fix');
+    assert.equal(evaluate(pr, [verdict], [ci, { ...ci, id: 2, conclusion }]).state, 'fix');
   }
-  assert.equal(evaluate(pr, approvedWithComments, [{ ...ci, app: { slug: 'other-app' } }]).state, 'pending');
-  assert.equal(evaluate(pr, approvedWithComments, [{ ...ci, status: 'in_progress', conclusion: null }]).state, 'pending');
-  assert.equal(evaluate(pr, approvedWithComments, [{ ...ci, head_sha: 'old' }]).state, 'pending');
+  assert.equal(evaluate(pr, [verdict], [{ ...ci, app: { slug: 'other-app' } }]).state, 'pending');
+  assert.equal(evaluate(pr, [verdict], [{ ...ci, status: 'in_progress', conclusion: null }]).state, 'pending');
+  assert.equal(evaluate(pr, [verdict], [{ ...ci, head_sha: 'old' }]).state, 'pending');
   const queued = { ...ci, id: 2, started_at: null, status: 'queued', conclusion: null };
-  assert.equal(evaluate(pr, approvedWithComments, [ci, queued]).state, 'pending');
-  assert.equal(evaluate({ ...pr, head: { ...pr.head, sha: 'changed' } }, approvedWithComments, [ci]).state, 'pending');
+  assert.equal(evaluate(pr, [verdict], [ci, queued]).state, 'pending');
+  assert.equal(evaluate({ ...pr, head: { ...pr.head, sha: 'changed' } }, [verdict], [ci]).state, 'pending');
 });
 
-test('current requested changes enter the repair loop, stale findings wait', () => {
-  assert.equal(evaluate(pr, [{ ...review, state: 'CHANGES_REQUESTED' }], [ci]).state, 'fix');
-  assert.equal(evaluate(pr, [{ ...review, state: 'CHANGES_REQUESTED', commit_id: 'old' }], [ci]).state, 'pending');
-});
-
-test('unresolved current CodeRabbit threads hold approval', () => {
-  const thread = { isResolved: false, isOutdated: false, comments: { nodes: [{ author: { login: 'coderabbitai', __typename: 'Bot' } }] } };
-  assert.equal(evaluate(pr, approvedWithComments, [ci], [thread]).state, 'pending');
-  assert.equal(evaluate(pr, approvedWithComments, [ci], [{ ...thread, isResolved: true }]).state, 'approved');
-  const spoof = { ...thread, comments: { nodes: [{ author: { login: 'coderabbitai', __typename: 'User' } }] } };
-  assert.equal(evaluate(pr, [review], [ci], [spoof]).state, 'approved');
+test('unresolved current review conversations hold approval', () => {
+  const thread = { isResolved: false, isOutdated: false, comments: { nodes: [{ author: { login: 'anyone', __typename: 'User' } }] } };
+  assert.equal(evaluate(pr, [verdict], [ci], [thread]).state, 'pending');
+  assert.equal(evaluate(pr, [verdict], [ci], [{ ...thread, isResolved: true }]).state, 'approved');
+  assert.equal(evaluate(pr, [verdict], [ci], [{ ...thread, isOutdated: true }]).state, 'approved');
 });
 
 test('a PR that already auto-merged is successful completion', () => {
@@ -91,15 +86,14 @@ test('a PR that already auto-merged is successful completion', () => {
 });
 
 test('closed, draft and fork PRs cannot enter automatic merging', () => {
-  assert.equal(evaluate({ ...pr, state: 'closed' }, approvedWithComments, [ci]).state, 'blocked');
-  assert.equal(evaluate({ ...pr, draft: true }, approvedWithComments, [ci]).state, 'blocked');
-  assert.equal(evaluate({ ...pr, head: { ...pr.head, repo: { full_name: 'other/fork' } } }, approvedWithComments, [ci]).state, 'blocked');
+  assert.equal(evaluate({ ...pr, state: 'closed' }, [verdict], [ci]).state, 'blocked');
+  assert.equal(evaluate({ ...pr, draft: true }, [verdict], [ci]).state, 'blocked');
+  assert.equal(evaluate({ ...pr, head: { ...pr.head, repo: { full_name: 'other/fork' } } }, [verdict], [ci]).state, 'blocked');
 });
 
-test('another reviewer requesting changes prevents automatic completion', () => {
-  const other = { ...review, id: 3, user: { login: 'other' }, state: 'CHANGES_REQUESTED' };
-  assert.equal(evaluate(pr, [...approvedWithComments, other, { ...other, id: 4, state: 'COMMENTED' }], [ci]).state, 'blocked');
-  assert.equal(evaluate(pr, [...approvedWithComments, other, { ...other, id: 4, state: 'APPROVED', submitted_at: '2026-10-13T00:02:00Z' }], [ci]).state, 'approved');
+test('a reviewer requesting changes prevents automatic completion until they approve', () => {
+  assert.equal(evaluate(pr, [verdict], [ci], [], [human, { ...human, id: 4, state: 'COMMENTED' }]).state, 'blocked');
+  assert.equal(evaluate(pr, [verdict], [ci], [], [human, { ...human, id: 4, state: 'APPROVED', submitted_at: '2026-10-13T00:03:00Z' }]).state, 'approved');
 });
 
 function mergeRace(read, overrides = {}) {
@@ -155,7 +149,7 @@ test('an unconfirmed or different merge method expires with the original failure
 const cliPr = { ...pr, number: 95, merged: false, html_url: 'https://github.com/owner/repo/pull/95',
   head: { ...pr.head, ref: 'archon/issue-95' }, base: { ...pr.base, ref: 'main', sha: 'base-before' } };
 const cliMerged = { ...cliPr, state: 'closed', merged: true, base: { ...cliPr.base, sha: 'base-after' } };
-async function reviewCli(t, fresh, overrides = {}, command = 'merge') {
+async function reviewCli(t, fresh, overrides = {}, command = 'merge', extra = []) {
   const root = resolve('.archon/runtime/tests/review-cli');
   await mkdir(root, { recursive: true });
   const directory = await mkdtemp(root + '/case-');
@@ -164,11 +158,11 @@ async function reviewCli(t, fresh, overrides = {}, command = 'merge') {
   for (const name of ['gh', 'git']) await writeFile(resolve(directory, name), '#!/usr/bin/env node\n' + transport, { mode: 0o700 });
   const file = resolve(directory, 'data.json');
   await writeFile(file, JSON.stringify({ prs: [cliPr, fresh], reads: 0, calls: [],
-    branch: cliPr.head.ref, sha: cliPr.head.sha, reviews: [review], checks: [ci], threads: [],
-    protection: { required_status_checks: { checks: ['Automation CI', 'CodeRabbit approval'].map(context => ({ context, app_id: 15368 })) }, enforce_admins: { enabled: true } },
+    branch: cliPr.head.ref, sha: cliPr.head.sha, reviews: [], statuses: [verdict], checks: [ci], threads: [],
+    protection: { required_status_checks: { checks: ['Automation CI', 'Review approval'].map(context => ({ context, app_id: 15368 })) }, enforce_admins: { enabled: true } },
     ...overrides }));
-  const result = spawnSync(process.execPath, [resolve('automation/review-state.mjs'), command, '--repo', 'owner/repo', '--pr', '95', '--timeout-seconds', '1'],
-    { encoding: 'utf8', timeout: 15000, env: { ...process.env, PATH: directory + ':' + process.env.PATH, REVIEW_CLI_FIXTURE: file } });
+  const result = spawnSync(process.execPath, [resolve('automation/review-state.mjs'), command, '--repo', 'owner/repo', '--pr', '95', '--timeout-seconds', '1', ...extra],
+    { encoding: 'utf8', timeout: 15000, env: { ...process.env, MODEL_REVIEWER_LOGINS: 'owner', PATH: directory + ':' + process.env.PATH, REVIEW_CLI_FIXTURE: file } });
   assert.ifError(result.error);
   const data = JSON.parse(await readFile(file, 'utf8'));
   return { ...result, data, mutations: data.calls.filter(call => call[0] === 'gh' && call[1] !== 'api' && call[1] !== 'variable') };
@@ -241,15 +235,17 @@ test('CLI unchanged open approval uses only protected exact-head native auto-mer
 });
 
 for (const [label, overrides] of [
-  ['missing review', { reviews: [] }],
-  ['stale review', { reviews: [{ ...review, commit_id: 'old' }] }],
-  ['dismissed review', { reviews: [{ ...review, state: 'DISMISSED' }] }],
-  ['requested changes', { reviews: [{ ...review, state: 'CHANGES_REQUESTED' }] }],
+  ['missing verdict', { statuses: [] }],
+  ['failed verdict', { statuses: [{ ...verdict, state: 'failure' }] }],
+  ['workflow-created verdict', { statuses: [{ ...verdict, creator: { login: 'github-actions[bot]', type: 'Bot' } }] }],
+  ['requested changes', { reviews: [human] }],
   ['missing CI', { checks: [] }],
   ...['skipped', 'neutral', 'failure'].map(conclusion => [`${conclusion} CI`, { checks: [{ ...ci, conclusion }] }]),
-  ['unresolved conversation', { threads: [{ isResolved: false, isOutdated: false, comments: { nodes: [{ author: { login: 'coderabbitai', __typename: 'Bot' } }] } }] }],
+  ['unresolved conversation', { threads: [{ isResolved: false, isOutdated: false, comments: { nodes: [{ author: { login: 'anyone', __typename: 'User' } }] } }] }],
   ['missing protections', { protection: {} }],
+  ['missing gate check protection', { protection: { required_status_checks: { checks: [{ context: 'Automation CI', app_id: 15368 }] }, enforce_admins: { enabled: true } } }],
   ['unavailable protections', { protection: { apiFailure: true } }],
+  ['unavailable statuses', { statuses: { apiFailure: true } }],
   ['unavailable reviews', { reviews: { apiFailure: true } }],
 ]) {
   test(`CLI still blocks open PR with ${label}, even with auto-merge enabled`, async t => {
@@ -259,3 +255,26 @@ for (const [label, overrides] of [
     assert.deepEqual(result.mutations, []);
   });
 }
+
+test('CLI wait hands an unreviewed head to the model reviewer without posting anything', async t => {
+  const result = await reviewCli(t, cliPr, { statuses: [] }, 'wait');
+  assert.equal(result.status, 0, result.stderr);
+  assert.equal(JSON.parse(result.stdout).state, 'review');
+  assert.deepEqual(result.mutations, []);
+});
+
+test('CLI record posts the verdict on the reviewed head only', async t => {
+  const args = ['--state', 'success', '--summary', 'No open finding'];
+  const posted = await reviewCli(t, cliPr, { prs: [cliPr] }, 'record', args);
+  assert.equal(posted.status, 0, posted.stderr);
+  const call = posted.data.calls.find(entry => entry[1] === 'api' && entry.includes('repos/owner/repo/statuses/current'));
+  assert.ok(call, 'a status was written to the reviewed head');
+  assert.ok(call.includes('context=Model review') && call.includes('state=success'));
+  for (const overrides of [{ sha: 'moved' }, { branch: 'wrong' }]) {
+    const refused = await reviewCli(t, cliPr, { prs: [cliPr], ...overrides }, 'record', args);
+    assert.equal(refused.status, 1);
+    assert.equal(refused.data.calls.some(entry => entry.some(arg => String(arg).includes('/statuses/'))), false);
+  }
+  const incomplete = await reviewCli(t, cliPr, { prs: [cliPr] }, 'record', ['--state', 'maybe', '--summary', 'x']);
+  assert.equal(incomplete.status, 1);
+});

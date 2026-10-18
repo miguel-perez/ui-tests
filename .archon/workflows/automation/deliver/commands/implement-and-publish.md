@@ -6,7 +6,7 @@ argument-hint: <task or GitHub issue>
 Task: $ARGUMENTS
 
 You own implementation through publication. The following workflow owns
-CodeRabbit review, corrections, and merge. Work autonomously using the repository
+model review, corrections, and merge. Work autonomously using the repository
 instructions and the task's acceptance criteria.
 
 1. Read repository instructions and the task context. If the task identifies a
@@ -28,7 +28,7 @@ instructions and the task's acceptance criteria.
    body must explain the final behavior and actual validation. Write multiline
    bodies to a file and use `--body-file`. Link the issue using `Closes #N` when
    the implementation meets its acceptance criteria. Mark your own draft PR
-   ready with `gh pr ready` so CodeRabbit can review it.
+   ready with `gh pr ready` so it can be reviewed.
 6. Read the PR back with `gh pr view --json number,url,headRefName,state,isDraft`.
    Confirm it is ready (or already merged) and names this branch. Leave enabling
    auto-merge to the deterministic review tail. Update the implementation

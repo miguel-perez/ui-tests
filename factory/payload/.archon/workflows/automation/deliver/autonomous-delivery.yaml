@@ -1,8 +1,9 @@
 name: autonomous-delivery
 description: |
   Implement a requested task in an isolated branch, validate it, open a pull
-  request, address CodeRabbit and CI findings, and enable automatic squash merge
-  after CodeRabbit approves the current commit and required checks pass.
+  request, address model-review and CI findings, and enable automatic squash merge
+  after the model reviewer reports no open finding on the current commit and
+  required checks pass.
   Use for GitHub issues and feature or repair requests that should be delivered
   without a human PR review. Routine review and merge need no approval gate.
 
