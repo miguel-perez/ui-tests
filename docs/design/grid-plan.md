@@ -152,7 +152,7 @@ At 1440:
 ```text
    1       2       3       4       5       6       7       8       9      10      11      12   
 [Agents use some interfaces, too.   ]          [lead: three sentences, 64ch, ends at 1344     ]  head
-[$ npx ui-tests run --actor agent   ]
+[$ npx ui-tests --actor agent       ]
 [icon · Your API · target: { http } ] [icon · Your MCP server        ] [icon · Your CLI           ]  tiles · 230
 [  one sentence                     ] [  one sentence                ] [  one sentence            ]
 ```

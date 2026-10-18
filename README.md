@@ -10,11 +10,11 @@ Open source. Nothing to sign up for. Runs on your preview or your live site.
 
 Each line opens to the moment to watch, the person's words, and the smallest change that would fix it.
 
-If you have written a Playwright test, you have written this.
+Written like a Playwright test, read like a study: an `expect` that fails means one person did not get there, never a red build.
 
 A run reports the problems it found, or that it found none this time. There is no score and no pass.
 
-You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co.
+You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.example.
 
 ## Agent runs
 
@@ -48,9 +48,9 @@ Flags, help text and exit codes are what it sees. A `--help` that lies costs it 
 
 One file, two actors, two reports that never mix.
 
-npx ui-tests run --actor agent
+npx ui-tests --actor agent
 
-goal('add a member through the API', { target: { http: 'https://api.weekboard.app' } })
+task('add a member through the API', { target: { http: 'https://api.weekboard.app' } })
 
 add a member through the API
 
@@ -125,17 +125,27 @@ Adds the package.
 
 npx ui-tests init
 
-Creates the file below, with the example filled in.
+Writes a study file and a config, and prints the three lines to mount in your app.
 
-the file
+a study file
 
-npx ui-tests run
+npx ui-tests
 
-Turns it into these screens and puts people in front of them.
+Runs the whole study on you, in your browser: the consent, the scenario card, your page with the bar, and your own trace. Recruits nobody, costs nothing.
 
-these screens
+on you
 
-`npx ui-tests` on its own runs every screen on you first, so you see the card, the bar and your own trace before anyone else does.
+npx ui-tests recruit
+
+Runs it with real people: your link, your visitors or a paid panel. Shows the plan and the price, and asks first.
+
+real people
+
+npx ui-tests check
+
+In the job that deploys your preview: the same run, with the cap in your config as the yes, and a check on the pull request.
+
+a check on the pull request
 
 consent
 
@@ -145,7 +155,7 @@ Consent
 
 before anything loads
 
-What the person does on the page is always recorded, and the consent says so in plain words. `video: true` adds the screen as a video, which is what needs the browser's prompt; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.
+What the person does on the page is always recorded, and the consent says so in plain words. `record: 'video'` adds the screen as a video, which is what needs the browser's prompt and raises the incentive to 1.5×, and the plan shows that price; without that line the first line of the list is all there is. Voice and camera are always the person's choice. The incentive and the purposes are filled in from the run. The colours are Weekboard's: the chrome inverts their page and takes the one accent they set.
 
 recorded: actions, screen, voice · camera: declined
 
@@ -159,7 +169,7 @@ the sample
 
 Six questions, one per screen; press Next to see them all. The first three come from `users`: `did` and `within` become a recency question with bands, `uses` a multi-select with one decoy, `not` an item among neutral ones, so nobody can tell what disqualifies. The last three come from `purpose`: when they last needed it, how they do it today, how much it matters. Write `users` as the sentence alone and the first three are drafted from it.
 
-The `catch` line sets how many: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost from $60, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
+The `sample` line sets how many, for the whole study: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost from $60, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
 
 screened 20 · matched 5 · who took part: 3 of 5 had the need this month · how they do it today, in their words
 
@@ -169,9 +179,9 @@ First look
 
 First look
 
-on by default
+on for public pages
 
-The page the task starts on is flashed for 500 ms, then one open question. The start is the first page of the `happyPath` unless the goal names a `start`; name another page for the flash with `impression: { page }` when the task begins behind a login and the purpose lives on the public page. The answers are read against the `purpose`, which the person never sees, and you can re-read any of them. Then the page comes back for one click.
+A page is flashed for 500 ms, then one open question. It is the page the task starts on when that page is public, and off when the start is behind a sign-in, as Weekboard's board is; `firstLook: { page }` names the public page where the purpose lives, here the home page. The answers are read against the `purpose`, which the person never sees, and you can re-read any of them. Then the page comes back for one click.
 
 named the purpose: 4 of 5, with their words · first click on your path: 3 of 5
 
@@ -181,9 +191,9 @@ Scenario card
 
 Scenario card
 
-from the goal, never the path
+from the task, never the path
 
-The situation from `users.are` and `purpose`, the action from the goal's name, the name and email from `beforeEach`. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with `scenario`.
+The situation from `users.are` and `purpose`, the action from the task's name, the name and email from what `setup` returns. Lint rejects any word that appears on a control of your site, so the card cannot hint where to click. Edit it in the trace and pin it with `scenario`.
 
 the exact card text, kept with the run
 
@@ -195,9 +205,9 @@ Your page, with the bar, then the check
 
 two controls, one check
 
-One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from `video`, with a pause; there is no microphone during the task. The summary is the goal's name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: the two pages of the `happyPath` set a silent three-minute limit, and the person may ask for more time once. The pill takes your font, inverts your page's colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.
+One small pill in a corner, draggable, that hides while they type in your page. The red dot and the time come from `record: 'video'`, with a pause; there is no microphone during the task. The summary is the goal's name; press it to reread the card. Done asks "Finished this task?" in place. No countdown: `timeLimit` is silent, and the person may ask for more time once. The `path` is only what you expect them to take; it sets nothing else. The pill takes your font, inverts your page's colours and uses the one accent you set, so it is never mistaken for your site and never carries ours.
 
-When they press Done, the `outcome` runs against the page as they left it. What they said does not count; what the page says does. A check that cannot decide returns "couldn't tell" and is never rounded either way.
+When they press Done, the `outcome` asks your app what happened, whatever page they ended on: here, whether this board has an invitation for Sam. What they said does not count; what your app holds does. Pressing Add twice still invited Sam; the second invitation comes back as a problem, not as a failure. A check that cannot decide returns "couldn't tell" and is never rounded either way.
 
 time on this goal · every moment · their path against yours · how it ended · reached the goal: yes / no / couldn't tell, with the diff
 
@@ -218,26 +228,33 @@ ease 3 of 7 · what made it difficult, in their words · would it help them 4 of
 ui-tests/invite.ui.test.ts
 
 ```ts
-import { context, beforeEach, goal, outcome, expect } from 'ui-tests'
+import { study, setup, task, outcome, expect } from 'ui-tests'
 
-context({
+study('invite flow', {
   users: {
-    are: 'people who signed up this week and want a colleague on their board',
-    did: 'signed up for a tool to plan work with a team',
-    within: '7 days',
+    are: 'people who plan work with a team in a shared tool',
+    did: 'used a shared tool to plan work with a team',
+    within: '3 months',
     uses: ['Trello', 'Asana', 'Notion', 'Linear'],
     not: ['has used Weekboard'],
   },
   purpose: 'plan the week together without emailing screenshots around',
-  video: true,
+  sample: { affecting: 1 / 3, confidence: 0.85 }, // five people
+  record: 'video',
 }, () => {
-  beforeEach(async () => ({ colleague: 'Sam', email: 'sam@acme.co' }))
-  goal('invite a colleague', {
-    happyPath: ['/board', '/settings/members'],
-    catch: { affecting: '1 in 3', confidence: 0.85 },
+  // Each attempt gets its own signed-in board. A .example address is never delivered.
+  setup(async ({ request }) => {
+    const board = await (await request.post('/api/test/boards', { data: { cards: 'sample-week' } })).json()
+    return { start: board.signInUrl, board: board.id, colleague: 'Sam', email: 'sam@acme.example' }
+  })
+  task('invite a colleague', {
+    path: ['/board', '/settings/members'],
+    timeLimit: '3 min',
+    firstLook: { page: '/' },
   }, () => {
-    outcome(async ({ page }) => {
-      expect(await page.textContent('main')).toContain('1 invitation pending')
+    outcome(async ({ request, setup }) => {
+      const invitations = await (await request.get(`/api/test/boards/${setup.board}/invitations`)).json()
+      expect(invitations.map(i => i.email)).toContain(setup.email)
     })
   })
 })
@@ -247,7 +264,7 @@ context({
 
 Pressed Add, saw nothing change, pressed it again; Sam got two invitations
 
-blocked
+confused
 
 /settings/members
 
@@ -259,7 +276,7 @@ I wasn't sure the first Add did anything, so I pressed it again.
 
 Person 3, after the task
 
-On press, change the button to "Invited sam@acme.co" and disable it.
+On press, change the button to "Invited sam@acme.example" and disable it.
 
 The Add button looked switched off; Person 2 pressed I couldn't do this
 
@@ -327,7 +344,7 @@ the-check
 
 The check
 
-One line in the merge box, next to your other checks. Its mark is neutral, never red or green: there is no pass to give, and it never blocks a merge unless you ask it to.
+One line in the merge box, next to your other checks, from `npx ui-tests check` in your preview job. It waits while people take part and turns neutral when the run closes, never red or green: there is no pass to give. One run per pull request: a push while people are still in starts nothing new, and the line names the commit they saw.
 
 All checks have passed
 
@@ -353,19 +370,19 @@ The replay
 
 Every problem in the report comes with the moment it happened: the person's minute as a rail, the moments that got in the way as stops, and at each stop the clip, what they did, what they said afterwards, and the smallest change that would have fixed it.
 
-Blocked
+Confused
 
 Pressed Add, saw nothing change, pressed it again.
 
 I wasn't sure the first Add did anything, so I pressed it again.
 
-On press, change the button to "Invited sam@acme.co" and disable it.
+On press, change the button to "Invited sam@acme.example" and disable it.
 
 Started on /board
 
 Pressed Done
 
-the check failed
+reached the goal, with two invitations
 
 ## The example run
 
@@ -387,7 +404,7 @@ Prolific
 
 CloudResearch Connect
 
-screened as signed up for a planning tool this week
+screened as planning work with a team in a shared tool
 
 Share
 
@@ -427,7 +444,7 @@ Closes at the deadline, 48 h unless you set one
 
 What almost anybody would stumble on, today, and every week
 
-`npx ui-tests run` prints the link. It can point at a branch preview, at your laptop through a tunnel, or at your live site.
+`npx ui-tests recruit` prints the link. It can point at a branch preview, at your laptop through a tunnel, or at your live site.
 
 You send it. Ask a friend to pass it on rather than take it themselves.
 
@@ -485,7 +502,7 @@ People like your users when you don't know any
 
 Put a cap in the config. Your deploy and your machine both use your own panel account: add a token once.
 
-`npx ui-tests run` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends.
+`npx ui-tests recruit` turns `users` into each panel's filters and a short screener, prints the plan, and asks before it spends. In CI, `npx ui-tests check` asks nothing: the cap in the config is the yes.
 
 People are paid as they finish. Anyone you exclude later stays paid. What is not spent comes back.
 
@@ -568,9 +585,9 @@ https://www.bls.gov/news.release/archives/ecec_03202026.htm
 ## This page runs this test
 
 ```ts
-import { context, goal, outcome, expect } from 'ui-tests'
+import { study, task, outcome, expect } from 'ui-tests'
 
-context({
+study('getting started', {
   users: {
     are: 'developers who ship UI and have no researcher',
     did: 'shipped a user interface you built yourself',
@@ -580,7 +597,7 @@ context({
   },
   purpose: 'find out whether people can use what I built, without a researcher',
 }, () => {
-  goal('start trying ui-tests', { happyPath: ['/', '/docs/getting-started'] }, () => {
+  task('start trying ui-tests', { path: ['/', '/docs/getting-started'] }, () => {
     outcome(async ({ page }) => {
       expect(page.url()).toContain('/docs/getting-started')
     })
@@ -614,7 +631,7 @@ You see a link in the terminal, then in your browser the consent, a few question
 
 You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in, and change it to your own site:
 
-You see, on the next `npx ui-tests`, the card reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.co. When you think you've finished, press Done. If you get stuck, press I couldn't do this." It is written from `users`, `purpose`, the goal and `beforeEach`, never from the path; pin your own wording with `scenario`. Write `users` as the sentence alone and `ui-tests lint` prints the screener it drafted from it, and the plan names the recording level: event replay, or screen video with `video: true`.
+You see, on the next `npx ui-tests`, the card reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.example. When you think you've finished, press Done. If you get stuck, press I couldn't do this." It is written from `users`, `purpose`, the task and what `setup` returns, never from the path; pin your own wording with `scenario`. Write `users` as the sentence alone and `ui-tests lint` prints the screener it drafted from it, and the plan names the recording level: event replay, or screen video with `record: 'video'`.
 
 You type, in the same file or a new one:
 
@@ -624,7 +641,9 @@ Read what came back
 
 You type, once the attempts are in:
 
-Then, for the pull request, put `npx ui-tests run` in the job that deploys your preview. On the next pull request you see the check:
+Then, for the pull request, put `npx ui-tests check` in the job that deploys your preview. It starts one run per pull request within the cap in your config, asks nothing, and the check waits while people take part, then turns neutral. A push during the run starts nothing new. On the next pull request you see the check:
+
+check: starting the run from CI is not shipped yet; today it publishes the check from a run summary. See https://github.com/miguel-perez/ui-tests/issues/69
 
 ## Commands
 
@@ -634,7 +653,9 @@ npx ui-tests init
 
 npx ui-tests
 
-npx ui-tests run
+npx ui-tests recruit
+
+npx ui-tests check
 
 npx ui-tests report k2m9
 
@@ -690,12 +711,11 @@ These frames are generated by the CLI’s Ink renderer.
 
 ```text
 ● Problems found: 4, seen across all 5 people.
-  Reached the goal: 2 of 5.
-  Pressed Done, but your check failed: 2 of 5.
+  Reached the goal: 4 of 5.
 
-▏1  2 of 5  blocked   Pressed Add, saw nothing change, pressed it again
- 2  1 of 5  blocked   Add looked switched off; pressed I couldn't do this
- 3  4 of 5  slowed    Looked for Invite in the Share menu, found only links
+▏1  1 of 5  blocked   Add looked switched off; pressed I couldn't do this
+ 2  4 of 5  slowed    Looked for Invite in the Share menu, found only links
+ 3  2 of 5  confused  Pressed Add, saw nothing change, pressed it again
  4  2 of 5  confused  Typed Sam's email into the board search
 ```
 

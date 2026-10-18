@@ -11,8 +11,8 @@ const contributing = original.slice(start)
 function text(value) {
   if (typeof value === 'string') return value ? [value] : []
   if (typeof value !== 'object' || value === null) return []
-  // A source's icon and picture name the drawing, not words a reader reads; the host's issue link is already in its caveat line.
-  return Object.entries(value).filter(([key]) => !['icon', 'picture', 'issue'].includes(key)).flatMap(([, item]) => text(item))
+  // A source's icon and picture name the drawing, not words a reader reads; the host's and the check's issue links are already in their caveat lines.
+  return Object.entries(value).filter(([key]) => !['icon', 'picture', 'issue', 'ciIssue'].includes(key)).flatMap(([, item]) => text(item))
 }
 const blocks = [`# ui-tests\n\n${copy.promise}\n\n${copy.intro}`]
 for (const [title, values] of Object.entries({ 'The promise and the run': copy.landing, 'Agent runs': copy.agent, 'Without a repository': copy.hosted, 'What you write, what they see': copy.compilation, 'The file': [copy.inviteFile, copy.inviteExample], 'The problems': copy.problems, 'What worked': copy.worked, 'How it works': copy.whatComesBack, 'The example run': copy.runFacts, 'Where the people come from': copy.sources, 'What a run is worth': copy.worth, 'This page runs this test': copy.example, 'Getting started': copy.guide, 'Commands': copy.commands, 'Site navigation and controls': copy.ui, 'The footer': copy.footer, 'Rehearsal': copy.rehearsal })) {

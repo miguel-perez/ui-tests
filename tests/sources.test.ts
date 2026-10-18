@@ -126,8 +126,8 @@ it('takes the appeal rating and the first click with the open answer, codes the 
   const store = new SQLiteAdapter(':memory:')
   const close = vi.spyOn(store, 'close').mockImplementation(() => {})
   try {
-    const compiled = compile([{ users: 'people who plan work', purpose: 'plan the week together', goals: [{ name: 'invite a colleague', options: { happyPath: ['/board', '/settings/members'] }, tasks: [], outcomes: [() => {}], source: 'test' }], source: 'test' }])[0]
-    expect(compiled.impression).toMatchObject({ appeal: { points: 9 }, firstClick: { toward: 'invite a colleague', codedAgainst: 'happyPath' } })
+    const compiled = compile([{ name: 'invite flow', users: 'people who plan work', purpose: 'plan the week together', goals: [{ name: 'invite a colleague', options: { path: ['/board', '/settings/members'] }, outcomes: [() => {}], source: 'test' }], source: 'test' }])[0]
+    expect(compiled.impression).toMatchObject({ appeal: { points: 9 }, firstClick: { toward: 'invite a colleague', codedAgainst: 'path' } })
     const run = store.create(compiled)
     expect(participantView(run).impression).toMatchObject({ goal: 'invite a colleague' })
     expect(participantView(run).impression).not.toHaveProperty('codedAgainst')
@@ -153,7 +153,7 @@ it('takes the appeal rating and the first click with the open answer, codes the 
 
 it('prints where the people come from in the run plan: both panels, the cap, how long people take and the deadline', async () => {
   const { compile, plan } = await import('../packages/ui-tests/src/compiler')
-  const compiled = compile([{ users: 'people who plan work', purpose: 'plan the week together', goals: [{ name: 'invite a colleague', options: { happyPath: ['/board', '/settings/members'] }, tasks: [], outcomes: [() => {}], source: 'test' }], source: 'test' }])
+  const compiled = compile([{ name: 'invite flow', users: 'people who plan work', purpose: 'plan the week together', goals: [{ name: 'invite a colleague', options: { path: ['/board', '/settings/members'] }, outcomes: [() => {}], source: 'test' }], source: 'test' }])
   expect(plan(compiled)).not.toContain('Prolific')
   const run = plan(compiled, { cap: 70 })
   expect(run).toContain('the paid panel on Prolific and CloudResearch Connect: invitations spread across both under your $70 cap, each person labelled with the one they came from.')

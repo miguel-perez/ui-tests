@@ -1,5 +1,6 @@
 import { exampleFile, exampleFileName } from 'ui-tests/example'
 import { hostCaveat, hostIssue } from 'ui-tests/host'
+import { checkCaveat, checkIssue } from 'ui-tests/check'
 
 /** Approved D2 copy. README parity tests cover every exported string. */
 export const promise = 'See where people get stuck on what you just shipped.'
@@ -80,13 +81,13 @@ export const worked = { title: 'Found Settings, then Members, on their own', pag
 export const whatComesBack = {
   heading: 'How it works.',
   /** The merge box: GitHub's own heading, then our check and two of the team's. */
-  check: { n: 1, id: 'the-check', name: 'The check', intro: 'One line in the merge box, next to your other checks, from `npx ui-tests check` in your preview job. It waits while people take part and turns neutral when the run closes, never red or green: there is no pass to give. One run per pull request: a push while people are still in starts nothing new, and the line names the commit they saw.', heading: 'All checks have passed', counts: '1 neutral and 2 successful checks', others: [{ name: 'preview', summary: 'Deployment ready' }, { name: 'tests', summary: '212 passed' }] },
+  check: { n: 1, id: 'the-check', name: 'The check', intro: 'One line in the merge box, next to your other checks, from `npx ui-tests check` in your preview job. It waits while people take part and turns neutral when the run closes, never red or green: there is no pass to give. One run per pull request: a push while people are still in starts nothing new, and the line names the commit they\u00a0saw.', heading: 'All checks have passed', counts: '1 neutral and 2 successful checks', others: [{ name: 'preview', summary: 'Deployment ready' }, { name: 'tests', summary: '212 passed' }] },
   checkPage: { n: 2, id: 'check-page', name: 'Its details, on GitHub', intro: 'Press Details and GitHub shows the check\'s own page: the sentence, the three problems to fix first with where they are and a link to the moment, and a link to the report. One screen, no pictures, no scrolling.' },
   /** The replay (issue #62): an illustration of one person's minute, the first problem's moment as one compact card over the rail. */
   replay: {
     n: 3, id: 'the-replay', name: 'The replay', intro: 'Every problem in the report comes with the moment it happened: the person\'s minute as a rail, the moments that got in the way as stops, and at each stop the clip, what they did, what they said afterwards, and the smallest change that would have fixed it.',
     person: 3, at: 58, to: 64, impact: 'Confused', did: 'Pressed Add, saw nothing change, pressed it again.', said: problems[0].quote.text, change: problems[0].change,
-    started: 'Started on /board', ended: 'Pressed Done', failed: 'reached the goal, with two invitations',
+    started: 'Started on /board', ended: 'Pressed Done', reached: 'reached the goal, with two invitations',
   },
 }
 /** The example run's facts that are not in the recordings: the product, where the report lives, the preview and commit the check ran on, where each person came from. */
@@ -162,7 +163,9 @@ export const guide = {
   agentSee: 'You see a separate agent report:',
   read: 'Read what came back',
   once: 'You type, once the attempts are in:',
-  pr: 'Then, for the pull request, put `npx ui-tests check` in the job that deploys your preview. It starts one run per pull request within the cap in your config, asks nothing, and the check waits while people take part, then turns neutral. A push during the run starts nothing new. On the next pull request you see the check:',
+  pr: 'Then, for the pull request, put `npx ui-tests check` in the job that deploys your preview. It starts one run per pull request within the cap in your config, asks nothing, and the check waits while people take part, then turns neutral. A push during the run starts nothing new. On the next pull request you see the\u00a0check:',
+  ciCaveat: checkCaveat,
+  ciIssue: checkIssue,
 }
 /**
  * The agent section (design/artefacts/agents-section.html; docs/discovery/agent-section-research.md), verbatim: the heading, the
@@ -179,7 +182,7 @@ export const agent = {
   ],
   closing: 'One file, two actors, two reports that never mix.',
   command: 'npx ui-tests --actor agent',
-  fileLine: "goal('add a member through the API', { target: { http: 'https://api.weekboard.app' } })",
+  fileLine: "task('add a member through the API', { target: { http: 'https://api.weekboard.app' } })",
   report: { goal: 'add a member through the API', url: 'https://ui-tests.com/r/k2m9-agent', trials: [
     { seconds: '0:19', detail: 'POST /members, then GET /members' },
     { seconds: '0:22' },

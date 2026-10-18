@@ -6,7 +6,8 @@ import { shown, offences } from '../vocabulary'
 
 /** The share secret playwright.config.ts gives the dev server; the signature is the one lib/share.ts makes. */
 const sign = (path: string) => createHmac('sha256', 'e2e-share-secret').update(path).digest('base64url').slice(0, 22)
-const titles = ['Pressed Add, saw nothing change, pressed it again; Sam got two invitations.', "The Add button looked switched off; Person 2 pressed I couldn't do this.", 'Looked for Invite in the Share menu and found only link options.', "Typed Sam's email into the board search.", 'Found Settings, then Members, on their own.']
+// Issue #68: the double Add reached the goal, so it is confused and ranks third, behind the switched-off Add and the Share menu.
+const titles = ["The Add button looked switched off; Person 2 pressed I couldn't do this.", 'Looked for Invite in the Share menu and found only link options.', 'Pressed Add, saw nothing change, pressed it again; Sam got two invitations.', "Typed Sam's email into the board search.", 'Found Settings, then Members, on their own.']
 
 async function open(page: Page, route: string, width: number) {
   const errors: string[] = []
@@ -49,19 +50,20 @@ for (const width of [1440, 375]) {
     if (width === 1440) expect(boxes.map(box => [box.x, box.width])).toEqual([[96, 1248], [96, 1248], [96, 1248]])
     // The check in the merge box: neutral, never green or red, beside the team's green checks.
     const ours = pr.locator('.pr-chk.ours')
-    await expect(ours).toContainText('ui-tests · 4 problems found · 2 of 5 people reached the goal')
+    await expect(ours).toContainText('ui-tests · 4 problems found · 4 of 5 people reached the goal')
     const mark = await ours.locator('.pr-ic').evaluate(node => getComputedStyle(node).color)
     expect(mark).toBe('rgb(87, 87, 87)')
     expect(['rgb(0, 120, 82)', 'rgb(189, 31, 68)']).not.toContain(mark)
-    // Its page: the title, the two sentences, the three to fix first (Share third), the moment links, the three links and the footer.
+    // Its page: the title, the two sentences, the three to fix first (the double Add third), the moment links, the three links and the footer.
     const checkPage = pr.locator('[data-artefact="check-page"]')
-    await expect(checkPage.locator('h4')).toHaveText('4 problems found · 2 of 5 people reached the goal')
-    await expect(checkPage.locator('.pr-md > p').first()).toHaveText('5 people tried invite a colleague on this preview. 2 of 5 reached the goal; 2 of 5 pressed Done, but your check failed. This check never fails your build. It reports problems, or that none were seen this time.')
+    await expect(checkPage.locator('h4')).toHaveText('4 problems found · 4 of 5 people reached the goal')
+    await expect(checkPage.locator('.pr-md > p').first()).toHaveText('5 people tried invite a colleague on this preview. 4 of 5 reached the goal. This check never fails your build. It reports problems, or that none were seen this time.')
     await expect(checkPage.locator('thead th')).toHaveText(['#', 'Problem', 'Where', 'People', 'Impact', 'Moment'])
     await expect(checkPage.locator('tbody tr')).toHaveCount(3)
-    await expect(checkPage.locator('tbody tr').nth(2)).toContainText('Share menu')
-    await expect(checkPage.locator('tbody td:last-child a')).toHaveText(['Person 3 · 00:58', 'Person 2 · 00:49', 'Person 1 · 00:04'])
-    await expect(checkPage.locator('tbody td:last-child a').first()).toHaveAttribute('href', '/r/k2m9#problem-1&t=58')
+    await expect(checkPage.locator('tbody tr').nth(2)).toContainText('pressed it again')
+    await expect(checkPage.locator('tbody tr td:nth-child(5)')).toHaveText(['Blocked', 'Slowed', 'Confused'])
+    await expect(checkPage.locator('tbody td:last-child a')).toHaveText(['Person 2 · 00:49', 'Person 1 · 00:04', 'Person 3 · 00:58'])
+    await expect(checkPage.locator('tbody td:last-child a').first()).toHaveAttribute('href', '/r/k2m9#problem-1&t=49')
     await expect(checkPage.locator('.pr-legend')).toHaveText('Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect')
     await expect(checkPage.locator('.pr-links a')).toHaveText(['Open the report', '+1 more problem', 'What worked'])
     await expect(checkPage.locator('.pr-links a').first()).toHaveAttribute('href', '/r/k2m9')
@@ -78,7 +80,7 @@ for (const width of [1440, 375]) {
     await expect(card.locator('h4')).toHaveText(text(drawn.querySelector('.moment h3')))
     await expect(card.locator('blockquote')).toHaveText(text(drawn.querySelector('blockquote')))
     await expect(card.locator('.replay-fix')).toHaveText(text(drawn.querySelector('.fix')))
-    expect(text(drawn.querySelector('.fix'))).toBe('Smallest changeOn press, change the button to "Invited sam@acme.co" and disable it.')
+    expect(text(drawn.querySelector('.fix'))).toBe('Smallest changeOn press, change the button to "Invited sam@acme.example" and disable it.')
     await expect(card.locator('.replay-clip img')).toHaveAttribute('src', '/sessions/p3-58.jpg')
     await expect(card.locator('.replay-play')).toHaveAttribute('aria-hidden', 'true')
     // The rail: a dot at each of the attempt's thirteen events at the artefact's positions, the three moments with their time and word,
@@ -91,14 +93,16 @@ for (const width of [1440, 375]) {
     expect(await rail.locator('.replay-dots li').evaluateAll(nodes => nodes.map(node => Number(node.getAttribute('data-at'))))).toEqual([0, 3, 5, 12, 19, 23, 27, 36, 41, 46, 58, 61, 63])
     expect(await rail.locator('.replay-dots li').evaluateAll(nodes => nodes.map(node => node.className))).toEqual(events.map(node => node.className.replace(/^mo /, '')))
     await expect(rail.locator('.replay-dots li span')).toHaveText(events.filter(node => node.querySelector('span')).map(node => text(node.querySelector('span'))))
-    await expect(rail.locator('.replay-dots li span')).toHaveText(['00:03Slowed', '00:23Confused', '00:58Blocked'])
+    await expect(rail.locator('.replay-dots li span')).toHaveText(['00:03Slowed', '00:23Confused', '00:58Confused'])
+    await expect(card.locator('.replay-who')).toHaveText('Person 3 · 00:58 · Confused')
+    await expect(rail.locator('.replay-ends > span').last()).toHaveText('01:03 Pressed Done · reached the goal, with two invitations')
     await expect(rail.locator('.replay-ends > span')).toHaveText([...drawn.querySelectorAll('.rail .ends > span')].map(node => text(node)))
-    // The dots: hollow 8px on the 2px line in the line colour; the moments 14px, filled in yellow, note violet and red, ringed in the canvas.
+    // The dots: hollow 8px on the 2px line in the line colour; the moments 14px, filled in yellow and note violet, ringed in the canvas.
     await expect(rail.locator('.replay-line')).toHaveCSS('height', '2px')
     await expect(rail.locator('.replay-line')).toHaveCSS('background-color', 'rgb(226, 226, 226)')
     const dots = await rail.locator('.replay-dots li i').evaluateAll(nodes => nodes.map(node => { const style = getComputedStyle(node); return [style.width, style.backgroundColor, style.boxShadow.includes('rgb(246, 246, 246)')] }))
     expect(dots.filter(([size]) => size === '8px')).toHaveLength(10)
-    expect(dots.filter(([size]) => size === '14px').map(([, colour, ring]) => [colour, ring])).toEqual([['rgb(139, 97, 0)', true], ['rgb(122, 65, 175)', true], ['rgb(189, 31, 68)', true]])
+    expect(dots.filter(([size]) => size === '14px').map(([, colour, ring]) => [colour, ring])).toEqual([['rgb(139, 97, 0)', true], ['rgb(122, 65, 175)', true], ['rgb(122, 65, 175)', true]])
     // An illustration: nothing in the piece takes focus or a press.
     await expect(replay.locator('a, button, input, video, [tabindex], [role="button"]')).toHaveCount(0)
     // The intro and the card on the 5/7 split at 1440, the card in the right seven and its clip 240px; the rail across all twelve.
@@ -142,16 +146,16 @@ for (const width of [1440, 375]) {
   test(`the report page /r/k2m9 as the list, from the run's data: the cards, their clips and moments, and the people at ${width}px`, async ({ page }) => {
     const errors = await open(page, '/r/k2m9', width)
     const report = page.locator('.run-report')
-    await expect(page.getByRole('heading', { level: 1 })).toHaveText('invite a colleague · Reached the goal: 2 of 5 · Problems found: 4, seen across all 5 people · Pressed Done, but your check failed: 2 of 5')
+    await expect(page.getByRole('heading', { level: 1 })).toHaveText('invite a colleague · Reached the goal: 4 of 5 · Problems found: 4, seen across all 5 people')
     await expect(report.locator('.rr-crumb')).toContainText('5 people from a paid panel (Prolific, CloudResearch Connect)')
     await expect(report.locator('.rr-legend')).toHaveText('Blocked kept them from the goal · Slowed cost them time · Confused did something that had no effect')
     // Issue #49, item 3: one card per problem, worst first by impact then count, what worked as the last card.
     const cards = report.locator('.rr-card')
     await expect(cards.locator('.rr-what > b')).toHaveText(titles)
     await expect(cards.locator('.rr-rank')).toHaveText(['1', '2', '3', '4', ''])
-    await expect(cards.locator('.rr-impact')).toHaveText(['Blocked', 'Blocked', 'Slowed', 'Confused', 'Worked'])
-    await expect(cards.locator('.rr-where')).toHaveText(['/settings/members · button "Add"', '/settings/members · button "Add"', '/board · menu "Share"', '/board · field "Search"', '/settings · tab "Members"'])
-    await expect(cards.locator('.rr-count')).toHaveText(['2 of 5', '1 of 5', '4 of 5', '2 of 5', '5 of 5'])
+    await expect(cards.locator('.rr-impact')).toHaveText(['Blocked', 'Slowed', 'Confused', 'Confused', 'Worked'])
+    await expect(cards.locator('.rr-where')).toHaveText(['/settings/members · button "Add"', '/board · menu "Share"', '/settings/members · button "Add"', '/board · field "Search"', '/settings · tab "Members"'])
+    await expect(cards.locator('.rr-count')).toHaveText(['1 of 5', '4 of 5', '2 of 5', '2 of 5', '5 of 5'])
     // The cards' words are design/artefacts/run-report-list.html's, verbatim: the sentence, the impact, where, x of n and the quote.
     const { parseHTML } = await import('linkedom')
     const list = [...parseHTML(await readFile('design/artefacts/run-report-list.html', 'utf8')).document.querySelectorAll('.rep .pcard')]
@@ -160,15 +164,15 @@ for (const width of [1440, 375]) {
     await expect(cards.locator('.rr-impact')).toHaveText(words('.hd .impact'))
     await expect(cards.locator('.rr-where')).toHaveText(words('.hd .where'))
     await expect(cards.locator('.rr-quote')).toHaveText(words('.q'))
-    await expect(cards.nth(2).locator('.rr-marks')).toHaveAttribute('aria-label', 'Hit by Person 1, Person 2, Person 3, Person 5')
-    await expect(cards.nth(2).locator('.rr-marks i.on')).toHaveText(['1', '2', '3', '5'])
+    await expect(cards.nth(1).locator('.rr-marks')).toHaveAttribute('aria-label', 'Hit by Person 1, Person 2, Person 3, Person 5')
+    await expect(cards.nth(1).locator('.rr-marks i.on')).toHaveText(['1', '2', '3', '5'])
     await expect(cards.last()).toHaveAttribute('id', 'worked')
     await expect(cards.last().locator('.rr-clip, .rr-quote, .rr-chip, .rr-fix')).toHaveCount(0)
     // Each problem card: the words and who said them, the moments as play chips, the suggested change, and the clip on the right.
-    const first = report.locator('#problem-1')
+    const first = report.locator('#problem-3')
     await expect(first.locator('.rr-quote')).toHaveText("I wasn't sure the first Add did anything, so I pressed it again.Person 3, after the task")
     await expect(first.locator('.rr-chip')).toHaveText(['Person 3 · 00:58', 'Person 4 · 00:41'])
-    await expect(first.locator('.rr-fix')).toHaveText('On press, change the button to "Invited sam@acme.co" and disable it.')
+    await expect(first.locator('.rr-fix')).toHaveText('On press, change the button to "Invited sam@acme.example" and disable it.')
     await expect(first.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p3.webm#t=58')
     await expect(first.locator('.rr-secs')).toHaveText('00:58')
     await expect(report.locator('.rr-clip')).toHaveCount(4)
@@ -176,7 +180,7 @@ for (const width of [1440, 375]) {
     await expect(report.locator('.rr-pane, .rr-row, .is-sel, .rr-copy')).toHaveCount(0)
     await expect(report.getByRole('button', { name: 'Copy as an issue' })).toHaveCount(0)
     // A moment chip plays that person's clip in its card, from that second.
-    const share = report.locator('#problem-3')
+    const share = report.locator('#problem-2')
     await expect(share.locator('.rr-chip')).toHaveText(['Person 1 · 00:04', 'Person 2 · 00:06', 'Person 3 · 00:03', 'Person 5 · 00:09'])
     await expect(share.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p1.webm#t=4')
     await share.getByRole('button', { name: 'Person 5 · 00:09', exact: true }).click()
@@ -189,12 +193,12 @@ for (const width of [1440, 375]) {
     await share.getByRole('button', { name: /^Pause Person 5 · 00:09/ }).click()
     // The people in a strip under the cards, each linking to their attempt.
     const strip = report.locator('.rr-strip a')
-    await expect(strip).toHaveText([/^Person 1Reached the goal0:57 · ease 4 of 7 · Pressed Done$/, /^Person 2Did not reach it0:53 · ease 2 of 7 · Pressed I couldn't do this$/, /^Person 3Did not reach it1:03 · ease 3 of 7 · Pressed Done$/, /^Person 4Did not reach it0:47 · ease 4 of 7 · Pressed Done$/, /^Person 5Reached the goal0:52 · ease 5 of 7 · Pressed Done$/])
+    await expect(strip).toHaveText([/^Person 1Reached the goal0:57 · ease 4 of 7 · Pressed Done$/, /^Person 2Did not reach it0:53 · ease 2 of 7 · Pressed I couldn't do this$/, /^Person 3Reached the goal1:03 · ease 3 of 7 · Pressed Done$/, /^Person 4Reached the goal0:47 · ease 4 of 7 · Pressed Done$/, /^Person 5Reached the goal0:52 · ease 5 of 7 · Pressed Done$/])
     for (let n = 1; n <= 5; n++) await expect(strip.nth(n - 1)).toHaveAttribute('href', `/r/k2m9/p${n}`)
     const [lastCard, firstPerson] = await Promise.all([cards.last().boundingBox(), strip.first().boundingBox()])
     expect(firstPerson!.y).toBeGreaterThan(lastCard!.y + lastCard!.height)
     // The closing line: the study-wide answers, the first look, who took part, the environment and the caveat.
-    await expect(report.locator('.rr-foot')).toHaveText('After the goal: would it help them 4 of 5 · easy to use 2 of 5 · First look: named the purpose 4 of 5, first click on your path 3 of 5 · Who took part: 5 people from a paid panel (Prolific, CloudResearch Connect), screened as signed up for a planning tool this week · desktop Chromium, 1280×800 · Found automatically from what people did; it can miss problems. Watch the clips.')
+    await expect(report.locator('.rr-foot')).toHaveText('After the goal: would it help them 4 of 5 · easy to use 2 of 5 · First look: named the purpose 4 of 5, first click on your path 3 of 5 · Who took part: 5 people from a paid panel (Prolific, CloudResearch Connect), screened as planning work with a team in a shared tool · desktop Chromium, 1280×800 · Found automatically from what people did; it can miss problems. Watch the clips.')
     expect(offences(await report.innerText(), shown)).toEqual([])
 
     const [text, clip] = await Promise.all([first.locator('.rr-text').boundingBox(), first.locator('.rr-clip').boundingBox()])
@@ -217,17 +221,17 @@ for (const width of [1440, 375]) {
 
 test('the check links open the problem at the moment; each person opens their attempt; the share link is signed and white-labelled', async ({ page, context }) => {
   // The check's moment link opens its card, in view, with that person's clip from that second.
-  await page.goto('/r/k2m9#problem-3&t=9')
-  const card = page.locator('#problem-3')
+  await page.goto('/r/k2m9#problem-2&t=9')
+  const card = page.locator('#problem-2')
   await expect(card.locator('.rr-clip video')).toHaveAttribute('src', '/sessions/p5.webm#t=9')
   await expect(card.getByRole('button', { name: 'Person 5 · 00:09', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(card).toBeInViewport()
-  await page.goto('/r/k2m9#problem-2&t=49')
-  await expect(page.locator('#problem-2 .rr-clip video')).toHaveAttribute('src', '/sessions/p2.webm#t=49')
+  await page.goto('/r/k2m9#problem-1&t=49')
+  await expect(page.locator('#problem-1 .rr-clip video')).toHaveAttribute('src', '/sessions/p2.webm#t=49')
   // Each person links to their attempt, where everything about that person lives.
   await page.locator('.rr-strip a').nth(3).click()
   await expect(page).toHaveURL(/\/r\/k2m9\/p4$/)
-  await expect(page.locator('.attempt-headline')).toHaveText('Person 4 did not reach the goal.')
+  await expect(page.locator('.attempt-headline')).toHaveText('Person 4 reached the goal.')
   await expect(page.locator('.attempt-foot')).toContainText('Person 4 of 5 · paid panel (Prolific)')
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   // The author's page offers the signed link; it opens the report without the site's header, and its people link to signed attempts.
@@ -248,7 +252,7 @@ test('the check links open the problem at the moment; each person opens their at
 for (const width of [1440, 375]) test(`the attempt page /r/k2m9/p3 renders the attempt view with no empty block at ${width}px`, async ({ page }) => {
   const errors = await open(page, '/r/k2m9/p3', width)
   const view = page.locator('[data-artefact="attempt-view"]')
-  await expect(view.locator('.attempt-headline')).toHaveText('Person 3 did not reach the goal.')
+  await expect(view.locator('.attempt-headline')).toHaveText('Person 3 reached the goal.')
   // Issue #46, item 5: the guide's `.track` rule gave each clip's scrub line a 96px margin and 48px padding, an empty grey block
   // over the second moment's heading at 375. The scrub line stays a 2px line inside its own strip, under the clip.
   for (const card of await view.locator('.moment-card').all()) {

@@ -79,12 +79,12 @@ it('renders every terminal surface and fragment in the new words only', async ()
   }
   const { stdout } = await exec(process.execPath, ['packages/ui-tests/bin/ui-tests.mjs', 'report', 'apps/web/generated/example-report.json'], { env: { ...process.env, FORCE_COLOR: '0' }, timeout: 10000 })
   expect(offences(stdout, shown)).toEqual([])
-  expect(stdout).toContain('Reached the goal: 2 of 5.')
-  // The goal has a check: two pressed Done but the check failed, and "Wrong, and sure" is never shown for it.
-  expect(stdout).toContain('Pressed Done, but your check failed: 2 of 5.')
+  expect(stdout).toContain('Reached the goal: 4 of 5.')
+  // The goal has a check: nobody pressed Done while the check failed, and "Wrong, and sure" is never shown for it.
+  expect(stdout).not.toContain('Pressed Done, but your check failed')
   expect(stdout).toContain('Problems found: 4, seen across all 5 people.')
   expect(stdout).not.toContain('Wrong, and sure')
-  expect(stdout.split('\n').filter(line => /^[▏ ]\d/.test(line)).map(line => line.slice(10, 20).trim())).toEqual(['blocked', 'blocked', 'slowed', 'confused'])
+  expect(stdout.split('\n').filter(line => /^[▏ ]\d/.test(line)).map(line => line.slice(10, 20).trim())).toEqual(['blocked', 'slowed', 'confused', 'confused'])
 }, 20000)
 
 it('shows "Wrong, and sure" only at 7 of 7, the goal not reached and without a check, and ranks problems by impact then by people', async () => {
@@ -99,10 +99,10 @@ it('shows "Wrong, and sure" only at 7 of 7, the goal not reached and without a c
   expect(stdout).toContain('Wrong, and sure: 1 of 5.')
   expect(ranked([{ title: 'a', people: 4, impact: 'confused' }, { title: 'b', people: 2, impact: 'slowed' }, { title: 'c', people: 1, impact: 'blocked' }, { title: 'd', people: 3, impact: 'slowed' }]).map(p => p.title)).toEqual(['c', 'd', 'b', 'a'])
   const { wrongAndSure } = await import('../apps/web/lib/attempts')
-  const p3 = (await import('../apps/web/lib/attempts')).attempt('p3')
-  expect(wrongAndSure(p3)).toBe(false)
-  expect(wrongAndSure({ ...p3, sure: 7 })).toBe(true)
-  expect(wrongAndSure({ ...p3, sure: 7, reached: 'yes' })).toBe(false)
+  const p2 = (await import('../apps/web/lib/attempts')).attempt('p2')
+  expect(wrongAndSure(p2)).toBe(false)
+  expect(wrongAndSure({ ...p2, sure: 7 })).toBe(true)
+  expect(wrongAndSure({ ...p2, sure: 7, reached: 'yes' })).toBe(false)
   // Weekboard's goal has a check, so the attempt view says the check failed instead (attempt-view.tsx reads `!run.check`).
   expect(await readFile('apps/web/components/artefacts/attempt-view.tsx', 'utf8')).toContain('!run.check && wrongAndSure(shown)')
 }, 20000)
@@ -112,13 +112,14 @@ it('catches the old labels of issue #35, item 4, and lets the new ones through',
   for (const now of ['Moments', 'Watch the clips.', 'the moment to watch', 'Suggested change', 'Problems found: 4, seen across all 5 people.', 'Person 3 · 00:03']) expect(offences(now, was), now).toEqual([])
 })
 
-it('ranks the Share-menu problem third on the report rows, the check and the Ink output', async () => {
+it('ranks the Share-menu problem second, behind the switched-off Add, on the report rows, the check and the Ink output', async () => {
   const { findings, exampleCheck } = await import('../apps/web/lib/pull-request')
   const report = JSON.parse(await readFile('apps/web/generated/example-report.json', 'utf8'))
-  expect(findings[2]).toMatchObject({ rank: 3, impact: 'slowed', people: [1, 2, 3, 5] })
-  expect(findings[2].title).toContain('Share menu')
-  expect(exampleCheck.problems[2].title).toContain('Share menu')
-  expect(report.problems[2].title).toContain('Share menu')
+  expect(findings[1]).toMatchObject({ rank: 2, impact: 'slowed', people: [1, 2, 3, 5] })
+  expect(findings[1].title).toContain('Share menu')
+  expect(findings[2]).toMatchObject({ rank: 3, impact: 'confused', people: [3, 4] })
+  expect(exampleCheck.problems[1].title).toContain('Share menu')
+  expect(report.problems[1].title).toContain('Share menu')
 }, 20000)
 
 it('writes the rehearsal trace page in the new words', async () => {
@@ -127,7 +128,7 @@ it('writes the rehearsal trace page in the new words', async () => {
   const { renderTrace } = await import('../packages/ui-tests/src/trace')
   const store = new SQLiteAdapter(':memory:')
   try {
-    const run = store.create(compile([{ users: 'people who plan work', purpose: 'plan the week', goals: [{ name: 'invite a colleague', options: { happyPath: ['/board', '/settings/members'] }, tasks: [], outcomes: [() => {}], source: 'test' }], source: 'test' }])[0])
+    const run = store.create(compile([{ name: 'invite flow', users: 'people who plan work', purpose: 'plan the week', goals: [{ name: 'invite a colleague', options: { path: ['/board', '/settings/members'] }, outcomes: [() => {}], source: 'test' }], source: 'test' }])[0])
     Object.assign(run, { reason: "couldn't do this", seq: 2, confidence: 6, afterGoal: { ease: 2, usefulness: 4 }, result: { reached: 'no', reason: "How it ended: pressed I couldn't do this" }, endedAt: run.startedAt + 63000 })
     const { document } = parseHTML(renderTrace(run, [{ type: 'pause', at: run.startedAt + 5000, url: 'http://localhost/board', stoppedMs: 7000 }, { type: 'url', at: run.startedAt + 12000, url: 'http://localhost/board/link' }]))
     // Raw records (the stored result, events and compiled context) keep their field names; everything a person reads uses the new words.
