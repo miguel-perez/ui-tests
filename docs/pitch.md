@@ -62,7 +62,7 @@ This does not test traction. That is fine.
 
 ## Defaults
 
-- **CI**: advisory check by default, configurable to blocking per context. Never pays participants on every push.
+- **CI**: a neutral check by default that never fails the build; `check: { block_on: 'problems' }` in the config makes it fail when a completed run finds problems. Never pays participants on every push.
 - **Sample size**: no modes. A goal states the smallest problem occurrence it wants to catch and the confidence it wants of seeing it; the runner derives n (problems hitting one in three users at 85% confidence gives five). A precision target derives a larger n the same way. The sentence states what the number supports.
 - **Results**: a problem-catching goal reports "problems found" or "none found at this n", never pass. Pass and fail exist only for a goal that asked for an estimate, with a power statement. Findings are reported at the level they belong to: the UI, the goal, or the context.
 - **Success**: defined by the author's hooks, run in the runner, never in the app under test. A participant's own judgement is recorded as data.

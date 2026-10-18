@@ -19,12 +19,12 @@ Any framework can implement the recorder and collector contract; it is a handful
 
 ## Reachability
 
-Participants have to reach the build. The mode is declared in the config, shown in the trace, and limits what a run can license. The link `ui-tests run` prints can point at a branch preview, at the author's laptop through a tunnel, or at the live site: the first three rows.
+Participants have to reach the build. The mode is declared in the config, shown in the trace, and limits what a run can license. The link `ui-tests recruit` prints (runs with people are not shipped yet: [#71](https://github.com/miguel-perez/ui-tests/issues/71)) can point at a branch preview, at the author's laptop through a tunnel, or at the live site: the first three rows.
 
 | Mode | How participants reach the build | Where the collector and store live | Limit |
 | --- | --- | --- | --- |
 | Public preview | A Vercel preview with the protection-bypass token in the invite link | In the app; the Postgres store | Needs a deployment |
-| Tunnel from a local machine | `ui-tests run --tunnel` opens a short-lived cloudflared or ngrok tunnel to `localhost`, scoped to the run and closed at the deadline or when the process exits, whichever is first | On the dev machine; SQLite | The machine must stay up, so it fits a run the author watches for a few hours: rehearsal, or a link sent to a few people. A longer or unattended run, a paid-panel run, which stays open until its deadline (48 hours unless the author sets one), and the visitors source, which listens all the time, need `ui-tests host`, which is not shipped yet ([#59](https://github.com/miguel-perez/ui-tests/issues/59); [`../discovery/hosting-decision.md`](../discovery/hosting-decision.md)). See "When the laptop closes" below |
+| Tunnel from a local machine | `ui-tests recruit --tunnel` opens a short-lived cloudflared or ngrok tunnel to `localhost`, scoped to the run and closed at the deadline or when the process exits, whichever is first | On the dev machine; SQLite | The machine must stay up, so it fits a run the author watches for a few hours: rehearsal, or a link sent to a few people. A longer or unattended run, a paid-panel run, which stays open until its deadline (48 hours unless the author sets one), and the visitors source, which listens all the time, need `ui-tests host`, which is not shipped yet ([#59](https://github.com/miguel-perez/ui-tests/issues/59); [`../discovery/hosting-decision.md`](../discovery/hosting-decision.md)). See "When the laptop closes" below |
 | The author's deploy | Participants reach the live site | The collector and store live on the deploy | The provider's free tier |
 | Inside the perimeter | Invite links on the internal hostname; collector, store and runner all run inside; nothing crosses the boundary unless the author exports the record | Inside | Participants must be inside too: employees, a lab, a LAN; panels and the hosted track do not apply |
 | Local only | As inside, with the runner on the same box and participants in the room | On the box | Hallway testing with a recorder and a trace |
@@ -33,20 +33,20 @@ The tunnel URL alone opens nothing: every request through it needs the participa
 
 ### When the laptop closes
 
-A tunnel run lives as long as the machine. If the laptop closes, sleeps or loses its connection, or the process exits, mid-run:
+A tunnel run comes with `recruit`, which is not shipped yet ([#71](https://github.com/miguel-perez/ui-tests/issues/71)); it lives as long as the machine. If the laptop closes, sleeps or loses its connection, or the process exits, mid-run:
 
 - The link goes dark: anyone who opens it reaches nothing.
 - Attempts in progress are lost. The person's page can no longer reach the collector. Its retry buffer (IndexedDB, in the person's browser; [`06-nonfunctional.md`](06-nonfunctional.md#performance-and-reliability)) keeps unsent events and replays them if the collector comes back while that page is still open; once the person closes the page, unsent events are discarded with it. What arrived of the attempt is kept as `disconnected`, never `incorrect`, and it does not count toward n. Where the consent promised pay, that person is still owed it.
 - Attempts already received are kept, with their recordings, in the SQLite store on the machine.
-- The same run resumes: the next `ui-tests run` from the same commit, context and actor derives the same key, returns the same run, and reopens the tunnel. Nothing is created twice.
+- The same run resumes: the next `ui-tests recruit` from the same commit, study and actor derives the same key, returns the same run, and reopens the tunnel. Nothing is created twice.
 - The deadline keeps counting from the run's start; it does not pause while the machine is closed. A run that reaches its deadline closed ends as any run does then, inconclusive if fewer than n attempts came in.
-- A tunnel whose address changes on each start (a quick tunnel) leaves the link sent before dark; `run` prints the new link to send. A named tunnel keeps its address, and the old link works again.
+- A tunnel whose address changes on each start (a quick tunnel) leaves the link sent before dark; `recruit` prints the new link to send. A named tunnel keeps its address, and the old link works again.
 
 The tunnel fits a run watched for a few hours. A longer or unattended run needs `ui-tests host`, which is always up once it ships (not shipped yet: [#59](https://github.com/miguel-perez/ui-tests/issues/59); [`../discovery/hosting-decision.md`](../discovery/hosting-decision.md)). A remote browser hosted inside a perimeter and streamed to an outside participant is a planned omission; the player and collector never assume they are public, and the runner only ever talks to the store, so it slots in without changing the contract.
 
 ## The run handle
 
-`ui-tests run` derives an idempotency key from the commit, the context id (itself derived from users and purpose) and the actor, or takes one with `--key`, creates the run, and exits. A repeated key returns the existing run; a lost response never creates a second paid run. The run is a durable record with independent states:
+`ui-tests recruit` derives an idempotency key from the commit, the context id (itself derived from users and purpose) and the actor, or takes one with `--key`, creates the run, and exits. A repeated key returns the existing run; a lost response never creates a second paid run. The run is a durable record with independent states:
 
 ```json
 {
@@ -74,7 +74,7 @@ Completion is observable three ways: poll `ui-tests status`, a webhook the store
 
 ## GitHub
 
-The action posts one check run named `ui-tests` on the commit for a human run; an agent run posts its own, `ui-tests (agent)`, which never counts with people ([`04-agent-studies.md`](04-agent-studies.md)). While pending its summary is the estimate. On completion its conclusion is `neutral` for every outcome, so it never fails the build or blocks a merge, even when a team marks it required; with `check: { block_on: 'problems' }` in the config it is `failure` when a completed run found problems, and only then; an inconclusive run, with fewer attempts completed than it asked for, stays `neutral` with or without `block_on`. Its mark in the merge box is neutral, never red or green.
+`npx ui-tests check` posts one check run named `ui-tests` on the commit for a human run (starting the run from CI is not shipped yet: [#69](https://github.com/miguel-perez/ui-tests/issues/69); today `npx ui-tests check <run.json>` publishes the check from a run summary); an agent run posts its own, `ui-tests (agent)`, which never counts with people ([`04-agent-studies.md`](04-agent-studies.md); agent runs are not shipped yet: [#72](https://github.com/miguel-perez/ui-tests/issues/72)). While pending its summary is the estimate. On completion its conclusion is `neutral` for every outcome, so it never fails the build or blocks a merge, even when a team marks it required; with `check: { block_on: 'problems' }` in the config it is `failure` when a completed run found problems, and only then; an inconclusive run, with fewer attempts completed than it asked for, stays `neutral` with or without `block_on`. Its mark in the merge box is neutral, never red or green.
 
 Its title, one line in the merge box, is one of three:
 

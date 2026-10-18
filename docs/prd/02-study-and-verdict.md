@@ -19,7 +19,7 @@
 | `questions` | UX-Lite, two items, usefulness and ease | yes |
 | `sample` | n, derived (below) | no |
 | `sentenceRule` | derived (below) | no |
-| `consent`, `instructions` | standing text with the recording level (event replay always, screen video when `video: true`), the payout line (the amount, or that a `link` run is unpaid; [`03-participants.md`](03-participants.md#the-payout-line)) and purposes filled in | yes |
+| `consent`, `instructions` | standing text with the recording level (event replay always, screen video when `record: 'video'`), the payout line (the amount, or that a `link` run is unpaid; [`03-participants.md`](03-participants.md#the-payout-line)) and purposes filled in | yes |
 
 ## The ladder the report reads
 
@@ -72,7 +72,7 @@ Time on goal starts when the scenario card is dismissed and the target is ready,
 | Environment | usual browser, device and assistive technology from the screener; accommodation is never a quality flag |
 | Quality flags | speeder under half the median, failed attention item; flagged, never auto-excluded. A duplicate device or IP across runs of the same project is the one exception: excluded from n and still paid |
 
-Event replay (what the person does on the page: clicks, typing without its values, pages) is always recorded. Screen video, when the context sets `video: true`, needs the browser's prompt, attaches to the attempt and applies the 1.5× recording multiplier to the incentive's hourly term ([`03-participants.md`](03-participants.md)). Voice is the person's choice and the camera is off; neither is an author field.
+Event replay (what the person does on the page: clicks, typing without its values, pages) is always recorded. Screen video, when the study sets `record: 'video'`, needs the browser's prompt, attaches to the attempt and applies the 1.5× recording multiplier to the incentive's hourly term ([`03-participants.md`](03-participants.md)). Voice is the person's choice and the camera is off; neither is an author field.
 
 ## Sample size
 
