@@ -643,7 +643,7 @@ You type, once the attempts are in:
 
 Then, for the pull request, put `npx ui-tests check` in the job that deploys your preview. It starts one run per pull request within the cap in your config, asks nothing, and the check waits while people take part, then turns neutral. A push during the run starts nothing new. On the next pull request you see the check:
 
-check: starting the run from CI is not shipped yet; today it publishes the check from a run summary. See https://github.com/miguel-perez/ui-tests/issues/69
+check: starting the run from CI is not shipped yet; today npx ui-tests check run.json publishes the check from a run summary you pass it. See https://github.com/miguel-perez/ui-tests/issues/69
 
 ## Commands
 
@@ -658,6 +658,14 @@ npx ui-tests recruit
 npx ui-tests check
 
 npx ui-tests report k2m9
+
+## Not shipped yet
+
+check: starting the run from CI is not shipped yet; today npx ui-tests check run.json publishes the check from a run summary you pass it. See https://github.com/miguel-perez/ui-tests/issues/69
+
+recruit: runs with people are not shipped yet; today it prints the plan and stops. See https://github.com/miguel-perez/ui-tests/issues/71
+
+--actor agent: agent runs are not shipped yet; today it prints the plan and stops. See https://github.com/miguel-perez/ui-tests/issues/72
 
 ## Site navigation and controls
 

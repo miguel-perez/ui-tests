@@ -17,7 +17,8 @@
     "./colours": "./src/colours.ts",
     "./check": "./src/check.ts",
     "./example": "./src/example.ts",
-    "./host": "./src/host.ts"
+    "./host": "./src/host.ts",
+    "./slice": "./src/slice.ts"
   },
   "dependencies": {
     "@inkjs/ui": "2.0.0",

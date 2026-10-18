@@ -14,6 +14,7 @@ import { runSetup, type Context, type Fixtures } from './index.ts'
 import { printTerminal, impacts, type Report } from './report.tsx'
 import { parseCheckRun, publishCheck, checkRunPayload, stickyComment, type CheckOptions } from './check.ts'
 import { hostArgs, hostHelp, hostPlan, hostCaveat } from './host.ts'
+import { agentIssue, recruitIssue } from './slice.ts'
 const print = (text: string) => printTerminal({ lines: text.split('\n') })
 
 const args = process.argv.slice(2)
@@ -110,7 +111,10 @@ export const help = `Usage: ui-tests [command] [options]
   npx ui-tests init        Writes a study file and a config, and prints the three lines to mount in your app.
   npx ui-tests             Runs the whole study on you, in your browser. Recruits nobody, costs nothing.
   npx ui-tests recruit     Runs it with real people. Shows the plan and the price, and asks first.
-  npx ui-tests check       In the job that deploys your preview: a check on the pull request.
+                           Not shipped yet: prints the plan and stops (issue #71).
+  npx ui-tests check <run.json>
+                           In the job that deploys your preview: a check on the pull request.
+                           Today it publishes the check from a run summary; starting the run is issue #69.
 
   npx ui-tests lint        Compiles the study file and prints the plan.
   npx ui-tests report <id> Prints a run's report.
@@ -118,7 +122,7 @@ export const help = `Usage: ui-tests [command] [options]
 
 Options:
   --file <path>            the study file (default: the first *.ui.test.ts)
-  --actor human|agent      who takes the study (default: human)
+  --actor human|agent      who takes the study (default: human); agent runs are not shipped yet (issue #72)
   --no-open                print the links instead of opening them
   --help                   print this help`
 /** Opens Playwright's `request` against the target, for `setup` and `outcome`. */
@@ -186,8 +190,8 @@ async function main() {
   // The plan: who, what is recorded and where each task starts, before anything runs; `recruit` adds where the people come from and the cap.
   console.log(plan(result.compiled, command === 'recruit' ? { cap: config.budget?.max } : undefined))
   if (command === 'lint') { console.log(`Compiled ${file}: ${result.bundle.replace(/hooks-.*$/, 'context.json')}`); return }
-  if (command === 'recruit') throw new Error('Runs with people are not part of this slice yet. npx ui-tests rehearses the plan above on you.')
-  if (actor === 'agent') throw new Error('Agent runs are not part of this slice yet. npx ui-tests rehearses the plan above on you.')
+  if (command === 'recruit') throw new Error(`Runs with people are not part of this slice yet. npx ui-tests rehearses the plan above on you. See ${recruitIssue}`)
+  if (actor === 'agent') throw new Error(`Agent runs are not part of this slice yet. npx ui-tests rehearses the plan above on you. See ${agentIssue}`)
   if (command !== 'dev') throw new Error(`Unknown command: ${command}`)
   const store = new SQLiteAdapter()
   const selectedContext = option('--context'), selectedGoal = option('--goal')

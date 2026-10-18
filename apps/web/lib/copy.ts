@@ -1,6 +1,6 @@
 import { exampleFile, exampleFileName } from 'ui-tests/example'
 import { hostCaveat, hostIssue } from 'ui-tests/host'
-import { checkCaveat, checkIssue } from 'ui-tests/check'
+import { checkCaveat, checkIssue, recruitCaveat, agentCaveat } from 'ui-tests/slice'
 
 /** Approved D2 copy. README parity tests cover every exported string. */
 export const promise = 'See where people get stuck on what you just shipped.'
@@ -236,3 +236,8 @@ Deploying to your account…
 /** The footer's links (issue #51): the author's site, the licence and the new-issue page; the header already links to GitHub. */
 export const footer = { site: 'miguel.design', licence: 'Open source MIT licence', report: 'Report a bug or suggest an improvement', label: 'About ui-tests' }
 export const ui = { wordmark: 'ui-tests', guide: 'Guide', github: 'GitHub', getStarted: 'Get started', skip: 'Skip to content', navigation: 'Main navigation', steps: 'Getting started', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy. Select and copy the code.', typescript: 'TypeScript', shell: 'Shell', output: 'Output', example: 'Example run' }
+/**
+ * What the landing promises and this slice does not ship yet (issue #68; `ui-tests/slice`): the landing keeps the designed contract,
+ * and the README says what runs today, one line per command with its issue, as the guide does for `check` and `host` does with #59.
+ */
+export const notShipped = { title: 'Not shipped yet', lines: [checkCaveat, recruitCaveat, agentCaveat] }

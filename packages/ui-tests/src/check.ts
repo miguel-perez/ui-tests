@@ -17,8 +17,7 @@ export { impacts, ranked, legend, legendLine, caveat, problemsLine, type Impact 
  * under the config's cap. Today it publishes the check from a run summary you pass it; starting the run itself is issue #69, and the
  * guide says so in one line until then, as `host` does with #59.
  */
-export const checkIssue = 'https://github.com/miguel-perez/ui-tests/issues/69'
-export const checkCaveat = `check: starting the run from CI is not shipped yet; today it publishes the check from a run summary. See ${checkIssue}`
+export { checkIssue, checkCaveat } from './slice.ts'
 
 /** One problem as the check shows it: the sentence about the design, the page and element, how many people, the impact and the moment to watch. */
 export type CheckProblem = { title: string; page: string; locator: string; people: number; impact: Impact; moment?: { person: number; seconds: number; url: string } }
