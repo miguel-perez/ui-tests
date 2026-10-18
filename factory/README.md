@@ -1,9 +1,9 @@
 # archon-factory
 
 Autonomous delivery for a GitHub repository: Archon implements a task from an
-issue comment on an isolated branch, CodeRabbit reviews the pull request, and
-GitHub's protected auto-merge merges it once review, CI and conversations are
-satisfied. This repository holds the machinery; consumers vendor it as a git
+issue comment on an isolated branch, a model reviewer (an Opus subagent) reviews
+the pull request head and records a verdict, and GitHub's protected auto-merge
+merges it once that verdict, CI and conversations are satisfied. This repository holds the machinery; consumers vendor it as a git
 subtree and install a small payload at their root.
 
 ## Adopt in a repository
@@ -21,7 +21,7 @@ node factory/check.mjs
 
 - Managed copies, overwritten on every install and checked by `check.mjs`:
   `.github/workflows/{merge-gate,review-event,delivery-status}.yml`,
-  `.archon/commands/`, `.archon/workflows/`, `.coderabbit.yaml`.
+  `.archon/commands/`, `.archon/workflows/`.
 - `.archon/factory-managed.json`: the sorted list of managed paths from the
   last install. Commit it. A later install deletes managed files the payload no
   longer ships (reported as `removed`), and `check.mjs` reports leftovers as
@@ -44,19 +44,20 @@ back with `git subtree push --prefix=factory git@github.com:miguel-perez/archon-
 
 ## GitHub configuration
 
-- Install the CodeRabbit GitHub App on the repository.
-- Protect `main`: required checks `Automation CI` and `CodeRabbit approval`,
-  one approving review, dismiss stale approvals, require conversation
-  resolution, enforce for admins, no force pushes or deletions.
+- Protect `main`: required checks `Automation CI` and `Review approval`,
+  require branches to be up to date, require conversation resolution, enforce for admins, no force pushes or deletions.
 - Allow squash merges and auto-merge; delete branches on merge.
 - Set the repository variable `AUTOMERGE_ENABLED=true` once protections exist.
   `false` stops new auto-merge requests; pause a PR already enabled with
   `gh pr merge NUMBER --disable-auto`.
 
 The merge gate (`automation/merge_gate.py`) runs only trusted default-branch
-code. It enables auto-merge solely when CodeRabbit's actual APPROVED review is
-on the current head and CI succeeded. Missing, stale, dismissed or skipped
-reviews never merge.
+code. It publishes the required `Review approval` status and enables auto-merge solely
+when the model reviewer's `Model review` commit status is `success` on the
+current head (recorded with `review-state.mjs record`, created by a user, never by
+`github-actions[bot]`), no reviewer has outstanding requested changes, and
+`Automation CI` succeeded. A missing, stale (new head), failed or workflow-created
+verdict never merges; API failures publish an error and stay blocked.
 
 ## Start a task
 
@@ -66,7 +67,7 @@ Create an issue with the behavior and acceptance criteria, then comment:
 @archon /workflow run autonomous-delivery Implement this issue and satisfy its acceptance criteria.
 ```
 
-Archon handles at most five cumulative CodeRabbit correction rounds across runs
+Archon handles at most five cumulative correction rounds across runs
 and continuations; a sixth is never attempted and the PR stays open with a
 blocker report. From the consumer root:
 

@@ -1,6 +1,6 @@
 name: autonomous-pr-retry
 description: |
-  Resume an existing pull request through CodeRabbit fixes, CI validation, and
+  Resume an existing pull request through model-review fixes, CI validation, and
   automatic squash merge. Run on the PR's exact branch with --branch and supply
   --input pr=<number>. Use after a delivery stopped or to handle an existing PR
   without having the user review it.

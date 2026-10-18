@@ -13,7 +13,7 @@ observe:
   state: approved
   head_sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
   feedback_file: /tmp/example-review.json
-  summary: CodeRabbit approved the current commit and CI passed.
+  summary: The model reviewer reported no open finding on the current commit and CI passed.
 verify:
   state: approved
   head_sha: aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa

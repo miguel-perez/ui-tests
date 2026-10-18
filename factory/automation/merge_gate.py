@@ -1,7 +1,7 @@
 """Publish a required review status, then let GitHub enforce merge requirements.
 
 Run only from trusted default-branch code. No PR contents or review text are
-executed. A completed CodeRabbit check is not an approval.
+executed. Only the model reviewer's recorded verdict on this exact head counts.
 """
 
 import json
@@ -15,40 +15,49 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 
-CONTEXT = "CodeRabbit approval"
-REVIEWER = "coderabbitai[bot]"
+CONTEXT = "Review approval"
+MODEL_REVIEW = "Model review"
 CI_CHECK = "Automation CI"
 GITHUB_ACTIONS_APP_ID = 15368
 
 
-def review_status(pr, reviews, repository, default_branch):
-    """Require the latest submitted CodeRabbit decision on this exact head."""
+def changes_requested(reviews):
+    """True when any reviewer's latest submitted decision asks for changes."""
+    latest = {}
+    for review in reviews:
+        if review.get("submitted_at") and review.get("state") not in ("PENDING", "COMMENTED"):
+            latest[review.get("user", {}).get("login")] = review.get("state")
+    return "CHANGES_REQUESTED" in latest.values()
+
+
+def review_status(pr, statuses, repository, default_branch, reviews=()):
+    """Require the model reviewer's success verdict, recorded on this exact head."""
     if pr.get("state") != "open" or pr.get("draft"):
         return "pending", "Waiting for a ready, open pull request"
     if pr.get("base", {}).get("ref") != default_branch:
         return "pending", "Only the default branch is eligible for automatic merging"
     if (pr.get("head", {}).get("repo") or {}).get("full_name") != repository:
         return "pending", "Automatic merging is limited to branches in this repository"
+    # REST lists reviews chronologically; paginate preserves that order.
+    if changes_requested(reviews):
+        return "pending", "A reviewer has requested changes"
 
-    # REST lists reviews chronologically; paginate preserves that order, including
-    # ties. Comments are not decisions, regardless of their body or commit. Keep
-    # dismissed/unknown submitted states so they cannot resurrect older approval.
-    # Do not let a different reviewer or lookalike user satisfy bot approval.
-    bot_reviews = [
-        review for review in reviews
-        if review.get("user", {}).get("login") == REVIEWER
-        and review.get("user", {}).get("type") == "Bot"
-        and review.get("submitted_at")
-        and review.get("state") not in ("PENDING", "COMMENTED")
+    # The model reviewer records its verdict as a commit status on the head it
+    # reviewed, so a push leaves the new head without one. Statuses created by
+    # github-actions[bot] (this gate, or a workflow a PR could edit) never count.
+    # The newest verdict wins, so a later failure revokes an earlier success.
+    verdicts = [
+        status for status in statuses
+        if status.get("context") == MODEL_REVIEW
+        and status.get("creator", {}).get("type") == "User"
+        and status.get("creator", {}).get("login") != "github-actions[bot]"
     ]
-    if not bot_reviews:
-        return "pending", "Waiting for CodeRabbit to approve this commit"
-    latest = bot_reviews[-1]
-    if latest.get("commit_id") != pr["head"]["sha"]:
-        return "pending", "Waiting for CodeRabbit to review the latest commit"
-    if latest.get("state") != "APPROVED":
-        return "pending", "The latest CodeRabbit review has not approved this commit"
-    return "success", "CodeRabbit approved the latest commit"
+    if not verdicts:
+        return "pending", "Waiting for the model reviewer's report on this commit"
+    latest = max(verdicts, key=lambda status: status.get("id", 0))
+    if latest.get("state") != "success":
+        return "pending", "The model reviewer's report has open findings on this commit"
+    return "success", "The model reviewer reported no open finding on the latest commit"
 
 
 def ci_status(pr, checks):
@@ -67,7 +76,7 @@ def ci_status(pr, checks):
         return "pending", "Waiting for Automation CI on the latest commit"
     if latest.get("conclusion") != "success":
         return "pending", "Automation CI must succeed; skipped and neutral results do not pass"
-    return "success", "CodeRabbit approved the latest commit and Automation CI passed"
+    return "success", "The model reviewer reported no open finding and Automation CI passed"
 
 
 class GitHub:
@@ -171,6 +180,7 @@ def reconcile(api, repository, default_branch, pr, target_url, auto_merge_enable
     sha = pr["head"]["sha"]
     try:
         reviews = list(api.paginate(f"/repos/{repository}/pulls/{number}/reviews"))
+        statuses = list(api.paginate(f"/repos/{repository}/commits/{sha}/statuses"))
         checks = list(api.paginate(f"/repos/{repository}/commits/{sha}/check-runs", result_key="check_runs"))
         # Discard work if a push or draft/base change happened while fetching
         # reviews. A stale workflow may never grant success to a newer head.
@@ -182,7 +192,7 @@ def reconcile(api, repository, default_branch, pr, target_url, auto_merge_enable
                            "Commit changed during review verification; waiting for the next check",
                            target_url)
             return
-        state, description = review_status(current, reviews, repository, default_branch)
+        state, description = review_status(current, statuses, repository, default_branch, reviews)
         if state == "success":
             state, description = ci_status(current, checks)
         publish_status(api, repository, sha, state, description, target_url)
@@ -199,7 +209,7 @@ def reconcile(api, repository, default_branch, pr, target_url, auto_merge_enable
     except Exception:
         # Revoke a previous successful custom status if verification fails.
         # API outages cannot be treated as an approval.
-        publish_status(api, repository, sha, "error", "Could not verify CodeRabbit approval and CI", target_url)
+        publish_status(api, repository, sha, "error", "Could not verify the model review and CI", target_url)
         raise
 
 

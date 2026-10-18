@@ -16,15 +16,11 @@ PR = {
     "head": {"sha": HEAD, "repo": {"full_name": REPO}},
 }
 APPROVAL = {
-    "id": 5521179355,
-    "user": {"login": "coderabbitai[bot]", "type": "Bot"},
-    "state": "APPROVED", "commit_id": HEAD,
-    "submitted_at": "2026-10-14T16:26:06Z", "body": "",
+    "id": 900,
+    "context": "Model review", "state": "success",
+    "creator": {"login": "owner", "type": "User"},
+    "description": "No open finding", "created_at": "2026-10-14T16:26:06Z",
 }
-COMMENTS = [
-    {**APPROVAL, "id": 5521193172, "state": "COMMENTED", "submitted_at": "2026-10-14T16:27:13Z"},
-    {**APPROVAL, "id": 5521197696, "state": "COMMENTED", "submitted_at": "2026-10-14T16:27:37Z"},
-]
 CI = {
     "id": 1, "name": "Automation CI", "head_sha": HEAD,
     "app": {"id": 15368, "slug": "github-actions"},
@@ -33,68 +29,60 @@ CI = {
 
 
 class ReviewStatusTests(unittest.TestCase):
-    def status(self, reviews, pr=PR):
-        return review_status(pr, reviews, REPO, "main")[0]
+    def status(self, statuses, pr=PR, reviews=()):
+        return review_status(pr, statuses, REPO, "main", reviews)[0]
 
-    def test_requires_actual_current_bot_approval(self):
+    def test_requires_actual_model_review_success_on_the_head(self):
         self.assertEqual(self.status([APPROVAL]), "success")
         self.assertEqual(self.status([]), "pending")
 
-    def test_stale_approval_cannot_approve_new_commit(self):
-        old = {**APPROVAL, "commit_id": "b" * 40}
-        self.assertEqual(self.status([old]), "pending")
-
-    def test_other_reviewers_and_lookalike_users_cannot_approve(self):
-        for user in [{"login": "author", "type": "User"},
-                     {"login": "coderabbitai[bot]", "type": "User"},
-                     {"login": "other[bot]", "type": "Bot"}]:
-            with self.subTest(user=user):
-                self.assertEqual(self.status([{**APPROVAL, "user": user}]), "pending")
-
-    def test_latest_negative_decision_revokes_older_approval(self):
-        for state in ["CHANGES_REQUESTED", "DISMISSED"]:
+    def test_other_contexts_and_states_cannot_approve(self):
+        self.assertEqual(self.status([{**APPROVAL, "context": "Other review"}]), "pending")
+        self.assertEqual(self.status([{**APPROVAL, "context": "Review approval"}]), "pending")
+        for state in ["failure", "pending", "error", None]:
             with self.subTest(state=state):
-                self.assertEqual(self.status([APPROVAL, {**APPROVAL, "state": state}]), "pending")
+                self.assertEqual(self.status([{**APPROVAL, "state": state}]), "pending")
 
-    def test_identical_chronological_evidence_agrees_with_observer(self):
-        # REST chronological order is retained across pages. IDs order tied
-        # timestamps; the observer also accepts unordered input (tested in JS).
-        def row(index, state, **fields):
-            return {**APPROVAL, "id": APPROVAL["id"] + index,
-                    "submitted_at": f"2026-10-14T16:26:{6 + index:02d}Z",
-                    "state": state, **fields}
+    def test_workflow_and_bot_created_statuses_cannot_approve(self):
+        # A workflow in a PR branch holds a token that can write statuses.
+        for creator in [{"login": "github-actions[bot]", "type": "Bot"},
+                        {"login": "github-actions[bot]", "type": "User"},
+                        {"login": "other[bot]", "type": "Bot"}, {}]:
+            with self.subTest(creator=creator):
+                self.assertEqual(self.status([{**APPROVAL, "creator": creator}]), "pending")
 
-        approval = row(0, "APPROVED")
-        comment = row(2, "COMMENTED", body="Actionable feedback is still review evidence")
+    def test_newest_verdict_wins_regardless_of_order(self):
+        failure = {**APPROVAL, "id": 901, "state": "failure"}
+        recovered = {**APPROVAL, "id": 902}
+        for statuses in [[APPROVAL, failure], [failure, APPROVAL]]:
+            self.assertEqual(self.status(statuses), "pending")
+        for statuses in [[APPROVAL, failure, recovered], [recovered, failure, APPROVAL]]:
+            self.assertEqual(self.status(statuses), "success")
+
+    def test_requested_changes_block_even_with_a_success_verdict(self):
+        def review(login, state, at):
+            return {"user": {"login": login}, "state": state, "submitted_at": at}
+        blocked = [review("human", "CHANGES_REQUESTED", "2026-10-14T16:00:00Z"),
+                   review("human", "COMMENTED", "2026-10-14T16:01:00Z")]
+        self.assertEqual(self.status([APPROVAL], reviews=blocked), "pending")
+        resolved = [*blocked, review("human", "APPROVED", "2026-10-14T16:02:00Z")]
+        self.assertEqual(self.status([APPROVAL], reviews=resolved), "success")
+        pending = [review("human", "CHANGES_REQUESTED", None)]
+        self.assertEqual(self.status([APPROVAL], reviews=pending), "success")
+
+    def test_gate_and_observer_agree_on_the_same_evidence(self):
+        failure = {**APPROVAL, "id": 901, "state": "failure"}
+        forged = {**APPROVAL, "creator": {"login": "github-actions[bot]", "type": "Bot"}}
         cases = [
-            ("incident empty comments", [APPROVAL, *COMMENTS], "success", "approved"),
-            ("nonempty comments", [approval, comment], "success", "approved"),
-            ("comments only", [comment], "pending", "pending"),
-            ("no reviews", [], "pending", "pending"),
-            ("stale approval current comment", [row(0, "APPROVED", commit_id="old"), comment], "pending", "pending"),
-            ("current approval old comment", [approval, {**comment, "commit_id": "old"}], "success", "approved"),
+            ("no verdict", [], "pending", "review"),
+            ("success", [APPROVAL], "success", "approved"),
+            ("failure", [failure], "pending", "fix"),
+            ("failure after success", [APPROVAL, failure], "pending", "fix"),
+            ("success after failure", [failure, {**APPROVAL, "id": 902}], "success", "approved"),
+            ("forged", [forged], "pending", "review"),
+            ("forged beside failure", [forged, failure], "pending", "fix"),
+            ("other context", [{**APPROVAL, "context": "x"}], "pending", "review"),
         ]
-        for state in ["CHANGES_REQUESTED", "DISMISSED", "UNKNOWN", None]:
-            negative = row(1, state)
-            cases.append((f"later {state}", [approval, negative, comment], "pending",
-                          "fix" if state == "CHANGES_REQUESTED" else "pending"))
-            cases.append((f"later stale {state}", [approval, {**negative, "commit_id": "old"}, comment], "pending", "pending"))
-            cases.append((f"restored after {state}", [negative, row(2, "APPROVED"), row(3, "COMMENTED")], "success", "approved"))
-        cases.append(("dismissed original approval row", [row(0, "DISMISSED"), comment], "pending", "pending"))
-        for state in ["APPROVED", "PENDING"]:
-            cases.append((f"unsubmitted {state}", [row(0, state, submitted_at=None), comment], "pending", "pending"))
-        cases.append(("submitted pending only", [row(0, "PENDING")], "pending", "pending"))
-        cases.append(("pending cannot supersede", [approval, row(1, "PENDING"), comment], "success", "approved"))
-        for user in [{"login": "coderabbitai[bot]", "type": "User"},
-                     {"login": "coderabbitai", "type": "Bot"},
-                     {"login": "other[bot]", "type": "Bot"}]:
-            cases.append((f"lookalike {user}", [row(0, "APPROVED", user=user), comment], "pending", "pending"))
-        for state in ["APPROVED", "CHANGES_REQUESTED", "DISMISSED"]:
-            tied = row(1, state, submitted_at=approval["submitted_at"])
-            cases.append((f"tied {state}", [approval, tied, comment],
-                          "success" if state == "APPROVED" else "pending",
-                          "approved" if state == "APPROVED" else "fix" if state == "CHANGES_REQUESTED" else "pending"))
-
         script = """
           import { evaluate } from './review-state.mjs';
           let input = ''; for await (const chunk of process.stdin) input += chunk;
@@ -106,18 +94,10 @@ class ReviewStatusTests(unittest.TestCase):
                                 cwd=Path(__file__).resolve().parent,
                                 input=json.dumps({"pr": observer_pr, "ci": CI, "cases": cases}),
                                 text=True, capture_output=True, check=True, timeout=30)
-        for (name, reviews, expected_gate, expected_observer), observed in zip(cases, json.loads(result.stdout), strict=True):
+        for (name, statuses, expected_gate, expected_observer), observed in zip(cases, json.loads(result.stdout), strict=True):
             with self.subTest(case=name):
-                self.assertEqual(self.status(reviews), expected_gate)
+                self.assertEqual(self.status(statuses), expected_gate)
                 self.assertEqual(observed, expected_observer)
-
-    def test_other_reviewer_does_not_replace_coderabbit_verdict(self):
-        human = {**APPROVAL, "user": {"login": "human", "type": "User"}, "state": "COMMENTED"}
-        self.assertEqual(self.status([APPROVAL, human]), "success")
-
-    def test_unsubmitted_review_is_not_approval(self):
-        self.assertEqual(self.status([{**APPROVAL, "submitted_at": None}]), "pending")
-        self.assertEqual(self.status([{**APPROVAL, "state": "PENDING"}]), "pending")
 
     def test_drafts_closed_forks_and_other_bases_are_ineligible(self):
         for field, value in [("draft", True), ("state", "closed"),
@@ -156,27 +136,14 @@ class CiStatusTests(unittest.TestCase):
 
 
 class ApiTests(unittest.TestCase):
-    def test_reviews_beyond_first_page_are_examined(self):
+    def test_statuses_beyond_first_page_are_examined(self):
         api = GitHub("unused")
-        api.request = Mock(side_effect=[[{"state": "COMMENTED"}] * 100, [APPROVAL]])
-        reviews = list(api.paginate("/reviews"))
-        self.assertEqual(len(reviews), 101)
-        self.assertEqual(reviews[-1], APPROVAL)
+        api.request = Mock(side_effect=[[{"context": "other"}] * 100, [APPROVAL]])
+        statuses = list(api.paginate("/statuses"))
+        self.assertEqual(len(statuses), 101)
+        self.assertEqual(statuses[-1], APPROVAL)
         self.assertIn("page=2", api.request.call_args.args[0])
-
-    def test_comment_pages_do_not_hide_decisions(self):
-        comment = COMMENTS[0]
-        for pages, expected in [
-            ([[comment] * 100, [APPROVAL, COMMENTS[1]]], "success"),
-            ([[APPROVAL] + [comment] * 99, [COMMENTS[1]]], "success"),
-            ([[APPROVAL] + [comment] * 99, [{**COMMENTS[1], "state": "DISMISSED"}, COMMENTS[1]]], "pending"),
-        ]:
-            with self.subTest(expected=expected, pages=pages):
-                api = GitHub("unused")
-                api.request = Mock(side_effect=pages)
-                reviews = list(api.paginate("/reviews"))
-                self.assertEqual(review_status(PR, reviews, REPO, "main")[0], expected)
-                self.assertEqual(api.request.call_count, 2)
+        self.assertEqual(review_status(PR, statuses, REPO, "main")[0], "success")
 
     def test_check_runs_response_is_paginated_by_result_key(self):
         api = GitHub("unused")
@@ -270,11 +237,13 @@ class MergeConfirmationTests(unittest.TestCase):
 
 
 class ReconcileTests(unittest.TestCase):
-    def api(self, current=PR, reviews=None, checks=None):
+    def api(self, current=PR, statuses=None, checks=None, reviews=None):
         api = Mock()
         def paginate(path, **params):
+            if path.endswith("/statuses"):
+                return iter([APPROVAL] if statuses is None else statuses)
             if path.endswith("/reviews"):
-                return iter([APPROVAL, *COMMENTS] if reviews is None else reviews)
+                return iter([] if reviews is None else reviews)
             if path.endswith("/check-runs"):
                 return iter([CI] if checks is None else checks)
             raise AssertionError("Unexpected API endpoint")
@@ -310,15 +279,15 @@ class ReconcileTests(unittest.TestCase):
 
     @patch("merge_gate.enable_auto_merge")
     @patch("merge_gate.publish_status")
-    def test_missing_approval_never_enables_auto_merge(self, publish, merge):
-        api = self.api(reviews=[])
+    def test_missing_verdict_never_enables_auto_merge(self, publish, merge):
+        api = self.api(statuses=[])
         reconcile(api, REPO, "main", PR, "url", True)
         self.assertEqual(publish.call_args.args[3], "pending")
         merge.assert_not_called()
 
     @patch("merge_gate.enable_auto_merge")
     @patch("merge_gate.publish_status")
-    def test_approval_with_skipped_ci_never_enables_auto_merge(self, publish, merge):
+    def test_verdict_with_skipped_ci_never_enables_auto_merge(self, publish, merge):
         for check in [{**CI, "id": 2, "conclusion": conclusion} for conclusion in ["skipped", "neutral", "failure"]] + [
             {**CI, "id": 2, "status": "queued", "conclusion": None},
         ]:
@@ -333,10 +302,20 @@ class ReconcileTests(unittest.TestCase):
 
     @patch("merge_gate.enable_auto_merge")
     @patch("merge_gate.publish_status")
-    def test_approval_plus_comments_preserves_pr_eligibility(self, publish, merge):
+    def test_success_verdict_preserves_pr_eligibility(self, publish, merge):
         for current in [{**PR, "draft": True}, {**PR, "base": {"ref": "release"}},
                         {**PR, "head": {"sha": HEAD, "repo": {"full_name": "fork/repo"}}}]:
             reconcile(self.api(current), REPO, "main", PR, "url", True)
+            self.assertEqual(publish.call_args.args[3], "pending")
+            merge.assert_not_called()
+
+    @patch("merge_gate.enable_auto_merge")
+    @patch("merge_gate.publish_status")
+    def test_failure_verdict_and_requested_changes_never_enable_auto_merge(self, publish, merge):
+        failed = [{**APPROVAL, "id": 901, "state": "failure"}]
+        blocked = [{"user": {"login": "human"}, "state": "CHANGES_REQUESTED", "submitted_at": "2026-10-14T16:00:00Z"}]
+        for api in [self.api(statuses=failed), self.api(reviews=blocked)]:
+            reconcile(api, REPO, "main", PR, "url", True)
             self.assertEqual(publish.call_args.args[3], "pending")
             merge.assert_not_called()
 
@@ -350,7 +329,7 @@ class ReconcileTests(unittest.TestCase):
 
     @patch("merge_gate.enable_auto_merge")
     @patch("merge_gate.publish_status")
-    def test_current_approval_enables_merge_for_exact_head(self, publish, merge):
+    def test_current_verdict_enables_merge_for_exact_head(self, publish, merge):
         reconcile(self.api(), REPO, "main", PR, "url", True)
         self.assertEqual(publish.call_args.args[3], "success")
         merge.assert_called_once_with(REPO, 1, HEAD)

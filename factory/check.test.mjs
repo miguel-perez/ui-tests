@@ -23,14 +23,14 @@ test('a freshly installed consumer passes', t => {
 
 test('drifted, missing files and missing scripts are each reported', t => {
   const root = installed(t);
-  writeFileSync(join(root, '.coderabbit.yaml'), 'language: fr\n');
+  writeFileSync(join(root, '.github/workflows/merge-gate.yml'), 'language: fr\n');
   unlinkSync(join(root, '.github/workflows/review-event.yml'));
   const pkg = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
   delete pkg.scripts['automation:stop'];
   writeFileSync(join(root, 'package.json'), JSON.stringify(pkg));
   const problems = check({ root, prefix: 'factory' });
   assert.deepEqual(problems.sort(), [
-    'drifted: .coderabbit.yaml',
+    'drifted: .github/workflows/merge-gate.yml',
     'missing npm script: automation:stop',
     'missing: .github/workflows/review-event.yml',
   ]);
@@ -45,10 +45,10 @@ test('seeded files are consumer-owned and never reported', t => {
 
 test('the CLI exits 1 and prints problems', t => {
   const root = installed(t);
-  writeFileSync(join(root, '.coderabbit.yaml'), 'x\n');
+  writeFileSync(join(root, '.github/workflows/merge-gate.yml'), 'x\n');
   const result = spawnSync(process.execPath, [fileURLToPath(new URL('./check.mjs', import.meta.url)), '--prefix', 'factory'], { cwd: root, encoding: 'utf8' });
   assert.equal(result.status, 1);
-  assert.match(result.stdout + result.stderr, /drifted: \.coderabbit\.yaml/);
+  assert.match(result.stdout + result.stderr, /drifted: \.github\/workflows\/merge-gate\.yml/);
   install({ root, prefix: 'factory', log() {} });
   const ok = spawnSync(process.execPath, [fileURLToPath(new URL('./check.mjs', import.meta.url)), '--prefix', 'factory'], { cwd: root, encoding: 'utf8' });
   assert.equal(ok.status, 0);
@@ -71,11 +71,11 @@ test('the managed manifest is required, must match the payload, and flags stale 
 
 test('the CLI still runs when invoked through a symlinked factory directory', t => {
   const root = installed(t);
-  writeFileSync(join(root, '.coderabbit.yaml'), 'x\n');
+  writeFileSync(join(root, '.github/workflows/merge-gate.yml'), 'x\n');
   const links = mkdtempSync(join(tmpdir(), 'factory-link-'));
   t.after(() => rmSync(links, { recursive: true, force: true }));
   symlinkSync(factoryDir, join(links, 'factory'), 'dir');
   const result = spawnSync(process.execPath, [join(links, 'factory/check.mjs'), '--prefix', 'factory'], { cwd: root, encoding: 'utf8' });
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /drifted: \.coderabbit\.yaml/);
+  assert.match(result.stderr, /drifted: \.github\/workflows\/merge-gate\.yml/);
 });

@@ -13,7 +13,9 @@ if (process.argv[1].endsWith('/git')) {
   if (args[1] === 'repos/owner/repo/pulls/95') {
     result = data.prs[data.reads++];
   } else if (args.includes('graphql')) result = [{ data: { repository: { pullRequest: { reviewThreads: { nodes: data.threads } } } } }];
-  else if (args.some(arg => arg.includes('/reviews?'))) result = [data.reviews];
+  else if (args.some(arg => arg.includes('/reviews?'))) result = data.reviews?.apiFailure ? data.reviews : [data.reviews];
+  else if (args.some(arg => arg.includes('/statuses?'))) result = data.statuses?.apiFailure ? data.statuses : [data.statuses];
+  else if (args.some(arg => String(arg).includes('/statuses/'))) result = '{}';
   else if (args.some(arg => arg.includes('/check-runs?'))) result = [{ check_runs: data.checks }];
   else if (args[1]?.endsWith('/protection')) result = data.protection;
 } else if (args[0] === 'variable') result = 'true';
