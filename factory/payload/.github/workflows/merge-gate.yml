@@ -26,6 +26,7 @@ concurrency:
 
 jobs:
   reconcile:
+    if: github.event_name != 'status' || github.event.context == 'Model review'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -39,3 +40,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           AUTOMERGE_ENABLED: ${{ vars.AUTOMERGE_ENABLED }}
+          MODEL_REVIEWER_LOGINS: ${{ vars.MODEL_REVIEWER_LOGINS }}

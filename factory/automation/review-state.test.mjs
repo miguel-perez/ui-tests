@@ -4,8 +4,9 @@ import { readFileSync } from 'node:fs';
 import { mkdir, mkdtemp, writeFile, readFile, rm } from 'node:fs/promises';
 import { spawnSync } from 'node:child_process';
 import { resolve } from 'node:path';
-import { enableAutoMerge, evaluate, latestModelReview } from './review-state.mjs';
+import { enableAutoMerge, evaluate, latestModelReview, reviewerLogins } from './review-state.mjs';
 
+process.env.MODEL_REVIEWER_LOGINS = 'owner';
 const pr = { state: 'open', draft: false, head: { sha: 'current', repo: { full_name: 'owner/repo' } }, base: { repo: { full_name: 'owner/repo' } } };
 const verdict = { id: 10, context: 'Model review', state: 'success', creator: { login: 'owner', type: 'User' }, description: 'No open finding', target_url: 'https://example.test/report' };
 const ci = { id: 1, head_sha: 'current', name: 'Automation CI', app: { slug: 'github-actions' }, started_at: '2026-10-13T00:00:00Z', status: 'completed', conclusion: 'success' };
@@ -36,6 +37,18 @@ test('requires an affirmative current-head model review verdict and successful C
 test('only a user-created verdict counts; workflow-created statuses never do', () => {
   for (const creator of [{ login: 'github-actions[bot]', type: 'Bot' }, { login: 'github-actions[bot]', type: 'User' }, { login: 'other[bot]', type: 'Bot' }, undefined]) {
     assert.equal(evaluate(pr, [{ ...verdict, creator }], [ci]).state, 'review');
+  }
+});
+
+test('only allowlisted logins count, and an empty allowlist fails closed', () => {
+  const other = { ...verdict, creator: { login: 'implementer', type: 'User' } };
+  assert.equal(evaluate(pr, [other], [ci]).state, 'review');
+  assert.equal(evaluate(pr, [other], [ci], [], [], reviewerLogins('Implementer')).state, 'approved');
+  assert.equal(evaluate(pr, [verdict, { ...other, id: 20, state: 'failure' }], [ci]).state, 'approved');
+  for (const raw of ['', ' , ']) {
+    const result = evaluate(pr, [verdict], [ci], [], [], reviewerLogins(raw));
+    assert.equal(result.state, 'blocked');
+    assert.match(result.summary, /MODEL_REVIEWER_LOGINS/);
   }
 });
 
@@ -149,7 +162,7 @@ async function reviewCli(t, fresh, overrides = {}, command = 'merge', extra = []
     protection: { required_status_checks: { checks: ['Automation CI', 'Review approval'].map(context => ({ context, app_id: 15368 })) }, enforce_admins: { enabled: true } },
     ...overrides }));
   const result = spawnSync(process.execPath, [resolve('automation/review-state.mjs'), command, '--repo', 'owner/repo', '--pr', '95', '--timeout-seconds', '1', ...extra],
-    { encoding: 'utf8', timeout: 15000, env: { ...process.env, PATH: directory + ':' + process.env.PATH, REVIEW_CLI_FIXTURE: file } });
+    { encoding: 'utf8', timeout: 15000, env: { ...process.env, MODEL_REVIEWER_LOGINS: 'owner', PATH: directory + ':' + process.env.PATH, REVIEW_CLI_FIXTURE: file } });
   assert.ifError(result.error);
   const data = JSON.parse(await readFile(file, 'utf8'));
   return { ...result, data, mutations: data.calls.filter(call => call[0] === 'gh' && call[1] !== 'api' && call[1] !== 'variable') };

@@ -51,6 +51,13 @@ back with `git subtree push --prefix=factory git@github.com:miguel-perez/archon-
   `false` stops new auto-merge requests; pause a PR already enabled with
   `gh pr merge NUMBER --disable-auto`.
 
+Set the repository variable `MODEL_REVIEWER_LOGINS` to the comma-separated GitHub
+logins allowed to record the `Model review` verdict. The gate and the observer
+accept a verdict only from those users, and fail closed (pending/blocked) when the
+variable is unset or empty. The implementer and the reviewer should use separate
+credentials (separate GitHub users), and only the reviewer's login belongs in the
+list, so the implementing agent cannot record its own approval.
+
 The merge gate (`automation/merge_gate.py`) runs only trusted default-branch
 code. It publishes the required `Review approval` status and enables auto-merge solely
 when the model reviewer's `Model review` commit status is `success` on the

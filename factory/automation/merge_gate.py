@@ -21,6 +21,12 @@ CI_CHECK = "Automation CI"
 GITHUB_ACTIONS_APP_ID = 15368
 
 
+def reviewer_logins(raw=None):
+    """Logins trusted to record the model review, from MODEL_REVIEWER_LOGINS."""
+    raw = os.environ.get("MODEL_REVIEWER_LOGINS", "") if raw is None else raw
+    return frozenset(login.strip().lower() for login in raw.split(",") if login.strip())
+
+
 def changes_requested(reviews):
     """True when any reviewer's latest submitted decision asks for changes."""
     latest = {}
@@ -30,7 +36,7 @@ def changes_requested(reviews):
     return "CHANGES_REQUESTED" in latest.values()
 
 
-def review_status(pr, statuses, repository, default_branch, reviews=()):
+def review_status(pr, statuses, repository, default_branch, reviews=(), reviewers=None):
     """Require the model reviewer's success verdict, recorded on this exact head."""
     if pr.get("state") != "open" or pr.get("draft"):
         return "pending", "Waiting for a ready, open pull request"
@@ -46,11 +52,15 @@ def review_status(pr, statuses, repository, default_branch, reviews=()):
     # reviewed, so a push leaves the new head without one. Statuses created by
     # github-actions[bot] (this gate, or a workflow a PR could edit) never count.
     # The newest verdict wins, so a later failure revokes an earlier success.
+    reviewers = reviewer_logins() if reviewers is None else reviewers
+    if not reviewers:
+        return "pending", "MODEL_REVIEWER_LOGINS is not set; no model review verdict can be trusted"
     verdicts = [
         status for status in statuses
         if status.get("context") == MODEL_REVIEW
         and status.get("creator", {}).get("type") == "User"
         and status.get("creator", {}).get("login") != "github-actions[bot]"
+        and (status.get("creator", {}).get("login") or "").lower() in reviewers
     ]
     if not verdicts:
         return "pending", "Waiting for the model reviewer's report on this commit"

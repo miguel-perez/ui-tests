@@ -11,9 +11,13 @@ const GATE_CONTEXT = 'Review approval';
 // The model reviewer records its verdict as a commit status on the exact head it
 // reviewed, so a push leaves the new head without a verdict. A status created by
 // github-actions[bot] (the gate itself, or any workflow a PR could edit) never counts.
-export function latestModelReview(statuses) {
+export function reviewerLogins(raw = process.env.MODEL_REVIEWER_LOGINS ?? '') {
+  return new Set(raw.split(',').map(login => login.trim().toLowerCase()).filter(Boolean));
+}
+
+export function latestModelReview(statuses, reviewers = reviewerLogins()) {
   return statuses.filter(status => status.context === MODEL_REVIEW && status.creator?.type === 'User' &&
-    status.creator?.login !== 'github-actions[bot]')
+    status.creator?.login !== 'github-actions[bot]' && reviewers.has(String(status.creator?.login).toLowerCase()))
     .sort((a, b) => b.id - a.id)[0];
 }
 
@@ -30,12 +34,12 @@ function pages(path, key) {
   return JSON.parse(output).flatMap(page => key ? page[key] : page);
 }
 
-export function evaluate(pr, statuses, checks, threads = [], reviews = []) {
+export function evaluate(pr, statuses, checks, threads = [], reviews = [], reviewers = reviewerLogins()) {
   if (pr.merged) return { state: 'merged', summary: 'The pull request is already merged.' };
   if (pr.state !== 'open') return { state: 'blocked', summary: 'The pull request is closed.' };
   if (pr.draft) return { state: 'blocked', summary: 'The pull request is still a draft.' };
   if (pr.head.repo?.full_name !== pr.base.repo?.full_name) return { state: 'blocked', summary: 'Fork pull requests are outside this automation.' };
-  const verdict = latestModelReview(statuses);
+  const verdict = latestModelReview(statuses, reviewers);
   const ci = checks.filter(check => check.name === CI_CHECK && check.app?.slug === 'github-actions' && check.head_sha === pr.head.sha)
     .sort((a, b) => b.id - a.id)[0];
   const outstanding = threads.filter(thread => !thread.isResolved && !thread.isOutdated);
@@ -50,6 +54,7 @@ export function evaluate(pr, statuses, checks, threads = [], reviews = []) {
   if (ci?.status === 'completed' && ci.conclusion !== 'success') {
     return { state: 'fix', summary: `Required CI concluded ${ci.conclusion}; inspect the run and repair the failure.` };
   }
+  if (reviewers.size === 0) return { state: 'blocked', summary: 'MODEL_REVIEWER_LOGINS is not set; no model review verdict can be trusted.' };
   if (!verdict) return { state: 'review', summary: 'The model reviewer has not reported on the current commit.' };
   if (verdict.state !== 'success') {
     return { state: 'fix', summary: 'The model reviewer reported open findings on the current commit.' };

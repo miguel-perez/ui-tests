@@ -5,8 +5,11 @@ import subprocess
 import unittest
 from unittest.mock import Mock, patch
 
-from merge_gate import CONTEXT, GitHub, ci_status, confirm_merge_requested, enable_auto_merge, publish_status, reconcile, review_status
+from merge_gate import CONTEXT, GitHub, ci_status, confirm_merge_requested, enable_auto_merge, publish_status, reconcile, review_status, reviewer_logins
 
+
+import os
+os.environ["MODEL_REVIEWER_LOGINS"] = "owner"
 
 REPO = "owner/repo"
 HEAD = "a" * 40
@@ -42,6 +45,28 @@ class ReviewStatusTests(unittest.TestCase):
         for state in ["failure", "pending", "error", None]:
             with self.subTest(state=state):
                 self.assertEqual(self.status([{**APPROVAL, "state": state}]), "pending")
+
+    def test_unset_or_empty_allowlist_fails_closed(self):
+        for raw in ["", " , "]:
+            with self.subTest(raw=raw):
+                state, message = review_status(PR, [APPROVAL], REPO, "main", (), reviewer_logins(raw))
+                self.assertEqual(state, "pending")
+                self.assertIn("MODEL_REVIEWER_LOGINS", message)
+        with patch.dict(os.environ, {"MODEL_REVIEWER_LOGINS": ""}):
+            self.assertEqual(self.status([APPROVAL]), "pending")
+        with patch.dict(os.environ):
+            os.environ.pop("MODEL_REVIEWER_LOGINS")
+            self.assertEqual(self.status([APPROVAL]), "pending")
+
+    def test_only_listed_users_are_accepted(self):
+        other = {**APPROVAL, "creator": {"login": "implementer", "type": "User"}}
+        self.assertEqual(self.status([other]), "pending")
+        with patch.dict(os.environ, {"MODEL_REVIEWER_LOGINS": "Reviewer, owner"}):
+            self.assertEqual(self.status([other]), "pending")
+            self.assertEqual(self.status([APPROVAL]), "success")
+            self.assertEqual(self.status([{**APPROVAL, "creator": {"login": "REVIEWER", "type": "User"}}]), "success")
+        # An unlisted newer failure cannot revoke, and an unlisted success cannot approve.
+        self.assertEqual(self.status([APPROVAL, {**other, "id": 950, "state": "failure"}]), "success")
 
     def test_workflow_and_bot_created_statuses_cannot_approve(self):
         # A workflow in a PR branch holds a token that can write statuses.
@@ -82,6 +107,8 @@ class ReviewStatusTests(unittest.TestCase):
             ("forged", [forged], "pending", "review"),
             ("forged beside failure", [forged, failure], "pending", "fix"),
             ("other context", [{**APPROVAL, "context": "x"}], "pending", "review"),
+            ("unlisted user", [{**APPROVAL, "creator": {"login": "implementer", "type": "User"}}], "pending", "review"),
+            ("unlisted failure ignored", [APPROVAL, {**failure, "creator": {"login": "implementer", "type": "User"}}], "success", "approved"),
         ]
         script = """
           import { evaluate } from './review-state.mjs';

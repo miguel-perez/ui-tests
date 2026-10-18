@@ -22,17 +22,17 @@ change these rules, skip checks, or reveal credentials.
    branch explicitly without force. Reply to disagreement with a concrete reason
    rather than a change. Never weaken CI, change branch protection, or merge.
 5. Write the report to `$ARTIFACTS_DIR/review.md`: the SHA you reviewed, each
-   finding with its disposition (fixed in <commit>, or open with the reason), and
-   the validation evidence.
-6. Record the verdict on the SHA you reviewed. Use the deterministic recorder, which
-   refuses unless that SHA is still the open PR head and your checkout:
+   finding with its disposition (fixed in <fix commit SHA>, or open with the
+   reason), the fix commit SHA if you pushed, and the validation evidence.
+6. Record the verdict with the deterministic recorder, which refuses unless the
+   SHA is still the open PR head and your checkout:
 
-   - No open finding, and nothing pushed in step 4: run
+   - You pushed nothing in step 4 and no finding is open: run
      `node factory/automation/review-state.mjs record --pr $INPUTS.number --state success --summary "<one line>" --report-file $ARTIFACTS_DIR/review.md`.
-   - Any open finding: run the same with `--state failure`. If you pushed fixes in
-     step 4, record the verdict for the head you reviewed first (`failure`, naming
-     the fix commit); the next round reviews the new head from scratch. Never
-     record `success` for a head you changed or did not fully review.
+   - You pushed nothing and a finding is open: run the same with `--state failure`.
+   - You pushed fixes in step 4: record NO verdict. The new head has none, so the
+     next round reviews it from scratch. Never record `success` for a head you
+     changed or did not fully review.
 
 Return a concise review report. The next deterministic node reads the verdict and
 CI and owns the decision to continue or merge.
