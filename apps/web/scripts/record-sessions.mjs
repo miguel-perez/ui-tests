@@ -23,7 +23,7 @@ const tmpDir = join(outDir, '.tmp');
 if (!resolve(chromium.executablePath()).startsWith(root + '/')) throw new Error('Set PLAYWRIGHT_BROWSERS_PATH=0 and install bundled Chromium inside this worktree.');
 
 const SIZE = { width: 1280, height: 800 };
-const EMAIL = 'sam@acme.co';
+const EMAIL = 'sam@acme.example';
 
 mkdirSync(outDir, { recursive: true });
 rmSync(tmpDir, { recursive: true, force: true });
@@ -118,7 +118,7 @@ const attempt = (id, extra) => ({
  * moment and the smallest change.
  */
 const blockers = [
-  { n: 1, problem: 1, impact: 'confused', from: 58, to: 63, poster: '/sessions/p3-58.jpg', title: 'Pressed Add, saw nothing change, pressed it again. Two invitations went out.', where: '/settings/members · the Add button', said: { when: 'after', text: "I wasn't sure the first Add did anything, so I pressed it again." }, change: 'On press, change the button to "Invited sam@acme.co" and disable it.' },
+  { n: 1, problem: 1, impact: 'confused', from: 58, to: 63, poster: '/sessions/p3-58.jpg', title: 'Pressed Add, saw nothing change, pressed it again. Two invitations went out.', where: '/settings/members · the Add button', said: { when: 'after', text: "I wasn't sure the first Add did anything, so I pressed it again." }, change: 'On press, change the button to "Invited sam@acme.example" and disable it.' },
   { n: 2, problem: 3, impact: 'slowed', from: 3, to: 19, poster: '/sessions/p3-03.jpg', title: 'Looked for Invite in the Share menu and found only link options.', where: '/board · the Share menu', said: { when: 'after', text: 'Share seemed like the place for people.' }, change: 'Put "Invite a colleague" at the top of the Share menu.' },
   { n: 3, problem: 4, impact: 'confused', from: 23, to: 36, poster: '/sessions/p3-23.jpg', title: "Typed the colleague's email into the board search.", where: '/board · Search cards', said: null, change: 'When a search matches no cards, offer "Invite someone with this email".' },
 ];
