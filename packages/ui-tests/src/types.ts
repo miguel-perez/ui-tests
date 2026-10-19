@@ -41,5 +41,20 @@ export type TaskOptions = {
   target?: Target
   [legacy: string]: unknown
 }
-/** The shape of `ui-tests.config.ts`; every key is optional. Task 2 narrows it. */
-export type UiTestsConfig = { target?: Target; [key: string]: unknown }
+/** Filled in when the agent runner ships. */
+export type AgentConfig = unknown
+/** The shape of `ui-tests.config.ts`; every key is optional. */
+export type UiTestsConfig = {
+  target?: Target
+  participants?: { sources?: ('link' | 'prolific' | 'connect')[]; budget?: { max: number; currency: string }; link?: { amount?: number } }
+  check?: { block_on?: 'problems'; comment?: boolean }
+  ci?: { on?: string[] }
+  reporters?: ('default' | 'github-actions' | 'json')[]
+  actor?: 'human' | 'agent'
+  agents?: AgentConfig
+  product?: string
+  author?: string
+  brand?: { accent?: string; poweredBy?: boolean }
+  webhook?: { url: string; secret?: string }
+  consent?: { workflows?: boolean }
+}

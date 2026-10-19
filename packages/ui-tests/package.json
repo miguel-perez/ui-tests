@@ -8,7 +8,8 @@
     "ui-tests": "./bin/ui-tests.mjs"
   },
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./config": "./src/define-config.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit"

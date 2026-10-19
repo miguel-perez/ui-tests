@@ -1,3 +1,4 @@
+import { originalPosition } from './sourcemap.ts'
 import type { Hook, SetupFn, StudyOptions, TaskOptions } from './types.ts'
 
 export type AuthoredTask = { name: string; options: TaskOptions; steps: { name: string; check?: Hook; line: number }[]; outcomes: Hook[]; answer?: { question: string; expected: string; distractors?: string[] }; line: number }
@@ -13,8 +14,8 @@ const legacyOptions: Record<string, string> = { happyPath: 'path', catch: 'sampl
 /** Finds the authoring call site: the first stack frame outside this module, as file and line. */
 function site(): { file: string; line: number } {
   for (const frame of (new Error().stack ?? '').split('\n').slice(1)) {
-    const match = /\(?((?:file:\/\/)?[^()\s]+?):(\d+):\d+\)?$/.exec(frame.trim())
-    if (match && !/authoring\.ts$/.test(match[1])) return { file: match[1].replace(/^file:\/\//, ''), line: Number(match[2]) }
+    const match = /\(?((?:file:\/\/)?[^()\s]+?):(\d+):(\d+)\)?$/.exec(frame.trim())
+    if (match && !/authoring\.ts$/.test(match[1])) return originalPosition(match[1].replace(/^file:\/\//, ''), Number(match[2]), Number(match[3]))
   }
   return { file: '', line: 0 }
 }

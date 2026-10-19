@@ -2,7 +2,15 @@ import { isDeepStrictEqual } from 'node:util'
 
 /** Thrown by `expect` when an assertion fails; carries the expected and actual values for the trace diff. */
 export class AssertionFailure extends Error {
-  constructor(public actual: unknown, public expected: unknown, public operator: string) { super(`${operator}: expected ${JSON.stringify(expected)}, actual ${JSON.stringify(actual)}`) }
+  actual: unknown
+  expected: unknown
+  operator: string
+  constructor(actual: unknown, expected: unknown, operator: string) {
+    super(`${operator}: expected ${JSON.stringify(expected)}, actual ${JSON.stringify(actual)}`)
+    this.actual = actual
+    this.expected = expected
+    this.operator = operator
+  }
 }
 /** Thrown when a hook has no evidence to assert against; the verifier reports `unknown` rather than `incorrect`. */
 export class MissingEvidence extends Error {}
