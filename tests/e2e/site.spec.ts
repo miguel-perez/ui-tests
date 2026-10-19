@@ -380,6 +380,10 @@ for (const width of [1440, 375]) test(`what you write, what they see: the comman
   for (const [id, count, step] of [['screener', 6, 2], ['after', 5, 6]] as const) {
     await tabs.nth(step - 1).click()
     const row = section.locator(`#piece-${id}`), frame = row.locator('.compile-frame'), stepper = row.locator('.stepper')
+    // The tab's panel finishes switching before the frame is measured; on a slow runner it can lag the click.
+    await expect(tabs.nth(step - 1)).toHaveAttribute('aria-selected', 'true')
+    await expect(frame).toBeVisible()
+    await expect(stepper.locator('.where')).toHaveText(`1 of ${count}`)
     await frame.scrollIntoViewIfNeeded()
     const height = (await frame.boundingBox())!.height
     await expect(stepper.locator('.where')).toHaveText(`1 of ${count}`)
