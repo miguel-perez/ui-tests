@@ -1,6 +1,7 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { DatabaseSync } from 'node:sqlite'
 import { afterAll, describe, expect, it } from 'vitest'
 import { newId, newRunId, newToken } from '../src/ids.ts'
 import { dataDirectory, openStore } from '../src/store/open.ts'
@@ -32,6 +33,56 @@ describe('SqliteStore on one file opened twice', () => {
     expect(results.filter(Boolean)).toHaveLength(1)
     await cli.close()
     await app.close()
+  })
+})
+
+describe('SqliteStore across connections', () => {
+  it('stays usable after BEGIN fails because another connection holds the write lock', async () => {
+    const file = tempFile()
+    const store = new SqliteStore(file, undefined, 0)
+    const other = new DatabaseSync(file)
+    other.exec('BEGIN IMMEDIATE')
+    await expect(store.transaction(async (tx) => tx.listRuns())).rejects.toThrow(/locked|busy/i)
+    other.exec('ROLLBACK')
+    other.close()
+    expect(await store.transaction(async (tx) => (await tx.createRun(newRun('k1'))).created)).toBe(true)
+    expect(await store.listRuns()).toHaveLength(1)
+    await store.close()
+  })
+
+  it('answers created: false, never a unique-key error, when two connections race one key', async () => {
+    const file = tempFile()
+    const stores = [new SqliteStore(file), new SqliteStore(file), new SqliteStore(file)]
+    const results = await Promise.all(stores.flatMap((s) => [s.createRun(newRun('same')), s.createRun(newRun('same'))]))
+    expect(results.filter((r) => r.created)).toHaveLength(1)
+    expect(new Set(results.map((r) => r.run.run)).size).toBe(1)
+    await Promise.all(stores.map((s) => s.close()))
+  })
+
+  it('keeps patches from two connections to different attempt fields', async () => {
+    const file = tempFile()
+    const a = new SqliteStore(file)
+    const b = new SqliteStore(file)
+    const { run } = await a.createRun(newRun('k1'))
+    const { attempt } = await a.createAttempt({ runId: run.run, participant: 'p_1', goalIndex: 0, rehearsal: false })
+    await Promise.all([
+      ...Array.from({ length: 20 }, (_, i) => a.updateAttempt(attempt.id, { answers: { ...{}, q: i } })),
+      b.updateAttempt(attempt.id, { flags: ['dead click'] }),
+      a.updateAttempt(attempt.id, { startedAt: '2026-10-19T00:00:00.000Z' }),
+      b.updateAttempt(attempt.id, { purposes: ['usability'] }),
+    ])
+    expect(await a.getAttempt(attempt.id)).toMatchObject({ flags: ['dead click'], startedAt: '2026-10-19T00:00:00.000Z', purposes: ['usability'] })
+    await a.close()
+    await b.close()
+  })
+
+  it('does not let explicit undefined in a new run wipe the defaults', async () => {
+    const store = new SqliteStore(':memory:')
+    const { run } = await store.createRun(newRun('k1', { states: undefined, result: undefined, deadline: undefined }))
+    expect(run.result).toBe('pending')
+    expect(run.states.recruitment).toBe('open')
+    expect(run.deadline).toBeTruthy()
+    await store.close()
   })
 })
 

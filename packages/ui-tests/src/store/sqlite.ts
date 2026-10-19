@@ -1,4 +1,4 @@
-import { createHash, timingSafeEqual } from 'node:crypto'
+import { createHash } from 'node:crypto'
 import { mkdirSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import path from 'node:path'
@@ -21,7 +21,7 @@ export class SqliteStore implements RunStore {
   private readonly inTransaction: boolean
 
   /** Opens or creates the database and applies pending migrations; `:memory:` skips directory creation. */
-  constructor(filename: string, shared?: Shared) {
+  constructor(filename: string, shared?: Shared, busyTimeoutMs = 5000) {
     this.inTransaction = shared !== undefined
     if (shared) {
       this.shared = shared
@@ -29,7 +29,7 @@ export class SqliteStore implements RunStore {
     }
     if (filename !== ':memory:') mkdirSync(path.dirname(filename), { recursive: true })
     const db = new DatabaseSync(filename)
-    db.exec('PRAGMA busy_timeout = 10000')
+    db.exec(`PRAGMA busy_timeout = ${Math.floor(busyTimeoutMs)}`)
     db.exec('PRAGMA journal_mode = WAL')
     db.exec('PRAGMA foreign_keys = ON')
     this.migrate(db)
@@ -64,6 +64,20 @@ export class SqliteStore implements RunStore {
     return body()
   }
 
+  /** Runs a synchronous body as one atomic unit: inside a transaction it just runs; otherwise it takes the write lock first, so a read-modify-write cannot interleave with another connection. */
+  private atomic<T>(body: () => T): T {
+    if (this.inTransaction) return body()
+    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      const result = body()
+      this.db.exec('COMMIT')
+      return result
+    } catch (error) {
+      this.db.exec('ROLLBACK')
+      throw error
+    }
+  }
+
   private one(sql: string, ...params: (string | number)[]): Row | undefined {
     return this.db.prepare(sql).get(...params) as Row | undefined
   }
@@ -86,20 +100,20 @@ export class SqliteStore implements RunStore {
 
   createRun(input: NewRun) {
     return this.op(() => {
-      const existing = this.runRow(this.one('SELECT data FROM runs WHERE key = ?', input.key))
-      if (existing) return { run: existing, created: false }
       const now = new Date()
+      const defined = Object.fromEntries(Object.entries(input).filter(([, value]) => value !== undefined)) as NewRun
       const run: RunRow = {
         states: { recruitment: 'open', collection: 'waiting', verification: 'pending', payment: 'none' },
         result: 'pending',
-        ...input,
+        ...defined,
         deadline: input.deadline ?? new Date(now.getTime() + defaultDeadlineMs).toISOString(),
         run: newRunId(),
         revision: 1,
         createdAt: now.toISOString(),
       }
-      this.run('INSERT INTO runs (id, key, revision, created_at, data) VALUES (?, ?, ?, ?, ?)', run.run, run.key, run.revision, run.createdAt, JSON.stringify(run))
-      return { run, created: true }
+      const inserted = this.run('INSERT INTO runs (id, key, revision, created_at, data) VALUES (?, ?, ?, ?, ?) ON CONFLICT (key) DO NOTHING', run.run, run.key, run.revision, run.createdAt, JSON.stringify(run))
+      if (Number(inserted.changes) > 0) return { run, created: true }
+      return { run: this.runRow(this.one('SELECT data FROM runs WHERE key = ?', input.key))!, created: false }
     })
   }
 
@@ -112,13 +126,13 @@ export class SqliteStore implements RunStore {
   }
 
   updateRun(id: string, patch: Partial<RunRow>, expectedRevision: number) {
-    return this.op(() => {
+    return this.op(() => this.atomic(() => {
       const current = this.runRow(this.one('SELECT data FROM runs WHERE id = ?', id))
       if (!current || current.revision !== expectedRevision) return false
       const next: RunRow = { ...current, ...patch, run: current.run, key: current.key, createdAt: current.createdAt, revision: expectedRevision + 1 }
       const result = this.run('UPDATE runs SET data = ?, revision = ? WHERE id = ? AND revision = ?', JSON.stringify(next), next.revision, id, expectedRevision)
       return Number(result.changes) === 1
-    })
+    }))
   }
 
   createAttempt(input: NewAttempt) {
@@ -155,11 +169,10 @@ export class SqliteStore implements RunStore {
   authorize(token: string) {
     return this.op(() => {
       const hash = hashToken(token)
-      const row = this.one('SELECT hash, attempt_id, run_id FROM tokens WHERE hash = ?', hash)
+      // Only the sha256 of a token is stored and looked up through the primary-key index. The presented token is never
+      // compared byte by byte, so there is no secret-dependent comparison for timing to reveal.
+      const row = this.one('SELECT attempt_id, run_id FROM tokens WHERE hash = ?', hash)
       if (!row) return undefined
-      const stored = Buffer.from(row.hash as string)
-      const given = Buffer.from(hash)
-      if (stored.length !== given.length || !timingSafeEqual(stored, given)) return undefined
       const attempt = this.attemptRow(this.one('SELECT data FROM attempts WHERE id = ?', row.attempt_id as string))
       const run = this.runRow(this.one('SELECT data FROM runs WHERE id = ?', row.run_id as string))
       return attempt && run ? { run, attempt } : undefined
@@ -175,13 +188,13 @@ export class SqliteStore implements RunStore {
   }
 
   updateAttempt(id: string, patch: Partial<AttemptRow>, expectedStatus?: AttemptStatus) {
-    return this.op(() => {
+    return this.op(() => this.atomic(() => {
       const current = this.attemptRow(this.one('SELECT data FROM attempts WHERE id = ?', id))
       if (!current || (expectedStatus !== undefined && current.status !== expectedStatus)) return false
       const next: AttemptRow = { ...current, ...patch, id: current.id, runId: current.runId, participant: current.participant }
       const result = this.run('UPDATE attempts SET data = ?, status = ? WHERE id = ? AND status = ?', JSON.stringify(next), next.status, id, current.status)
       return Number(result.changes) === 1
-    })
+    }))
   }
 
   appendEvents(attemptId: string, events: RecordedEvent[]) {
@@ -258,16 +271,7 @@ export class SqliteStore implements RunStore {
         this.run('INSERT INTO reservations (run_id, minor, currency) VALUES (?, ?, ?)', runId, amount.minor, amount.currency)
         return true
       }
-      if (this.inTransaction) return run()
-      this.db.exec('BEGIN IMMEDIATE')
-      try {
-        const ok = run()
-        this.db.exec('COMMIT')
-        return ok
-      } catch (error) {
-        this.db.exec('ROLLBACK')
-        throw error
-      }
+      return this.atomic(run)
     })
   }
 
@@ -276,8 +280,13 @@ export class SqliteStore implements RunStore {
     const previous = this.shared.gate
     let release!: () => void
     this.shared.gate = new Promise<void>((resolve) => (release = resolve))
-    await previous
-    this.db.exec('BEGIN IMMEDIATE')
+    try {
+      await previous
+      this.db.exec('BEGIN IMMEDIATE')
+    } catch (error) {
+      release()
+      throw error
+    }
     try {
       const result = await fn(new SqliteStore('', this.shared))
       this.db.exec('COMMIT')

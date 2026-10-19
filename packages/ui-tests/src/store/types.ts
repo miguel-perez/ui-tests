@@ -98,6 +98,7 @@ export interface RunStore {
   /** Idempotent on `input.key`: a repeated key returns the existing run with `created: false`. */
   createRun(input: NewRun): Promise<{ run: RunRow; created: boolean }>
   getRun(id: string): Promise<RunRow | undefined>
+  /** All runs in creation order (ties broken by insertion order). */
   listRuns(): Promise<RunRow[]>
   /** Applies the patch and bumps the revision, only when the stored revision is `expectedRevision`. */
   updateRun(id: string, patch: Partial<RunRow>, expectedRevision: number): Promise<boolean>
@@ -105,6 +106,7 @@ export interface RunStore {
   createAttempt(input: NewAttempt): Promise<{ attempt: AttemptRow; token: string }>
   authorize(token: string): Promise<{ run: RunRow; attempt: AttemptRow } | undefined>
   getAttempt(id: string): Promise<AttemptRow | undefined>
+  /** The run's attempts in creation order (ties broken by insertion order). */
   listAttempts(runId: string): Promise<AttemptRow[]>
   /** With `expectedStatus`, applies only when the attempt is in that status. */
   updateAttempt(id: string, patch: Partial<AttemptRow>, expectedStatus?: AttemptStatus): Promise<boolean>
