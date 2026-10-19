@@ -19,7 +19,7 @@ describe('the cursor follies', () => {
     // Each fate names the parts it plays on.
     for (const stage of stages) {
       const roles = Object.keys(stage.parts).sort()
-      expect(roles, stage.sel).toEqual({ hesitation: ['a', 'b'], 'rage click': ['btn'], backtrack: ['back', 'btn'], 'long pause': ['btn'] }[stage.fate])
+      expect(roles, stage.sel).toEqual({ hesitation: ['a', 'b'], 'rage click': ['btn'], 'went back': ['back', 'btn'], 'long pause': ['btn'] }[stage.fate])
     }
     expect(stages.find(stage => stage.sel === '.hero-artefact .terminal-body')!.parts).toEqual({ back: { sel: '.terminal-rank', at: 0 }, btn: { sel: '.terminal-rank', at: -1 } })
     expect(stages.find(stage => stage.sel === '.hero-artefact .window-chrome')!.parts).toEqual({ btn: { sel: '.window-title' } })
@@ -107,7 +107,7 @@ describe('the cursor follies', () => {
     const hero = stages.filter(stage => heroStages.includes(stage.sel))
     expect(cast(hero, none)!.sel).toBe('.hero .actions')
     expect(cast(hero, { ...none, confusion: 1 })!.fate).toBe('rage click')
-    expect(cast(hero, { ...none, confusion: 1, frustration: 1 })!.fate).toBe('backtrack')
+    expect(cast(hero, { ...none, confusion: 1, frustration: 1 })!.fate).toBe('went back')
     expect(cast(hero, { confusion: 1, frustration: 1, hook: 1, spinner: 0 })!.fate).toBe('long pause')
     expect(cast(hero, { confusion: 2, frustration: 1, hook: 2, spinner: 1 })!.fate).toBe('rage click')
     expect(cast([], none)).toBeUndefined()

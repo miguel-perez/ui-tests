@@ -5,12 +5,16 @@
  * browser (tests/follies.test.ts); `components/cursor-follies.tsx` draws and directs from it.
  */
 
-export type Fate = 'hesitation' | 'rage click' | 'backtrack' | 'long pause'
+/**
+ * The four problems the report finds, as the troupe acts them out. Issue #75 names the third with the old word for it; here it is
+ * "went back", issue #22's word, as everywhere on the site (tests/vocabulary.ts).
+ */
+export type Fate = 'hesitation' | 'rage click' | 'went back' | 'long pause'
 export type Exit = 'confusion' | 'frustration' | 'hook' | 'spinner'
 export type Rect = { x: number; y: number; w: number; h: number }
 
 /** Each fate's cartoon exit: a cloud of `?`, a pop into shards, the vaudeville cane, the spinner's vortex. */
-export const exitOf: Record<Fate, Exit> = { hesitation: 'confusion', 'rage click': 'frustration', backtrack: 'hook', 'long pause': 'spinner' }
+export const exitOf: Record<Fate, Exit> = { hesitation: 'confusion', 'rage click': 'frustration', 'went back': 'hook', 'long pause': 'spinner' }
 export const exits: readonly Exit[] = ['confusion', 'frustration', 'hook', 'spinner']
 
 /**
@@ -20,7 +24,7 @@ export const exits: readonly Exit[] = ['confusion', 'frustration', 'hook', 'spin
 export type Part = { sel?: string; at?: number }
 /**
  * A stage: a real element already on the page and the parts the cursor plays on. Hesitation swings between `a` and `b`, a rage click
- * presses `btn`, a backtrack runs between `back` and `btn`, a long pause clicks the end of `btn` and waits.
+ * presses `btn`, going back runs between `back` and `btn`, a long pause clicks the end of `btn` and waits.
  */
 export type Stage = { fate: Fate; sel: string; parts: Record<string, Part> }
 
@@ -28,18 +32,18 @@ export type Stage = { fate: Fate; sel: string; parts: Record<string, Part> }
 export const stages: readonly Stage[] = [
   { fate: 'hesitation', sel: '.hero .actions', parts: { a: { sel: '.button.primary' }, b: { sel: '.button.quiet' } } },
   { fate: 'rage click', sel: '.site-header .nav-links', parts: { btn: { sel: 'a' } } },
-  { fate: 'backtrack', sel: '.hero-artefact .terminal-body', parts: { back: { sel: '.terminal-rank', at: 0 }, btn: { sel: '.terminal-rank', at: -1 } } },
+  { fate: 'went back', sel: '.hero-artefact .terminal-body', parts: { back: { sel: '.terminal-rank', at: 0 }, btn: { sel: '.terminal-rank', at: -1 } } },
   { fate: 'long pause', sel: '.hero-artefact .window-chrome', parts: { btn: { sel: '.window-title' } } },
   { fate: 'hesitation', sel: '.compilation [role="tablist"]', parts: { a: { sel: '[role="tab"]', at: 1 }, b: { sel: '[role="tab"]', at: 2 } } },
   { fate: 'rage click', sel: '.replay-clip', parts: { btn: { sel: '.replay-play' } } },
-  { fate: 'backtrack', sel: '.replay-rail', parts: { back: { sel: 'li[data-at="0"] i' }, btn: { sel: 'li[data-at="63"] i' } } },
+  { fate: 'went back', sel: '.replay-rail', parts: { back: { sel: 'li[data-at="0"] i' }, btn: { sel: 'li[data-at="63"] i' } } },
   { fate: 'long pause', sel: '.host-window', parts: { btn: { sel: '.host-term .k' } } },
   { fate: 'rage click', sel: '.pr-chk', parts: { btn: { sel: 'a' } } },
   { fate: 'hesitation', sel: '.pr-links', parts: { a: { sel: 'a', at: 0 }, b: { sel: 'a', at: -1 } } },
   { fate: 'hesitation', sel: '.ch-actions', parts: { a: { sel: '.quiet' }, b: { sel: '.pri' } } },
   { fate: 'rage click', sel: '.lines-window .window-chrome', parts: { btn: { sel: '.copy-control' } } },
   { fate: 'rage click', sel: '#link-row', parts: { btn: { at: -1 } } },
-  { fate: 'backtrack', sel: '.agents-tiles', parts: { back: { sel: '.agents-icon', at: 0 }, btn: { sel: '.agents-icon', at: -1 } } },
+  { fate: 'went back', sel: '.agents-tiles', parts: { back: { sel: '.agents-icon', at: 0 }, btn: { sel: '.agents-icon', at: -1 } } },
   { fate: 'long pause', sel: '.host-snip', parts: { btn: { sel: 'code' } } },
 ]
 /** The hero's stages: the ones a visitor who stays at the top of the page sees. */

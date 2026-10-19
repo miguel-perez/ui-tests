@@ -46,14 +46,13 @@ const ease = {
 const ARROW = [[0, 0], [0, 17], [4, 13], [7, 20], [9.6, 19], [6.6, 12], [12, 12]]
 const glyphFont = (size: number) => `600 ${size}px "Fira Code", ui-monospace, Menlo, monospace`
 
-/** A colour the canvas can mix: the token's computed value read through a one-pixel probe, so any CSS colour arrives as channels. */
-function tokenColour(token: string, fallback: string) {
+/** A token's colour as the canvas can mix it: its computed value read through a one-pixel probe, so any CSS colour arrives as channels. */
+function tokenColour(token: string) {
   const probe = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!
-  probe.fillStyle = fallback
-  probe.fillStyle = getComputedStyle(document.documentElement).getPropertyValue(token).trim() || fallback
+  probe.fillStyle = getComputedStyle(document.documentElement).getPropertyValue(token).trim()
   probe.fillRect(0, 0, 1, 1)
   const [r, g, b] = probe.getImageData(0, 0, 1, 1).data
-  return `rgb(${r}, ${g}, ${b})`
+  return `rgb(${[r, g, b].join(', ')})`
 }
 const channels = (colour: string) => colour.match(/\d+/g)!.slice(0, 3).map(Number)
 const mix = (a: string, b: string, t: number) => { const A = channels(a), B = channels(b); return `rgb(${A.map((v, i) => Math.round(v + (B[i] - v) * t)).join(', ')})` }
@@ -61,7 +60,7 @@ const mix = (a: string, b: string, t: number) => { const A = channels(a), B = ch
 /**
  * The troupe (issue #75), on the landing only: one fixed, full-viewport canvas over the page with `pointer-events: none`, and one
  * animation loop that stops while the tab is hidden. Cartoon cursors pop in, rest only in empty space and walk up to real parts of the
- * page to act out hesitation, a rage click, a backtrack and a long pause, each ending in its exit; a click on one in trouble catches
+ * page to act out hesitation, a rage click, going back and a long pause, each ending in its exit; a click on one in trouble catches
  * it. Everything is drawn: the cursors never hover, focus or trigger anything, and the layer never changes the page's markup, because
  * the recorder reads a markup change after a click as that click's effect. Its state is a `follies` property on the canvas for the
  * tests, never an attribute. Under reduced motion, or while a live ui-tests surface is on the page, there are no cursors.
@@ -84,15 +83,12 @@ export function CursorFollies() {
 
     // ---------- viewport, colour ----------
     let VW = 0, VH = 0, DPR = 1, K = 3
+    // Every colour is a site token: the cursors are white with an ink outline, the effects are the accent and the data roles, the cane
+    // is the yellow, and smoke and dozing take the demo app's dim ink.
     const C = {
-      ink: '', accent: '', red: '', yellow: '', green: '', teal: '', dim: '', cane: 'rgb(184, 134, 11)', fill: 'rgb(255, 255, 255)', stroke: 'rgb(17, 17, 17)',
+      fill: tokenColour('--surface'), stroke: tokenColour('--ink'), accent: tokenColour('--accent'), red: tokenColour('--red'),
+      yellow: tokenColour('--yellow'), green: tokenColour('--green'), teal: tokenColour('--teal'), dim: tokenColour('--host-dim'), cane: tokenColour('--yellow'),
     }
-    const readColours = () => Object.assign(C, {
-      dim: tokenColour('--host-dim', '#4b5a94'), ink: tokenColour('--ink', '#111111'), accent: tokenColour('--accent', '#4b3ff0'), red: tokenColour('--red', '#bd1f44'),
-      yellow: tokenColour('--yellow', '#8b6100'), green: tokenColour('--green', '#27762f'), teal: tokenColour('--teal', '#00757c'),
-    })
-    readColours()
-    C.stroke = C.ink
     const resize = () => {
       VW = document.documentElement.clientWidth; VH = innerHeight; DPR = Math.min(2, devicePixelRatio || 1)
       const w = Math.round(VW * DPR), h = Math.round(VH * DPR)
@@ -288,7 +284,7 @@ export function CursorFollies() {
           tick: (c, p) => { c.s = 1 + .5 * ease.in(p); c.jx = rand(-3, 3) * p; c.jy = rand(-3, 3) * p; c.wide = 1 + .4 * p; c.oy = 0; c.sy = c.sx = 1; c.steam = 1.5 + 2 * p } },
         { d: 1.6, enter: c => { const h = body(c); shards(h); smoke(h.x, h.y, 10, 60); ring(h.x, h.y, C.red, 60); glyph(h.x, h.y - 10, 'POP', { color: C.red, size: 24, vy: -50, max: .9 }); c.alpha = 0; c.steam = 0 } },
       ],
-      backtrack: (c, st) => {
+      'went back': (c, st) => {
         const at = (role: string) => () => { const p = anc(st, role); return { x: p.x - 2, y: p.y - 2 } }
         return [
           ...hop(at('btn'), { lift: 70, dur: .9 }),
