@@ -30,7 +30,7 @@ export type Stage = { fate: Fate; sel: string; parts: Record<string, Part> }
 
 /** The stages, in the issue's order. The hero has one of each fate, so a visitor who never scrolls sees every exit. */
 export const stages: readonly Stage[] = [
-  { fate: 'hesitation', sel: '.hero .actions', parts: { a: { sel: '.button.primary' }, b: { sel: '.button.quiet' } } },
+  { fate: 'hesitation', sel: '.hero-copy', parts: { a: { sel: '.button.primary' }, b: { sel: '.fineprint' } } },
   { fate: 'rage click', sel: '.site-header .nav-links', parts: { btn: { sel: 'a' } } },
   { fate: 'went back', sel: '.hero-artefact .terminal-body', parts: { back: { sel: '.terminal-rank', at: 0 }, btn: { sel: '.terminal-rank', at: -1 } } },
   { fate: 'long pause', sel: '.hero-artefact .window-chrome', parts: { btn: { sel: '.window-title' } } },
@@ -39,7 +39,7 @@ export const stages: readonly Stage[] = [
   { fate: 'went back', sel: '.replay-rail', parts: { back: { sel: 'li[data-at="0"] i' }, btn: { sel: 'li[data-at="63"] i' } } },
   { fate: 'long pause', sel: '.host-window', parts: { btn: { sel: '.host-term .k' } } },
   { fate: 'rage click', sel: '.pr-chk', parts: { btn: { sel: 'a' } } },
-  { fate: 'hesitation', sel: '.pr-links', parts: { a: { sel: 'a', at: 0 }, b: { sel: 'a', at: -1 } } },
+  { fate: 'hesitation', sel: '.pr-links', parts: { a: { sel: '.pr-link', at: 0 }, b: { sel: '.pr-link', at: -1 } } },
   { fate: 'hesitation', sel: '.ch-actions', parts: { a: { sel: '.quiet' }, b: { sel: '.pri' } } },
   { fate: 'rage click', sel: '.lines-window .window-chrome', parts: { btn: { sel: '.copy-control' } } },
   { fate: 'rage click', sel: '#link-row', parts: { btn: { at: -1 } } },

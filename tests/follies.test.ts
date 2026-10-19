@@ -13,7 +13,7 @@ describe('the cursor follies', () => {
   it('casts on the issue\'s fifteen stages, and the hero alone has one of each fate, so every exit can be seen without scrolling', () => {
     expect(stages).toHaveLength(15)
     expect(new Set(stages.map(stage => stage.sel)).size).toBe(15)
-    expect(heroStages).toEqual(['.hero .actions', '.site-header .nav-links', '.hero-artefact .terminal-body', '.hero-artefact .window-chrome'])
+    expect(heroStages).toEqual(['.hero-copy', '.site-header .nav-links', '.hero-artefact .terminal-body', '.hero-artefact .window-chrome'])
     const heroExits = stages.filter(stage => heroStages.includes(stage.sel)).map(stage => exitOf[stage.fate])
     expect(new Set(heroExits)).toEqual(new Set(exits))
     // Each fate names the parts it plays on.
@@ -105,7 +105,7 @@ describe('the cursor follies', () => {
 
   it('casts the ready stage whose exit has been used least, the first in page order on a tie', () => {
     const hero = stages.filter(stage => heroStages.includes(stage.sel))
-    expect(cast(hero, none)!.sel).toBe('.hero .actions')
+    expect(cast(hero, none)!.sel).toBe('.hero-copy')
     expect(cast(hero, { ...none, confusion: 1 })!.fate).toBe('rage click')
     expect(cast(hero, { ...none, confusion: 1, frustration: 1 })!.fate).toBe('went back')
     expect(cast(hero, { confusion: 1, frustration: 1, hook: 1, spinner: 0 })!.fate).toBe('long pause')

@@ -178,7 +178,7 @@ test('three waves caught bring one happy cursor that never enters a stage', asyn
 test('at 390x844 the same first scene runs on the hero', async ({ page }) => {
   await open(page, 390, 844)
   await expect.poll(async () => (await follies(page)).actors.length, { timeout: 2000, intervals: [100] }).toBe(1)
-  await expect.poll(async () => (await follies(page)).actors.find(actor => actor.mode === 'performing')?.stage ?? null, { timeout: 8000, intervals: [100] }).toBe('.hero .actions')
+  await expect.poll(async () => (await follies(page)).actors.find(actor => actor.mode === 'performing')?.stage ?? null, { timeout: 8000, intervals: [100] }).toBe('.hero-copy')
   expect((await follies(page)).actors[0].fate).toBe('hesitation')
 })
 
@@ -237,25 +237,27 @@ test('a live surface injected mid-scene clears the cursors within a second; a co
   expect((await follies(page)).actors).toEqual([])
 })
 
-test('clicks go through to the page: Get started navigates while a cursor is on the page, and a click on a cursor in trouble over a link does not', async ({ page }) => {
+test('clicks go through to the page: the GitHub link navigates while a cursor is on the page, and a click on a cursor in trouble over a link does not', async ({ page }) => {
   test.setTimeout(90_000)
+  // GitHub itself is never fetched: a navigation there lands on a stand-in page.
+  await page.route('https://github.com/**', route => route.fulfill({ contentType: 'text/html', body: '<title>GitHub</title>' }))
   await open(page, 1440, 900)
-  // The nav's Guide link hosts the rage click, the second scene at the top: the cursor sits on the link and clicks it, and a real
+  // The nav's GitHub link hosts the rage click, the second scene at the top: the cursor sits on the link and clicks it, and a real
   // click on it there catches it and goes no further.
   await expect.poll(async () => (await follies(page)).actors.some(actor => actor.trouble && actor.fate === 'rage click'), { timeout: 60_000, intervals: [100] }).toBe(true)
   const k = await scale(page)
   const { actors } = await follies(page)
   const actor = actors.find(actor => actor.trouble)!
   const point = { x: actor.x + 4, y: actor.y + 4 }
-  expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x - scrollX, y - scrollY)?.closest('a')?.getAttribute('href'), point)).toBe('/docs/getting-started')
+  expect(await page.evaluate(({ x, y }) => document.elementFromPoint(x - scrollX, y - scrollY)?.closest('a')?.getAttribute('href'), point)).toBe('https://github.com/miguel-perez/ui-tests')
   expect(Math.hypot(point.x - (actor.x + 5 * k), point.y - (actor.y + 10 * k))).toBeLessThan(15 * k)
   await page.mouse.click(point.x, point.y)
   await expect.poll(async () => (await follies(page)).actors.some(actor => actor.trouble), { timeout: 2000 }).toBe(false)
   await page.waitForTimeout(1000)
   await expect(page).toHaveURL(/\/$/)
-  // With a cursor on the page that is not in trouble, Get started navigates as before.
+  // With a cursor on the page that is not in trouble, the hero's GitHub link navigates as before.
   await page.mouse.move(1438, 898)
   await expect.poll(async () => { const state = await follies(page); return state.actors.length > 0 && !state.actors.some(actor => actor.trouble) }, { timeout: 20_000, intervals: [100] }).toBe(true)
-  await page.getByRole('link', { name: 'Get started', exact: true }).first().click()
-  await expect(page).toHaveURL(/\/docs\/getting-started$/)
+  await page.locator('.hero .button.primary').click()
+  await expect(page).toHaveURL('https://github.com/miguel-perez/ui-tests')
 })
