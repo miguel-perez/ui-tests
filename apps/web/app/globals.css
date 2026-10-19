@@ -51,6 +51,8 @@ main { position: relative; isolation: isolate; }
 /* The page's texture (issue #51): in the document, not fixed, as wide and as tall as the page, under everything on it. */
 .site { position: relative; }
 .page-texture { position: absolute; inset: 0; z-index: -1; overflow: hidden; pointer-events: none; }
+/* The cursor follies (issue #75): one canvas over the whole window, drawn only; every click it does not catch goes through. */
+.cursor-follies { position: fixed; inset: 0; width: 100%; height: 100%; z-index: 40; pointer-events: none; display: block; }
 /* The footer (issue #51): the wordmark in the first five columns, the links in the right seven, the last flush with the container. */
 .site-footer { padding-block: var(--space-2); }
 .site-footer .split { align-items: center; }

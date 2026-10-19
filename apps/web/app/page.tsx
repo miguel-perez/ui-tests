@@ -8,6 +8,7 @@ import { Agents } from '../components/artefacts/agents'
 import { Worth } from '../components/artefacts/worth'
 import { Host } from '../components/artefacts/host'
 import { Icon } from '../components/icon'
+import { CursorFollies } from '../components/cursor-follies'
 import { promise, intro, landing } from '../lib/copy'
 
 function Actions() { return <div className="actions"><Link className="button primary" href="/docs/getting-started">Get started<Icon name="arrow" /></Link><a className="button quiet" href={repository}><Icon name="github" />GitHub</a></div> }
@@ -15,7 +16,7 @@ function Actions() { return <div className="actions"><Link className="button pri
 /**
  * The landing page: a sequence of typed content per docs/design/site-schema.md, every section on one grid per docs/design/grid-plan.md
  * (design/artefacts/README.md, "The page grid, in one place"): hero, how it works, what you write, where the people come from, what a
- * run is worth, the agent section, the host section (no repo, one command).
+ * run is worth, the agent section, the host section (no repo, one command). Over it, on the landing only, the cursor follies (issue #75).
  */
 export default function Home() {
   return <SiteShell><main id="content">
@@ -28,5 +29,5 @@ export default function Home() {
       <Agents />
       <Host />
     </div>
-  </main></SiteShell>
+  </main><CursorFollies /></SiteShell>
 }
