@@ -23,7 +23,7 @@ describe('compileStudy', () => {
     const [goal] = compiled.goals
     expect(goal).toMatchObject({ shape: 'happy-path', startFrom: 'setup', start: '/board', primary: true, hasOutcome: true, path: ['/board', '/settings/members'] })
     expect(goal.timeout.seconds).toBe(180)
-    expect(compiled.impression).toMatchObject({ enabled: true, page: '/', flashMs: 500 })
+    expect(compiled.impression).toMatchObject({ on: true, page: '/', flashMs: 500 })
     expect(compiled.questions[0].text).toBe('Would Weekboard be useful to you?')
     expect(goal.questions.map(q => q.id)).toEqual(['goal0.ease', 'goal0.difficulty'])
     expect(compiled.screener).toEqual([])
@@ -51,7 +51,8 @@ describe('compileStudy', () => {
     expect(goals[0].steps).toEqual([{ name: 'one', hasCheck: false }, { name: 'two', hasCheck: true }])
     expect(goals[0].timeout.seconds).toBe(180)
     expect(goals[2].timeout.seconds).toBe(300)
-    expect(goals[3].answer).toEqual({ question: 'Which?', choices: ['B', 'A'], expected: 'B' })
+    expect(goals[3].answer).toMatchObject({ question: 'Which?', expected: 'B' })
+    expect([...goals[3].answer!.choices].sort()).toEqual(['A', 'B'])
     expect(goals[3].questions.map(q => q.id)).toEqual(['goal3.ease', 'goal3.difficulty'])
     expect(goals[0].questions.map(q => q.id)).toContain('goal0.confidence')
     expect(goals[1].primary).toBe(true)
@@ -62,10 +63,10 @@ describe('compileStudy', () => {
     study('s', { users: 'people' }, () => { task('a', { path: ['/p', '/q'] }) })
     const compiled = compileStudy(getStudies()[0], {})
     expect(compiled.goals[0]).toMatchObject({ start: '/p', startFrom: 'path' })
-    expect(compiled.impression.enabled).toBe(true)
+    expect(compiled.impression.on).toBe(true)
     resetStudies()
     study('s', { users: 'people' }, () => { setup(async () => ({})); task('a') })
-    expect(compileStudy(getStudies()[0], {}).impression).toEqual({ enabled: false })
+    expect(compileStudy(getStudies()[0], {}).impression).toMatchObject({ on: false, reason: expect.stringContaining('setup') })
   })
 
   it('prefers primary: true, then the only task with an outcome', () => {

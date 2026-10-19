@@ -1,5 +1,9 @@
 import { StudyLoadError } from './load.ts'
 import type { AuthoredStudy, AuthoredTask } from './authoring.ts'
+import { consentText } from './derive/consent.ts'
+import { distractors, shuffleChoices } from './derive/distractors.ts'
+import { deriveImpression } from './derive/impression.ts'
+import { scenarioTemplate } from './derive/scenario.ts'
 import { detectionChance, sampleSentence, sampleSize } from './derive/sample.ts'
 import { goalTimeout } from './derive/timeout.ts'
 import { contextId, validateUsers } from './derive/users.ts'
@@ -11,6 +15,14 @@ export type { CompiledConsent, CompiledGoal, CompiledImpression, CompiledQuestio
 export { sampleSize, detectionChance } from './derive/sample.ts'
 export { goalTimeout } from './derive/timeout.ts'
 export { validateUsers, contextId } from './derive/users.ts'
+export { scenarioTemplate, fillScenario } from './derive/scenario.ts'
+export { distractors, shuffleChoices } from './derive/distractors.ts'
+export { consentText, payoutLine } from './derive/consent.ts'
+export { deriveImpression } from './derive/impression.ts'
+export { sentence, resultOf } from './derive/sentence.ts'
+export { CARD_FOOTER, START_TASK } from './copy.ts'
+export { nullModel } from './model.ts'
+export type { TextModel } from './model.ts'
 
 type Derivation = CompiledStudy['derivations'][number]
 
@@ -20,7 +32,6 @@ function normalizeUsers(users: Users): CompiledStudy['users'] {
   return { ...rest, ...(where !== undefined && { where }), ...(uses && { uses }), ...(not && { not }) } as CompiledStudy['users']
 }
 function hostname(url: string) { try { return new URL(url).hostname } catch { return url } }
-function sentence(text: string) { return text.charAt(0).toUpperCase() + text.slice(1) }
 
 /** The primary task: the one marked `primary`, else the only one with an outcome, else the first. */
 function primaryOf(tasks: AuthoredTask[]): AuthoredTask | undefined {
@@ -73,6 +84,7 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
   const primary = primaryOf(study.tasks)
   derive('goals[].primary', 'the task marked primary, else the only task with an outcome, else the first', 'task.primary, task.outcome')
 
+  const answerPool = study.tasks.flatMap(t => t.answer ? [t.answer.expected] : [])
   const goals: CompiledGoal[] = study.tasks.map((task, index) => {
     const { path, start, minutes, scenario } = task.options
     const hasOutcome = task.outcomes.length > 0
@@ -85,7 +97,7 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
     derive(`${at}.start`, start ? 'task start' : path?.length ? 'the first page of path' : 'the root page', 'task.start, task.path')
     derive(`${at}.startFrom`, start ? 'task start' : study.setup ? 'setup returns the start at run time' : path?.length ? 'path' : 'default', 'task.start, setup, task.path')
     derive(`${at}.timeout`, timeout.rule, 'task.timeLimit, task.path, task.steps')
-    derive(`${at}.scenario`, scenario ? 'as authored' : 'the task name as an instruction', 'task.scenario, task.name')
+    derive(`${at}.scenario`, scenario ? 'as authored' : 'who the users are, the purpose and the task name; never the path or the outcome', 'task.scenario, task.name')
     derive(`${at}.questions`, 'ease, then what made it difficult at 4 or below; confidence only without outcome or answer', 'task.outcome, task.answer')
     return {
       index,
@@ -93,10 +105,10 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
       shape,
       start: start ?? path?.[0] ?? '/',
       startFrom,
-      scenario: scenario ? { text: scenario, pinned: true } : { text: `Try to ${task.name}.`, pinned: false },
+      scenario: scenario ? { text: scenario, pinned: true } : { text: scenarioTemplate({ are: users.are, purpose, goal: task.name, values: {} }), pinned: false },
       steps: task.steps.map(s => ({ name: s.name, hasCheck: Boolean(s.check) })),
       ...(path && { path }),
-      ...(task.answer && { answer: { question: task.answer.question, choices: [task.answer.expected, ...(task.answer.distractors ?? [])], expected: task.answer.expected } }),
+      ...(task.answer && { answer: { question: task.answer.question, choices: shuffleChoices(task.answer.expected, task.answer.distractors ?? distractors(task.answer.expected, answerPool, `${id}:${index}`), `${id}:${index}`), expected: task.answer.expected } }),
       hasOutcome,
       timeout,
       ...(minutes !== undefined && { minutes }),
@@ -105,12 +117,8 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
     }
   })
 
-  const firstLook = study.options.firstLook ?? primary?.options.firstLook
-  const startFromSetup = Boolean(study.setup)
-  const impression: CompiledStudy['impression'] = firstLook === false || (firstLook === undefined && startFromSetup)
-    ? { enabled: false }
-    : { enabled: true, page: firstLook?.page ?? goals.find(g => g.primary)?.start ?? '/', flashMs: 500, question: 'What was that page for?', codes: ['named the purpose', 'did not name it', 'no answer'] }
-  derive('impression', firstLook === false ? 'firstLook is false' : firstLook ? 'firstLook page as authored' : startFromSetup ? 'off when the start comes from setup' : 'on at the primary start page', 'firstLook, setup')
+  const impression = deriveImpression(study, goals)
+  derive('impression', impression.reason, 'firstLook, setup')
 
   const questions: CompiledQuestion[] = [
     { id: 'useful', text: `Would ${product} be useful to you?`, type: 'scale', points: 7 },
@@ -118,7 +126,8 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
     { id: 'anything', text: `Anything you want to tell ${product}?`, type: 'open' },
   ]
   derive('questions', 'asked once after all goals, with the product name', 'config.product')
-  derive('consent', 'retention 90 days; workflows from config', 'config.consent')
+  derive('consent', 'retention 90 days; the third purpose only when config consent.workflows is true; the payout line from config participants.link.amount', 'config.consent, config.participants')
+  derive('goals[].answer.choices', 'the expected answer among its distractors (authored, else generated), shuffled by the study id and task index', 'task.answer')
 
   return {
     schema: compiledSchemaUrl,
@@ -132,12 +141,12 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
     author: config.author ?? '',
     record,
     actors,
-    sample: { affecting: sampleOptions.affecting, confidence: sampleOptions.confidence, n, sentence: sampleSentence(sampleOptions.affecting, n) },
+    sample: { affecting: sampleOptions.affecting, confidence: sampleOptions.confidence, n, sentence: sampleSentence(n, sampleOptions.affecting) },
     impression,
     screener: [],
     goals,
     questions,
-    consent: { workflows: config.consent?.workflows ?? false, retentionDays: 90, purposes: [] },
+    consent: consentText({ product, author: config.author ?? '' }, { workflows: config.consent?.workflows ?? false, ...(config.participants?.link?.amount && { amount: { minor: config.participants.link.amount, currency: config.participants.budget?.currency ?? 'USD' } }) }),
     derivations,
   }
 }

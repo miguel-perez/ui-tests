@@ -23,26 +23,31 @@ export const compiledQuestionSchema = z.object({
 export type CompiledQuestion = z.infer<typeof compiledQuestionSchema>
 
 /**
- * The first look at the start page. Task 4 fills the details; here: whether it runs, which page, and the fixed
- * words and timing. `enabled: false` leaves the rest out.
+ * The first look at the start page: whether it runs (`on`), which page, the fixed timing and words, and `reason`
+ * saying why it is on or off. The fixed fields are present either way.
  */
 export const compiledImpressionSchema = z.object({
-  enabled: z.boolean(),
+  on: z.boolean(),
   page: z.string().optional(),
-  flashMs: z.number().optional(),
-  question: z.string().optional(),
-  codes: z.array(z.string()).optional(),
+  flashMs: z.literal(500),
+  question: z.string(),
+  codes: z.array(z.string()),
+  reason: z.string(),
 })
 export type CompiledImpression = z.infer<typeof compiledImpressionSchema>
 
 /**
- * What the participant is asked to agree to. Task 4 fills `purposes` (the consent lines shown, in order); the
- * compiler only records the options that change them.
+ * What the participant is asked to agree to. `purposes` names what is agreed to; `text` is what is shown.
  */
 export const compiledConsentSchema = z.object({
   workflows: z.boolean(),
   retentionDays: z.number(),
+  /** The purposes agreed to, in order. */
   purposes: z.array(z.string()),
+  /** The consent screen's paragraphs: one sentence per purpose, retention, then the payout line. */
+  text: z.array(z.string()),
+  /** The payout line, also the last entry of `text`. */
+  payout: z.string(),
 })
 export type CompiledConsent = z.infer<typeof compiledConsentSchema>
 

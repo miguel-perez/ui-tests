@@ -14,7 +14,7 @@ describe('sample size', () => {
   })
   it('rejects values outside 0..1', () => { expect(() => sampleSize(0, 0.85)).toThrow(); expect(() => sampleSize(0.5, 1)).toThrow() })
   it('writes the sentence', () => {
-    expect(sampleSentence(1 / 3, 5)).toBe('Five people give an 87% chance of seeing any problem that hits at least one person in three.')
+    expect(sampleSentence(5, 1 / 3)).toBe('Five people give an 87% chance of seeing any problem that hits at least one person in three.')
   })
 })
 
@@ -51,10 +51,10 @@ describe('users', () => {
 
 describe('sample sentence phrasing', () => {
   it('says one person in k only for 1/k', () => {
-    expect(sampleSentence(1 / 3, 5)).toContain('one person in three.')
-    expect(sampleSentence(1 / 10, 19)).toContain('one person in ten.')
-    expect(sampleSentence(0.4, 5)).toContain('at least 40% of people.')
-    expect(sampleSentence(0.15, 5)).toContain('at least 15% of people.')
+    expect(sampleSentence(5, 1 / 3)).toContain('one person in three.')
+    expect(sampleSentence(19, 1 / 10)).toContain('one person in ten.')
+    expect(sampleSentence(5, 0.4)).toContain('at least 40% of people.')
+    expect(sampleSentence(5, 0.15)).toContain('at least 15% of people.')
   })
   it('names users when missing and keeps non-Latin ids distinct', () => {
     expect(validateUsers(undefined as never).errors[0].field).toBe('users')
