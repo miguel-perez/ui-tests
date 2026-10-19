@@ -8,7 +8,7 @@ import { was, shown, unsaid, offences, verbatim, hostVerbatim, hosting } from '.
 async function files(directory: string): Promise<string[]> {
   const found: string[] = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (['node_modules', '.next', 'out'].includes(entry.name)) continue
+    if (['node_modules', '.next', '.next-server', '.ui-tests', 'out'].includes(entry.name)) continue
     const path = join(directory, entry.name)
     if (entry.isDirectory()) found.push(...await files(path))
     else if (/\.(tsx?|mjs|css|html|json|md)$/.test(entry.name)) found.push(path)
