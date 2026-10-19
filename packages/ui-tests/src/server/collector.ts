@@ -1,0 +1,214 @@
+import { timingSafeEqual } from 'node:crypto'
+import { z } from 'zod'
+import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
+import { MORE_TIME, effectiveTimeout, participantView } from './view.ts'
+
+export type CollectorOptions = {
+  store: () => Promise<RunStore>
+  /** The secret the CLI sends as a Bearer token to act on an attempt named by `?attempt=`. */
+  cliSecret?: string
+  /** The clock in epoch milliseconds; replaced in tests. */
+  now?: () => number
+}
+
+/** Most bytes a body may carry. `end` holds a snapshot of up to 2,000,000 characters, which JSON-escaping can nearly double. */
+const END_BYTES = 5_000_000
+const BODY_BYTES = 2_100_000
+const MAX_EVENTS = 100
+const MAX_SNAPSHOT_CHARS = 2_000_000
+
+const snapshot = z.object({ url: z.string().max(2000), dom: z.string().max(MAX_SNAPSHOT_CHARS), truncated: z.boolean().optional(), state: z.unknown().optional() })
+const at = z.union([z.number(), z.iso.datetime()]).transform((value) => (typeof value === 'number' ? value : Date.parse(value)))
+const event = z.object({
+  type: z.enum(['click', 'url', 'scroll', 'input', 'pause', 'step', 'key', 'focus', 'rrweb']),
+  at,
+  url: z.string().max(2000),
+  target: z.string().max(300).optional(),
+  changed: z.boolean().optional(),
+  duration: z.number().optional(),
+  step: z.number().int().nonnegative().optional(),
+  data: z.unknown().optional(),
+})
+const scale = z.number().int().min(1).max(7)
+const message = z.discriminatedUnion('action', [
+  z.object({ action: z.literal('consent') }),
+  z.object({ action: z.literal('begin') }),
+  z.object({ action: z.literal('events'), events: z.array(event).max(MAX_EVENTS) }),
+  z.object({ action: z.literal('step'), index: z.number().int().nonnegative(), snapshot: snapshot.optional() }),
+  z.object({ action: z.literal('end'), reason: z.enum(['done', 'gave up', 'timeout']), snapshot }),
+  z.object({
+    action: z.literal('answers'),
+    screener: z.record(z.string(), z.union([z.string().max(500), z.array(z.string().max(500)).max(50)])).optional(),
+    impression: z.string().max(5000).optional(),
+    ease: scale.optional(),
+    difficulty: z.string().max(5000).optional(),
+    confidence: scale.optional(),
+    answer: z.string().max(1000).optional(),
+    uxlite: z.record(z.string(), scale).optional(),
+    comment: z.string().max(10_000).optional(),
+  }),
+  z.object({ action: z.literal('more-time') }),
+  z.object({ action: z.literal('withdraw') }),
+])
+type Message = z.infer<typeof message>
+
+const headers = { 'Cache-Control': 'no-store' }
+const refuse = (status: number, text: string) => new Response(text, { status, headers })
+
+const cookieValue = (request: Request, name: string) => new RegExp(`(?:^|;\\s*)${name}=([^;]+)`).exec(request.headers.get('cookie') ?? '')?.[1]
+
+function sameSecret(given: string, secret: string): boolean {
+  const a = Buffer.from(given)
+  const b = Buffer.from(secret)
+  return a.length === b.length && timingSafeEqual(a, b)
+}
+
+/** Builds the collector: one handler for `GET` (the participant view) and `POST` (the participant's actions). */
+export function createCollector(options: CollectorOptions): (request: Request) => Promise<Response> {
+  const now = options.now ?? Date.now
+
+  return async function collector(request: Request): Promise<Response> {
+    const url = new URL(request.url)
+    const get = request.method === 'GET'
+    if (!get && request.method !== 'POST') return refuse(405, 'Method not allowed')
+    const length = Number(request.headers.get('content-length') ?? 0)
+    if (length > END_BYTES) return refuse(413, 'Request too large')
+
+    const store = await options.store()
+    const bearer = /^Bearer (.+)$/.exec(request.headers.get('authorization') ?? '')?.[1]
+    const cookie = cookieValue(request, 'ui-tests-run')
+    const viaCookie = !bearer && Boolean(cookie)
+    const resolved = await authorize(store, url, bearer, cookie, get)
+    if (!resolved) return refuse(401, 'Unauthorized')
+    const wantedRun = url.searchParams.get('run')
+    if (wantedRun && wantedRun !== resolved.run.run) return refuse(401, 'Unauthorized')
+
+    if (get) return respond(resolved.run, resolved.attempt)
+
+    // Cookies ride along on cross-site requests, so a write they authorise must come from this origin. Bearer writes (CLI, tests) are not ambient.
+    if (viaCookie && request.headers.get('origin') !== url.origin) return refuse(403, 'Invalid origin')
+
+    const text = await request.text()
+    if (Buffer.byteLength(text) > END_BYTES) return refuse(413, 'Request too large')
+    let raw: unknown
+    try { raw = JSON.parse(text) } catch { return refuse(400, 'Body is not JSON') }
+    const action = (raw as { action?: unknown } | null)?.action
+    if (action !== 'end' && Buffer.byteLength(text) > BODY_BYTES) return refuse(413, 'Request too large')
+    const parsed = message.safeParse(raw)
+    if (!parsed.success) return refuse(400, parsed.error.message)
+
+    return act(store, resolved.run, resolved.attempt, parsed.data, request)
+  }
+
+  async function authorize(store: RunStore, url: URL, bearer: string | undefined, cookie: string | undefined, get: boolean) {
+    if (bearer && options.cliSecret && sameSecret(bearer, options.cliSecret)) {
+      const attempt = await store.getAttempt(url.searchParams.get('attempt') ?? '')
+      const run = attempt && (await store.getRun(attempt.runId))
+      return run && attempt ? { run, attempt } : undefined
+    }
+    const token = bearer ?? cookie ?? (get ? (url.searchParams.get('t') ?? undefined) : undefined)
+    return token ? store.authorize(token) : undefined
+  }
+
+  async function respond(run: RunRow, attempt: AttemptRow, extra?: Headers): Promise<Response> {
+    const response = Response.json(participantView(run, attempt), { headers })
+    extra?.forEach((value, key) => response.headers.append(key, value))
+    return response
+  }
+
+  async function act(store: RunStore, run: RunRow, attempt: AttemptRow, body: Message, request: Request): Promise<Response> {
+    const goal = run.compiled.goals[attempt.goalIndex]!
+    const reload = async (extra?: Headers) => respond(run, (await store.getAttempt(attempt.id)) ?? attempt, extra)
+    const conflict = (text: string) => refuse(409, text)
+
+    switch (body.action) {
+      case 'consent': {
+        if (attempt.status === 'created') {
+          const moved = await store.updateAttempt(attempt.id, { status: 'consented', purposes: run.compiled.consent.purposes }, 'created')
+          if (!moved && (await store.getAttempt(attempt.id))?.status !== 'consented') return conflict('Consent was already given or the attempt moved on')
+        } else if (attempt.status !== 'consented') return conflict('Consent was already given or the attempt moved on')
+        const secure = new URL(request.url).protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https' ? '; Secure' : ''
+        const token = request.headers.get('authorization')?.replace(/^Bearer /, '') ?? cookieValue(request, 'ui-tests-run')!
+        const cookies = new Headers()
+        cookies.append('Set-Cookie', `ui-tests-run=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=7200${secure}`)
+        cookies.append('Set-Cookie', `ui-tests-active=1; Path=/; SameSite=Lax; Max-Age=7200${secure}`)
+        return reload(cookies)
+      }
+      case 'begin': {
+        const moved = await store.updateAttempt(attempt.id, { status: 'active', startedAt: new Date(now()).toISOString() }, 'consented')
+        return moved ? reload() : conflict('Consent is required before beginning')
+      }
+      case 'events': {
+        if ((await store.getAttempt(attempt.id))?.status !== 'active') return conflict('Attempt is not active')
+        await store.appendEvents(attempt.id, body.events as RecordedEvent[])
+        return reload()
+      }
+      case 'step': {
+        if ((await store.getAttempt(attempt.id))?.status !== 'active') return conflict('Attempt is not active')
+        await store.appendEvents(attempt.id, [{ type: 'step', at: now(), url: body.snapshot?.url ?? '', step: body.index }])
+        if (body.snapshot) await store.putSnapshot(attempt.id, `step-${body.index}`, body.snapshot)
+        return reload()
+      }
+      case 'end': {
+        const current = await store.getAttempt(attempt.id)
+        if (current?.status !== 'active') return conflict('Attempt is not active')
+        const started = current.startedAt ? Date.parse(current.startedAt) : now()
+        const late = now() >= started + effectiveTimeout(goal.timeout.seconds, current) * 1000
+        const reason: AttemptReason = late ? 'timeout' : body.reason
+        // The status check inside updateAttempt is what makes the first end the only end.
+        const moved = await store.updateAttempt(attempt.id, { status: 'questions', reason, endedAt: new Date(now()).toISOString() }, 'active')
+        if (!moved) return conflict('Attempt is not active')
+        await store.putSnapshot(attempt.id, 'end', body.snapshot)
+        return reload()
+      }
+      case 'more-time': {
+        const result = await store.transaction(async (tx) => {
+          const current = await tx.getAttempt(attempt.id)
+          if (current?.status !== 'active') return 'Attempt is not active'
+          if (current.answers[MORE_TIME]) return 'More time was already given'
+          await tx.updateAttempt(attempt.id, { answers: { ...current.answers, [MORE_TIME]: true } }, 'active')
+          return undefined
+        })
+        return result ? conflict(result) : reload()
+      }
+      case 'answers': {
+        const result = await store.transaction(async (tx) => {
+          const current = await tx.getAttempt(attempt.id)
+          if (!current || current.status === 'created') return { status: 409, text: 'Consent is required before answering' }
+          if (body.answer !== undefined && !goal.answer) return { status: 400, text: 'This task asks no question to answer' }
+          const given: Record<string, unknown> = {}
+          const prefix = `goal${goal.index}`
+          if (body.screener) given.screener = body.screener
+          if (body.impression !== undefined) given.impression = body.impression
+          if (body.ease !== undefined) given[`${prefix}.ease`] = body.ease
+          if (body.difficulty !== undefined) given[`${prefix}.difficulty`] = body.difficulty
+          if (body.confidence !== undefined) given[`${prefix}.confidence`] = body.confidence
+          if (body.answer !== undefined && goal.answer) given[goal.answer.question] = body.answer
+          for (const [id, value] of Object.entries(body.uxlite ?? {})) {
+            if (!run.compiled.questions.some((q) => q.id === id && q.type === 'scale')) return { status: 400, text: `Unknown question ${id}` }
+            given[id] = value
+          }
+          if (body.comment !== undefined) given.anything = body.comment
+          const answers = { ...current.answers, ...given }
+          const view = participantView(run, { ...current, answers })
+          const answered = (id: string) => answers[id] !== undefined
+          const complete =
+            view.questions.every((q) => (q.askIf && !(typeof answers[q.askIf.id] === 'number' && (answers[q.askIf.id] as number) <= q.askIf.atOrBelow)) || answered(q.id)) &&
+            (!goal.answer || answered(goal.answer.question))
+          const finish = current.status === 'questions' && complete
+          const ok = await tx.updateAttempt(attempt.id, { answers, ...(finish && { status: 'finished' as const }) }, current.status)
+          return ok ? undefined : { status: 409, text: 'The attempt moved on; try again' }
+        })
+        return result ? refuse(result.status, result.text) : reload()
+      }
+      case 'withdraw': {
+        const current = await store.getAttempt(attempt.id)
+        if (current && current.status !== 'finished') {
+          await store.updateAttempt(attempt.id, { status: 'finished', reason: 'withdrew', endedAt: new Date(now()).toISOString() }, current.status)
+        }
+        await store.deleteBlobs(attempt.id)
+        return reload()
+      }
+    }
+  }
+}
