@@ -61,8 +61,9 @@ test('the layer is one canvas, fixed over the window, drawn only: no panel, no t
     const log: string[] = []
     ;(window as unknown as { mutations: string[] }).mutations = log
     const name = (node: Node) => node instanceof Element ? `${node.tagName.toLowerCase()}${node.className && typeof node.className === 'string' ? `.${node.className.split(' ')[0]}` : ''}` : node.nodeName
-    new MutationObserver(records => { for (const record of records) log.push(`${record.type} ${name(record.target)} ${record.attributeName ?? ''} ${[...record.addedNodes].map(name).join(',')}`) })
-      .observe(document, { subtree: true, childList: true, attributes: true })
+    const observer = new MutationObserver(records => { for (const record of records) log.push(`${record.type} ${name(record.target)} ${record.attributeName ?? ''} ${[...record.addedNodes].map(name).join(',')}`) })
+    // From the end of the parse: the canvas the server sent arrives while the document is parsed, and is not a change.
+    document.addEventListener('DOMContentLoaded', () => observer.observe(document, { subtree: true, childList: true, attributes: true }))
   })
   // The server's markup carries the canvas once, empty, with nothing but its class and aria-hidden.
   const html = await (await request.get('/')).text()
@@ -80,9 +81,8 @@ test('the layer is one canvas, fixed over the window, drawn only: no panel, no t
   // Only on the landing.
   expect(await page.evaluate(() => document.querySelectorAll('canvas').length - document.querySelectorAll('.page-texture canvas').length)).toBe(1)
 
-  // Once the troupe is on, the markup is watched from there: what the page parsed and hydrated before is not the layer's doing.
+  // The markup is watched from the end of the parse, so a change the layer makes while it mounts is seen too.
   await expect.poll(async () => (await follies(page)).actors.length, { timeout: 2000 }).toBe(1)
-  await page.evaluate(() => { (window as unknown as { mutations: string[] }).mutations.length = 0 })
   // A scene starts on the hero; the page around it shows nothing of the layer.
   await expect.poll(async () => (await follies(page)).actors.some(actor => actor.mode === 'performing'), { timeout: 8000 }).toBe(true)
   await expect.poll(async () => (await follies(page)).actors.some(actor => actor.trouble), { timeout: 8000 }).toBe(true)
@@ -95,7 +95,7 @@ test('the layer is one canvas, fixed over the window, drawn only: no panel, no t
   expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
   // A catch, then the layer's markup is as it was: no attribute on the canvas but its size, nothing added to the document, no style on
   // the root or the body.
-  expect(await catchOne(page)).not.toBeNull()
+  await expect.poll(() => catchOne(page), { timeout: 5000, intervals: [50] }).not.toBeNull()
   await expect.poll(async () => (await follies(page)).wave, { timeout: 15_000 }).toBe(2)
   await page.waitForTimeout(1500)
   const mutations = await page.evaluate(() => (window as unknown as { mutations: string[] }).mutations)

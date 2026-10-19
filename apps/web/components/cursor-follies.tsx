@@ -757,6 +757,8 @@ export function CursorFollies() {
         director(dt)
         for (const c of chars.slice()) updateChar(c, dt)
       }
+      // The pointer the page shows follows the cursors too: one that swings under a still pointer, is caught, or stands down.
+      if (ptr.on || pointing) hover()
       for (let i = fx.length - 1; i >= 0; i--) {
         const f = fx[i]
         f.life += dt; f.x += f.vx * dt; f.y += f.vy * dt; f.vy += f.g * dt; f.rot += f.vr * dt
@@ -777,7 +779,7 @@ export function CursorFollies() {
     // A click on a cursor in trouble catches it, and that click stops there: the pointerdown and everything it would lead to, so a
     // link under the cursor doesn't navigate. Every other click goes straight through to the page.
     const hitTest = (x: number, y: number) => chars.find(c => c.trouble && !c.caught && c.alpha > 0 && Math.hypot(body(c).x - x, body(c).y - y) < 15 * K * Math.max(c.s, .8))
-    let swallowing = false
+    let swallowing = false, unswallow = 0
     const swallow = (e: Event) => { if (swallowing) { e.preventDefault(); e.stopImmediatePropagation(); if (e.type === 'click') swallowing = false } }
     const onPointerDown = (e: PointerEvent) => {
       if (standDown) return
@@ -785,7 +787,7 @@ export function CursorFollies() {
       if (!c) return
       e.preventDefault(); e.stopImmediatePropagation()
       swallowing = true
-      setTimeout(() => { swallowing = false }, 800)
+      clearTimeout(unswallow); unswallow = window.setTimeout(() => { swallowing = false }, 800)
       rescue(c)
     }
     // While the pointer is over a cursor in trouble, the page shows a pointer. The rule lives in an adopted sheet, out of the markup.
@@ -812,7 +814,7 @@ export function CursorFollies() {
     startWave(1)
     if (document.visibilityState === 'visible') raf = requestAnimationFrame(frame)
     return () => {
-      cancelAnimationFrame(raf)
+      cancelAnimationFrame(raf); clearTimeout(unswallow)
       removeEventListener('pointermove', onPointerMove)
       document.documentElement.removeEventListener('pointerleave', onPointerLeave)
       document.removeEventListener('selectionchange', onSelection)
