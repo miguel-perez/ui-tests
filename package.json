@@ -5,7 +5,8 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "apps/web"
+    "apps/web",
+    "packages/ui-tests"
   ],
   "overrides": {
     "postcss": "^8.5.30"
@@ -19,7 +20,7 @@
     "build": "npm run build --workspace @ui-tests/web",
     "test": "vitest run",
     "test:e2e": "playwright install --with-deps chromium && playwright test",
-    "typecheck": "tsc --noEmit && npm run typecheck --workspace @ui-tests/web",
+    "typecheck": "tsc --noEmit && npm run typecheck --workspace @ui-tests/web && npm run typecheck --workspace ui-tests",
     "validate": "node factory/check.mjs && npm --prefix factory run validate && npm run typecheck && npm test && npm run test:e2e",
     "automation:build": "python3 factory/scripts/archon-runtime.py build",
     "automation:verify-sol": "python3 factory/scripts/verify-archon-sol.py",

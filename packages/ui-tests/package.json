@@ -1,0 +1,23 @@
+{
+  "name": "ui-tests",
+  "version": "0.0.0",
+  "license": "MIT",
+  "type": "module",
+  "description": "Usability tests as code: studies authored next to your tests, run with real people.",
+  "bin": {
+    "ui-tests": "./bin/ui-tests.mjs"
+  },
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "esbuild": "0.28.2",
+    "linkedom": "0.18.13",
+    "playwright-core": "1.64.1",
+    "tsx": "4.23.15",
+    "zod": "4.6.5"
+  }
+}
