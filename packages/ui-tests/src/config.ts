@@ -34,7 +34,7 @@ export async function loadConfig(cwd: string): Promise<LoadedConfig> {
       if (exported && typeof exported === 'object' && exported.uiTests) { file = join(cwd, name); found = exported.uiTests; break }
     }
   }
-  return { config: { ...found, target: { url: defaultUrl, ...found.target } }, file }
+  return { config: { ...found, target: { ...found.target, url: found.target?.url ?? defaultUrl } }, file }
 }
 
 /** Lists every `*.ui.test.ts` under `cwd`, relative-sorted, skipping dependencies and build output. */

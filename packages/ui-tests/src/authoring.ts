@@ -14,7 +14,8 @@ const legacyOptions: Record<string, string> = { happyPath: 'path', catch: 'sampl
 /** Finds the authoring call site: the first stack frame outside this module, as file and line. */
 function site(): { file: string; line: number } {
   for (const frame of (new Error().stack ?? '').split('\n').slice(1)) {
-    const match = /\(?((?:file:\/\/)?[^()\s]+?):(\d+):(\d+)\)?$/.exec(frame.trim())
+    const text = frame.trim().replace(/^at /, '')
+    const match = /^(?:.*? \()?(.+?):(\d+):(\d+)\)?$/.exec(text)
     if (match && !/authoring\.ts$/.test(match[1])) return originalPosition(match[1].replace(/^file:\/\//, ''), Number(match[2]), Number(match[3]))
   }
   return { file: '', line: 0 }

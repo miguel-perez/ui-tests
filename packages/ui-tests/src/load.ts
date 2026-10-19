@@ -36,10 +36,13 @@ export async function bundleStudyFile(file: string): Promise<{ code: string; has
   }
 }
 
-/** The line of the first stack frame inside the generated bundle, mapped back to the study file. */
-function lineIn(error: unknown, bundle: string): number | undefined {
-  const match = new RegExp(`${bundle.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}:(\\d+):(\\d+)`).exec(error instanceof Error ? error.stack ?? '' : '')
-  return match ? originalPosition(bundle, Number(match[1]), Number(match[2])).line : undefined
+const escape = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+/** The line of the first stack frame in the bundle (mapped back) or already mapped into the study file. */
+function lineIn(error: unknown, bundle: string, study: string): number | undefined {
+  const stack = error instanceof Error ? error.stack ?? '' : ''
+  const match = new RegExp(`(${escape(bundle)}|${escape(study)}):(\\d+):(\\d+)`).exec(stack)
+  if (!match) return undefined
+  return match[1] === bundle ? originalPosition(bundle, Number(match[2]), Number(match[3])).line : Number(match[2])
 }
 
 let counter = 0
@@ -47,7 +50,14 @@ let counter = 0
  * Evaluates a bundle under `<cwd>/node_modules/.cache/ui-tests/` (so `ui-tests` resolves) and returns the studies it declares.
  * The studies are read through the bundle's own `ui-tests` import, so it works whichever module loader owns this file.
  */
-export async function loadBundle(code: string, file: string, cwd = process.cwd()): Promise<AuthoredStudy[]> {
+export function loadBundle(code: string, file: string, cwd = process.cwd()): Promise<AuthoredStudy[]> {
+  // Loads share one studies registry, so they run one at a time.
+  const run = queue.then(() => evaluate(code, file, cwd))
+  queue = run.catch(() => undefined)
+  return run
+}
+let queue: Promise<unknown> = Promise.resolve()
+async function evaluate(code: string, file: string, cwd: string): Promise<AuthoredStudy[]> {
   const dir = join(cwd, 'node_modules', '.cache', 'ui-tests')
   await mkdir(dir, { recursive: true })
   const base = join(dir, `${createHash('sha1').update(file).digest('hex').slice(0, 8)}-${process.pid}-${counter++}`)
@@ -63,7 +73,7 @@ export async function loadBundle(code: string, file: string, cwd = process.cwd()
     const loaded = await import(/* @vite-ignore */ pathToFileURL(temp).href) as { __getStudies: () => AuthoredStudy[] }
     return [...loaded.__getStudies()]
   } catch (error) {
-    throw new StudyLoadError(error instanceof Error ? error.message : String(error), file, lineIn(error, temp), error)
+    throw new StudyLoadError(error instanceof Error ? error.message : String(error), file, lineIn(error, temp, file), error)
   } finally {
     await Promise.all([rm(reset, { force: true }), rm(temp, { force: true })])
   }

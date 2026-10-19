@@ -44,4 +44,18 @@ describe('study loading', () => {
     expect(loaded.file).toMatch(/ok\.ui\.test\.ts$/)
     expect(loaded.tasks).toBe(1)
   })
+  it('reports the throwing line under plain node too', () => {
+    const out = execFileSync('node', ['--import', 'tsx', fixture('load-throws-in-node.mjs')], { cwd: join(import.meta.dirname, '../../..'), encoding: 'utf8' })
+    const error = JSON.parse(out)
+    expect(error.name).toBe('StudyLoadError')
+    expect(error.file).toMatch(/throws\.ui\.test\.ts$/)
+    expect(error.line).toBe(4)
+  })
+  it('keeps concurrent loads apart', async () => {
+    const files = ['ok.ui.test.ts', 'other.ui.test.ts'].map(fixture)
+    const bundles = await Promise.all(files.map(file => bundleStudyFile(file)))
+    const [first, second] = await Promise.all(files.map((file, index) => loadBundle(bundles[index].code, file)))
+    expect(first.map(entry => entry.name)).toEqual(['fixture study'])
+    expect(second.map(entry => entry.name)).toEqual(['other study'])
+  })
 })

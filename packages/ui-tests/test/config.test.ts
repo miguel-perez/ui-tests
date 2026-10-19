@@ -35,6 +35,11 @@ describe('loadConfig', () => {
     expect(config.target.url).toBe('http://localhost:3000')
     expect(file).toBeUndefined()
   })
+  it('falls back to the default url when the config sets it to undefined', async () => {
+    const cwd = dir()
+    writeFileSync(join(cwd, 'ui-tests.config.ts'), `export default { target: { url: process.env.PREVIEW_URL } }`)
+    expect((await loadConfig(cwd)).config.target.url).toBe('http://localhost:3000')
+  })
   it('lets PREVIEW_URL reach the config through process.env', async () => {
     const cwd = dir()
     process.env.PREVIEW_URL = 'http://preview.example'
