@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import type { Users } from '../types.ts'
 
 export type UsersError = { field: string; message: string }
@@ -10,6 +11,7 @@ const language = /^[a-z]{2,3}(-[A-Za-z]{2,4})?$/
 export function validateUsers(users: Users): { errors: UsersError[] } {
   const errors: UsersError[] = []
   const add = (field: string, message: string) => errors.push({ field, message })
+  if (users === undefined || users === null || (typeof users !== 'string' && typeof users !== 'object')) { add('users', 'the study needs users: a sentence, or an object with an "are" sentence'); return { errors } }
   const fields = typeof users === 'string' ? { are: users } : users
   if (!fields || typeof fields.are !== 'string' || !fields.are.trim()) add('are', 'users needs an "are" sentence saying who these people are')
   if (typeof users === 'string') return { errors }
@@ -30,13 +32,16 @@ export function validateUsers(users: Users): { errors: UsersError[] } {
   return { errors }
 }
 
+/** A short stable hash for text with no letters or digits to slug. */
+function hash(text: string) { return createHash('sha256').update(text).digest('hex').slice(0, 8) }
 function slug(text: string) {
-  return text.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+/, '').slice(0, 40).replace(/-+$/, '')
+  return text.toLowerCase().replace(/[^\p{L}\p{N}]+/gu, '-').replace(/^-+/, '').slice(0, 40).replace(/-+$/, '')
 }
 
 /** The study's id: slug of the `are` sentence and of the purpose, each cut to 40 characters, joined with an ellipsis. */
 export function contextId(users: Users, purpose: string): string {
   const are = typeof users === 'string' ? users : users.are
-  const tail = slug(purpose)
-  return tail ? `${slug(are)}…${tail}` : slug(are)
+  const head = slug(are) || hash(are)
+  const tail = slug(purpose) || (purpose ? hash(purpose) : '')
+  return tail ? `${head}…${tail}` : head
 }

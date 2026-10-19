@@ -1,3 +1,4 @@
+import { StudyLoadError } from './load.ts'
 import type { AuthoredStudy, AuthoredTask } from './authoring.ts'
 import { detectionChance, sampleSentence, sampleSize } from './derive/sample.ts'
 import { goalTimeout } from './derive/timeout.ts'
@@ -35,9 +36,16 @@ function goalQuestions(index: number, task: AuthoredTask): CompiledQuestion[] {
 
 /** Turns an authored study and the config into the JSON context every other part of the system reads. */
 export function compileStudy(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
-  const users = normalizeUsers(study.options.users)
+  try { return compile(study, config) } catch (error) {
+    if (error instanceof StudyLoadError) throw error
+    throw new StudyLoadError(error instanceof Error ? error.message : String(error), study.file, study.line, error)
+  }
+}
+
+function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
   const { errors } = validateUsers(study.options.users)
   if (errors.length) throw new Error(`study "${study.name}": ${errors.map(e => `${e.field}: ${e.message}`).join('; ')}`)
+  const users = normalizeUsers(study.options.users)
   if (!study.tasks.length) throw new Error(`study "${study.name}" has no tasks`)
   const derivations: Derivation[] = []
   const derive = (field: string, rule: string, source: string) => derivations.push({ field, rule, source })
@@ -70,7 +78,8 @@ export function compileStudy(study: AuthoredStudy, config: UiTestsConfig): Compi
     const hasOutcome = task.outcomes.length > 0
     const shape: CompiledGoal['shape'] = task.steps.length ? 'steps' : path?.length ? 'happy-path' : minutes !== undefined && !hasOutcome ? 'time-boxed' : 'goal-only'
     const startFrom: CompiledGoal['startFrom'] = start ? 'option' : study.setup ? 'setup' : path?.length ? 'path' : 'root'
-    const timeout = goalTimeout(task)
+    let timeout: ReturnType<typeof goalTimeout>
+    try { timeout = goalTimeout(task) } catch (error) { throw new StudyLoadError(error instanceof Error ? error.message : String(error), study.file, task.line, error) }
     const at = `goals[${index}]`
     derive(`${at}.shape`, shape === 'steps' ? 'the task has steps' : shape === 'happy-path' ? 'the task has a path' : shape === 'time-boxed' ? 'minutes and no outcome' : 'an outcome or answer only', 'task.steps, task.path, task.minutes, task.outcome')
     derive(`${at}.start`, start ? 'task start' : path?.length ? 'the first page of path' : 'the root page', 'task.start, task.path')

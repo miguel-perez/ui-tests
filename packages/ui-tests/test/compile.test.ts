@@ -84,4 +84,17 @@ describe('compileStudy', () => {
     const fields = compileStudy(getStudies()[0], config).derivations.map(d => d.field)
     for (const f of ['id', 'label', 'sample.n', 'sample.sentence', 'goals[0].shape', 'goals[0].start', 'goals[0].timeout', 'goals[0].scenario', 'impression', 'questions']) expect(fields).toContain(f)
   })
+
+  it('reports undefined users and bad time limits with the study file and line', () => {
+    study('s', {} as never, () => { task('a') })
+    expect(() => compileStudy(getStudies()[0], {})).toThrow(/users/)
+    resetStudies()
+    study('t', { users: 'people' }, () => { task('a', { timeLimit: 'soon' }) })
+    const s = getStudies()[0]
+    let caught: unknown
+    try { compileStudy(s, {}) } catch (e) { caught = e }
+    expect(caught).toMatchObject({ name: 'StudyLoadError', file: s.file, line: s.tasks[0].line })
+    expect((caught as Error).message).toContain('timeLimit')
+    expect(s.file).not.toBe('')
+  })
 })

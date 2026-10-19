@@ -18,5 +18,7 @@ export function sampleSentence(affecting: number, n: number): string {
   const chance = Math.round(detectionChance(affecting, n) * 100)
   const first = word(n)
   const article = chance === 8 || chance === 11 || chance === 18 || (chance >= 80 && chance <= 89) ? 'an' : 'a'
-  return `${first[0].toUpperCase()}${first.slice(1)} ${n === 1 ? 'person gives' : 'people give'} ${article} ${chance}% chance of seeing any problem that hits at least one person in ${word(Math.round(1 / affecting))}.`
+  const k = 1 / affecting
+  const hits = Math.abs(k - Math.round(k)) < 1e-9 ? `one person in ${word(Math.round(k))}` : `${Number((affecting * 100).toFixed(1))}% of people`
+  return `${first[0].toUpperCase()}${first.slice(1)} ${n === 1 ? 'person gives' : 'people give'} ${article} ${chance}% chance of seeing any problem that hits at least ${hits}.`
 }

@@ -48,3 +48,18 @@ describe('users', () => {
     expect(contextId('x'.repeat(60), 'y').split('…')[0]).toHaveLength(40)
   })
 })
+
+describe('sample sentence phrasing', () => {
+  it('says one person in k only for 1/k', () => {
+    expect(sampleSentence(1 / 3, 5)).toContain('one person in three.')
+    expect(sampleSentence(1 / 10, 19)).toContain('one person in ten.')
+    expect(sampleSentence(0.4, 5)).toContain('at least 40% of people.')
+    expect(sampleSentence(0.15, 5)).toContain('at least 15% of people.')
+  })
+  it('names users when missing and keeps non-Latin ids distinct', () => {
+    expect(validateUsers(undefined as never).errors[0].field).toBe('users')
+    const a = contextId('人们计划', '一起'), b = contextId('人们计划', '不同')
+    expect(a).not.toBe(b)
+    expect(contextId('!!!', '')).toMatch(/^[0-9a-f]{8}$/)
+  })
+})
