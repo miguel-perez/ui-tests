@@ -42,8 +42,11 @@ export type NewRun = Omit<RunRow, 'run' | 'revision' | 'createdAt' | 'states' | 
 export type AttemptStatus = 'created' | 'consented' | 'active' | 'questions' | 'finished'
 export type AttemptReason = 'done' | 'gave up' | 'timeout' | 'withdrew' | 'disconnected'
 
-/** The verified outcome of an attempt. Minimal here; the verifier task extends it. */
-export type Verification = { outcome: 'correct' | 'incorrect' | 'unknown'; diff?: string }
+/** The verdict of one hook: correct, incorrect with a diff, or unknown with a reason. */
+export type HookResult = { status: 'correct' | 'incorrect' | 'unknown'; reason?: string; diff?: { expected: unknown; actual: unknown } }
+
+/** The verified outcome of an attempt: the overall verdict, each step check, and the validation answer. */
+export type Verification = HookResult & { steps: (HookResult & { name: string })[]; answer?: HookResult }
 
 /** One revision of a run's findings, made in the trace viewer. Minimal here; the revision task extends it. */
 export type Revision = { at: string; author?: string; note?: string; data?: unknown }

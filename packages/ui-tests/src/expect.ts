@@ -7,13 +7,16 @@ export class AssertionFailure extends Error {
   operator: string
   constructor(actual: unknown, expected: unknown, operator: string) {
     super(`${operator}: expected ${JSON.stringify(expected)}, actual ${JSON.stringify(actual)}`)
+    this.name = 'AssertionFailure'
     this.actual = actual
     this.expected = expected
     this.operator = operator
   }
 }
 /** Thrown when a hook has no evidence to assert against; the verifier reports `unknown` rather than `incorrect`. */
-export class MissingEvidence extends Error {}
+export class MissingEvidence extends Error {
+  name = 'MissingEvidence'
+}
 /** A small assertion API over snapshot evidence. An `undefined` value means missing evidence, not a failure. */
 export function expect(actual: unknown) {
   /** Throws `MissingEvidence` for undefined evidence and `AssertionFailure` when the assertion does not hold. */
