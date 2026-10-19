@@ -114,6 +114,24 @@ export function describeStore(name: string, open: () => Promise<RunStore>) {
       expect(await store.getBlob(id3)).toBeUndefined()
     })
 
+    it('deletes the events and snapshots of one attempt only', async () => {
+      const { run } = await store.createRun(newRun('k1'))
+      const a = await store.createAttempt({ runId: run.run, participant: 'p_1', goalIndex: 0, rehearsal: false })
+      const b = await store.createAttempt({ runId: run.run, participant: 'p_2', goalIndex: 0, rehearsal: false })
+      const event = { type: 'click' as const, at: 1, url: '/' }
+      await store.appendEvents(a.attempt.id, [event, event])
+      await store.appendEvents(b.attempt.id, [event])
+      await store.putSnapshot(a.attempt.id, 'end', { url: '/', dom: '<p/>' })
+      await store.putSnapshot(a.attempt.id, 'step-0', { url: '/', dom: '<p/>' })
+      await store.putSnapshot(b.attempt.id, 'end', { url: '/', dom: '<p/>' })
+      expect(await store.deleteEvents(a.attempt.id)).toBe(2)
+      expect(await store.deleteSnapshots(a.attempt.id)).toBe(2)
+      expect(await store.listEvents(a.attempt.id)).toEqual([])
+      expect(await store.getSnapshot(a.attempt.id, 'end')).toBeUndefined()
+      expect(await store.listEvents(b.attempt.id)).toHaveLength(1)
+      expect(await store.getSnapshot(b.attempt.id, 'end')).toBeDefined()
+    })
+
     it('keeps revisions in order and numbers them from one', async () => {
       const { run } = await store.createRun(newRun('k1'))
       expect(await store.addRevision(run.run, { at: '2026-10-19T00:00:00.000Z', note: 'one' })).toBe(1)

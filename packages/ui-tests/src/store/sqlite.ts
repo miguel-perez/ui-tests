@@ -247,6 +247,14 @@ export class SqliteStore implements RunStore {
     return this.op(() => Number(this.run('DELETE FROM blobs WHERE attempt_id = ?', attemptId).changes))
   }
 
+  deleteEvents(attemptId: string) {
+    return this.op(() => Number(this.run('DELETE FROM events WHERE attempt_id = ?', attemptId).changes))
+  }
+
+  deleteSnapshots(attemptId: string) {
+    return this.op(() => Number(this.run('DELETE FROM snapshots WHERE attempt_id = ?', attemptId).changes))
+  }
+
   deleteBlobsBefore(date: Date) {
     return this.op(() => Number(this.run('DELETE FROM blobs WHERE created_at < ?', date.toISOString()).changes))
   }

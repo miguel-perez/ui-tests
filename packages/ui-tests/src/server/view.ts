@@ -37,9 +37,6 @@ export function effectiveTimeout(base: number, attempt: AttemptRow): number {
   return attempt.answers[MORE_TIME] ? base + Math.ceil(base / 2) : base
 }
 
-/** Keeps the product's own name off participant surfaces: the tool is only named when branding says so. */
-const neutral = (text: string) => text.replace(/ui-tests/gi, 'this tool')
-
 /**
  * Projects a run and an attempt onto the participant. An explicit allowlist: no path, expected answer, hook,
  * label, rule or `purpose` field is copied, and the scenario is filled with the attempt's own setup values.
@@ -57,7 +54,7 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
   return {
     run: run.run,
     attempt: attempt.id,
-    author: neutral(study.author),
+    author: study.author,
     product: study.product,
     brand: { poweredBy: false },
     consent: { text: study.consent.text, purposes: study.consent.purposes, payout: study.consent.payout },
@@ -66,10 +63,10 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
     ...(impression.on && { impression: { page: impression.page ?? goal.start, flashMs: impression.flashMs, question: impression.question } }),
     goal: {
       index: goal.index,
-      name: neutral(goal.name),
-      scenario: neutral(scenario),
+      name: goal.name,
+      scenario: scenario,
       start: typeof startValue === 'string' ? startValue : goal.start,
-      steps: goal.steps.map((s) => neutral(s.name)),
+      steps: goal.steps.map((s) => s.name),
       timeoutSeconds: effectiveTimeout(goal.timeout.seconds, attempt),
     },
     hasVerification: goal.hasOutcome || Boolean(goal.answer),

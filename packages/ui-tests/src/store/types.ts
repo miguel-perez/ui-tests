@@ -120,6 +120,10 @@ export interface RunStore {
   putBlob(attemptId: string, kind: string, bytes: Uint8Array, contentType: string): Promise<string>
   getBlob(id: string): Promise<{ bytes: Uint8Array; contentType: string } | undefined>
   deleteBlobs(attemptId: string): Promise<number>
+  /** Deletes the attempt's recorded events (the replay); returns how many. */
+  deleteEvents(attemptId: string): Promise<number>
+  /** Deletes the attempt's snapshots; returns how many. */
+  deleteSnapshots(attemptId: string): Promise<number>
   /** Deletes blobs stored before `date` (retention); returns how many. */
   deleteBlobsBefore(date: Date): Promise<number>
   /** Appends a revision; returns its 1-based position. */

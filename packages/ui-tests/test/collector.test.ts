@@ -288,3 +288,108 @@ describe('answers and withdrawal', () => {
     expect((await post(token, { action: 'events', events: [] })).status).toBe(409)
   })
 })
+
+describe('fix round 1', () => {
+  it('withdraws after finishing: the reason becomes withdrew and everything recorded is deleted', async () => {
+    const { attempt, token } = await active(0)
+    await post(token, { action: 'events', events: [{ type: 'click', at: clock, url: '/' }] })
+    await post(token, { action: 'step', index: 0, snapshot: snap('<p>s</p>') })
+    await post(token, { action: 'end', reason: 'done', snapshot: snap() })
+    await post(token, { action: 'answers', ease: 6 })
+    expect((await store.getAttempt(attempt.id))?.status).toBe('finished')
+    const view = await (await post(token, { action: 'withdraw' })).json()
+    expect(view.status).toBe('finished')
+    expect(await store.getAttempt(attempt.id)).toMatchObject({ status: 'finished', reason: 'withdrew' })
+    expect(await store.listEvents(attempt.id)).toEqual([])
+    expect(await store.getSnapshot(attempt.id, 'end')).toBeUndefined()
+    expect(await store.getSnapshot(attempt.id, 'step-0')).toBeUndefined()
+    expect((await post(token, { action: 'withdraw' })).status).toBe(200)
+  })
+
+  it('leaves the attempt withdrawn whichever of withdraw and end wins the race', async () => {
+    for (let i = 0; i < 5; i++) {
+      const { attempt, token } = await active()
+      const [end, withdraw] = await Promise.all([
+        post(token, { action: 'end', reason: 'done', snapshot: snap('<p>x</p>') }),
+        post(token, { action: 'withdraw' }),
+      ])
+      expect(withdraw.status).toBe(200)
+      expect([200, 409]).toContain(end.status)
+      expect(await store.getAttempt(attempt.id)).toMatchObject({ status: 'finished', reason: 'withdrew' })
+      expect(await store.getSnapshot(attempt.id, 'end')).toBeUndefined()
+    }
+  })
+
+  it('refuses answers once the attempt is finished or withdrawn', async () => {
+    const { attempt, token } = await active(5)
+    await post(token, { action: 'end', reason: 'done', snapshot: snap() })
+    await post(token, { action: 'answers', answer: 'Team', ease: 6 })
+    expect((await post(token, { action: 'answers', answer: 'Solo' })).status).toBe(409)
+    expect((await store.getAttempt(attempt.id))?.answers['Which plan was shown?']).toBe('Team')
+    const other = await active(0)
+    await post(other.token, { action: 'withdraw' })
+    expect((await post(other.token, { action: 'answers', ease: 2 })).status).toBe(409)
+  })
+
+  it('stops reading a chunked body without Content-Length at the limit', async () => {
+    const { token } = await active()
+    let pulled = 0
+    const chunk = new TextEncoder().encode('x'.repeat(1_000_000))
+    const body = new ReadableStream<Uint8Array>({
+      pull(controller) {
+        if (pulled++ >= 50) return controller.close()
+        controller.enqueue(chunk)
+      },
+    })
+    const request = new Request(endpoint, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body, duplex: 'half' } as RequestInit)
+    expect(request.headers.get('content-length')).toBeNull()
+    expect((await collect(request)).status).toBe(413)
+    expect(pulled).toBeLessThan(20)
+  })
+
+  it('lets an explicit ?t= win over a stale cookie on GET', async () => {
+    const a = await start()
+    const b = await store.createAttempt({ runId: run.run, participant: 'p_2', goalIndex: 1, rehearsal: false })
+    const response = await collect(new Request(`${endpoint}?t=${b.token}`, { headers: { Cookie: `ui-tests-run=${a.token}` } }))
+    expect((await response.json()).attempt).toBe(b.attempt.id)
+    const bearer = await collect(new Request(endpoint, { headers: { Authorization: `Bearer ${b.token}`, Cookie: `ui-tests-run=${a.token}` } }))
+    expect((await bearer.json()).attempt).toBe(b.attempt.id)
+  })
+
+  it('never writes the CLI secret into a cookie, and ignores other Authorization schemes', async () => {
+    const { attempt, token } = await start()
+    const response = await post('cli-secret', { action: 'consent' }, { query: `?attempt=${attempt.id}` })
+    expect(response.status).toBe(200)
+    expect(response.headers.getSetCookie()).toEqual([])
+    expect(JSON.stringify([...response.headers])).not.toContain('cli-secret')
+    const other = await start()
+    const basic = await collect(new Request(endpoint, { method: 'POST', headers: { Authorization: 'Basic abc', Cookie: `ui-tests-run=${other.token}`, Origin: origin }, body: JSON.stringify({ action: 'consent' }) }))
+    expect(basic.status).toBe(200)
+    expect(basic.headers.getSetCookie()[0]).toContain(`ui-tests-run=${other.token};`)
+    expect(token).toBeTruthy()
+  })
+
+  it('passes the author\'s own words through unchanged', async () => {
+    const compiled = structuredClone(run.compiled)
+    compiled.author = 'ui-tests team'
+    compiled.goals[0]!.name = 'Install ui-tests'
+    compiled.goals[0]!.scenario = { text: 'Add ui-tests to your repo.', pinned: true }
+    const made = (await store.createRun(newRun('k4', { compiled }))).run
+    const a = (await store.createAttempt({ runId: made.run, participant: 'p', goalIndex: 0, rehearsal: false })).attempt
+    const view = participantView(made, a)
+    expect(view).toMatchObject({ author: 'ui-tests team', goal: { name: 'Install ui-tests', scenario: 'Add ui-tests to your repo.' } })
+  })
+
+  it('compares Origin with the forwarded origin behind a proxy', async () => {
+    const { token } = await start()
+    const forwarded = (origin: string) => collect(new Request('http://internal:3000/api/ui-tests', {
+      method: 'POST',
+      headers: { Cookie: `ui-tests-run=${token}`, Origin: origin, 'X-Forwarded-Host': 'public.test', 'X-Forwarded-Proto': 'https' },
+      body: JSON.stringify({ action: 'consent' }),
+    }))
+    expect((await forwarded('http://internal:3000')).status).toBe(403)
+    const ok = await forwarded('https://public.test')
+    expect(ok.status).toBe(200)
+    expect(ok.headers.getSetCookie().every((c) => c.endsWith('; Secure'))).toBe(true)
+  })
+})

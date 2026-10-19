@@ -57,6 +57,36 @@ const refuse = (status: number, text: string) => new Response(text, { status, he
 
 const cookieValue = (request: Request, name: string) => new RegExp(`(?:^|;\\s*)${name}=([^;]+)`).exec(request.headers.get('cookie') ?? '')?.[1]
 
+const first = (value: string | null) => value?.split(',')[0]?.trim() || undefined
+
+/** The origin the browser sees: forwarded host and protocol win over the internal URL behind a proxy or tunnel. */
+function publicOrigin(request: Request, url: URL): string {
+  const proto = first(request.headers.get('x-forwarded-proto'))
+  const host = first(request.headers.get('x-forwarded-host'))
+  return `${proto ?? url.protocol.replace(':', '')}://${host ?? url.host}`
+}
+
+const isSecure = (request: Request, url: URL) => publicOrigin(request, url).startsWith('https:')
+
+/** Reads the body while counting bytes; undefined once it passes `limit`, without reading the rest. */
+async function readBody(request: Request, limit: number): Promise<string | undefined> {
+  if (!request.body) return ''
+  const reader = request.body.getReader()
+  const chunks: Uint8Array[] = []
+  let total = 0
+  for (;;) {
+    const { done, value } = await reader.read()
+    if (done) break
+    total += value.byteLength
+    if (total > limit) {
+      await reader.cancel().catch(() => {})
+      return undefined
+    }
+    chunks.push(value)
+  }
+  return Buffer.concat(chunks).toString('utf8')
+}
+
 function sameSecret(given: string, secret: string): boolean {
   const a = Buffer.from(given)
   const b = Buffer.from(secret)
@@ -77,7 +107,6 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     const store = await options.store()
     const bearer = /^Bearer (.+)$/.exec(request.headers.get('authorization') ?? '')?.[1]
     const cookie = cookieValue(request, 'ui-tests-run')
-    const viaCookie = !bearer && Boolean(cookie)
     const resolved = await authorize(store, url, bearer, cookie, get)
     if (!resolved) return refuse(401, 'Unauthorized')
     const wantedRun = url.searchParams.get('run')
@@ -86,10 +115,10 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     if (get) return respond(resolved.run, resolved.attempt)
 
     // Cookies ride along on cross-site requests, so a write they authorise must come from this origin. Bearer writes (CLI, tests) are not ambient.
-    if (viaCookie && request.headers.get('origin') !== url.origin) return refuse(403, 'Invalid origin')
+    if (resolved.via === 'cookie' && request.headers.get('origin') !== publicOrigin(request, url)) return refuse(403, 'Invalid origin')
 
-    const text = await request.text()
-    if (Buffer.byteLength(text) > END_BYTES) return refuse(413, 'Request too large')
+    const text = await readBody(request, END_BYTES)
+    if (text === undefined) return refuse(413, 'Request too large')
     let raw: unknown
     try { raw = JSON.parse(text) } catch { return refuse(400, 'Body is not JSON') }
     const action = (raw as { action?: unknown } | null)?.action
@@ -97,17 +126,21 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     const parsed = message.safeParse(raw)
     if (!parsed.success) return refuse(400, parsed.error.message)
 
-    return act(store, resolved.run, resolved.attempt, parsed.data, request)
+    return act(store, resolved.run, resolved.attempt, parsed.data, 'token' in resolved ? resolved.token : undefined, isSecure(request, url))
   }
 
+  /** Who is asking: the CLI secret naming an attempt, or a participant token from `?t=` (GET only), then Bearer, then the cookie. */
   async function authorize(store: RunStore, url: URL, bearer: string | undefined, cookie: string | undefined, get: boolean) {
     if (bearer && options.cliSecret && sameSecret(bearer, options.cliSecret)) {
       const attempt = await store.getAttempt(url.searchParams.get('attempt') ?? '')
       const run = attempt && (await store.getRun(attempt.runId))
-      return run && attempt ? { run, attempt } : undefined
+      return run && attempt ? { run, attempt, via: 'cli' as const } : undefined
     }
-    const token = bearer ?? cookie ?? (get ? (url.searchParams.get('t') ?? undefined) : undefined)
-    return token ? store.authorize(token) : undefined
+    const query = get ? (url.searchParams.get('t') ?? undefined) : undefined
+    const via = query ? ('query' as const) : bearer ? ('bearer' as const) : cookie ? ('cookie' as const) : undefined
+    const token = query ?? bearer ?? cookie
+    const found = token ? await store.authorize(token) : undefined
+    return found && via && token ? { ...found, via, token } : undefined
   }
 
   async function respond(run: RunRow, attempt: AttemptRow, extra?: Headers): Promise<Response> {
@@ -116,7 +149,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     return response
   }
 
-  async function act(store: RunStore, run: RunRow, attempt: AttemptRow, body: Message, request: Request): Promise<Response> {
+  async function act(store: RunStore, run: RunRow, attempt: AttemptRow, body: Message, token: string | undefined, secure: boolean): Promise<Response> {
     const goal = run.compiled.goals[attempt.goalIndex]!
     const reload = async (extra?: Headers) => respond(run, (await store.getAttempt(attempt.id)) ?? attempt, extra)
     const conflict = (text: string) => refuse(409, text)
@@ -127,11 +160,12 @@ export function createCollector(options: CollectorOptions): (request: Request) =
           const moved = await store.updateAttempt(attempt.id, { status: 'consented', purposes: run.compiled.consent.purposes }, 'created')
           if (!moved && (await store.getAttempt(attempt.id))?.status !== 'consented') return conflict('Consent was already given or the attempt moved on')
         } else if (attempt.status !== 'consented') return conflict('Consent was already given or the attempt moved on')
-        const secure = new URL(request.url).protocol === 'https:' || request.headers.get('x-forwarded-proto') === 'https' ? '; Secure' : ''
-        const token = request.headers.get('authorization')?.replace(/^Bearer /, '') ?? cookieValue(request, 'ui-tests-run')!
+        // A CLI-secret request has no participant token, so it sets no cookie: the secret never goes into one.
+        if (!token) return reload()
+        const flag = secure ? '; Secure' : ''
         const cookies = new Headers()
-        cookies.append('Set-Cookie', `ui-tests-run=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=7200${secure}`)
-        cookies.append('Set-Cookie', `ui-tests-active=1; Path=/; SameSite=Lax; Max-Age=7200${secure}`)
+        cookies.append('Set-Cookie', `ui-tests-run=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=7200${flag}`)
+        cookies.append('Set-Cookie', `ui-tests-active=1; Path=/; SameSite=Lax; Max-Age=7200${flag}`)
         return reload(cookies)
       }
       case 'begin': {
@@ -156,9 +190,12 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         const late = now() >= started + effectiveTimeout(goal.timeout.seconds, current) * 1000
         const reason: AttemptReason = late ? 'timeout' : body.reason
         // The status check inside updateAttempt is what makes the first end the only end.
-        const moved = await store.updateAttempt(attempt.id, { status: 'questions', reason, endedAt: new Date(now()).toISOString() }, 'active')
+        const moved = await store.transaction(async (tx) => {
+          if (!(await tx.updateAttempt(attempt.id, { status: 'questions', reason, endedAt: new Date(now()).toISOString() }, 'active'))) return false
+          await tx.putSnapshot(attempt.id, 'end', body.snapshot)
+          return true
+        })
         if (!moved) return conflict('Attempt is not active')
-        await store.putSnapshot(attempt.id, 'end', body.snapshot)
         return reload()
       }
       case 'more-time': {
@@ -175,6 +212,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         const result = await store.transaction(async (tx) => {
           const current = await tx.getAttempt(attempt.id)
           if (!current || current.status === 'created') return { status: 409, text: 'Consent is required before answering' }
+          if (current.status === 'finished') return { status: 409, text: 'The attempt is finished' }
           if (body.answer !== undefined && !goal.answer) return { status: 400, text: 'This task asks no question to answer' }
           const given: Record<string, unknown> = {}
           const prefix = `goal${goal.index}`
@@ -202,12 +240,20 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         return result ? refuse(result.status, result.text) : reload()
       }
       case 'withdraw': {
-        const current = await store.getAttempt(attempt.id)
-        if (current && current.status !== 'finished') {
-          await store.updateAttempt(attempt.id, { status: 'finished', reason: 'withdrew', endedAt: new Date(now()).toISOString() }, current.status)
-        }
-        await store.deleteBlobs(attempt.id)
-        return reload()
+        // Allowed from any status until withdrawn, even after finishing: the reason becomes `withdrew`, which verification and counting skip.
+        const result = await store.transaction(async (tx) => {
+          const current = await tx.getAttempt(attempt.id)
+          if (!current) return 'Attempt not found'
+          if (current.reason !== 'withdrew') {
+            const moved = await tx.updateAttempt(attempt.id, { status: 'finished', reason: 'withdrew', endedAt: new Date(now()).toISOString() }, current.status)
+            if (!moved) return 'The attempt moved on; try again'
+          }
+          await tx.deleteBlobs(attempt.id)
+          await tx.deleteEvents(attempt.id)
+          await tx.deleteSnapshots(attempt.id)
+          return undefined
+        })
+        return result ? conflict(result) : reload()
       }
     }
   }

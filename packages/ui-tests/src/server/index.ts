@@ -7,7 +7,10 @@ export { participantView, type ParticipantView } from './view.ts'
 
 let store: Promise<RunStore> | undefined
 const handler = createCollector({
-  store: () => (store ??= openStore()),
+  store: () => (store ??= openStore().catch((error) => {
+    store = undefined
+    throw error
+  })),
   ...(process.env.UI_TESTS_CLI_SECRET && { cliSecret: process.env.UI_TESTS_CLI_SECRET }),
 })
 
