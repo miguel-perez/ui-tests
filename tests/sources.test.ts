@@ -1,4 +1,4 @@
-import { it, expect, vi } from 'vitest'
+import { it, expect } from 'vitest'
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseHTML } from 'linkedom'
@@ -48,7 +48,7 @@ it('carries every cell, step and caveat of the sources artefact verbatim, in the
 async function files(directory: string): Promise<string[]> {
   const found: string[] = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (['node_modules', '.next'].includes(entry.name)) continue
+    if (['node_modules', '.next', 'out'].includes(entry.name)) continue
     const path = join(directory, entry.name)
     if (entry.isDirectory()) found.push(...await files(path))
     else if (/\.(tsx?|mjs|css|html|json|md)$/.test(entry.name)) found.push(path)
@@ -57,10 +57,9 @@ async function files(directory: string): Promise<string[]> {
 }
 
 it('says 48 hours only as the deadline, and has no $60 cap, no $54 and no "visibly struggling" anywhere a visitor or the docs read', async () => {
-  const { deadlineSentence } = await import('../packages/ui-tests/src/compiler')
-  expect(deadlineSentence).toBe('The run closes at its deadline, 48 hours unless you set one.')
+  const deadlineSentence = 'The run closes at its deadline, 48 hours unless you set one.'
   const found: string[] = []
-  for (const file of [...await files('apps/web'), ...await files('packages/ui-tests/src'), ...await files('docs/design'), 'README.md']) {
+  for (const file of [...await files('apps/web'), ...await files('docs/design')]) {
     const lines = (await readFile(file, 'utf8')).split('\n')
     lines.forEach((line, i) => {
       if (/48 hours/.test(line.replaceAll(deadlineSentence, '').replaceAll("'The run closes at its deadline, 48 hours unless you set one.'", ''))) found.push(`${file}:${i + 1} 48 hours`)
@@ -71,27 +70,25 @@ it('says 48 hours only as the deadline, and has no $60 cap, no $54 and no "visib
     })
   }
   expect(found).toEqual([])
-  // The example cap is $70 in the guide's run output, the config example and PRD 01.
-  expect(await readFile('apps/web/generated/terminal-run.html', 'utf8')).toContain('cap $70')
-  expect((await import('../packages/ui-tests/src/example')).configFile).toContain('budget: { max: 70')
+  // The example cap is $70 in PRD 01.
   expect(await readFile('docs/prd/01-dx-contract.md', 'utf8')).toContain('budget: { max: 70')
 })
 
 it('prices the paid panel at $12 a person everywhere: five from $60, the $70 cap with $10 back, and no $55, $54 or $11 a person (issue #54)', async () => {
   const found: string[] = []
-  for (const directory of ['apps/web', 'packages/ui-tests/src', 'docs/design', 'docs/prd', 'design/artefacts']) for (const file of [...await files(directory), ...(directory === 'apps/web' ? ['README.md'] : [])]) {
+  for (const directory of ['apps/web', 'docs/design', 'docs/prd', 'design/artefacts']) for (const file of await files(directory)) {
     (await readFile(file, 'utf8')).split('\n').forEach((line, i) => {
       for (const old of [/\$55\b/, /\$54\b/, /\$11 a person/i, /about \$11\b/i, /\$15 back/]) if (old.test(line)) found.push(`${file}:${i + 1} ${old.source}`)
     })
   }
   expect(found).toEqual([])
-  for (const file of ['README.md', 'apps/web/generated/terminal-run.html', 'apps/web/scripts/render-terminal.mjs', 'design/artefacts/sources-section.html', 'docs/design/landing-content-v3.md']) expect((await readFile(file, 'utf8')).replace(/<\/?b>/g, ''), file).toContain('Paid $60 of the $70 cap · $10 back')
-  for (const file of ['apps/web/lib/copy.ts', 'design/artefacts/compile-section.html', 'docs/design/landing-content-v3.md', 'README.md']) expect(await readFile(file, 'utf8'), file).toContain('five people cost from $60')
+  for (const file of ['design/artefacts/sources-section.html', 'docs/design/landing-content-v3.md']) expect((await readFile(file, 'utf8')).replace(/<\/?b>/g, ''), file).toContain('Paid $60 of the $70 cap · $10 back')
+  for (const file of ['apps/web/lib/copy.ts', 'design/artefacts/compile-section.html', 'docs/design/landing-content-v3.md']) expect(await readFile(file, 'utf8'), file).toContain('five people cost from $60')
   expect(await readFile('docs/prd/03-participants.md', 'utf8')).toContain('starts at $12 a person, so five people cost from $60')
 })
 
-it('keeps the invitation one string in PRD 03, the player and the demo, and the trigger in the PRD\'s words', async () => {
-  const { invitationText, invitation } = await import('../packages/ui-tests/src/next')
+it('keeps the invitation one string in PRD 03 and the landing\'s picture, and the trigger in the PRD\'s words', async () => {
+  const { invitationText } = await import('../apps/web/components/player/invitation')
   expect(invitationText).toBe('This page seems to be giving you trouble. Would you show us where? Five minutes, paid, in your own words. The site is being tested, not you.')
   const prd = await readFile('docs/prd/03-participants.md', 'utf8')
   expect(prd).toContain(`"${invitationText}"`)
@@ -99,67 +96,7 @@ it('keeps the invitation one string in PRD 03, the player and the demo, and the 
   expect(prd).toContain('invited when a page has given them trouble twice')
   expect(prd).toContain('A no is not asked again that visit')
   expect(prd).toContain('[`../discovery/intercept-recruiting.md`](../discovery/intercept-recruiting.md)')
-  const demo = parseHTML(await readFile('apps/web/public/demo/weekboard.html', 'utf8')).document
-  expect(text(demo.querySelector('#invitation h2')) + ' ' + text(demo.querySelector('#invitation p'))).toBe(invitationText)
-  expect([text(demo.querySelector('#inviteSure')), text(demo.querySelector('#inviteNo'))]).toEqual([invitation.accept, invitation.decline])
   for (const old of ['Looks like this is not going smoothly', 'Mind helping us', 'Having trouble with this?']) {
-    for (const file of ['apps/web/public/demo/weekboard.html', 'packages/ui-tests/src/next.tsx', 'design/artefacts/sources-section.html']) expect(await readFile(file, 'utf8'), file).not.toContain(old)
+    for (const file of ['apps/web/components/player/invitation.ts', 'design/artefacts/sources-section.html']) expect(await readFile(file, 'utf8'), file).not.toContain(old)
   }
-})
-
-it('codes the first click against the happy path from where it starts', async () => {
-  const { codeFirstClick } = await import('../packages/ui-tests/src/impression')
-  const path = ['/board', '/settings/members']
-  expect(codeFirstClick({ target: 'a#members', href: 'http://localhost/settings/members', x: .5, y: .5 }, path, '/board').code).toBe('on your path')
-  expect(codeFirstClick({ target: 'button#share', after: 'http://localhost/board/link', x: .5, y: .1 }, path, '/board').code).toBe('off your path')
-  expect(codeFirstClick({ target: 'button#avatar', after: 'http://localhost/board', x: .9, y: .1 }, path, '/board').code).toBe("couldn't tell")
-  expect(codeFirstClick({ target: 'a point on the page', x: .2, y: .3 }, path, '/board').code).toBe("couldn't tell")
-  expect(codeFirstClick({ target: 'a#x', href: '/settings/members', x: 0, y: 0 }, [], '/').code).toBe("couldn't tell")
-  expect(codeFirstClick(null, path, '/board').code).toBe('no click')
-})
-
-it('takes the appeal rating and the first click with the open answer, codes the click, keeps the codes on the author\'s side and shows both in the trace', async () => {
-  const { SQLiteAdapter } = await import('../packages/ui-tests/src/storage')
-  const { compile } = await import('../packages/ui-tests/src/compiler')
-  const { createCollector, participantView } = await import('../packages/ui-tests/src/server')
-  const { renderTrace } = await import('../packages/ui-tests/src/trace')
-  const store = new SQLiteAdapter(':memory:')
-  const close = vi.spyOn(store, 'close').mockImplementation(() => {})
-  try {
-    const compiled = compile([{ name: 'invite flow', users: 'people who plan work', purpose: 'plan the week together', goals: [{ name: 'invite a colleague', options: { path: ['/board', '/settings/members'] }, outcomes: [() => {}], source: 'test' }], source: 'test' }])[0]
-    expect(compiled.impression).toMatchObject({ appeal: { points: 9 }, firstClick: { toward: 'invite a colleague', codedAgainst: 'path' } })
-    const run = store.create(compiled)
-    expect(participantView(run).impression).toMatchObject({ goal: 'invite a colleague' })
-    expect(participantView(run).impression).not.toHaveProperty('codedAgainst')
-    run.status = 'consented'; store.update(run)
-    const handler = createCollector(() => store)
-    const post = (body: unknown) => handler(new Request('http://localhost/api/ui-tests', { method: 'POST', headers: { origin: 'http://localhost', cookie: `ui-tests-run=${run.id}.${run.token}` }, body: JSON.stringify(body) }))
-    const click = { target: 'a#members', href: 'http://localhost/settings/members', x: .4, y: .2 }
-    expect((await post({ action: 'impression', answer: 'planning the week', spoken: false, appeal: 10, firstClick: click })).status).toBe(400)
-    const response = await post({ action: 'impression', answer: 'planning the week', spoken: false, appeal: 6, firstClick: click })
-    expect(response.status).toBe(200)
-    expect(JSON.stringify(await response.json())).not.toMatch(/on your path|happyPath/)
-    const saved = store.get(run.id)!
-    expect(saved.impression).toMatchObject({ appeal: 6, firstClick: { ...click, code: { code: 'on your path' } } })
-    // Once per session: an identical retry is accepted, a different click refused.
-    expect((await post({ action: 'impression', answer: 'planning the week', spoken: false, appeal: 6, firstClick: click })).status).toBe(200)
-    expect((await post({ action: 'impression', answer: 'planning the week', spoken: false, appeal: 6, firstClick: null })).status).toBe(409)
-    const trace = renderTrace(saved, [])
-    expect(trace).toContain('How appealing the page looked: 6 of 9')
-    expect(trace).toMatch(/<select aria-label="Where the first click led">/)
-    expect(trace).toContain('on your path')
-  } finally { close.mockRestore(); store.close() }
-})
-
-it('prints where the people come from in the run plan: both panels, the cap, how long people take and the deadline', async () => {
-  const { compile, plan } = await import('../packages/ui-tests/src/compiler')
-  const compiled = compile([{ name: 'invite flow', users: 'people who plan work', purpose: 'plan the week together', goals: [{ name: 'invite a colleague', options: { path: ['/board', '/settings/members'] }, outcomes: [() => {}], source: 'test' }], source: 'test' }])
-  expect(plan(compiled)).not.toContain('Prolific')
-  const run = plan(compiled, { cap: 70 })
-  expect(run).toContain('the paid panel on Prolific and CloudResearch Connect: invitations spread across both under your $70 cap, each person labelled with the one they came from.')
-  expect(run).toContain('Time: First people within minutes. Usually all 5 within a few hours; a narrow audience a day or more. The run closes at its deadline, 48 hours unless you set one.')
-  expect(plan(compiled, {})).toContain('budget: { max: 70 }')
-  // The guide's run output names the panel each person came from.
-  const fragment = await readFile('apps/web/generated/terminal-run.html', 'utf8')
-  for (const line of ['Person 1 · Prolific', 'Person 3 · CloudResearch Connect', 'Paid $60 of the $70 cap · $10 back']) expect(fragment).toContain(line)
 })

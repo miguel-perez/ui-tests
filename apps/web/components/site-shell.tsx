@@ -10,7 +10,7 @@ function Wordmark() {
 }
 
 /**
- * Shared by the landing page, the guide and the report, leaving participant surfaces and shared links independent. The texture runs
+ * The landing page's shell: the header, the texture and the footer. The texture runs
  * behind all of it (issue #51); the footer closes every page: the wordmark in the first five columns, the three links in the right
  * seven, the last flush with the container's right edge.
  */
@@ -20,7 +20,7 @@ export function SiteShell({ children }: { children: React.ReactNode }) {
     <PageTexture />
     <header className="site-header"><nav className="site-width" aria-label={ui.navigation}>
       <Wordmark />
-      <div className="nav-links"><Link href="/docs/getting-started">{ui.guide}</Link><a href={repository}><Icon name="github" />{ui.github}</a></div>
+      <div className="nav-links"><a href={repository}><Icon name="github" />{ui.github}</a></div>
     </nav></header>
     {children}
     <footer className="site-footer"><div className="site-width split">

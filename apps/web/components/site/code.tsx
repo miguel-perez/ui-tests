@@ -1,4 +1,4 @@
-import { role, segments } from 'ui-tests/colours'
+import { role, segments } from '../../lib/colours'
 import { highlight } from '../../lib/highlight'
 
 /**

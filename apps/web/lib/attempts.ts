@@ -19,29 +19,9 @@ export type Run = { label: string; run: string; goal: string; date: string; peop
 export const run = metadata as Run
 export const attempt = (id: string) => run.attempts.find(entry => entry.id === id)!
 
-export const reachedLabel: Record<Reached, string> = { yes: 'Yes', no: 'No', "couldn't tell": "Couldn't tell" }
-export const endedLabel: Record<Ended, string> = { done: 'Pressed Done', "couldn't do this": "Pressed I couldn't do this", 'ran out of time': 'Ran out of time', withdrew: 'Withdrew', left: 'Left' }
 /** Wrong, and sure: did not reach the goal yet rated themselves 7 of 7 sure (MeasuringU, UI disasters). Nothing at 6 or below. */
 export const wrongAndSure = (entry: Attempt) => entry.reached === 'no' && entry.sure === 7
-/** The run-level lines: how many reached the goal, and how many were wrong and sure. */
-export const reachedCount = run.attempts.filter(entry => entry.reached === 'yes').length
-export const wrongAndSureCount = run.attempts.filter(wrongAndSure).length
-/** The typical (median) answer to a 1-to-n question across the run. */
-export function typical(values: number[]) { const sorted = [...values].sort((a, b) => a - b), middle = Math.floor(sorted.length / 2); return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2 }
 
-export const seconds = (timestamp: string) => { const [m, s] = timestamp.split(':').map(Number); return m * 60 + s }
 /** 00:03, as on a recording. */
 export const clock = (value: number) => `${String(Math.floor(value / 60)).padStart(2, '0')}:${String(Math.floor(value % 60)).padStart(2, '0')}`
-/** 1:03, as a time of day on the attempt. */
-export const short = (value: number) => `${Math.floor(value / 60)}:${String(Math.floor(value % 60)).padStart(2, '0')}`
-/** 1 min 3 s: time on this goal. */
-export const spoken = (value: number) => value >= 60 ? `${Math.floor(value / 60)} min ${value % 60} s` : `${value} s`
 
-/** The colour a moment's kind is drawn in: one kind, one hue (results-views audit, rule 1). Routine moments stay ink. */
-export const signal: Record<string, 'stop' | 'path' | 'dead' | 'ended' | undefined> = { stopped: 'stop', 'off-path': 'path', 'went-back': 'path', 'no-effect': 'dead', ended: 'ended' }
-/** The impact label on the index and the card: wrong end state, or slowed / confused with the seconds it cost. */
-export function impactLabel(blocker: Blocker, separator = ' ') {
-  if (blocker.impact === 'wrong end state') return 'Wrong end state'
-  const word = blocker.impact[0].toUpperCase() + blocker.impact.slice(1)
-  return blocker.impact === 'blocked' ? word : `${word}${separator}${blocker.to - blocker.from} s`
-}

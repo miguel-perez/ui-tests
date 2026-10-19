@@ -17,9 +17,10 @@ coverage/
 dist/
 playwright-report/
 test-results/
-.ui-tests/
+out/
 next-env.d.ts
 *.tsbuildinfo
 
 # Superdesign local state
 .superdesign/
+.ui-tests/

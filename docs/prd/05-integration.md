@@ -46,7 +46,7 @@ The tunnel fits a run watched for a few hours. A longer or unattended run needs 
 
 ## The run handle
 
-`ui-tests recruit` derives an idempotency key from the commit, the context id (itself derived from users and purpose) and the actor, or takes one with `--key`, creates the run, and exits. A repeated key returns the existing run; a lost response never creates a second paid run. The run is a durable record with independent states:
+`ui-tests recruit` derives an idempotency key from the commit, the context id (itself derived from users and purpose) and the actor, or takes one with `--key`, creates the run, and exits. From CI, `ui-tests check` derives it from the pull request in place of the commit, so a pull request gets one run and a push during it starts nothing new ([`01-dx-contract.md`](01-dx-contract.md#ci)). A repeated key returns the existing run; a lost response never creates a second paid run. The run is a durable record with independent states:
 
 ```json
 {
@@ -61,7 +61,7 @@ The tunnel fits a run watched for a few hours. A longer or unattended run needs 
     "verification": "pending | complete | instrumentation-problem",
     "payment":     "none | reserved | paid | trued-up"
   },
-  "result": "pending | problems-found | none-found | pass | fail | inconclusive",
+  "result": "pending | problems-found | none-found | inconclusive",
   "deadline": "2026-10-17T12:00:00Z"
 }
 ```
@@ -70,11 +70,11 @@ Completion is observable three ways: poll `ui-tests status`, a webhook the store
 
 ## The run record
 
-`ui-tests report --json` writes one file per run with the compiled context, every derived field and its source rule, attempts with their consented purposes and source restrictions, measures, the ranked `issues[]` with participants, impact, words, access conditions and moment references, the impression stage results, the fit of the sample, measures named effectiveness, efficiency, satisfaction, fit and appeal, money, quality flags, revisions, and the sentence. Its JSON Schema is published and versioned; the schema id is in the file. It is the only artifact a consumer needs.
+`ui-tests report --json` writes one file per run with the compiled context, every derived field and its source rule, attempts with their consented purposes and source restrictions, measures, the ranked `issues[]` with participants, impact, words, access conditions and moment references, the impression stage results, the fit of the sample, measures named effectiveness, efficiency, satisfaction and fit, money, quality flags, revisions, and the sentence. Its JSON Schema is published and versioned; the schema id is in the file. It is the only artifact a consumer needs.
 
 ## GitHub
 
-`npx ui-tests check` posts one check run named `ui-tests` on the commit for a human run (starting the run from CI is not shipped yet: [#69](https://github.com/miguel-perez/ui-tests/issues/69); today `npx ui-tests check <run.json>` publishes the check from a run summary); an agent run posts its own, `ui-tests (agent)`, which never counts with people ([`04-agent-studies.md`](04-agent-studies.md); agent runs are not shipped yet: [#72](https://github.com/miguel-perez/ui-tests/issues/72)). While pending its summary is the estimate. On completion its conclusion is `neutral` for every outcome, so it never fails the build or blocks a merge, even when a team marks it required; with `check: { block_on: 'problems' }` in the config it is `failure` when a completed run found problems, and only then; an inconclusive run, with fewer attempts completed than it asked for, stays `neutral` with or without `block_on`. Its mark in the merge box is neutral, never red or green.
+`npx ui-tests check` posts one check run named `ui-tests` on the commit for a human run (starting the run from CI is not shipped yet: [#69](https://github.com/miguel-perez/ui-tests/issues/69); today `npx ui-tests check <run.json>` publishes the check from a run summary); an agent run posts its own, `ui-tests (agent)`, which never counts with people ([`04-agent-studies.md`](04-agent-studies.md); agent runs are not shipped yet: [#72](https://github.com/miguel-perez/ui-tests/issues/72)). One run per pull request: a push while people are still in starts nothing new, and the check stays on the commit they saw, which its footer names. While pending its summary is the estimate. On completion its conclusion is `neutral` for every outcome, so it never fails the build or blocks a merge, even when a team marks it required: there is no pass to give. The one opt-in is `check: { block_on: 'problems' }` in the config: it is `failure` when a completed run found problems, and only then; an inconclusive run, with fewer attempts completed than it asked for, stays `neutral` with or without `block_on`. Its mark in the merge box is neutral, never red or green, unless `block_on` makes it red; it is never green.
 
 Its title, one line in the merge box, is one of three:
 
@@ -82,7 +82,7 @@ Its title, one line in the merge box, is one of three:
 - "No problems found with {n} people · {x} of {n} reached the goal"
 - "Inconclusive · only {x} of {n} attempts completed", when fewer attempts completed than the run asked for
 
-Its page on GitHub, behind Details, is one screen with no pictures: the sentence; "This check never fails your build. It reports problems, or that none were seen this time." (with `block_on`, that it fails the build when it finds problems); the three problems to fix first, each with where it is (the page and the element), how many people, the impact and a link to the moment; the links to the report; and a footer with who took part, where it ran, the commit and the date. The rest of the problems sit folded below. No annotations and no images. Details opens the report at `/r/<run>` ([`02-study-and-verdict.md`](02-study-and-verdict.md#the-report)). One sticky comment of three to five lines is updated in place, posted only when the outcome changes; `check: { comment: false }` turns it off. The reconciliation workflow runs `ui-tests verify` and `ui-tests status` on a schedule with default-branch code only. Invite links carry the Vercel protection-bypass token so participants reach a protected preview without the author's session.
+Its page on GitHub, behind Details, is one screen with no pictures: the sentence; "This check never fails your build. It reports problems, or that none were seen this time." (with `block_on`, that it fails the build when it finds problems); the three problems to fix first, each with where it is (the page and the element), how many people, the impact and a link to the moment; the links to the report; and a footer with who took part, where it ran, the commit and the date. The rest of the problems sit folded below. No annotations and no images. Details opens this page, on GitHub; its links open the report at `/r/<run>`, and each problem's link opens its card at the moment ([`02-study-and-verdict.md`](02-study-and-verdict.md#the-report)). One sticky comment of three to five lines is updated in place, posted only when the outcome changes; `check: { comment: false }` turns it off. The reconciliation workflow runs `ui-tests verify` and `ui-tests status` on a schedule with default-branch code only. Invite links carry the Vercel protection-bypass token so participants reach a protected preview without the author's session.
 
 ## What the record evidences
 
