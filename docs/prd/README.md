@@ -1,5 +1,7 @@
 # ui-tests PRD
 
+**Status, 19 October 2026:** nothing in these documents is built. The repository is the landing page, a static site, and these documents. The R0 walking skeleton (issue #5) built a local runner ahead of any evidence that people want one, and it was removed; the landing page is the false door the [pitch](../pitch.md) describes, and the next evidence comes from it. "Not shipped yet" below means not built.
+
 Built on [`../pitch.md`](../pitch.md), [`../stack.md`](../stack.md), [`../personas.md`](../personas.md). Each file owns one area. Release order lives in [`../story-map.md`](../story-map.md).
 
 | File | Owns |
@@ -19,7 +21,7 @@ Unit and end-to-end tests prove the code works, not that people can use it. Usab
 
 1. A developer with no research background gets from install to a first result on their own preview URL in one afternoon.
 2. A test is who the users are, what they are trying to do, a goal, and an `outcome`, with a happy path if you have one and steps when the route is the requirement. Everything else is derived and visible, including the impression stage and the fit questions.
-3. Every run surfaces the problems that stopped people, ranked, in their words, with the moment to watch, and reports the two rungs above usable: fit and recognition, then appeal.
+3. Every run surfaces the problems that stopped people, ranked, in their words, with the moment to watch and the smallest change that would fix each, and reports the rung above usable: fit and recognition of the purpose. A run reports the problems it found, or that it found none this time; there is no score and no pass.
 4. The numbers come with a sentence that says what they can and cannot support. Five people find problems; they do not certify a rate.
 5. Participants are real people treated fairly, or agents clearly labelled as agents. The two never mix.
 6. Output is a durable JSON record a DAG, a factory, or GEPA can consume without reading a dashboard, with the purposes participants consented to attached.
@@ -58,4 +60,4 @@ Which slice tests each one is in [`../story-map.md`](../story-map.md).
 
 ## Glossary
 
-**Context**: the root of a test, after ISO 9241-11's context of use: specified users, a purpose, an environment, and the goals under them; named and identified by its users and purpose. A file may hold several. **Goal**: what a participant is trying to achieve, with a scenario, an optional happy path, optional steps, and usually an `outcome` hook; a goal without one yields issues only. The unit of the count. **Task**: one step inside a goal, shown when the route is the requirement. **Impression**: the derived first stage of a run, a flash, an appeal item, recognition of the purpose and a first click, before any goal. **Fit**: the screener's three purpose questions, scored, opening the report. **Attempt**: one participant's try at one goal. **Verified outcome**: the goal's `outcome` result, `correct`, `incorrect`, or `unknown`. **Run**: one execution of a context against one build by one actor, human or agent, with a durable handle. **Trace**: everything recorded about a run, viewable and exportable. **Issue**: a problem participants hit, derived from trace signals, with its participants, impact, words and moments. **Sentence**: the plain statement of what a run's numbers support.
+**Context**: the root of a test, after ISO 9241-11's context of use: specified users, a purpose, an environment, and the goals under them; named and identified by its users and purpose. A file may hold several. **Goal**: what a participant is trying to achieve, with a scenario, an optional happy path, optional steps, and usually an `outcome` hook; a goal without one yields issues only. The unit of the count. **Task**: one step inside a goal, shown when the route is the requirement. **Impression**: the derived first stage of a run, the first look: a flash, recognition of the purpose and a first click, before any goal. **Fit**: the screener's three purpose questions, scored, opening the report. **Attempt**: one participant's try at one goal. **Verified outcome**: the goal's `outcome` result, `correct`, `incorrect`, or `unknown`. **Run**: one execution of a context against one build by one actor, human or agent, with a durable handle. **Trace**: everything recorded about a run, viewable and exportable. **Issue**: a problem participants hit, derived from trace signals, with its participants, impact, words and moments. **Sentence**: the plain statement of what a run's numbers support.

@@ -1,5 +1,7 @@
 # R0: walking skeleton. The site is live and ui-tests runs its own landing context on the author
 
+**Superseded, 19 October 2026.** Built in #5 and removed: the repository is now the landing page and the documents (see `docs/prd/README.md`, Status). Kept as a record of what was asked.
+
 Self-contained issue text. The factory reads only this.
 
 ## Outcome

@@ -2,12 +2,14 @@
 
 Built with Patton's five steps: frame, map the big picture, explore, slice viable releases, slice a development strategy. Cards are short verb phrases. Details hang under each task, most necessary first, tagged with the slice that ships them. Each slice is a complete walk across the backbone and ends with Miguel using it. See `briefings/2026-10-15-patton-story-mapping.md`.
 
+**Status, 19 October 2026:** R0's site cards are what exists: the landing page, as a static site. The getting-started page, the package, the rehearsal and every other R0 card were removed with the walking skeleton (issue #5); the slices below are the plan again, not a record of what shipped.
+
 ## Frame
 
 - **What:** a usability test runner that runs like unit tests; see [`pitch.md`](pitch.md).
 - **Who:** the three personas in [`personas.md`](personas.md), the participant, the agent under test, the consumer workflow. The author is also the chooser.
-- **Why:** prove the rung your tests don't, to the ISO 9241 definition, from the same pipeline, for about $50 a run, with no research background; and say whether people want it before you polish it.
-- **Success metrics:** install to first result under one afternoon; fewer than one override per context; at least one problem acted on per run; about $10 a person with a panel; our own landing study's sentence.
+- **Why:** prove the rung your tests don't, to the ISO 9241 definition, from the same pipeline, from $60 a run, with no research background; and say whether people want it before you polish it.
+- **Success metrics:** install to first result under one afternoon; fewer than one override per context; at least one problem acted on per run; from $12 a person with a panel; our own landing study's sentence.
 
 ## Backbone (narrative flow, top to bottom)
 
@@ -51,9 +53,9 @@ Patton draws the backbone left to right; it is turned on its side here so the ta
 - Lint with rule sources and reasons `R0`
 - Scenario generated from goal and fixture names, editable, pinnable `R0`
 - `participant.answer()` with generated distractors `R0`
-- Impression stage derived from the context: flash, appeal item, recognition of the purpose, first click `R1`
+- Impression stage derived from the context: flash, recognition of the purpose, first click `R1`
 - Fit questions derived from the purpose open the report `R1`
-- `catch` and `estimate` intents; the sentence derived from them `R0` sentence, `R3` estimate
+- The `sample` intent (catch problems); the sentence derived from it `R0`
 - `actors` on a context; `trials`; `ui-tests run --actor agent` `R2`
 
 ### Rehearse › dev mode
@@ -75,7 +77,7 @@ Patton draws the backbone left to right; it is turned on its side here so the ta
 
 ### Participate › consent, task, questions
 - Consent naming purposes, scenario card, floating taskbar, done or can't; all white-labelled `R0`
-- Screener with behavioural, panel, fit and persona-placement questions; practice screen `R1`
+- Screener with behavioural, panel and fit questions; practice screen `R1`
 - SEQ, confidence, UX-Lite `R1`
 - Keyboard and screen-reader operable; access conditions recorded `R1`
 - Attention item and speeder flag, flagged not excluded; hashed duplicates excluded from n and paid `R3`
@@ -89,9 +91,8 @@ Patton draws the backbone left to right; it is turned on its side here so the ta
 - Issues from trace signals across people, ranked, three most serious per goal `R1`
 - Event replay highlight reel `R1`
 - Shareable report page by signed link `R1`
-- Impression and fit results beside the issues; measures named effectiveness, efficiency, satisfaction, fit, appeal `R1`
+- Impression and fit results beside the issues; measures named effectiveness, efficiency, satisfaction, fit `R1`
 - Clause-evidence section in the record `R1`
-- Adjusted-Wald estimate with power statement `R3`
 - pass^k and per-trial table for agents `R2`
 
 ### Iterate › fix, re-run
@@ -140,7 +141,7 @@ Order follows the opportunity map in [`discovery/redesign.md`](discovery/redesig
 - **Serves:** participants who match without a sales call, and a price one person can pay; the promise "it recruits the people" becomes true.
 - **Outcome:** a run recruits from Prolific with the author's token, pays by formula, enforces the cap with its reserve, trues up, and reaches n without the author touching the panel.
 - **Metric:** time to fill under the deadline; no-show under 10%; about $10 a person; zero payment disputes.
-- **Development strategy:** estimate command, Prolific adapter, incentive formula with raise rule and true-up reserve, quality flags, `estimate` intent with the adjusted-Wald result and power statement, pricing on the site.
+- **Development strategy:** estimate command, Prolific adapter, incentive formula with raise rule and true-up reserve, quality flags, pricing on the site.
 - **Check-in:** Miguel funds one run of the landing study and decides whether the price and speed match the promise.
 
 ### H1: "Paste a snippet, run it from a page" (hosted track, after R3, or earlier if a persona-3 user asks)

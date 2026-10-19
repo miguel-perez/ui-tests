@@ -26,16 +26,16 @@ The site shows the three text surfaces, `target: { http }`, `target: { mcp }` an
 
 ```ts
 // cli-first-run.ui.test.ts
-import { context, goal, outcome, expect } from 'ui-tests'
+import { study, task, outcome, expect } from 'ui-tests'
 
-context({
+study('first run', {
   users: 'developers trying ui-tests for the first time',
   purpose: 'find out whether people can use what I built',
   actors: ['agent'],
   target: { cli: 'npx ui-tests' },
 }, () => {
-  goal('install ui-tests and get a result on the example', {
-    happyPath: ['npm i -D ui-tests', 'npx ui-tests'],
+  task('install ui-tests and get a result on the example', {
+    path: ['npm i -D ui-tests', 'npx ui-tests'],
     trials: 5,
   }, () => {
     outcome(async ({ workspace }) => {
@@ -45,7 +45,7 @@ context({
 })
 ```
 
-`npx ui-tests --actor agent` runs this with the cli harness and the configured model, five trials, fixtures reset between trials. A context on `target.cli` that lists `human` in `actors` fails lint, because a human terminal harness is a planned omission. The same context against `target.url` could admit both. The inputs are unchanged. `trials` replaces sample size for agent runs; the scenario wording is given to the agent as its prompt.
+`npx ui-tests --actor agent` runs this with the cli harness and the configured model, five trials, fixtures reset between trials. A study on `target.cli` that lists `human` in `actors` fails lint, because a human terminal harness is a planned omission. The same study against `target.url` could admit both. The inputs are unchanged. `trials` replaces sample size for agent runs; the scenario wording is given to the agent as its prompt.
 
 An agent is model plus harness plus context: provider and version, system instructions, visible tools, permissions, and budgets, set in the config under `agents` and pinned into the compiled run. Changing any of them is a different run.
 

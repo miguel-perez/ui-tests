@@ -4,13 +4,13 @@ The frame every other document references.
 
 ## One line
 
-Usability testing that runs like your unit tests. Define the goal and the happy path. It recruits the people, runs it, and reports the problems they hit.
+Usability testing that runs like your unit tests: see where people get stuck on what you just shipped. Say who your users are, what they are trying to do, and how you would know they did it. It recruits the people, runs it, and reports the problems they hit, with the moment to watch, their words and what to change.
 
 ## What
 
 An open-source test runner for the rung your tests don't cover. You write a `*.ui.test.ts` that names who the users are and what they are trying to do, then a goal and an `outcome` on the end state, the same hook you would write in Playwright, with a happy path if you have one and steps when the route is the requirement. One command runs it against your preview URL, brings participants, pays them by a formula grounded in published rates, records the attempts, verifies the outcome in the runner, and reports the problems people hit, ranked and in their words, with a sentence that says what the numbers can and cannot support.
 
-It measures usability the way ISO 9241-11 defines it, effectiveness, efficiency and satisfaction for specified users and goals in a specified context of use, and reads the two rungs above: whether these users need and recognise the purpose, and whether the thing appeals once it works. Every run exports a record that is evidence for the clauses of ISO 9241-210 that need people.
+It measures usability the way ISO 9241-11 defines it, effectiveness, efficiency and satisfaction for specified users and goals in a specified context of use, and reads the rung above: whether these users need and recognise the purpose. Every run exports a record that is evidence for the clauses of ISO 9241-210 that need people.
 
 Participants come from your own link, from a panel with your key (Prolific, CloudResearch Connect), and, on the hosted track, from your own site's visitors invited when they struggle.
 
@@ -38,9 +38,9 @@ Your tests prove it works and keeps working. ui-tests proves people can use it, 
 
 ## What users will do to get value
 
-1. Install the package, add a config, write one context against a preview URL.
+1. Install the package, run `npx ui-tests init`, and change the study it writes to their own site.
 2. Run it on themselves in dev mode.
-3. Share a link with five people from their audience, or add a panel key and a budget. Run it in CI on a label or on merge to main.
+3. Share a link with five people from their audience, or add a panel key and a cap. Put `npx ui-tests check` in the job that deploys the preview: one run per pull request, within the cap.
 4. Read the fit, the problems and the sentence. Fix the UI, or the purpose. Re-run.
 
 ## Riskiest assumption and how we test it
@@ -57,14 +57,14 @@ This does not test traction. That is fine.
 
 - Time from install to first result for a new author.
 - Problems surfaced per run that the author acts on.
-- Cost per verified attempt with a panel: about $10 a person, about $50 for five.
+- Cost per verified attempt with a panel: from $12 a person, from $60 for five.
 - Our own site: visitors understand what it is for and start.
 
 ## Defaults
 
-- **CI**: a neutral check by default that never fails the build; `check: { block_on: 'problems' }` in the config makes it fail when a completed run finds problems. Never pays participants on every push.
-- **Sample size**: no modes. A goal states the smallest problem occurrence it wants to catch and the confidence it wants of seeing it; the runner derives n (problems hitting one in three users at 85% confidence gives five). A precision target derives a larger n the same way. The sentence states what the number supports.
-- **Results**: a problem-catching goal reports "problems found" or "none found at this n", never pass. Pass and fail exist only for a goal that asked for an estimate, with a power statement. Findings are reported at the level they belong to: the UI, the goal, or the context.
+- **CI**: one run per pull request, a neutral check that is never red or green and never fails the build; `check: { block_on: 'problems' }` in the config is the one opt-in that makes it red when a completed run finds problems; it is never green. A push during the run starts nothing new, and never pays participants again.
+- **Sample size**: no modes. A goal states the smallest problem occurrence it wants to catch and the confidence it wants of seeing it; the runner derives n (problems hitting one in three users at 85% confidence gives five). The sentence states what the number supports.
+- **Results**: a run reports the problems it found, or that it found none this time; there is no score and no pass. Findings are reported at the level they belong to: the UI, the goal, or the context.
 - **Success**: defined by the author's hooks, run in the runner, never in the app under test. A participant's own judgement is recorded as data.
 - **Review**: the trace is auditable. Generated scenario wording can be edited before launch. Exclusions and incentive adjustments are recorded as revisions.
 - **White label**: everything a participant sees is the author's name and theme; our brand appears only where the author opts in.
