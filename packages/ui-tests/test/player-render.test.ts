@@ -1,0 +1,89 @@
+import { createElement } from 'react'
+import { renderToString } from 'react-dom/server'
+import { describe, expect, it } from 'vitest'
+import type { Screen } from '../src/player/flow.ts'
+import { PlayerScreen } from '../src/player/screens.tsx'
+import type { ParticipantView } from '../src/server/view.ts'
+import { view } from './player-fixtures.ts'
+
+const render = (v: ParticipantView, screen: Screen, answers: Record<string, unknown> = {}) =>
+  renderToString(createElement(PlayerScreen, { view: v, screen, answers, onAnswer: () => {}, onNext: () => {}, onStart: () => {} }))
+const count = (html: string, pattern: RegExp) => html.match(pattern)?.length ?? 0
+
+const screens = (v: ParticipantView): [string, Screen][] => [
+  ['consent', { kind: 'consent' }],
+  ['card', { kind: 'card' }],
+  ['ease', { kind: 'ease' }],
+  ['difficulty', { kind: 'difficulty' }],
+  ['confidence', { kind: 'confidence' }],
+  ['uxlite', { kind: 'uxlite', item: 1 }],
+  ['comment', { kind: 'comment' }],
+  ['thanks', { kind: 'thanks' }],
+  ...(v.answer ? ([['answer', { kind: 'answer' }]] as [string, Screen][]) : []),
+]
+
+describe('consent', () => {
+  const v = view()
+  const html = render(v, { kind: 'consent' })
+
+  it('shows the payout line, every purpose sentence, the recording level, the duration and a contact line', () => {
+    expect(html).toContain(v.consent.payout)
+    for (const line of v.consent.text) expect(html).toContain(line)
+    expect(html).toContain('Your screen is not filmed')
+    expect(html).toContain('about 4 minutes')
+    expect(html).toContain('Questions about this study? Ask Acme.')
+  })
+
+  it('says it records video when the run does', () => {
+    expect(render(view({ record: 'video' }), { kind: 'consent' })).toContain('as a video')
+  })
+
+  it('names no ui-tests anywhere unless poweredBy is on', () => {
+    for (const [, screen] of screens(view({ answer: { question: 'Which plan?', choices: ['A', 'B'] } }))) {
+      expect(render(view({ answer: { question: 'Which plan?', choices: ['A', 'B'] } }), screen).toLowerCase()).not.toContain('ui-tests')
+    }
+    expect(render(view({ brand: { poweredBy: true } }), { kind: 'consent' })).toContain('Powered by ui-tests')
+  })
+})
+
+describe('card', () => {
+  it('shows the filled scenario, the footer and Start task', () => {
+    const html = render(view(), { kind: 'card' })
+    expect(html).toContain('You owe Dana 40 dollars. Send her an invoice.')
+    expect(html).toContain("When you think you&#x27;ve finished, press Done. If you get stuck, press I couldn&#x27;t do this.")
+    expect(html).toContain('Start task')
+  })
+})
+
+describe('questions', () => {
+  it('shows the ease as seven radios with none checked', () => {
+    const html = render(view(), { kind: 'ease' })
+    expect(count(html, /type="radio"/g)).toBe(7)
+    expect(html).not.toContain('checked')
+    expect(html).toContain('Overall, how difficult or easy did you find this task?')
+  })
+
+  it('checks only what was answered', () => {
+    expect(count(render(view(), { kind: 'ease' }, { 'goal0.ease': 3 }), /checked=""/g)).toBe(1)
+  })
+
+  it('shows the choices of an answer question unchecked', () => {
+    const html = render(view({ answer: { question: 'Which plan was shown?', choices: ['Team', 'Solo', 'Org'] } }), { kind: 'answer' })
+    expect(count(html, /type="radio"/g)).toBe(3)
+    expect(html).not.toContain('checked')
+  })
+
+  it('has one h1 and labelled controls on every screen', () => {
+    const v = view({ answer: { question: 'Which plan was shown?', choices: ['Team', 'Solo'] }, questions: [...view().questions, { id: 'goal0.confidence', text: 'How confident are you that you finished the task?', type: 'scale', points: 7 }] })
+    for (const [name, screen] of screens(v)) {
+      const html = render(v, screen)
+      expect(count(html, /<h1[ >]/g), name).toBe(1)
+      for (const control of html.match(/<(?:textarea|input)[^>]*>/g) ?? []) {
+        const id = /name="([^"]+)"/.exec(control)![1]!
+        const labelled = /aria-labelledby=/.test(control) || /<label[^>]*>[^]*<\/label>/.test(html)
+        expect(labelled, `${name} ${id}`).toBe(true)
+      }
+      expect(count(html, /<textarea/g) === 0 || /<textarea[^>]*aria-labelledby=/.test(html), name).toBe(true)
+    }
+  })
+})

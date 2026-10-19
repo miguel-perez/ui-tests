@@ -12,6 +12,8 @@ export type ParticipantView = {
   consent: { text: string[]; purposes: string[]; payout: string }
   screener: { id: string; text: string; options: string[]; multi: boolean }[]
   practice: boolean
+  /** About how long the whole study takes; the consent screen says so. */
+  minutes: number
   impression?: { page: string; flashMs: number; question: string }
   goal: {
     index: number
@@ -60,6 +62,7 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
     consent: { text: study.consent.text, purposes: study.consent.purposes, payout: study.consent.payout },
     screener: study.screener.map((q) => ({ id: q.id, text: q.text, options: q.choices ?? [], multi: false })),
     practice: false,
+    minutes: Math.max(1, study.goals.reduce((sum, g) => sum + (g.minutes ?? Math.ceil(g.timeout.seconds / 60)), 0)),
     ...(impression.on && { impression: { page: impression.page ?? goal.start, flashMs: impression.flashMs, question: impression.question } }),
     goal: {
       index: goal.index,

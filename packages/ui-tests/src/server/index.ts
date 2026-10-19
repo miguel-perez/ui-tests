@@ -4,6 +4,7 @@ import { createCollector } from './collector.ts'
 
 export { createCollector, type CollectorOptions } from './collector.ts'
 export { participantView, type ParticipantView } from './view.ts'
+export { PlayerPage } from './player-page.tsx'
 
 let store: Promise<RunStore> | undefined
 const handler = createCollector({

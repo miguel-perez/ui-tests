@@ -1,0 +1,214 @@
+import type { CSSProperties, ReactNode } from 'react'
+import type { ParticipantView } from '../server/view.ts'
+import type { Screen } from './flow.ts'
+import {
+  AGREE, AGREEMENT_ENDS, CARD_FOOTER, CARD_TITLE, CONFIDENCE_ENDS, CONSENT_TITLE, CONTINUE, EASE_ENDS, POWERED_BY, RECORDING, SCREENER_TITLE,
+  START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, contact, duration,
+} from './copy.ts'
+
+export type ScreenProps = {
+  view: ParticipantView
+  screen: Screen
+  /** Answers given so far, keyed by question id. */
+  answers: Record<string, unknown>
+  onAnswer: (id: string, value: string | number | string[]) => void
+  /** Moves on from this screen; the player sends what the screen collected. */
+  onNext: () => void
+  /** Consent was given and the person pressed Start task. */
+  onStart: () => void
+  /** The flashed page finished loading. */
+  onFlashLoaded?: () => void
+  busy?: boolean
+  error?: string
+}
+
+/** Colours come from the host through these variables, with neutral fallbacks; the author's accent is applied inline. */
+const css = `
+.pl{--pl-bg:var(--background,#fff);--pl-fg:var(--foreground,#16181d);--pl-dim:color-mix(in srgb,var(--pl-fg) 68%,var(--pl-bg));--pl-hair:color-mix(in srgb,var(--pl-fg) 18%,var(--pl-bg));
+  box-sizing:border-box;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px;background:var(--pl-bg);color:var(--pl-fg);font:16px/1.5 var(--font-sans,system-ui,sans-serif)}
+.pl *{box-sizing:border-box}
+.pl-card{width:100%;max-width:34rem;display:flex;flex-direction:column;gap:16px}
+.pl h1{font-size:1.5rem;line-height:1.25;margin:0;font-weight:600}
+.pl p,.pl ul{margin:0}
+.pl ul{padding-left:1.25rem;display:flex;flex-direction:column;gap:8px}
+.pl-dim{color:var(--pl-dim);font-size:.9375rem}
+.pl-scale{display:flex;gap:8px;flex-wrap:wrap}
+.pl-scale label,.pl-choice{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 14px;border:1px solid var(--pl-hair);border-radius:8px;cursor:pointer}
+.pl-scale label{flex-direction:column;justify-content:center;gap:2px;min-width:44px;padding:6px 10px}
+.pl-ends{display:flex;justify-content:space-between;gap:16px;font-size:.875rem;color:var(--pl-dim)}
+.pl-choices{display:flex;flex-direction:column;gap:8px}
+.pl textarea{width:100%;min-height:7rem;padding:10px 12px;font:inherit;color:inherit;background:transparent;border:1px solid var(--pl-hair);border-radius:8px}
+.pl button{align-self:flex-start;min-height:44px;padding:0 20px;font:inherit;font-weight:600;color:var(--pl-bg);background:var(--pl-accent,var(--pl-fg));border:0;border-radius:8px;cursor:pointer}
+.pl button:disabled{opacity:.5;cursor:default}
+.pl :focus-visible{outline:2px solid var(--pl-accent,var(--pl-fg));outline-offset:2px}
+.pl-error{color:#b3261e}
+.pl-fix{font-size:3rem;text-align:center;margin:auto}
+.pl-frame{width:100%;height:70vh;border:1px solid var(--pl-hair);border-radius:8px}
+.pl-foot{margin-top:auto;padding-top:24px;color:var(--pl-dim);font-size:.8125rem}
+`
+
+function Frame({ view, children, error }: { view: ParticipantView; children: ReactNode; error?: string }) {
+  const style = view.brand.accent ? ({ '--pl-accent': view.brand.accent } as CSSProperties) : undefined
+  return (
+    <main className="pl" style={style}>
+      <style>{css}</style>
+      <div className="pl-card">
+        {children}
+        {error && <p role="alert" className="pl-error">{error}</p>}
+      </div>
+      {view.brand.poweredBy && <p className="pl-foot">{POWERED_BY}</p>}
+    </main>
+  )
+}
+
+function Scale({ id, question, ends, value, onAnswer }: { id: string; question: string; ends: { low: string; high: string }; value: unknown; onAnswer: ScreenProps['onAnswer'] }) {
+  const title = `title-${id}`
+  return (
+    <>
+      <h1 id={title}>{question}</h1>
+      <div role="radiogroup" aria-labelledby={title} className="pl-scale">
+        {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+          <label key={n}>
+            <input type="radio" name={id} value={n} checked={value === n} onChange={() => onAnswer(id, n)} />
+            <span>{n}</span>
+          </label>
+        ))}
+      </div>
+      <div className="pl-ends" aria-hidden="true"><span>{ends.low}</span><span>{ends.high}</span></div>
+    </>
+  )
+}
+
+function Choice({ id, question, options, multi, value, onAnswer }: { id: string; question: string; options: string[]; multi: boolean; value: unknown; onAnswer: ScreenProps['onAnswer'] }) {
+  const title = `title-${id}`
+  const chosen = Array.isArray(value) ? value : value === undefined ? [] : [value]
+  return (
+    <>
+      <h1 id={title}>{question}</h1>
+      <div role={multi ? 'group' : 'radiogroup'} aria-labelledby={title} className="pl-choices">
+        {options.map((option) => (
+          <label key={option} className="pl-choice">
+            <input
+              type={multi ? 'checkbox' : 'radio'}
+              name={id}
+              value={option}
+              checked={chosen.includes(option)}
+              onChange={() => onAnswer(id, multi ? (chosen.includes(option) ? chosen.filter((c) => c !== option) : [...chosen, option]) : option)}
+            />
+            <span>{option}</span>
+          </label>
+        ))}
+      </div>
+    </>
+  )
+}
+
+function Open({ id, question, value, onAnswer }: { id: string; question: string; value: unknown; onAnswer: ScreenProps['onAnswer'] }) {
+  const title = `title-${id}`
+  return (
+    <>
+      <h1 id={title}>{question}</h1>
+      <textarea aria-labelledby={title} name={id} placeholder={TEXT_LABEL} value={typeof value === 'string' ? value : ''} onChange={(e) => onAnswer(id, e.target.value)} />
+    </>
+  )
+}
+
+const questionOf = (view: ParticipantView, id: string) => view.questions.find((q) => q.id === id)
+
+/** One screen of the player. Pure: the player owns the state and the requests. */
+export function PlayerScreen(props: ScreenProps) {
+  const { view, screen, answers, onAnswer, onNext, onStart, busy, error } = props
+  const given = (id: string) => answers[id]
+  const answered = (id: string) => given(id) !== undefined && given(id) !== '' && !(Array.isArray(given(id)) && (given(id) as unknown[]).length === 0)
+  const next = (label: string, enabled = true) => <button type="button" disabled={busy || !enabled} onClick={onNext}>{label}</button>
+
+  const scale = (id: string, ends: { low: string; high: string }) => {
+    const q = questionOf(view, id)
+    return q ? <><Scale id={id} question={q.text} ends={ends} value={given(id)} onAnswer={onAnswer} />{next(SUBMIT, answered(id))}</> : null
+  }
+  const open = (id: string, required: boolean) => {
+    const q = questionOf(view, id)
+    return q ? <><Open id={id} question={q.text} value={given(id)} onAnswer={onAnswer} />{next(SUBMIT, !required || answered(id))}</> : null
+  }
+
+  let body: ReactNode
+  switch (screen.kind) {
+    case 'consent':
+      body = (
+        <>
+          <h1>{CONSENT_TITLE}</h1>
+          <p>{duration(view.minutes)}</p>
+          <p>{RECORDING[view.record]}</p>
+          <ul aria-label="What you agree to">
+            {view.consent.text.map((line) => <li key={line}>{line}</li>)}
+            {!view.consent.text.includes(view.consent.payout) && <li>{view.consent.payout}</li>}
+          </ul>
+          <p className="pl-dim">{contact(view.author || `the team behind ${view.product}`)}</p>
+          {next(AGREE)}
+        </>
+      )
+      break
+    case 'screener': {
+      const q = view.screener[screen.index]
+      body = q ? (
+        <>
+          <p className="pl-dim">{SCREENER_TITLE}</p>
+          <Choice id={q.id} question={q.text} options={q.options} multi={q.multi} value={given(q.id)} onAnswer={onAnswer} />
+          {next(CONTINUE, answered(q.id))}
+        </>
+      ) : null
+      break
+    }
+    case 'practice':
+      body = <><h1>{CARD_TITLE}</h1>{next(CONTINUE)}</>
+      break
+    case 'impression': {
+      const imp = view.impression
+      if (!imp) { body = null; break }
+      if (screen.phase === 'fixation') body = <><h1 style={{ position: 'absolute', left: -9999 }}>Get ready</h1><p className="pl-fix" aria-hidden="true">+</p></>
+      else if (screen.phase === 'flash') body = <><h1 style={{ position: 'absolute', left: -9999 }}>Look at this page</h1><iframe className="pl-frame" title="Page" src={imp.page} sandbox="" onLoad={props.onFlashLoaded} /></>
+      else body = <><Open id="impression" question={imp.question} value={given('impression')} onAnswer={onAnswer} />{next(CONTINUE)}</>
+      break
+    }
+    case 'card':
+    case 'step':
+      body = (
+        <>
+          <h1>{CARD_TITLE}</h1>
+          <p>{view.goal.scenario}</p>
+          <p className="pl-dim">{CARD_FOOTER}</p>
+          <button type="button" disabled={busy} onClick={onStart}>{START_TASK}</button>
+        </>
+      )
+      break
+    case 'answer':
+      body = view.answer ? (
+        <>
+          <Choice id={view.answer.question} question={view.answer.question} options={view.answer.choices} multi={false} value={given(view.answer.question)} onAnswer={onAnswer} />
+          {next(CONTINUE, answered(view.answer.question))}
+        </>
+      ) : null
+      break
+    case 'ease':
+      body = scale(`goal${view.goal.index}.ease`, EASE_ENDS)
+      break
+    case 'difficulty':
+      body = open(`goal${view.goal.index}.difficulty`, false)
+      break
+    case 'confidence':
+      body = scale(`goal${view.goal.index}.confidence`, CONFIDENCE_ENDS)
+      break
+    case 'uxlite': {
+      const id = (['useful', 'easy'] as const)[screen.item]
+      body = scale(id, id === 'useful' ? USEFUL_ENDS : AGREEMENT_ENDS)
+      break
+    }
+    case 'comment':
+      body = open('anything', false)
+      break
+    case 'thanks':
+      body = <><h1>{THANKS_TITLE}</h1><p>{THANKS_BODY}</p></>
+      break
+  }
+  return <Frame view={view} error={error}>{body}</Frame>
+}
