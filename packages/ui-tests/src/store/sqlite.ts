@@ -86,7 +86,7 @@ export class SqliteStore implements RunStore {
     return this.db.prepare(sql).all(...params) as Row[]
   }
 
-  private run(sql: string, ...params: (string | number | Uint8Array)[]) {
+  private run(sql: string, ...params: (string | number | null | Uint8Array)[]) {
     return this.db.prepare(sql).run(...params)
   }
 
@@ -201,7 +201,7 @@ export class SqliteStore implements RunStore {
     return this.op(() => {
       this.db.exec('SAVEPOINT append_events')
       try {
-        for (const event of events) this.run('INSERT INTO events (attempt_id, data) VALUES (?, ?)', attemptId, JSON.stringify(event))
+        for (const event of events) this.run('INSERT OR IGNORE INTO events (attempt_id, client_seq, data) VALUES (?, ?, ?)', attemptId, event.seq ?? null, JSON.stringify(event))
         this.db.exec('RELEASE append_events')
       } catch (error) {
         this.db.exec('ROLLBACK TO append_events')

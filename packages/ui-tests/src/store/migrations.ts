@@ -17,4 +17,7 @@ export const sqliteMigrations: string[] = [
    CREATE INDEX blobs_attempt ON blobs(attempt_id);
    CREATE TABLE revisions (seq INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL REFERENCES runs(id), data TEXT NOT NULL);
    CREATE TABLE reservations (seq INTEGER PRIMARY KEY AUTOINCREMENT, run_id TEXT NOT NULL REFERENCES runs(id), minor INTEGER NOT NULL, currency TEXT NOT NULL);`,
+  // Events carry the sender's sequence number so a replayed batch is stored once; events without one always insert (NULLs are distinct).
+  `ALTER TABLE events ADD COLUMN client_seq INTEGER;
+   CREATE UNIQUE INDEX events_client_seq ON events(attempt_id, client_seq);`,
 ]

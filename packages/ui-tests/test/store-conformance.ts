@@ -85,6 +85,14 @@ export function describeStore(name: string, open: () => Promise<RunStore>) {
       expect((await store.listEvents(attempt.id)).map((e) => e.type)).toEqual(['click', 'url', 'pause'])
     })
 
+    it('stores an event once when the same sequence number is appended twice', async () => {
+      const { run } = await store.createRun(newRun('k1'))
+      const { attempt } = await store.createAttempt({ runId: run.run, participant: 'p_1', goalIndex: 0, rehearsal: false })
+      await store.appendEvents(attempt.id, [{ type: 'click', at: 1, url: '/', seq: 1 }, { type: 'click', at: 2, url: '/', seq: 2 }])
+      await store.appendEvents(attempt.id, [{ type: 'click', at: 2, url: '/', seq: 2 }, { type: 'click', at: 3, url: '/', seq: 3 }])
+      expect((await store.listEvents(attempt.id)).map((e) => e.seq)).toEqual([1, 2, 3])
+    })
+
     it('stores and replaces snapshots by key', async () => {
       const { run } = await store.createRun(newRun('k1'))
       const { attempt } = await store.createAttempt({ runId: run.run, participant: 'p_1', goalIndex: 0, rehearsal: false })

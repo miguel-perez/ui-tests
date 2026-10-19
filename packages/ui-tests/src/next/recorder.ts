@@ -8,6 +8,15 @@ export const ROOT_ATTRIBUTE = 'data-ui-tests'
 const SCROLL_EVERY_MS = 500
 const INPUT_EVERY_MS = 1000
 
+const URL_MAX = 2000
+const TARGET_MAX = 300
+/** Keeps an event within the collector's field limits, so one long address cannot refuse a whole batch. */
+const bound = (event: RecordedEvent): RecordedEvent => ({
+  ...event,
+  url: event.url.slice(0, URL_MAX),
+  ...(event.target !== undefined && { target: event.target.slice(0, TARGET_MAX) }),
+})
+
 const inside = (node: Node | null) => {
   for (let at: Node | null = node; at; at = at.parentNode) if ((at as Element).hasAttribute?.(ROOT_ATTRIBUTE)) return true
   return false
@@ -50,7 +59,7 @@ export function createRecorder(sink: (events: RecordedEvent[]) => void, options:
       const drain = () => {
         const out: RecordedEvent[] = []
         while (queue[0]?.ready) out.push(queue.shift()!.event)
-        if (out.length) sink(out)
+        if (out.length) sink(out.map(bound))
       }
       let last = options.now()
       let lastUrl = url()
@@ -73,29 +82,36 @@ export function createRecorder(sink: (events: RecordedEvent[]) => void, options:
       }
 
       const timers = new Set<ReturnType<typeof setTimeout>>()
+      // Clicks whose window is still open; a page that unloads inside it settles them as changed.
+      const open = new Set<() => void>()
       const onClick = (e: Event) => {
         const target = e.target as Element | null
         if (!target?.tagName || inside(target)) return
         const entry: { event: RecordedEvent; ready: boolean } = { event: { type: 'click', at: stamp(), url: url(), target: shortSelector(target), changed: false }, ready: false }
         queue.push(entry)
+        const clickedAt = url()
         let mutated = false
         const Observer = view.MutationObserver
         const observer = Observer
           ? new Observer((records) => { if (records.some((r) => !inside(r.target))) mutated = true })
           : undefined
         observer?.observe(doc, { subtree: true, childList: true, attributes: true, characterData: true })
-        const timer = setTimeout(() => {
+        const settle = (unloading: boolean) => {
+          clearTimeout(timer)
           timers.delete(timer)
+          open.delete(unload)
           const pending = observer?.takeRecords?.() ?? []
           if (pending.some((r) => !inside(r.target))) mutated = true
           observer?.disconnect()
-          const moved = url() !== lastUrl
-          entry.event.changed = mutated || moved
+          entry.event.changed = unloading || mutated || url() !== clickedAt
           entry.ready = true
           urlChanged()
           drain()
-        }, options.mutationWindowMs)
+        }
+        const unload = () => settle(true)
+        const timer = setTimeout(() => settle(false), options.mutationWindowMs)
         timers.add(timer)
+        open.add(unload)
       }
       const onInput = (e: Event) => {
         const target = e.target as Element | null
@@ -116,12 +132,15 @@ export function createRecorder(sink: (events: RecordedEvent[]) => void, options:
         drain()
       }
       const onNavigate = () => { urlChanged() }
+      const onUnload = () => { for (const settle of [...open]) settle() }
 
       doc.addEventListener('click', onClick, true)
       doc.addEventListener('input', onInput, true)
       doc.addEventListener('scroll', onScroll, true)
       view.addEventListener('popstate', onNavigate)
       view.addEventListener('hashchange', onNavigate)
+      view.addEventListener('pagehide', onUnload)
+      view.addEventListener('beforeunload', onUnload)
       // Client-side navigation changes the URL without an event; check on the calls that do it.
       const history = view.history
       const originals: [keyof History, unknown][] = []
@@ -141,6 +160,8 @@ export function createRecorder(sink: (events: RecordedEvent[]) => void, options:
         doc.removeEventListener('scroll', onScroll, true)
         view.removeEventListener('popstate', onNavigate)
         view.removeEventListener('hashchange', onNavigate)
+        view.removeEventListener('pagehide', onUnload)
+        view.removeEventListener('beforeunload', onUnload)
         for (const [method, original] of originals) (history as unknown as Record<string, unknown>)[method] = original
         for (const timer of timers) clearTimeout(timer)
         timers.clear()

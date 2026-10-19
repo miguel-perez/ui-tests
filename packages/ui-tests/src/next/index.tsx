@@ -20,6 +20,7 @@ const ACTIVE = /(?:^|;\s*)ui-tests-active=1(?:;|$)/
 const FLUSH_AFTER_MS = 1000
 /** Fetches with a keepalive body only while it fits the browsers' 64 KB budget for it. */
 const KEEPALIVE_BYTES = 60_000
+const bytes = (text: string) => new TextEncoder().encode(text).length
 
 /**
  * Mount once in the root layout. Without the participant's run cookie it renders nothing and loads nothing; with it, it records
@@ -46,7 +47,7 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
   const post = useMemo(
     () => async (body: unknown): Promise<Response> => {
       const text = JSON.stringify(body)
-      return fetch(endpoint, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: text, keepalive: text.length < KEEPALIVE_BYTES })
+      return fetch(endpoint, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: text, keepalive: bytes(text) < KEEPALIVE_BYTES })
     },
     [endpoint],
   )
@@ -65,7 +66,7 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
       } catch {
         return false
       }
-    })
+    }, undefined, `ui-tests-events:${attempt}`)
     buffer.current = kept
     let timer: ReturnType<typeof setTimeout> | undefined
     const flushSoon = () => { clearTimeout(timer); timer = setTimeout(() => void kept.flush(), FLUSH_AFTER_MS) }
@@ -106,7 +107,7 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
       const response = await post({ action: 'end', reason, snapshot })
       // A second end (another tab, or Done racing the time limit) is refused with 409; the first one stands, so go on either way.
       if (response.ok || response.status === 409) {
-        await buffer.current?.clear()
+        await buffer.current?.destroy()
         window.location.assign(`/ui-tests/${active.run}/?after=1`)
         return
       }

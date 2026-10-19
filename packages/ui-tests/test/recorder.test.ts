@@ -72,6 +72,51 @@ describe('the recorder', () => {
   })
 })
 
+describe('the recorder across navigation', () => {
+  const withLocation = (r: ReturnType<typeof start>, href: string) => {
+    ;(r.window as unknown as { location: { href: string } }).location = { href }
+  }
+  it('marks a click changed when the address changed within the window (hash link, pushState)', () => {
+    const r = start('<a id="h">x</a>')
+    const loc = { href: 'https://h.test/a' }
+    ;(r.window as unknown as { location: unknown }).location = loc
+    // attach happened before location existed; re-attach for a recorder that sees it
+    r.detach()
+    const got: RecordedEvent[] = []
+    const rec = createRecorder((e) => got.push(...e), { now: () => 1000, mutationWindowMs: 300, pauseMs: 5000 })
+    rec.attach(r.document as unknown as Document)
+    fire(r.window, r.document.getElementById('h')!, 'click')
+    loc.href = 'https://h.test/a#top'
+    vi.advanceTimersByTime(300)
+    expect(got.filter((e) => e.type === 'click')).toMatchObject([{ changed: true, url: 'https://h.test/a' }])
+    expect(got.map((e) => e.type)).toContain('url')
+    fire(r.window, r.document.getElementById('h')!, 'click')
+    loc.href = 'https://h.test/b'
+    vi.advanceTimersByTime(300)
+    expect(got.filter((e) => e.type === 'click')[1]).toMatchObject({ changed: true })
+  })
+
+  it('emits a click as changed when the page unloads inside the window', () => {
+    const r = start('<a id="h">x</a>')
+    withLocation(r, 'https://h.test/')
+    fire(r.window, r.document.getElementById('h')!, 'click')
+    expect(r.got).toEqual([])
+    r.window.dispatchEvent(new (r.window as unknown as { Event: typeof Event }).Event('pagehide'))
+    expect(r.got.filter((e) => e.type === 'click')).toMatchObject([{ target: '#h', changed: true }])
+    r.advance(400)
+    expect(r.got.filter((e) => e.type === 'click')).toHaveLength(1)
+  })
+
+  it('keeps url and target within the collector limits', () => {
+    const r = start(`<a id="${'i'.repeat(500)}">x</a>`)
+    ;(r.document as unknown as { URL: string }).URL = 'https://h.test/' + 'u'.repeat(5000)
+    fire(r.window, r.document.getElementById('i'.repeat(500))!, 'click')
+    r.advance(400)
+    expect(r.got[0]!.url.length).toBeLessThanOrEqual(2000)
+    expect(r.got[0]!.target!.length).toBeLessThanOrEqual(300)
+  })
+})
+
 describe('serializeSnapshot', () => {
   it('masks input values and leaves out scripts and the bar', () => {
     const { document } = page('<input type="text" value="jane@example.com"><textarea>private</textarea><script>var x=1</script><div data-ui-tests>bar</div><p>hello</p>')

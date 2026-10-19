@@ -7,6 +7,8 @@ export type Buffer = {
   flush(): Promise<void>
   /** Forgets everything kept. */
   clear(): Promise<void>
+  /** Closes the buffer and deletes its database. */
+  destroy(): Promise<void>
 }
 
 /** A batch holds at most this many events (the collector's limit) ... */
@@ -58,7 +60,8 @@ export function createBuffer(post: (batch: RecordedEvent[]) => Promise<boolean>,
       const tx = database.transaction(STORE, 'readonly')
       const store = tx.objectStore(STORE)
       const [keys, events] = await Promise.all([request(store.getAllKeys()), request(store.getAll())])
-      return keys.map((key, i) => ({ key: key as number, event: events[i] as RecordedEvent }))
+      // The key generator only counts up, so the key is the event's sequence number across reloads.
+      return keys.map((key, i) => ({ key: key as number, event: { ...(events[i] as RecordedEvent), seq: key as number } }))
     } catch {
       return memory
     }
@@ -89,7 +92,7 @@ export function createBuffer(post: (batch: RecordedEvent[]) => Promise<boolean>,
         if (events.length === 0) return
         const database = await open()
         if (!database) {
-          for (const event of events) memory.push({ key: ++counter, event })
+          for (const event of events) { const key = ++counter; memory.push({ key, event: { ...event, seq: key } }) }
           return
         }
         const tx = database.transaction(STORE, 'readwrite')
@@ -123,6 +126,20 @@ export function createBuffer(post: (batch: RecordedEvent[]) => Promise<boolean>,
         const tx = database.transaction(STORE, 'readwrite')
         tx.objectStore(STORE).clear()
         await done(tx)
+      }),
+    destroy: () =>
+      serial(async () => {
+        memory = []
+        const database = await open()
+        database?.close()
+        opened = undefined
+        if (!db) return
+        await new Promise<void>((resolve) => {
+          try {
+            const req = db.deleteDatabase(name)
+            req.onsuccess = req.onerror = req.onblocked = () => resolve()
+          } catch { resolve() }
+        })
       }),
   }
 }

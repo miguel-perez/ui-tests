@@ -94,6 +94,8 @@ export type RecordedEvent = {
   duration?: number
   step?: number
   data?: unknown
+  /** The sender's per-attempt sequence number; an event whose (attempt, seq) is already stored is ignored. */
+  seq?: number
 }
 
 /** Storage behind the collector and the CLI. SQLite for development, Postgres elsewhere; both pass the same conformance suite. */

@@ -57,4 +57,34 @@ describe('the retry buffer', () => {
     await memory.flush()
     expect(sent).toEqual([0, 1])
   })
+
+  it('resends a batch the server stored but the page never heard about, with the same sequence numbers', async () => {
+    const db = new IDBFactory()
+    const stored = new Map<number, RecordedEvent>()
+    let lost = true
+    const post = async (batch: RecordedEvent[]) => {
+      for (const event of batch) stored.set(event.seq!, event)
+      if (lost) { lost = false; return false }
+      return true
+    }
+    const first = createBuffer(post, db)
+    await first.push(events(3))
+    await first.flush()
+    await createBuffer(post, db).flush()
+    expect([...stored.keys()]).toEqual([1, 2, 3])
+    expect(stored.size).toBe(3)
+  })
+
+  it('keeps each attempt in its own database and deletes it on destroy', async () => {
+    const db = new IDBFactory()
+    const sent: number[] = []
+    const post = async (batch: RecordedEvent[]) => { sent.push(...batch.map((e) => e.at)); return true }
+    const one = createBuffer(post, db, 'a1')
+    await one.push(events(2))
+    await createBuffer(post, db, 'a2').flush()
+    expect(sent).toEqual([])
+    await one.destroy()
+    await createBuffer(post, db, 'a1').flush()
+    expect(sent).toEqual([])
+  })
 })

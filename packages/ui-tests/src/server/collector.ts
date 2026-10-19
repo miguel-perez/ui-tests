@@ -28,6 +28,7 @@ const event = z.object({
   duration: z.number().optional(),
   step: z.number().int().nonnegative().optional(),
   data: z.unknown().optional(),
+  seq: z.number().int().nonnegative().optional(),
 })
 const scale = z.number().int().min(1).max(7)
 const message = z.discriminatedUnion('action', [
