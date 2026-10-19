@@ -1,9 +1,10 @@
 import type { CSSProperties, ReactNode } from 'react'
 import type { ParticipantView } from '../server/view.ts'
+import { answerKey } from './flow.ts'
 import type { Screen } from './flow.ts'
 import {
   AGREE, AGREEMENT_ENDS, CARD_FOOTER, CARD_TITLE, CONFIDENCE_ENDS, CONSENT_TITLE, CONTINUE, EASE_ENDS, POWERED_BY, RECORDING, SCREENER_TITLE,
-  START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, contact, duration,
+  START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, WITHDRAW, WITHDRAWN_BODY, WITHDRAWN_TITLE, contact, duration,
 } from './copy.ts'
 
 export type ScreenProps = {
@@ -16,6 +17,8 @@ export type ScreenProps = {
   onNext: () => void
   /** Consent was given and the person pressed Start task. */
   onStart: () => void
+  /** Stops and deletes the recording; offered on every screen after consent. */
+  onWithdraw?: () => void
   /** The flashed page finished loading. */
   onFlashLoaded?: () => void
   busy?: boolean
@@ -41,13 +44,17 @@ const css = `
 .pl button{align-self:flex-start;min-height:44px;padding:0 20px;font:inherit;font-weight:600;color:var(--pl-bg);background:var(--pl-accent,var(--pl-fg));border:0;border-radius:8px;cursor:pointer}
 .pl button:disabled{opacity:.5;cursor:default}
 .pl :focus-visible{outline:2px solid var(--pl-accent,var(--pl-fg));outline-offset:2px}
+.pl button.pl-withdraw{margin-top:16px;min-height:44px;color:var(--pl-fg);background:transparent;border:1px solid var(--pl-hair)}
 .pl-error{color:#b3261e}
 .pl-fix{font-size:3rem;text-align:center;margin:auto}
 .pl-frame{width:100%;height:70vh;border:1px solid var(--pl-hair);border-radius:8px}
 .pl-foot{margin-top:auto;padding-top:24px;color:var(--pl-dim);font-size:.8125rem}
 `
 
-function Frame({ view, children, error }: { view: ParticipantView; children: ReactNode; error?: string }) {
+/** Ids and names from question text or ids: no spaces or punctuation, so they can be referenced. */
+const slug = (id: string) => id.replace(/[^A-Za-z0-9_-]+/g, '-')
+
+function Frame({ view, children, error, onWithdraw }: { view: ParticipantView; children: ReactNode; error?: string; onWithdraw?: () => void }) {
   const style = view.brand.accent ? ({ '--pl-accent': view.brand.accent } as CSSProperties) : undefined
   return (
     <main className="pl" style={style}>
@@ -55,6 +62,7 @@ function Frame({ view, children, error }: { view: ParticipantView; children: Rea
       <div className="pl-card">
         {children}
         {error && <p role="alert" className="pl-error">{error}</p>}
+        {onWithdraw && <button type="button" className="pl-withdraw" onClick={onWithdraw}>{WITHDRAW}</button>}
       </div>
       {view.brand.poweredBy && <p className="pl-foot">{POWERED_BY}</p>}
     </main>
@@ -62,25 +70,25 @@ function Frame({ view, children, error }: { view: ParticipantView; children: Rea
 }
 
 function Scale({ id, question, ends, value, onAnswer }: { id: string; question: string; ends: { low: string; high: string }; value: unknown; onAnswer: ScreenProps['onAnswer'] }) {
-  const title = `title-${id}`
+  const title = `title-${slug(id)}`
   return (
     <>
       <h1 id={title}>{question}</h1>
-      <div role="radiogroup" aria-labelledby={title} className="pl-scale">
+      <div role="radiogroup" aria-labelledby={title} aria-describedby={`${title}-ends`} className="pl-scale">
         {[1, 2, 3, 4, 5, 6, 7].map((n) => (
           <label key={n}>
-            <input type="radio" name={id} value={n} checked={value === n} onChange={() => onAnswer(id, n)} />
+            <input type="radio" name={slug(id)} value={n} checked={value === n} onChange={() => onAnswer(id, n)} />
             <span>{n}</span>
           </label>
         ))}
       </div>
-      <div className="pl-ends" aria-hidden="true"><span>{ends.low}</span><span>{ends.high}</span></div>
+      <div className="pl-ends" id={`${title}-ends`}><span>1, {ends.low}</span><span>7, {ends.high}</span></div>
     </>
   )
 }
 
 function Choice({ id, question, options, multi, value, onAnswer }: { id: string; question: string; options: string[]; multi: boolean; value: unknown; onAnswer: ScreenProps['onAnswer'] }) {
-  const title = `title-${id}`
+  const title = `title-${slug(id)}`
   const chosen = Array.isArray(value) ? value : value === undefined ? [] : [value]
   return (
     <>
@@ -90,7 +98,7 @@ function Choice({ id, question, options, multi, value, onAnswer }: { id: string;
           <label key={option} className="pl-choice">
             <input
               type={multi ? 'checkbox' : 'radio'}
-              name={id}
+              name={slug(id)}
               value={option}
               checked={chosen.includes(option)}
               onChange={() => onAnswer(id, multi ? (chosen.includes(option) ? chosen.filter((c) => c !== option) : [...chosen, option]) : option)}
@@ -104,11 +112,11 @@ function Choice({ id, question, options, multi, value, onAnswer }: { id: string;
 }
 
 function Open({ id, question, value, onAnswer }: { id: string; question: string; value: unknown; onAnswer: ScreenProps['onAnswer'] }) {
-  const title = `title-${id}`
+  const title = `title-${slug(id)}`
   return (
     <>
       <h1 id={title}>{question}</h1>
-      <textarea aria-labelledby={title} name={id} placeholder={TEXT_LABEL} value={typeof value === 'string' ? value : ''} onChange={(e) => onAnswer(id, e.target.value)} />
+      <textarea aria-labelledby={title} name={slug(id)} placeholder={TEXT_LABEL} value={typeof value === 'string' ? value : ''} onChange={(e) => onAnswer(id, e.target.value)} />
     </>
   )
 }
@@ -117,7 +125,7 @@ const questionOf = (view: ParticipantView, id: string) => view.questions.find((q
 
 /** One screen of the player. Pure: the player owns the state and the requests. */
 export function PlayerScreen(props: ScreenProps) {
-  const { view, screen, answers, onAnswer, onNext, onStart, busy, error } = props
+  const { view, screen, answers, onAnswer, onNext, onStart, onWithdraw, busy, error } = props
   const given = (id: string) => answers[id]
   const answered = (id: string) => given(id) !== undefined && given(id) !== '' && !(Array.isArray(given(id)) && (given(id) as unknown[]).length === 0)
   const next = (label: string, enabled = true) => <button type="button" disabled={busy || !enabled} onClick={onNext}>{label}</button>
@@ -184,8 +192,8 @@ export function PlayerScreen(props: ScreenProps) {
     case 'answer':
       body = view.answer ? (
         <>
-          <Choice id={view.answer.question} question={view.answer.question} options={view.answer.choices} multi={false} value={given(view.answer.question)} onAnswer={onAnswer} />
-          {next(CONTINUE, answered(view.answer.question))}
+          <Choice id={answerKey(view)} question={view.answer.question} options={view.answer.choices} multi={false} value={given(answerKey(view))} onAnswer={onAnswer} />
+          {next(CONTINUE, answered(answerKey(view)))}
         </>
       ) : null
       break
@@ -209,6 +217,10 @@ export function PlayerScreen(props: ScreenProps) {
     case 'thanks':
       body = <><h1>{THANKS_TITLE}</h1><p>{THANKS_BODY}</p></>
       break
+    case 'withdrawn':
+      body = <><h1>{WITHDRAWN_TITLE}</h1><p>{WITHDRAWN_BODY}</p></>
+      break
   }
-  return <Frame view={view} error={error}>{body}</Frame>
+  const after = view.status !== 'created' && !['screener', 'consent', 'withdrawn'].includes(screen.kind)
+  return <Frame view={view} error={error} onWithdraw={after ? onWithdraw : undefined}>{body}</Frame>
 }

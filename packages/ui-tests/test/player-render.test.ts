@@ -7,7 +7,7 @@ import type { ParticipantView } from '../src/server/view.ts'
 import { view } from './player-fixtures.ts'
 
 const render = (v: ParticipantView, screen: Screen, answers: Record<string, unknown> = {}) =>
-  renderToString(createElement(PlayerScreen, { view: v, screen, answers, onAnswer: () => {}, onNext: () => {}, onStart: () => {} }))
+  renderToString(createElement(PlayerScreen, { view: v, screen, answers, onAnswer: () => {}, onNext: () => {}, onStart: () => {}, onWithdraw: () => {} }))
 const count = (html: string, pattern: RegExp) => html.match(pattern)?.length ?? 0
 
 const screens = (v: ParticipantView): [string, Screen][] => [
@@ -19,6 +19,7 @@ const screens = (v: ParticipantView): [string, Screen][] => [
   ['uxlite', { kind: 'uxlite', item: 1 }],
   ['comment', { kind: 'comment' }],
   ['thanks', { kind: 'thanks' }],
+  ['withdrawn', { kind: 'withdrawn' }],
   ...(v.answer ? ([['answer', { kind: 'answer' }]] as [string, Screen][]) : []),
 ]
 
@@ -74,16 +75,34 @@ describe('questions', () => {
   })
 
   it('has one h1 and labelled controls on every screen', () => {
-    const v = view({ answer: { question: 'Which plan was shown?', choices: ['Team', 'Solo'] }, questions: [...view().questions, { id: 'goal0.confidence', text: 'How confident are you that you finished the task?', type: 'scale', points: 7 }] })
+    const v = view({ status: 'consented', answer: { question: 'Which plan was shown?', choices: ['Team', 'Solo'] }, questions: [...view().questions, { id: 'goal0.confidence', text: 'How confident are you that you finished the task?', type: 'scale', points: 7 }] })
     for (const [name, screen] of screens(v)) {
       const html = render(v, screen)
       expect(count(html, /<h1[ >]/g), name).toBe(1)
-      for (const control of html.match(/<(?:textarea|input)[^>]*>/g) ?? []) {
-        const id = /name="([^"]+)"/.exec(control)![1]!
-        const labelled = /aria-labelledby=/.test(control) || /<label[^>]*>[^]*<\/label>/.test(html)
-        expect(labelled, `${name} ${id}`).toBe(true)
+      const ids = new Set([...html.matchAll(/\bid="([^"]*)"/g)].map((m) => m[1]))
+      const labelled = (html.match(/<label\b[^>]*>[^]*?<\/label>/g) ?? []).join('')
+      for (const control of html.match(/<(?:textarea|input|[a-z]+ role="(?:radiogroup|group)")[^>]*>/g) ?? []) {
+        const refs = /aria-labelledby="([^"]*)"/.exec(control)?.[1]?.split(' ')
+        const named = refs ? refs.every((id) => id && ids.has(id)) : /aria-label="[^"]+"/.test(control) || labelled.includes(control)
+        expect(named, `${name}: ${control}`).toBe(true)
       }
-      expect(count(html, /<textarea/g) === 0 || /<textarea[^>]*aria-labelledby=/.test(html), name).toBe(true)
+      for (const ref of html.matchAll(/aria-describedby="([^"]*)"/g)) expect(ids.has(ref[1]!), `${name} describedby`).toBe(true)
     }
+  })
+})
+
+describe('withdrawing', () => {
+  const withdraw = 'Stop and delete my recording'
+  it('is offered on every screen after consent, and not before', () => {
+    expect(render(view({ status: 'consented' }), { kind: 'card' })).toContain(withdraw)
+    expect(render(view({ status: 'questions' }), { kind: 'ease' })).toContain(withdraw)
+    expect(render(view({ status: 'finished' }), { kind: 'thanks' })).toContain(withdraw)
+    expect(render(view(), { kind: 'consent' })).not.toContain(withdraw)
+  })
+
+  it('confirms with its own screen that offers no further withdrawal', () => {
+    const html = render(view({ status: 'finished' }), { kind: 'withdrawn' })
+    expect(html).toContain('Your recording is deleted')
+    expect(html).not.toContain(withdraw)
   })
 })

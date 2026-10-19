@@ -212,7 +212,10 @@ export function createCollector(options: CollectorOptions): (request: Request) =
       case 'answers': {
         const result = await store.transaction(async (tx) => {
           const current = await tx.getAttempt(attempt.id)
-          if (!current || current.status === 'created') return { status: 409, text: 'Consent is required before answering' }
+          if (!current) return { status: 409, text: 'Consent is required before answering' }
+          // A screener comes before consent (it decides who is asked to agree); nothing else may be answered until consent is given.
+          const onlyScreener = Object.entries(body).every(([key, value]) => key === 'action' || key === 'screener' || value === undefined)
+          if (current.status === 'created' && !(onlyScreener && body.screener)) return { status: 409, text: 'Consent is required before answering' }
           if (current.status === 'finished') return { status: 409, text: 'The attempt is finished' }
           if (body.answer !== undefined && !goal.answer) return { status: 400, text: 'This task asks no question to answer' }
           const given: Record<string, unknown> = {}

@@ -23,3 +23,6 @@ export const RECORDING = {
   video: 'What you do on the page is recorded, and so is your screen, as a video.',
 } as const
 export const contact = (who: string) => `Questions about this study? Ask ${who}.`
+export const WITHDRAW = 'Stop and delete my recording'
+export const WITHDRAWN_TITLE = 'Your recording is deleted'
+export const WITHDRAWN_BODY = 'Nothing more is needed from you. You can close this page.'

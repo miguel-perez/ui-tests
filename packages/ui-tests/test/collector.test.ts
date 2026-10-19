@@ -106,6 +106,17 @@ describe('view', () => {
   })
 })
 
+describe('answers before consent', () => {
+  it('accepts a screener alone and refuses anything else until consent', async () => {
+    const { token, attempt } = await start()
+    expect((await post(token, { action: 'answers', screener: { role: 'Designer' } })).status).toBe(200)
+    expect((await store.getAttempt(attempt.id))?.answers.screener).toEqual({ role: 'Designer' })
+    expect((await post(token, { action: 'answers', screener: { role: 'x' }, ease: 5 })).status).toBe(409)
+    expect((await post(token, { action: 'answers', ease: 5 })).status).toBe(409)
+    expect((await store.getAttempt(attempt.id))?.status).toBe('created')
+  })
+})
+
 describe('actions', () => {
   it('consent sets the HttpOnly run cookie and the readable active cookie', async () => {
     const { token } = await start()

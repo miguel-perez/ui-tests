@@ -14,6 +14,7 @@ export type Screen =
   | { kind: 'uxlite'; item: 0 | 1 }
   | { kind: 'comment' }
   | { kind: 'thanks' }
+  | { kind: 'withdrawn' }
 
 const UXLITE = ['useful', 'easy'] as const
 
@@ -101,5 +102,39 @@ export function nextScreen(view: ParticipantView, current: Screen, answers: Reco
     case 'comment':
     case 'thanks':
       return { kind: 'thanks' }
+    case 'withdrawn':
+      return { kind: 'withdrawn' }
+  }
+}
+
+/** The answers key for the task's own question; a stable, space-free id for the control. */
+export const answerKey = (view: ParticipantView) => `goal${view.goal.index}.answer`
+
+/** The collector message for what a screen collected, or none when the screen collects nothing to send. */
+export function messageFor(view: ParticipantView, screen: Screen, answers: Record<string, unknown>): Record<string, unknown> | undefined {
+  const goal = `goal${view.goal.index}`
+  switch (screen.kind) {
+    case 'consent':
+      return { action: 'consent' }
+    case 'screener':
+      return screen.index + 1 < view.screener.length ? undefined : { action: 'answers', screener: Object.fromEntries(view.screener.map((q) => [q.id, answers[q.id]]).filter(([, v]) => v !== undefined)) }
+    case 'impression':
+      return screen.phase === 'question' ? { action: 'answers', impression: String(answers.impression ?? '') } : undefined
+    case 'answer':
+      return view.answer ? { action: 'answers', answer: String(answers[answerKey(view)]) } : undefined
+    case 'ease':
+      return { action: 'answers', ease: answers[`${goal}.ease`] }
+    case 'difficulty':
+      return { action: 'answers', difficulty: String(answers[`${goal}.difficulty`] ?? '') }
+    case 'confidence':
+      return { action: 'answers', confidence: answers[`${goal}.confidence`] }
+    case 'uxlite': {
+      const id = (['useful', 'easy'] as const)[screen.item]
+      return { action: 'answers', uxlite: { [id]: answers[id] } }
+    }
+    case 'comment':
+      return { action: 'answers', comment: String(answers.anything ?? '') }
+    default:
+      return undefined
   }
 }

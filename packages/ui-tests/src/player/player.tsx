@@ -2,41 +2,12 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { ParticipantView } from '../server/view.ts'
-import { entryScreen, nextScreen } from './flow.ts'
+import { entryScreen, messageFor, nextScreen } from './flow.ts'
 import type { Screen } from './flow.ts'
 import { PlayerScreen } from './screens.tsx'
 
 const ENDPOINT = '/api/ui-tests/'
 const FIXATION_MS = 800
-
-/** The collector message for what a screen collected, or none when the screen collects nothing to send. */
-function messageFor(view: ParticipantView, screen: Screen, answers: Record<string, unknown>): Record<string, unknown> | undefined {
-  const goal = `goal${view.goal.index}`
-  switch (screen.kind) {
-    case 'consent':
-      return { action: 'consent' }
-    case 'screener':
-      return screen.index + 1 < view.screener.length ? undefined : { action: 'answers', screener: Object.fromEntries(view.screener.map((q) => [q.id, answers[q.id]]).filter(([, v]) => v !== undefined)) }
-    case 'impression':
-      return screen.phase === 'question' ? { action: 'answers', impression: String(answers.impression ?? '') } : undefined
-    case 'answer':
-      return view.answer ? { action: 'answers', answer: String(answers[view.answer.question]) } : undefined
-    case 'ease':
-      return { action: 'answers', ease: answers[`${goal}.ease`] }
-    case 'difficulty':
-      return { action: 'answers', difficulty: String(answers[`${goal}.difficulty`] ?? '') }
-    case 'confidence':
-      return { action: 'answers', confidence: answers[`${goal}.confidence`] }
-    case 'uxlite': {
-      const id = (['useful', 'easy'] as const)[screen.item]
-      return { action: 'answers', uxlite: { [id]: answers[id] } }
-    }
-    case 'comment':
-      return { action: 'answers', comment: String(answers.anything ?? '') }
-    default:
-      return undefined
-  }
-}
 
 /** The participant's own page: consent, the scenario card, and the questions after the task. White-labelled by default. */
 export function Player({ runId }: { runId: string }) {
@@ -93,7 +64,26 @@ export function Player({ runId }: { runId: string }) {
       const message = messageFor(view, current, answers)
       const updated = message ? await send(message) : undefined
       if (updated) setView(updated)
+      if (current.kind === 'consent') {
+        // The cookie carries the run from here; the token leaves the address bar and the history.
+        token.current = null
+        window.history.replaceState(null, '', window.location.pathname)
+      }
       setScreen(nextScreen(updated ?? view, current, answers))
+    } catch {
+      setError('That did not go through. Check your connection and try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function withdraw() {
+    if (!view || busy) return
+    setBusy(true)
+    setError(undefined)
+    try {
+      setView(await send({ action: 'withdraw' }))
+      setScreen({ kind: 'withdrawn' })
     } catch {
       setError('That did not go through. Check your connection and try again.')
     } finally {
@@ -125,6 +115,7 @@ export function Player({ runId }: { runId: string }) {
       onAnswer={(id, value) => setAnswers((a) => ({ ...a, [id]: value }))}
       onNext={() => void advance(screen)}
       onStart={() => void start()}
+      onWithdraw={() => void withdraw()}
       onFlashLoaded={() => {
         clearTimeout(flash.current)
         flash.current = setTimeout(() => setScreen((s) => (s ? nextScreen(view, s, answers) : s)), view.impression?.flashMs ?? 500)
