@@ -39,6 +39,7 @@
     "@types/node": "26.6.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "fake-indexeddb": "6.2.5",
     "lighthouse": "13.5.0",
     "linkedom": "0.18.13",
     "tsx": "4.23.15",
