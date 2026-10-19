@@ -2,7 +2,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { texture, rowAt, lineY, stretchAt, stops } from '../lib/texture'
 
-function useReducedMotion() {
+/** Whether the visitor asks for reduced motion; true until the first effect has read it, so nothing moves before it is known. Shared with the cursor follies. */
+export function useReducedMotion() {
   const [reduced, setReduced] = useState(true)
   useEffect(() => {
     const media = matchMedia('(prefers-reduced-motion: reduce)')
