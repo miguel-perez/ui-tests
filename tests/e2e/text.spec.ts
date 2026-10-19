@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
- * How text wraps and how wide it runs (issue #65, items 1 and 2). On the landing, the guide and the report page, at 1440 and 375:
+ * How text wraps and how wide it runs (issue #65, items 1 and 2). On the landing, at 1440 and 375:
  *
  * - No orphans. Every text block wider than 120px (a paragraph, a list item, a heading, a caption, a quote, a definition) that runs
  *   to two or more lines ends on at least two words. A block's words are the ones whose nearest block is it, so a list item holding a
@@ -101,7 +101,7 @@ function wide(page: Page, limit: number): Promise<Wide[]> {
   }, { skipped, exempt, limit })
 }
 
-const pages = [['landing', '/'], ['guide', '/docs/getting-started'], ['report', '/r/k2m9']] as const
+const pages = [['landing', '/']] as const
 
 for (const [page, route] of pages) for (const width of [1440, 375]) {
   test(`the ${page} has no orphan and no paragraph over 72ch at ${width}`, async ({ page: tab }) => {

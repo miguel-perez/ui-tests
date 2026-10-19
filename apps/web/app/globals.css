@@ -63,7 +63,6 @@ main { position: relative; isolation: isolate; }
 .quiet { background: var(--canvas); }
 .actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .fineprint { font-size: 14px; color: var(--muted); }
-.text-link { color: var(--accent); text-decoration: underline; text-underline-offset: 4px; }
 
 /* The page grid (design/artefacts/README.md, "The page grid, in one place"; docs/design/grid-plan.md): 12 columns, 24px gutters, on
    the 1248px container. A section's heading takes the first five columns and its lead the right seven: one 5fr / 7fr split with one
@@ -72,10 +71,6 @@ main { position: relative; isolation: isolate; }
 .hero-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); column-gap: var(--gutter); }
 .section-head, .split { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); column-gap: var(--gutter); }
 .split > * { min-width: 0; }
-/* A figure in the right seven with its words beside it in the first five, vertically centred. */
-.split.figure-right { align-items: center; }
-.split.figure-right > :first-child { grid-column: 2; grid-row: 1; }
-.split.figure-right > :last-child { grid-column: 1; grid-row: 1; }
 
 /* Sections (issue #51): no separators, and one rhythm in three steps. Every section opens with --space-3 and the last before the
    footer closes with it; inside, the head and each figure are followed by --space-2, a caption or a note by --space-1. Nothing else
@@ -148,14 +143,10 @@ main { position: relative; isolation: isolate; }
 .terminal-problem { white-space: normal; }
 .types-once pre { animation: type-lines 1.8s steps(6, end) both; }
 @keyframes type-lines { from { clip-path: inset(0 0 100% 0); } to { clip-path: inset(0); } }
-.code-window { width: 100%; }
-.code-body .shiki { background: transparent !important; }
+
 .code-tab { margin: -8px 0; padding: 12px 0; border-bottom: 2px solid var(--line); color: var(--ink); font-size: 13px; overflow-wrap: anywhere; }
 .copy-control { display: inline-flex; align-items: center; gap: 6px; font: 400 11px var(--font-mono), monospace; border: 1px solid transparent; border-radius: 4px; background: transparent; padding: 6px 8px; color: var(--muted); }
 .copy-control .line-icon { width: 14px; height: 14px; }
-.code-body { display: flex; padding: 16px; gap: 16px; overflow: auto; font: 400 13.5px/1.6 var(--font-mono), monospace; }
-.code-body pre, .code-body code { font: inherit; }
-.line-numbers { display: flex; flex-direction: column; border-right: 1px solid var(--line); padding-right: 16px; color: var(--muted); text-align: right; user-select: none; }
 
 /* L1 · Claim. Copy in 7 columns, the terminal in 5 with its caption under it; only the texture behind. */
 .hero { position: relative; }
@@ -168,131 +159,6 @@ main { position: relative; isolation: isolate; }
 .hero-copy .actions { margin: var(--space-2) 0 var(--space-1); }
 .hero-artefact .terminal-body { font-size: 13px; padding: var(--space-1) 20px; }
 
-/* L2 · AttemptView (design/artefacts/attempt-view.html). 12 columns; the flow runs down the page; a moment card is 7 columns clip,
-   5 columns text; nothing sticky. A white window on the canvas, on the site tokens; the Weekboard recording inside the clips keeps
-   its own grey. The artefact's comment-coloured text reads in muted here: comment is decoration only. Chips on a filled hue carry
-   the chip ink. */
-.attempt-view { color: var(--ink); background: var(--surface); font-size: 15px; line-height: 1.55; }
-.attempt-view h3 { margin: 0; }
-.attempt-view time, .attempt-view .mono { font-family: var(--font-mono), monospace; font-variant-numeric: tabular-nums; }
-.attempt-crumb { justify-content: flex-start; flex-wrap: wrap; gap: 6px 14px; font: 400 14px/1.5 var(--font-sans), sans-serif; }
-.attempt-crumb b { font-weight: 500; color: var(--ink); }
-.attempt-crumb .sep { color: var(--muted); }
-.attempt-crumb .example-label { margin-left: auto; }
-.attempt-body { padding: 32px 32px 24px; }
-.attempt-view .yes { color: var(--done); }
-.attempt-view .no { color: var(--dead); }
-/* The result: a sentence and four facts, 7 and 5 of 12. */
-.attempt-result { display: grid; grid-template-columns: 7fr 5fr; gap: var(--gutter); align-items: end; margin-bottom: 40px; }
-.attempt-headline { font: 500 34px/1.15 var(--font-sans), sans-serif; letter-spacing: -.015em; text-wrap: balance; }
-.attempt-result .lede { color: var(--muted); margin-top: 12px; max-width: 58ch; }
-.attempt-facts { display: grid; grid-template-columns: 1fr 1fr; gap: 14px var(--gutter); margin: 0; border-left: 1px solid var(--line); padding-left: var(--gutter); }
-.attempt-facts dt { font-size: 13px; color: var(--muted); }
-.attempt-facts dd { margin: 2px 0 0; font: 500 17px/1.3 var(--font-sans), sans-serif; }
-.attempt-view dd small { font: 400 13px/1 var(--font-sans), sans-serif; color: var(--muted); margin-left: 6px; }
-.scale { display: inline-flex; gap: 2px; margin-left: 8px; vertical-align: 1px; }
-.scale i { width: 7px; height: 10px; border-radius: 1px; background: var(--line); }
-.scale i.on { background: var(--moment); }
-/* What got in the way: the index, worst first, then the minute as one vertical line. */
-.attempt-blockers { margin-bottom: 44px; }
-.attempt-sec { display: flex; flex-wrap: wrap; align-items: baseline; gap: 10px 18px; margin-bottom: 18px; }
-.attempt-view section h3 { font: 500 20px/1.2 var(--font-sans), sans-serif; letter-spacing: -.01em; }
-.attempt-index { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; font-size: 13px; color: var(--muted); }
-.attempt-index a { display: inline-flex; gap: 7px; align-items: baseline; }
-.attempt-index b { font-weight: 500; color: var(--ink); }
-.attempt-view .n, .flow-moment::after { display: inline-grid; place-items: center; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 3px; background: var(--moment); color: var(--chip-ink); font: 500 11px/1 var(--font-mono), monospace; vertical-align: 1px; }
-.attempt-view .n[data-impact="wrong end state"], .attempt-view .n[data-impact="blocked"], .flow-moment[data-impact="wrong end state"]::after, .flow-moment[data-impact="blocked"]::after { background: var(--dead); }
-.attempt-flow { position: relative; --rail: 60px; margin: 0; padding: 0; list-style: none; }
-.attempt-flow::before { content: ''; position: absolute; top: 10px; bottom: 10px; left: var(--rail); width: 1px; background: var(--line); }
-.attempt-flow > li { position: relative; }
-.flow-row::after { content: ''; position: absolute; left: calc(var(--rail) - 3px); top: 13px; width: 7px; height: 7px; border-radius: 50%; background: var(--surface); border: 1px solid var(--muted); }
-.flow-row[data-signal="stop"]::after { border-color: var(--pause); background: var(--pause); }
-.flow-row[data-signal="path"]::after { border-color: var(--path); background: var(--path); }
-.flow-row[data-signal="dead"]::after { border-color: var(--dead); background: var(--dead); }
-.flow-row[data-signal="ended"]::after { border-color: var(--done); background: var(--done); }
-.flow-row { display: grid; grid-template-columns: 46px 28px minmax(0, 1fr) auto; gap: 0 8px; align-items: baseline; padding: 7px 10px 7px 0; font-size: 14px; color: var(--muted); }
-.flow-row time { font-size: 13px; }
-.flow-what { grid-column: 3; }
-.flow-row .url { font: 400 12px/1 var(--font-mono), monospace; }
-.attempt-view .what { font-weight: 500; color: var(--ink); }
-.attempt-view .what[data-signal="stop"] { color: var(--pause); }
-.attempt-view .what[data-signal="path"] { color: var(--path); }
-.attempt-view .what[data-signal="dead"] { color: var(--dead); }
-.attempt-view .what[data-signal="ended"] { color: var(--done); }
-/* A moment: the card set into the flow at its own time, its numbered mark on the line. */
-.flow-moment { padding: 10px 0 10px calc(var(--rail) + 24px); scroll-margin-top: 24px; }
-.flow-moment::after { content: attr(data-n); position: absolute; left: calc(var(--rail) - 11px); top: 18px; width: 22px; height: 22px; padding: 0; border-radius: 4px; font-size: 12px; line-height: 22px; box-shadow: 0 0 0 4px var(--surface); }
-.moment-card { display: grid; grid-template-columns: 7fr 5fr; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
-.moment-card.is-playing { border-color: var(--moment); }
-.moment-media { min-width: 0; }
-.moment-clip { position: relative; aspect-ratio: 16 / 10; background: var(--host-bg); overflow: hidden; }
-.moment-clip video { display: block; width: 100%; height: 100%; object-fit: cover; object-position: top; }
-.moment-press { position: absolute; inset: 0; width: 100%; padding: 0; border: 0; background: none; cursor: pointer; }
-/* Play and seconds sit bottom left: the recorded bar docks bottom right and its labels stay in view. */
-.moment-secs { position: absolute; pointer-events: none; left: 54px; bottom: 16px; font: 500 12px/1 var(--font-mono), monospace; color: var(--ch-ink); background: var(--ch-surface); padding: 6px 8px; border-radius: 4px; }
-.moment-play { position: absolute; left: 10px; bottom: 10px; width: 36px; height: 36px; border-radius: 50%; background: var(--moment); color: var(--chip-ink); display: grid; place-items: center; }
-.moment-press:focus-visible { outline-offset: -4px; }
-.moment-scrub { position: relative; height: 18px; margin: 0 14px; }
-.moment-scrub .track, .moment-scrub .fill { position: absolute; left: 0; top: 8px; height: 2px; }
-.moment-scrub .track { right: 0; background: var(--line); }
-.moment-scrub .fill { width: var(--now); background: var(--moment); }
-.moment-scrub .dot { position: absolute; top: 4px; left: var(--now); width: 10px; height: 10px; margin-left: -5px; border-radius: 50%; background: var(--moment); }
-.moment-scrub .tick { position: absolute; top: 5px; left: var(--at); width: 2px; height: 8px; margin-left: -1px; background: var(--muted); }
-.moment-text { display: flex; flex-direction: column; gap: 12px; min-width: 0; padding: 18px 22px 20px; }
-.moment-text h3 { font: 500 18px/1.3 var(--font-sans), sans-serif; letter-spacing: -.005em; text-wrap: balance; }
-.moment-text .impact { font: 500 11px/1 var(--font-mono), monospace; letter-spacing: .06em; text-transform: uppercase; color: var(--moment); }
-.moment-card[data-impact="wrong end state"] .impact, .moment-card[data-impact="blocked"] .impact { color: var(--dead); }
-.moment-card[data-impact="confused"] .impact { color: var(--pause); }
-.moment-text .where { color: var(--muted); font-size: 14px; }
-.moment-text p { margin: 0; }
-.moment-steps { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; font-size: 14px; }
-.moment-steps li, .moment-text .said { display: grid; grid-template-columns: 44px minmax(0, 1fr); gap: 12px; align-items: baseline; color: var(--muted); }
-.moment-steps time, .moment-text .said time { font-size: 12px; }
-.moment-steps li[aria-current] { color: var(--ink); }
-.moment-steps li[aria-current] time { color: var(--moment); font-weight: 500; }
-.moment-text .said { font-size: 14px; }
-.moment-text q { font-style: italic; color: var(--ink); }
-.moment-text .said q { border-left: 2px solid var(--note); padding-left: 10px; }
-.moment-text .unsaid { color: var(--muted); font-size: 13px; }
-.moment-text .change { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); font-size: 14px; }
-.moment-text .change b { font-weight: 500; color: var(--done); }
-/* How it felt: the ratings 5 of 12, what they said 7 of 12. */
-.attempt-felt { display: grid; grid-template-columns: 5fr 7fr; gap: var(--gutter); margin-bottom: 36px; }
-.attempt-felt > div { min-width: 0; }
-.attempt-felt h3 { margin-bottom: 12px; }
-.attempt-felt dl { display: grid; gap: 10px; margin: 0; }
-.attempt-felt dl div { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: baseline; border-top: 1px solid var(--line); padding-top: 10px; }
-.attempt-felt dt { color: var(--muted); font-size: 14px; }
-.attempt-felt dd { margin: 0; font: 500 16px/1.3 var(--font-sans), sans-serif; white-space: nowrap; }
-.attempt-felt dd small { font-size: 12px; }
-.attempt-words { display: grid; grid-template-columns: 56px minmax(0, 1fr); gap: 12px; align-items: baseline; margin: 0; border-top: 1px solid var(--line); padding-top: 10px; }
-.attempt-words time { color: var(--muted); font-size: 12px; }
-.attempt-words p { margin: 0; font-size: 17px; line-height: 1.5; font-style: italic; }
-.attempt-words .when { color: var(--muted); font-size: 13px; }
-/* The mechanics, folded and closed by default. */
-.attempt-fold { border-top: 1px solid var(--line); }
-.attempt-fold summary { list-style: none; cursor: pointer; display: flex; flex-wrap: wrap; gap: 4px 14px; align-items: baseline; padding: 14px 0; }
-.attempt-fold summary::-webkit-details-marker { display: none; }
-.attempt-fold summary::before { content: '+'; width: 14px; font: 500 16px/1 var(--font-mono), monospace; color: var(--muted); }
-.attempt-fold[open] summary::before { content: '\2212'; }
-.attempt-fold summary b { font-weight: 500; }
-.attempt-fold summary span { color: var(--muted); font-size: 13px; }
-.fold-body { padding: 2px 0 24px 28px; }
-.attempt-path { display: grid; gap: 8px; font-size: 14px; }
-.attempt-path > div { display: grid; grid-template-columns: 110px minmax(0, 1fr); gap: 12px; align-items: baseline; }
-.attempt-path > div > span:first-child { color: var(--muted); }
-.attempt-path .chain { display: flex; flex-wrap: wrap; gap: 6px; }
-.attempt-path i { font: 400 12px/1 var(--font-mono), monospace; font-style: normal; padding: 5px 8px; border-radius: 4px; background: var(--raised); border: 1px solid var(--line); }
-.attempt-path i.off { border-color: var(--path); color: var(--path); }
-.attempt-path i.on { border-color: var(--done); color: var(--done); }
-.attempt-diff { margin: 0; font: 400 13px/1.6 var(--font-mono), monospace; background: var(--raised); border: 1px solid var(--line); border-radius: 6px; padding: 14px 16px; overflow-x: auto; color: var(--ink); }
-.attempt-diff .m { color: var(--dead); }
-.attempt-diff .p { color: var(--done); }
-.attempt-diff .c { color: var(--muted); }
-/* The context, one line at the foot. */
-.attempt-foot { display: flex; flex-wrap: wrap; gap: 8px 0; margin-top: 8px; padding-top: 14px; border-top: 1px solid var(--line); font-size: 13px; color: var(--muted); }
-.attempt-foot span + span::before { content: '·'; margin: 0 10px; }
-.attempt-foot b { font-weight: 500; color: var(--ink); }
 
 /* L3 · Compilation (design/artefacts/compile-section.html), on the page grid: the commands across twelve columns, then the six steps
    as tabs, one open at a time, each a 5/7 pair: the text on the left, the screen on the right; then the whole file across twelve.
@@ -312,7 +178,6 @@ main { position: relative; isolation: isolate; }
 .compile-tabs button b, .compile-stepnav b { font: 500 12px/1 var(--font-mono), monospace; color: var(--moment); }
 .compile-tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--moment); }
 .compile-tabs button:focus-visible { outline-offset: -2px; }
-/* The closed steps leave the layout, so the step area takes each step's own height at every width; nothing is sticky (issue #54). */
 /* The tab strip, the open step and previous and next are one figure: their spacing is the figure's own. */
 .compile-stepper > .compile-steps { margin-top: 28px; }
 .compile-step { min-width: 0; }
@@ -519,7 +384,7 @@ main { position: relative; isolation: isolate; }
 .pr-chk.ours { background: var(--raised); }
 .pr-chk b { font-weight: 500; color: var(--ink); }
 .pr-t { color: var(--muted); }
-.pr-chk a, .pr-md a { color: var(--accent); }
+.pr-chk a, .pr-md a, .pr-md .pr-link { color: var(--accent); }
 .pr-chk a { font-size: 13px; }
 .pr-ic { width: 16px; height: 16px; display: grid; place-items: center; }
 .pr-ic svg { width: 16px; height: 16px; }
@@ -546,73 +411,10 @@ main { position: relative; isolation: isolate; }
 .pr-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 13px; }
 .pr-foot { font-size: 12px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 10px; }
 /* The impact words: red for blocked, the moment for slowed, the stop colour for confused, green-teal for what worked. */
-.pr-impact, .rr-impact { font: 500 11px/1 var(--font-mono), monospace; letter-spacing: .06em; text-transform: uppercase; }
-.pr-impact[data-impact="blocked"], .rr-impact[data-impact="blocked"], .rr-legend b[data-impact="blocked"] { color: var(--dead); }
-.pr-impact[data-impact="slowed"], .rr-impact[data-impact="slowed"], .rr-legend b[data-impact="slowed"] { color: var(--moment); }
-.pr-impact[data-impact="confused"], .rr-impact[data-impact="confused"], .rr-legend b[data-impact="confused"] { color: var(--pause); }
-.rr-impact[data-impact="worked"] { color: var(--done); }
-
-/* RunReport (design/artefacts/run-report-list.html): the list. A white window; one card per problem on the canvas, where every data
-   role holds 4.5:1 (the artefact's raised grey drops the moment to 4.45:1), the text on the left and the clip in 300px on the right;
-   what worked as the last card, unfilled; the people in a strip of five. */
-.rr-addr { height: 34px; display: flex; align-items: center; gap: 8px; padding: 0 14px; border-bottom: 1px solid var(--line); font: 12px var(--font-mono), monospace; color: var(--muted); }
-.rr-dots { display: inline-flex; gap: 8px; }
-.rr-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
-.rr-url { margin-left: 6px; min-width: 0; overflow-wrap: anywhere; }
-.rr-addr .example-label, .rr-crumb .example-label { margin-left: auto; }
-.rr-body { padding: 22px 26px 26px; display: grid; gap: 20px; }
-.rr-top { display: grid; gap: 8px; }
-.rr-crumb { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 13px; color: var(--muted); }
-.rr-crumb b { font-weight: 500; color: var(--ink); }
-.rr-result { font: 500 19px/1.4 var(--font-sans), sans-serif; letter-spacing: -.01em; text-wrap: pretty; }
-.rr-result b { font-weight: 600; }
-.rr-result .no, .rr-strip .no { color: var(--no); }
-.rr-legend { font-size: 12px; color: var(--muted); }
-.rr-legend b { font-weight: 500; }
-.rr-cards { list-style: none; margin: 0; padding: 0; display: grid; gap: 14px; }
-.rr-card { border: 1px solid var(--line); border-radius: 8px; padding: 16px 18px; display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 18px; background: var(--canvas); scroll-margin-top: 16px; }
-.rr-card.worked { grid-template-columns: minmax(0, 1fr); background: var(--surface); }
-.rr-hd { display: grid; grid-template-columns: 24px 80px minmax(0, 1fr) auto; gap: 12px; align-items: baseline; font-size: 15px; }
-.rr-rank { font: 500 14px/1 var(--font-mono), monospace; color: var(--moment); }
-.rr-what b { font-weight: 500; }
-.rr-where { display: block; font: 12px/1.4 var(--font-mono), monospace; color: var(--muted); margin-top: 2px; }
-.rr-who { display: flex; align-items: center; gap: 10px; }
-.rr-count { font: 13px/1 var(--font-mono), monospace; color: var(--ink); white-space: nowrap; }
-.rr-ev { display: grid; gap: 10px; margin-top: 12px; font-size: 14px; }
-/* The person marks: the accent for the people who hit it, green-teal on what worked. */
-.rr-marks { display: inline-flex; gap: 4px; }
-.rr-marks i { width: 18px; height: 18px; border-radius: 3px; border: 1px solid var(--line); display: inline-grid; place-items: center; font: 500 10px/1 var(--font-mono), monospace; font-style: normal; color: var(--muted); }
-.rr-marks i.on { background: var(--accent); border-color: var(--accent); color: var(--chip-ink); }
-#worked .rr-marks i.on { background: var(--done); border-color: var(--done); }
-.rr-clip { position: relative; align-self: start; border-radius: 6px; overflow: hidden; border: 1px solid var(--line); background: var(--host-bg); aspect-ratio: 16 / 10; }
-.rr-clip video { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: top; }
-.rr-secs { position: absolute; left: 8px; bottom: 8px; font: 500 11px/1 var(--font-mono), monospace; color: var(--ch-ink); background: var(--ch-surface); padding: 5px 7px; border-radius: 4px; }
-.rr-play { position: absolute; right: 8px; bottom: 8px; width: 30px; height: 30px; border-radius: 50%; border: 0; background: var(--moment); color: var(--chip-ink); display: grid; place-items: center; }
-.rr-quote { font-style: italic; color: var(--ink); border-left: 2px solid var(--note); padding-left: 12px; }
-.rr-quote small { display: block; font: normal 12px var(--font-sans), sans-serif; color: var(--muted); }
-.rr-moments { display: flex; flex-wrap: wrap; gap: 6px; }
-.rr-chip { display: inline-flex; align-items: center; gap: 6px; font: 12px/1 var(--font-mono), monospace; border: 1px solid var(--line); border-radius: 4px; padding: 5px 8px; background: var(--surface); color: var(--ink); }
-.rr-chip .line-icon { color: var(--moment); }
-.rr-chip[aria-pressed="true"] { border-color: var(--moment); }
-.rr-fix b { font-weight: 500; color: var(--done); }
-.rr-strip { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
-.rr-strip a { height: 100%; display: grid; gap: 3px; align-content: start; border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; font-size: 13px; color: var(--muted); text-decoration: none; }
-.rr-strip a b { color: var(--accent); font-weight: 500; }
-.rr-strip .yes { color: var(--done); }
-.rr-f { font: 12px/1.4 var(--font-mono), monospace; color: var(--muted); }
-.rr-foot { font-size: 13px; color: var(--muted); border-top: 1px solid var(--line); padding-top: 14px; line-height: 1.6; text-wrap: pretty; }
-.rr-foot b { color: var(--ink); font-weight: 500; }
-/* The page /r/<run> and each attempt: the same 10-column reading width; the shared version carries no site header. */
-.report-page { padding: var(--space-2) 0 var(--space-3); }
-.report-page.shared { padding-top: var(--space-1); }
-.report-column { width: calc(100% - 48px); max-width: 1036px; margin: 0 auto; display: grid; gap: 16px; }
-.report-share { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; font-size: 14px; color: var(--muted); }
-.report-back a { color: var(--accent); font-size: 14px; }
-.report-title { font-size: 28px; font-weight: 500; letter-spacing: -.02em; }
-.attempt-none { color: var(--muted); font-size: 14px; }
-
-/* L5 · AgentRun: the terminal in the right seven, the caption in the first five beside it. */
-.figure-right .terminal-body { font-size: 13px; }
+.pr-impact { font: 500 11px/1 var(--font-mono), monospace; letter-spacing: .06em; text-transform: uppercase; }
+.pr-impact[data-impact="blocked"] { color: var(--dead); }
+.pr-impact[data-impact="slowed"] { color: var(--moment); }
+.pr-impact[data-impact="confused"] { color: var(--pause); }
 
 /* L7 · The host section (design/artefacts/hosted-section.html; issue #56): the lead flush to the container's right edge, then two
    unnumbered pieces, the terminal and the script tag as white windows across twelve columns. */
@@ -623,43 +425,19 @@ main { position: relative; isolation: isolate; }
 .host-term .p { color: var(--muted); } .host-term .a { color: var(--green); } .host-term .u { color: var(--blue); } .host-term .k { color: var(--muted); } .host-term b { font-weight: 500; color: var(--ink); }
 .host-snip .t { color: var(--purple); } .host-snip .at { color: var(--teal); } .host-snip .s { color: var(--green); }
 
-/* The guide: the step index, then Step × 6 and "Without a repository" as one paragraph with the CLI's caveat (issue #56). */
-.guide { padding-bottom: var(--space-3); }
-.guide-head { padding-top: var(--space-3); align-items: baseline; }
-.guide-head h1 { font-size: 48px; line-height: 1.1; font-weight: 500; letter-spacing: -.04em; }
-.guide-head p { color: var(--muted); font-size: 18px; max-width: 64ch; }
-.step-index { margin-top: var(--space-2); }
-.step-index ol { display: flex; flex-wrap: wrap; gap: 0 var(--space-1); list-style: none; margin: 0; padding: 0; }
-.step-index a { display: inline-flex; align-items: center; gap: 10px; padding: 14px 0; font-size: 14px; color: var(--muted); }
-.step-index span { font: 12px var(--font-mono), monospace; }
 /* A step: the number and title in the first five columns, sticky; its sentence, what you type and what you see in the right seven. */
 .step { padding-top: var(--space-3); align-items: start; }
 .step > h2 { position: sticky; top: 24px; font-size: 30px; }
-.step-number { display: block; margin-bottom: 8px; font: 500 14px var(--font-mono), monospace; color: var(--moment); }
-.step-body { display: grid; gap: var(--space-2); }
-.step-intro { color: var(--muted); max-width: 64ch; }
-.step-type, .step-see { min-width: 0; display: grid; gap: var(--space-1); }
-.step-label { font: 12px var(--font-mono), monospace; color: var(--muted); margin-bottom: -12px; }
+
 .step .terminal-body { padding: 16px 20px; font-size: 13px; }
-.mount-steps { list-style: none; counter-reset: step; padding: 0; margin: 0; display: grid; gap: 12px; font-size: 15px; }
-.mount-steps li { counter-increment: step; position: relative; padding-left: 36px; overflow-wrap: anywhere; }
-.mount-steps li::before { content: counter(step); position: absolute; left: 0; top: 2px; width: 24px; height: 24px; display: grid; place-items: center; border: 1.5px solid var(--muted); border-radius: 4px; font: 12px var(--font-mono), monospace; color: var(--muted); }
-/* Named for the guide alone: the attempt view's scrub line has a `.track` of its own (issue #46, item 5). */
-.guide-track { padding-top: var(--space-3); }
-.guide-track > h2 { grid-column: 1; }
-.guide-track > .step { grid-column: 1 / -1; }
-.guide-host { display: grid; gap: 12px; max-width: 64ch; color: var(--muted); }
-.guide-caveat { font: 13px var(--font-mono), monospace; overflow-wrap: anywhere; max-width: 64ch; }
 
 /* States change paint only: no size, weight, margin, padding or position changes on hover, focus or active. */
 @media (hover: hover) {
   .button.primary:hover { filter: brightness(1.08); }
-  .button.quiet:hover, .copy-control:hover, .rr-chip:hover, .rr-strip a:hover { border-color: var(--muted); color: var(--ink); }
-  .attempt-index a:hover b, .attempt-fold summary:hover b { text-decoration: underline; }
-  .moment-press:hover .moment-play { filter: brightness(1.08); }
-  .rr-play:hover { filter: brightness(1.08); }
-  .pr-chk a:hover, .pr-md a:hover, .report-back a:hover { text-decoration: underline; }
-  .nav-links a:hover, .text-link:hover, .step-index a:hover, .footer-links a:hover { color: var(--ink); }
+  .button.quiet:hover, .copy-control:hover { border-color: var(--muted); color: var(--ink); }
+
+  .pr-chk a:hover, .pr-md a:hover { text-decoration: underline; }
+  .nav-links a:hover, .footer-links a:hover { color: var(--ink); }
   /* A closed source row lights up from the middle; the open one already carries the surface. */
   .src-row:not([aria-expanded="true"]):hover { background: linear-gradient(90deg, transparent, var(--surface) 12%, var(--surface) 88%, transparent); }
 }
@@ -669,13 +447,6 @@ main { position: relative; isolation: isolate; }
 }
 /* The attempt view stacks below 900: the result, the felt ratings and each card in one column, the rail at the left edge. */
 @media (max-width: 900px) {
-  .attempt-result, .attempt-felt, .moment-card { grid-template-columns: minmax(0, 1fr); }
-  .attempt-facts { border-left: 0; padding-left: 0; }
-  .attempt-flow { --rail: 20px; }
-  .flow-moment { padding: 16px 0; }
-  .flow-moment::after { display: none; }
-  .flow-row { grid-template-columns: 46px minmax(0, 1fr) auto; padding-left: 28px; }
-  .flow-what { grid-column: 2; }
   /* The sources table stacks into labelled cards; the header goes; the well becomes one column. */
   .src-cols { display: none; }
   .src-row { grid-template-columns: 28px minmax(0, 1fr) 24px; column-gap: 12px; row-gap: 10px; min-height: 0; align-items: start; }
@@ -692,8 +463,8 @@ main { position: relative; isolation: isolate; }
    stack, the agent tiles stack, and the check page's side list goes above it. */
 @media (max-width: 900px) {
   .compile-pair { grid-template-columns: minmax(0, 1fr); }
-  .rr-card, .pr-cp { grid-template-columns: minmax(0, 1fr); }
-  .rr-strip { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pr-cp { grid-template-columns: minmax(0, 1fr); }
+
   .replay-row, .replay-moment { grid-template-columns: minmax(0, 1fr); }
   .replay-dots span { font-size: 11px; }
   .agents-tiles { grid-template-columns: minmax(0, 1fr); gap: 14px; }
@@ -717,22 +488,12 @@ main { position: relative; isolation: isolate; }
   .window-chrome .window-dots { display: none; }
   .terminal-window .window-title { text-align: left; font-size: 11px; }
   .code-tab { flex-basis: 100%; }
-  .attempt-body { padding: 24px 16px 16px; }
-  .flow-row { grid-template-columns: 46px minmax(0, 1fr); row-gap: 4px; }
-  .flow-row .url { grid-column: 2; }
-  .attempt-headline { font-size: 28px; }
+
   .pr-main { padding: 16px; }
-  .rr-body { padding: 20px 16px; }
-  .rr-result { font-size: 17px; }
-  .rr-card { padding: 14px; }
-  .rr-hd { grid-template-columns: 24px minmax(0, 1fr); row-gap: 6px; }
-  .rr-hd > :not(.rr-rank) { grid-column: 2; }
-  .rr-hd .rr-impact { grid-row: 1; }
-  .rr-where { overflow-wrap: anywhere; }
-  .report-column { width: calc(100% - 48px); }
+
   .section-head > p { justify-self: start; }
   .host-term, .host-snip { padding: 16px; font-size: 12px; }
-  .guide-head h1 { font-size: 40px; }
+
   .step > h2 { font-size: 26px; }
   /* The compilation stacks: commands one per row, the code wraps, the frames fit their sheets, the pill docks across the bottom. */
   .compile-command { grid-template-columns: minmax(0, 1fr); }

@@ -11,7 +11,8 @@ const root = process.cwd()
 if (!path.resolve(chromium.executablePath()).startsWith(root + path.sep)) throw new Error('Use worktree-local Playwright Chromium')
 const directory = path.join(root, '.archon/runtime/lighthouse')
 await mkdir(directory, { recursive: true })
-const server = spawn(process.execPath, ['node_modules/next/dist/bin/next', 'start', 'apps/web', '--hostname', '127.0.0.1', '--port', '3100'], { cwd: root, stdio: 'pipe' })
+// The site is a static export: serve apps/web/out as plain files.
+const server = spawn('python3', ['-m', 'http.server', '3100', '--bind', '127.0.0.1', '--directory', 'apps/web/out'], { cwd: root, stdio: 'pipe' })
 let logs = ''
 server.stdout.on('data', data => { logs += data })
 server.stderr.on('data', data => { logs += data })
@@ -27,10 +28,10 @@ try {
     try { if ((await fetch('http://127.0.0.1:3100')).ok) { ready = true; break } } catch {}
     await new Promise(resolve => setTimeout(resolve, 200))
   }
-  if (!ready) throw new Error('Production server did not become ready')
+  if (!ready) throw new Error('Static server did not become ready')
   browser = await chromium.launch({ args: [`--remote-debugging-port=${port}`] })
   const summaries = []
-  for (const [name, route] of [['landing', '/'], ['guide', '/docs/getting-started']]) {
+  for (const [name, route] of [['landing', '/']]) {
     for (const mobile of [false, true]) {
       const result = await lighthouse(`http://127.0.0.1:3100${route}`, { port, onlyCategories: ['performance', 'accessibility'], output: 'json', logLevel: 'error', formFactor: mobile ? 'mobile' : 'desktop', screenEmulation: { mobile, width: mobile ? 375 : 1440, height: 1000, deviceScaleFactor: 1, disabled: false } }, mobile ? undefined : desktopConfig)
       const scores = Object.fromEntries(Object.entries(result.lhr.categories).map(([key, value]) => [key, Math.round(value.score * 100)]))

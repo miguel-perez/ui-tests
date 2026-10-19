@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { role, segments } from 'ui-tests/colours'
+import { role, segments } from '../../lib/colours'
 import { highlight } from '../../lib/highlight'
 import { compilation, inviteExample, inviteFile, landing } from '../../lib/copy'
 import { Prose } from '../site/code'

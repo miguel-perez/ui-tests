@@ -1,15 +1,11 @@
-import { exampleFile, exampleFileName } from 'ui-tests/example'
-import { hostCaveat, hostIssue } from 'ui-tests/host'
-import { checkCaveat, checkIssue, recruitCaveat, agentCaveat } from 'ui-tests/slice'
+import { exampleFile, exampleFileName } from './example'
 
-/** Approved D2 copy. README parity tests cover every exported string. */
+/** Approved D2 copy: every word on the landing page. */
 export const promise = 'See where people get stuck on what you just shipped.'
 export const intro = 'Say who your users are, what they are trying to do, and how you would know they did it, in one small file next to your code. One command puts real people in front of your site, records every attempt, and hands back the problems they hit, ranked, with the moment to watch, the words they said, and what to change.'
 export const landing = {
   access: 'Open source. Nothing to sign up for. Runs on your preview or your live site.',
   caption: "Each line opens to the moment to watch, the person's words, and the smallest change that would fix it.",
-  fileCaption: 'Written like a Playwright test, read like a study: an `expect` that fails means one person did not get there, never a red build.',
-  closing: 'A run reports the problems it found, or that it found none this time. There is no score and no pass.',
   scenario: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.example.",
 }
 export const example = `import { study, task, outcome, expect } from 'ui-tests'
@@ -30,7 +26,7 @@ study('getting started', {
     })
   })
 })`
-/** The file `npx ui-tests init` writes, with Weekboard filled in: the landing section, the guide's step 4 and the README show it as written. */
+/** The study file, with Weekboard filled in, as the landing's compile section shows it. */
 export const inviteExample = exampleFile
 export const inviteFile = exampleFileName
 /**
@@ -93,7 +89,7 @@ export const whatComesBack = {
 /** The example run's facts that are not in the recordings: the product, where the report lives, the preview and commit the check ran on, where each person came from. */
 export const runFacts = {
   product: 'Weekboard', host: 'https://ui-tests.com', preview: 'weekboard-git-invite-flow.vercel.app', commit: '80035db',
-  /** Where each person came from: the run filled across both panels (the `run` frame in the guide says the same). */
+  /** Where each person came from: the run filled across both panels. */
   panels: { 1: 'Prolific', 2: 'Prolific', 3: 'CloudResearch Connect', 4: 'Prolific', 5: 'CloudResearch Connect' } as Record<number, string>,
   screened: 'screened as planning work with a team in a shared tool',
   firstLook: { named: 4, firstClick: 3 },
@@ -149,28 +145,10 @@ export const sources = {
   },
 } as const
 export const commands = { install: 'npm install -D ui-tests', init: 'npx ui-tests init', run: 'npx ui-tests', people: 'npx ui-tests recruit', ci: 'npx ui-tests check', report: 'npx ui-tests report k2m9' }
-export const rehearsal = 'Rehearsal: 0 of 5 planned attempts recorded.'
-export const guide = {
-  title: 'Getting started',
-  titles: ['Install', 'Set up', 'Try it on yourself', 'Write your own', 'Run it with people', 'Test your API with an agent'],
-  requirement: 'Node 22. Install the package in a Next.js app, or run one command if you have no repository.',
-  installIntro: 'In a Next.js app, install the package. With no repository, run one command instead: Without a repository.',
-  install: 'You see "ui-tests" in `devDependencies`.',
-  try: 'You see a link in the terminal, then in your browser the consent, a few questions, the first look, the scenario card, your own page with the bar over it, and the questions after the task, one at a time. Press "Done". The terminal prints:',
-  write: 'You open `ui-tests/invite.ui.test.ts`, the file `init` wrote with the Weekboard example filled in, and change it to your own\u00a0site:',
-  next: 'You see, on the next `npx ui-tests`, the card reads: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam\'s email is sam@acme.example. When you think you\'ve finished, press Done. If you get stuck, press I couldn\'t do this." It is written from `users`, `purpose`, the task and what `setup` returns, never from the path; pin your own wording with `scenario`. Write `users` as the sentence alone and `ui-tests lint` prints the screener it drafted from it, and the plan names the recording level: event replay, or screen video with `record: \'video\'`.',
-  agent: 'You type, in the same file or a new one:',
-  agentSee: 'You see a separate agent report:',
-  read: 'Read what came back',
-  once: 'You type, once the attempts are in:',
-  pr: 'Then, for the pull request, put `npx ui-tests check` in the job that deploys your preview. It starts one run per pull request within the cap in your config, asks nothing, and the check waits while people take part, then turns neutral. A push during the run starts nothing new. On the next pull request you see the\u00a0check:',
-  ciCaveat: checkCaveat,
-  ciIssue: checkIssue,
-}
 /**
  * The agent section (design/artefacts/agents-section.html; docs/discovery/agent-section-research.md), verbatim: the heading, the
  * command under it, the three-sentence lead, and one tile per interface an agent uses, each its name, its target and one sentence
- * (a word in backticks is set in mono). The guide's agent step keeps the command, the file line, the closing and the terminal's report.
+ * (a word in backticks is set in mono).
  */
 export const agent = {
   heading: 'Agents use some interfaces, too.',
@@ -182,14 +160,6 @@ export const agent = {
   ],
   closing: 'One file, two actors, two reports that never mix.',
   command: 'npx ui-tests --actor agent',
-  fileLine: "task('add a member through the API', { target: { http: 'https://api.weekboard.app' } })",
-  report: { goal: 'add a member through the API', url: 'https://ui-tests.com/r/k2m9-agent', trials: [
-    { seconds: '0:19', detail: 'POST /members, then GET /members' },
-    { seconds: '0:22' },
-    { seconds: '0:41', stopped: 'called POST /invites, which does not exist' },
-    { seconds: '0:17' },
-    { seconds: '0:35', stopped: 'sent the email in the query string, 400' },
-  ] },
 }
 /**
  * What a run is worth (design/artefacts/roi-section.html; docs/discovery/roi-research.md; issue #53), verbatim: the heading, the one
@@ -214,7 +184,7 @@ export const worth = {
 /**
  * The host section (design/artefacts/hosted-section.html; docs/discovery/hosting-decision.md; issue #56), verbatim: the heading, the
  * lead, two unnumbered pieces (the command and its terminal as drawn, the line and its script tag) and the closing. There is no hosted
- * service: the deploy is the author's. The guide and the README say the same in one paragraph with the CLI's caveat, until issue #59.
+ * service: the deploy is the author's.
  */
 export const hosted = {
   heading: 'No repo to put it in? One command.',
@@ -229,15 +199,7 @@ Deploying to your account…
   line: { name: 'The line', intro: 'One script tag, pointing at your deploy. It records only while a run is open and a person has said yes; the rest of the time it is forty lines that do nothing.', tab: ['index.html', 'or your tag manager'] },
   snippet: '<script src="https://ui-tests.weekboard.workers.dev/s.js" async></script>',
   closing: 'Same test, same report, on a box you own.',
-  guide: 'No repository? `npx ui-tests host` deploys the collector, the player and the store to a free tier in an account you own, Cloudflare Workers first, and prints the one line to paste on your live site, through your tag manager if that is how you ship. Then the same test in a form on your deploy instead of a file; the recordings stay in your bucket. Run it again to update.',
-  caveat: hostCaveat,
-  issue: hostIssue,
 }
 /** The footer's links (issue #51): the author's site, the licence and the new-issue page; the header already links to GitHub. */
 export const footer = { site: 'miguel.design', licence: 'Open source MIT licence', report: 'Report a bug or suggest an improvement', label: 'About ui-tests' }
-export const ui = { wordmark: 'ui-tests', guide: 'Guide', github: 'GitHub', getStarted: 'Get started', skip: 'Skip to content', navigation: 'Main navigation', steps: 'Getting started', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy. Select and copy the code.', typescript: 'TypeScript', shell: 'Shell', output: 'Output', example: 'Example run' }
-/**
- * What the landing promises and this slice does not ship yet (issue #68; `ui-tests/slice`): the landing keeps the designed contract,
- * and the README says what runs today, one line per command with its issue, as the guide does for `check` and `host` does with #59.
- */
-export const notShipped = { title: 'Not shipped yet', lines: [checkCaveat, recruitCaveat, agentCaveat] }
+export const ui = { wordmark: 'ui-tests', github: 'GitHub', skip: 'Skip to content', navigation: 'Main navigation', copy: 'Copy', copied: 'Copied', copyError: 'Could not copy. Select and copy the code.', typescript: 'TypeScript', shell: 'Shell', output: 'Output', example: 'Example run' }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { readFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
-import { roles } from '../packages/ui-tests/src/colours'
+import { roles } from '../apps/web/lib/colours'
 import { texture } from '../apps/web/lib/texture'
 import { mixOklab, over } from './oklab'
 
@@ -103,7 +103,7 @@ describe('the site reads the tokens only', () => {
     const offending: string[] = []
     for (const directory of ['apps/web/app', 'apps/web/components', 'apps/web/lib', 'apps/web/scripts', 'apps/web/public']) {
       for (const entry of await readdir(directory, { recursive: true })) {
-        if (!/\.(tsx?|m?js|css|html)$/.test(entry) || entry.startsWith('demo/')) continue
+        if (!/\.(tsx?|m?js|css|html)$/.test(entry)) continue
         const source = (await readFile(path.join(directory, entry), 'utf8')).replace(/\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->|^\s*\/\/.*$/gm, '')
         for (const match of source.matchAll(/prefers-color-scheme|data-theme|dataset\.theme/g)) offending.push(`${directory}/${entry}: ${match[0]}`)
       }
@@ -119,7 +119,8 @@ describe('the site reads the tokens only', () => {
     const offending: string[] = []
     for (const directory of ['apps/web/components', 'apps/web/app', 'apps/web/lib']) {
       for (const entry of await readdir(directory, { recursive: true })) {
-        if (!/\.tsx?$/.test(entry)) continue
+        // The two colour sources: the terminal's hues and the participant chrome's, each tested on its own.
+        if (!/\.tsx?$/.test(entry) || /(^|\/)(colours|player-styles)\.ts$/.test(entry)) continue
         const source = await readFile(path.join(directory, entry), 'utf8')
         for (const match of source.matchAll(/['"`]#[\da-f]{3,8}['"`]|rgba?\(\s*\d/gi)) offending.push(`${entry}: ${match[0]}`)
       }

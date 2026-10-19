@@ -1,13 +1,12 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 import { mkdir, readFile } from 'node:fs/promises'
-import { inviteExample, inviteFile, compilation, promise, intro, landing, guide, agent, hosted, sources, whatComesBack, worth } from '../../apps/web/lib/copy'
+import { inviteExample, inviteFile, compilation, promise, intro, landing, agent, hosted, sources, whatComesBack, worth } from '../../apps/web/lib/copy'
 import { shown, unsaid, offences } from '../vocabulary'
 import { texture, travel } from '../../apps/web/lib/texture'
 import { mixOklab, over, darken } from '../oklab'
 
-/** Every content type's component on the landing page (docs/design/site-schema.md); the code window is the guide's since the host round (issue #56),
- *  and the report is /r/<run>'s since the replay round (issue #62). */
+/** Every content type's component on the landing page (docs/design/site-schema.md). */
 const artefacts = ['terminal-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'worth', 'agents', 'host']
 /** Relative luminance of a computed rgb() colour. */
 const luminance = (rgb: string) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return r * .2126 + g * .7152 + b * .0722 }
@@ -22,7 +21,7 @@ async function textColours(page: Page, selector: string) {
 }
 
 for (const width of [1440, 375]) {
-  for (const [name, route] of [['landing', '/'], ['guide', '/docs/getting-started']]) {
+  for (const [name, route] of [['landing', '/']]) {
     test(`site ${name} at ${width}px: layout, accessibility, fonts, themes, highlighting and copy`, async ({ page, context }) => {
       await page.setViewportSize({ width, height: 1000 })
       await page.goto(route)
@@ -90,7 +89,7 @@ for (const width of [1440, 375]) {
         await expect(page.locator('.page-texture')).toHaveText('')
         await expect(page.getByRole('button', { name: /frustration gestures|texture/i })).toHaveCount(0)
         // Issue #46, item 2: "What comes back." in place of the attempt view block and "In the pull request": the check, its page and,
-        // since issue #62, the replay; the report and the one-person attempt view are off the landing, at /r/k2m9 and behind each name there.
+        // since issue #62, the replay; the report and the one-person attempt view are not on the site.
         const comesBack = page.locator('section[aria-labelledby="comes-back"]')
         for (const piece of ['merge-box', 'check-page']) await expect(comesBack.locator(`[data-artefact="${piece}"]`)).toHaveCount(1)
         await expect(comesBack.locator('#the-replay .replay-moment')).toBeVisible()
@@ -136,33 +135,12 @@ for (const width of [1440, 375]) {
         const agents = page.locator('section[aria-labelledby="agents"]')
         await expect(agents.locator('.agents-tile')).toHaveCount(3)
         await expect(agents.locator('pre, code, .terminal-window, .code-window, .caption')).toHaveCount(0)
-        await expect(agents).not.toContainText(agent.fileLine)
         await expect(agents).not.toContainText(agent.closing)
         expect(await page.locator('main').innerText()).not.toMatch(/ui-tests \(agent\)|instead of a person/)
-        await expect(page.getByRole('link', { name: 'Get started', exact: true }).first()).toHaveAttribute('href', '/docs/getting-started')
-      } else {
-        await expect(page.locator('.step')).toHaveCount(6)
-        await expect(page.locator('[data-artefact="run-report"], [data-artefact="attempt-view"]')).toHaveCount(0)
-        // Item 5: the guide's first step offers both ways in.
-        await expect(page.locator('#install')).toContainText('With no repository, run one command instead')
-        await expect(page.locator('.guide-head')).toContainText(guide.requirement)
-        for (const text of [guide.install, guide.try, guide.write, guide.next, guide.once, guide.pr, guide.agent]) await expect(page.getByText(text.replaceAll('`', ''), { exact: true }).first()).toBeVisible()
-        // The agent step matches the landing's API example.
-        await expect(page.locator('#agent')).toContainText(agent.fileLine)
-        // Issue #49, item 1: the two steps are "Run it with people" and "Test your API with an agent"; never "instead of a person".
-        await expect(page.getByRole('navigation', { name: 'Getting started' }).locator('a')).toContainText(['Run it with people', 'Test your API with an agent'])
-        await expect(page.locator('#real-people h2')).toContainText('Run it with people')
-        await expect(page.locator('#agent h2')).toContainText('Test your API with an agent')
-        expect(await page.locator('main').innerText()).not.toMatch(/instead of a person/i)
-        // Issue #56: "Without a repository" is one paragraph on `ui-tests host` and the CLI's caveat, linked to the follow-up issue.
-        const track = page.locator('#without-repository')
-        await expect(track.locator('.guide-host > p')).toHaveCount(2)
-        await expect(track.locator('.guide-host > p').first()).toHaveText(hosted.guide.replaceAll('`', ''))
-        await expect(track.locator('.guide-caveat')).toHaveText(hosted.caveat)
-        await expect(track.locator('.guide-caveat a')).toHaveAttribute('href', hosted.issue)
-        await expect(page.locator('.hosted-form, [data-artefact="dashboard"], form')).toHaveCount(0)
-        await page.getByRole('navigation', { name: 'Getting started' }).getByRole('link', { name: /Run it with people/ }).click()
-        await expect(page.locator('#real-people h2')).toBeInViewport()
+        // No guide and no package yet: the hero's one action is the repository.
+        await expect(page.locator('.hero .actions a')).toHaveCount(1)
+        await expect(page.locator('.hero .actions a')).toHaveAttribute('href', 'https://github.com/miguel-perez/ui-tests')
+        await expect(page.locator('a[href^="/docs"], a[href^="/r/"]')).toHaveCount(0)
       }
       if (process.env.CAPTURE_SITE === '1') {
         await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' })
@@ -179,7 +157,7 @@ for (const width of [1440, 375]) {
     })
   }
 
-  test(`reduced motion shows stills, and the results views respond to the visitor at ${width}px`, async ({ page }) => {
+  test(`reduced motion shows stills at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 })
     await page.emulateMedia({ reducedMotion: 'reduce' })
     await page.goto('/')
@@ -192,70 +170,6 @@ for (const width of [1440, 375]) {
     expect(await page.locator('.page-texture-tile').first().evaluate((canvas: HTMLCanvasElement) => canvas.toDataURL())).toBe(still)
     expect(await page.locator('.page-texture').evaluate(node => (node as HTMLElement & { clock: number }).clock)).toBe(0)
     await expect(page.locator('.types-once pre')).toHaveCSS('animation-name', 'none')
-
-    // The attempt view (issue #22, item 1), on its own page since issue #46, behind Person 3 in the report's people line: the result,
-    // the index worst first, the flow, how it felt, the folds closed, the footer.
-    await page.goto('/r/k2m9/p3')
-    const view = page.locator('.attempt-view')
-    await expect(view.locator('.attempt-headline')).toHaveText('Person 3 reached the goal.')
-    for (const [term, value] of [['Reached the goal?', 'Yes'], ['How it ended', 'Pressed Done'], ["How sure they'd done it", '6 of 7'], ['Time on this goal', '1 min 3 s']]) await expect(view.locator('.attempt-facts div').filter({ hasText: term })).toContainText(value)
-    await expect(view.locator('.attempt-facts')).toContainText('at 1:03')
-    await expect(view.locator('.attempt-result .lede')).toHaveText('Pressed Done with 2 invitations pending. The check expects an invitation for Sam.')
-    await expect(view.locator('.attempt-index li')).toHaveText([/1\s*Confused 5 s at 00:58/, /2\s*Slowed 16 s at 00:03/, /3\s*Confused 13 s at 00:23/])
-    await view.locator('.attempt-index a').first().click()
-    await expect(page).toHaveURL(/#moment-1$/)
-    // The flow: every moment in time order, the three cards set in at their own time, the last row how it ended.
-    expect(await view.locator('.attempt-flow > li').evaluateAll(items => items.map(item => item.classList.contains('flow-moment') ? `card ${item.getAttribute('data-n')}` : item.querySelector('time')!.textContent))).toEqual(['00:00', 'card 2', 'card 3', '00:41', '00:46', 'card 1', '01:03'])
-    await expect(view.locator('.attempt-flow > li').last()).toContainText('Pressed Done')
-    const card = view.locator('#moment-2 .moment-card')
-    await expect(card.locator('.moment-steps li')).toHaveText([/00:03\s*Clicked Share · menu open/, /00:05\s*Stopped 7 s on the menu/, /00:12\s*Off your path · opened Link settings/, /00:19\s*Went back to the board/])
-    await expect(card.locator('.said')).toContainText('Share seemed like the place for people.')
-    await expect(card.locator('.change')).toContainText('Put "Invite a colleague" at the top of the Share menu.')
-    await expect(view.locator('#moment-3 .unsaid')).toHaveText('They said nothing about this moment.')
-    // The card is 7 of 12 clip and 5 of 12 text, side by side at 1440 and stacked at 375.
-    const [clip, text] = await Promise.all([card.locator('.moment-media').boundingBox(), card.locator('.moment-text').boundingBox()])
-    if (width === 1440) expect(clip!.width / (clip!.width + text!.width)).toBeCloseTo(7 / 12, 1)
-    else expect(text!.y).toBeGreaterThanOrEqual(clip!.y + clip!.height - 1)
-    await expect(view.locator('.attempt-felt dl > div')).toHaveText([/How easy was it\?\s*3 of 7\s*7 = very easy · typical 5\.5/, /How sure they'd done it\s*6 of 7\s*7 = completely sure/, /Time on this goal\s*1 min 3 s\s*others: 0:47 to 0:57/])
-    await expect(view.locator('.attempt-words')).toContainText("Share seemed like the place for people. When I found it I wasn't sure the first Add did anything, so I pressed it again.")
-    for (const fold of await view.locator('details').all()) expect(await fold.evaluate((node: HTMLDetailsElement) => node.open)).toBe(false)
-    await view.getByText('Their path and yours').click()
-    await expect(view.locator('.attempt-path i.off')).toHaveText(['/board/link (off your path)'])
-    await expect(view.locator('.attempt-foot')).toHaveText(/Person 3 of 5 · paid panel.*Uses a spreadsheet for this today.*Desktop · Chromium · window 1280×800.*14 Oct 2026.*Recorded: screen, voice\. Camera: declined\./)
-    // No separate player panel and no lane chart: the only videos are the three clips, each inside its card.
-    await expect(view.locator('video')).toHaveCount(3)
-    await expect(view.locator('.lanes, .session-video, input[type=range]')).toHaveCount(0)
-    // The clip plays the real recording in place, from its start second, under reduced motion too; the step list follows it.
-    const press = card.getByRole('button', { name: /^Play 00:03 to 00:19/ })
-    await press.click()
-    const video = card.locator('video')
-    await expect(card.getByRole('button', { name: /^Pause 00:03 to 00:19/ })).toBeVisible()
-    await expect(card).toHaveClass(/is-playing/)
-    expect(await video.evaluate((element: HTMLVideoElement) => element.currentSrc)).toContain('/sessions/p3.webm')
-    await expect.poll(() => video.evaluate((element: HTMLVideoElement) => element.currentTime), { timeout: 10_000 }).toBeGreaterThan(5.2)
-    await expect(card.locator('.moment-steps li[aria-current="step"]')).toContainText('00:05')
-    expect(await card.locator('.moment-scrub').evaluate(node => parseFloat(getComputedStyle(node).getPropertyValue('--now')))).toBeGreaterThan(10)
-    // One clip at a time: pressing another pauses the first.
-    await view.locator('#moment-1').getByRole('button', { name: /^Play 00:58 to 01:03/ }).click()
-    await expect(view.locator('.moment-card.is-playing')).toHaveCount(1)
-    await expect(view.locator('#moment-1 .moment-card')).toHaveClass(/is-playing/)
-    expect(await video.evaluate((element: HTMLVideoElement) => element.paused)).toBe(true)
-    // Pressing it again pauses it.
-    await view.locator('#moment-1').getByRole('button', { name: /^Pause 00:58 to 01:03/ }).click()
-    await expect(view.locator('.moment-card.is-playing')).toHaveCount(0)
-    expect(await view.locator('#moment-1 video').evaluate((element: HTMLVideoElement) => element.paused)).toBe(true)
-    // Under reduced motion nothing in the view transitions.
-    expect(await view.locator('*').evaluateAll(nodes => nodes.every(node => getComputedStyle(node).transitionDuration.split(', ').every(duration => duration === '0s')))).toBe(true)
-
-    // The report at /r/k2m9 (off the landing since issue #62): one clip at a time, played on its control from its start second, under
-    // reduced motion too.
-    await page.goto('/r/k2m9')
-    const report = page.locator('.run-report')
-    const clipVideo = report.locator('#problem-3 .rr-clip video')
-    expect(await clipVideo.evaluate((video: HTMLVideoElement) => video.paused)).toBe(true)
-    await report.getByRole('button', { name: /^Play Person 3 · 00:58/ }).click()
-    await expect.poll(() => clipVideo.evaluate((video: HTMLVideoElement) => video.currentTime)).toBeGreaterThan(58)
-    await report.getByRole('button', { name: /^Pause Person 3 · 00:58/ }).click()
   })
 }
 
@@ -289,8 +203,8 @@ function pixels(page: Page, top: number, bottom: number) {
   }, [top, bottom, ground] as const)
 }
 
-// Issue #51, item 1: the waves behind the whole page, in the document, on the landing, the guide and the report, at both widths.
-for (const width of [1440, 375]) for (const [name, route, parts] of [['landing', '/', '.hero, [data-section], .site-footer'], ['guide', '/docs/getting-started', '.guide-head, [data-section], .site-footer'], ['report', '/r/k2m9', '.report-column, .site-footer']] as const) {
+// Issue #51, item 1: the waves behind the whole page, in the document, on the landing, at both widths.
+for (const width of [1440, 375]) for (const [name, route, parts] of [['landing', '/', '.hero, [data-section], .site-footer']] as const) {
   test(`the waves run behind every section and the footer of the ${name} at ${width}px, at the device pixel ratio`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 })
     await page.goto(route)
@@ -301,7 +215,7 @@ for (const width of [1440, 375]) for (const [name, route, parts] of [['landing',
     const box = await layer.evaluate(node => { const style = getComputedStyle(node), rect = node.getBoundingClientRect(); return { position: style.position, events: style.pointerEvents, z: style.zIndex, top: rect.top + scrollY, width: Math.round(rect.width), height: Math.round(rect.height), page: document.documentElement.scrollHeight, view: document.documentElement.clientWidth } })
     expect(box).toMatchObject({ position: 'absolute', events: 'none', z: '-1', top: 0, width: box.view, height: box.page })
     // A tall page is not one huge canvas: far from the window the tiles are released.
-    if (name !== 'report') expect(await page.locator('.page-texture-tile').evaluateAll(tiles => tiles.some(tile => (tile as HTMLCanvasElement).width === 0))).toBe(true)
+    expect(await page.locator('.page-texture-tile').evaluateAll(tiles => tiles.some(tile => (tile as HTMLCanvasElement).width === 0))).toBe(true)
     const areas = await page.locator(parts).evaluateAll(nodes => nodes.map(node => { const rect = node.getBoundingClientRect(); return { name: node.getAttribute('data-section') ?? node.className, top: rect.top + scrollY, bottom: rect.bottom + scrollY } }))
     expect(areas.length).toBeGreaterThan(1)
     for (const area of areas) {
@@ -515,7 +429,7 @@ for (const width of [1440, 375]) test(`the sources table opens one row at a time
   await expect(section.locator('#visitors-well')).toBeVisible()
   await expect(section.locator('#link-well')).toBeHidden()
   // The well is the real player's invitation, with the one string; a click inside it keeps the row open.
-  const { invitationText } = await import('../../packages/ui-tests/src/next')
+  const { invitationText } = await import('../../apps/web/components/player/invitation')
   const invitation = section.locator('#visitors-well .uit-invite')
   await expect(invitation).toHaveAttribute('role', 'dialog')
   expect((await invitation.innerText()).replace(/\s+/g, ' ')).toContain(invitationText)
@@ -559,22 +473,6 @@ for (const width of [1440, 375]) test(`the sources table opens one row at a time
 
 for (const width of [1440, 375]) test(`hover, focus and active never move anything at ${width}px`, async ({ page }) => {
   await page.setViewportSize({ width, height: 1000 })
-  // The attempt view first, on its own page.
-  await page.goto('/r/k2m9/p3')
-  // The flow's rows first: every row keeps its exact box when the pointer rests on it.
-  const rows = page.locator('.attempt-flow > li')
-  for (let i = 0; i < await rows.count(); i++) {
-    const row = rows.nth(i)
-    await row.scrollIntoViewIfNeeded()
-    await page.mouse.move(0, 0)
-    const before = await row.boundingBox()
-    await row.hover()
-    expect(await row.boundingBox(), `flow row ${i + 1} hover`).toEqual(before)
-  }
-  await still(page, ['.moment-press', '.attempt-index a', '.attempt-fold summary'])
-  // The report, at /r/k2m9 since the replay round (issue #62).
-  await page.goto('/r/k2m9')
-  await still(page, ['.rr-chip[aria-pressed="false"]', '.rr-play', '.rr-strip a'])
   await page.goto('/#step2')
   await still(page, ['.copy-control', '.button', '.src-row:not([aria-expanded="true"])', '.pr-chk a', '.nav-links a', '.compile-tabs button[aria-selected="false"]', '.compile-stepnav .snext', '.stepper .nextb'])
 })
@@ -597,53 +495,6 @@ async function still(page: Page, targets: string[]) {
     }
   }
 }
-
-test('the guide keeps its controls still on hover too', async ({ page }) => {
-  await page.goto('/docs/getting-started')
-  for (const selector of ['.step-index a', '.copy-control', '.text-link', '.guide-caveat a']) {
-    const target = page.locator(selector).first()
-    await target.scrollIntoViewIfNeeded()
-    await page.mouse.move(0, 0)
-    const before = await target.boundingBox()
-    await target.hover()
-    expect(await target.boundingBox(), `${selector} hover`).toEqual(before)
-    await target.focus()
-    expect(await target.boundingBox(), `${selector} focus`).toEqual(before)
-  }
-})
-
-test('failed playback restores the attempt clip and reel play controls without a pause event', async ({ page }) => {
-  const errors: string[] = []
-  page.on('pageerror', error => errors.push(error.message))
-  await page.emulateMedia({ reducedMotion: 'reduce' })
-  await page.addInitScript(() => {
-    HTMLMediaElement.prototype.play = function () {
-      this.dispatchEvent(new Event('play'))
-      return new Promise<void>((_, reject) => {
-        (this as HTMLMediaElement & { rejectPlay: () => void }).rejectPlay = () => reject(new DOMException('Playback denied', 'NotAllowedError'))
-      })
-    }
-  })
-  const view = page.locator('.attempt-view')
-  const report = page.locator('.run-report')
-  for (const [route, container, play, pause, clip] of [['/r/k2m9/p3', view, /^Play 00:03 to 00:19/, /^Pause 00:03 to 00:19/, 'video'], ['/r/k2m9', report, /^Play Person 3 · 00:58/, /^Pause Person 3 · 00:58/, '#problem-3 .rr-clip video']] as const) {
-    await page.goto(route)
-    await container.getByRole('button', { name: play }).click()
-    await expect(container.getByRole('button', { name: pause })).toBeVisible()
-    const video = container.locator(clip).first()
-    await expect.poll(() => video.evaluate(element => 'rejectPlay' in element)).toBe(true)
-    await video.evaluate((element: HTMLVideoElement & { rejectPlay: () => void }) => element.rejectPlay())
-    await expect(container.getByRole('button', { name: play })).toBeVisible()
-  }
-  // A moment chip swaps the clip; its play control recovers from a refused play too.
-  await report.getByRole('button', { name: 'Person 4 · 00:41', exact: true }).click()
-  await report.getByRole('button', { name: /^Play Person 4 · 00:41/ }).click()
-  await expect(report.getByRole('button', { name: /^Pause Person 4 · 00:41/ })).toBeVisible()
-  await expect.poll(() => report.locator('#problem-3 .rr-clip video').evaluate(element => 'rejectPlay' in element)).toBe(true)
-  await report.locator('#problem-3 .rr-clip video').evaluate((video: HTMLVideoElement & { rejectPlay: () => void }) => video.rejectPlay())
-  await expect(report.getByRole('button', { name: /^Play Person 4 · 00:41/ })).toBeVisible()
-  expect(errors).toEqual([])
-})
 
 for (const width of [1440, 375]) test(`the agent section is the artefact, word for word: the command under the heading, the lead, three tiles and no code at ${width}px`, async ({ page }) => {
   const errors: string[] = []

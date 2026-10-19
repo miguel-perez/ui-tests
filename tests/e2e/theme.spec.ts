@@ -1,8 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 import AxeBuilder from '@axe-core/playwright'
 
-/** Issue #43: the site is light only. The landing, the guide and the report render the light canvas and ink whatever the system setting. */
-const routes = [['landing', '/'], ['guide', '/docs/getting-started'], ['report', '/r/k2m9']]
+/** Issue #43: the site is light only. The landing renders the light canvas and ink whatever the system setting. */
+const routes = [['landing', '/']]
 
 /** The light ground, a light document colour scheme and the light meta, measured on the page as it renders. */
 async function expectLight(page: Page, label: string) {

@@ -1,6 +1,6 @@
 /**
- * The file `npx ui-tests init` writes, with the Weekboard example filled in (design/artefacts/compile-section.html). The landing
- * section, the getting-started guide and the README show this same text, so what a visitor reads is what init creates.
+ * The study file the landing shows, with the Weekboard example filled in (design/artefacts/compile-section.html): what
+ * `npx ui-tests init` would write, per docs/prd/01-dx-contract.md.
  */
 export const exampleFileName = 'ui-tests/invite.ui.test.ts'
 export const exampleFile = `import { study, setup, task, outcome, expect } from 'ui-tests'
@@ -33,12 +33,3 @@ study('invite flow', {
     })
   })
 })`
-/** The config `init` writes. The recording hint is a comment: nothing written records event replay; `record: 'video'` on a study adds the screen. */
-export const configFile = `import { defineConfig } from 'ui-tests'
-
-// Every attempt records what the person does on your page: where they click, what they type (never its value), which pages they open.
-// Add \`record: 'video'\` to a study to record their screen as a video too: the browser asks them first, and the incentive is 1.5×.
-// To add the paid panel (Prolific and CloudResearch Connect), set a cap per run: budget: { max: 70, currency: 'USD' } holds five people and the reserve.
-// In CI, \`npx ui-tests check\` puts a neutral check on the pull request. check: { block_on: 'problems' } makes it fail when problems are found; check: { comment: false } turns off its one comment.
-export default defineConfig({ target: { url: process.env.PREVIEW_URL ?? 'http://localhost:3000' } })
-`

@@ -1,4 +1,3 @@
-import Link from 'next/link'
 import { SiteShell, repository } from '../components/site-shell'
 import { Hero } from '../components/hero'
 import { WhatComesBack } from '../components/artefacts/what-comes-back'
@@ -10,7 +9,7 @@ import { Host } from '../components/artefacts/host'
 import { Icon } from '../components/icon'
 import { promise, intro, landing } from '../lib/copy'
 
-function Actions() { return <div className="actions"><Link className="button primary" href="/docs/getting-started">Get started<Icon name="arrow" /></Link><a className="button quiet" href={repository}><Icon name="github" />GitHub</a></div> }
+function Actions() { return <div className="actions"><a className="button primary" href={repository}><Icon name="github" />GitHub</a></div> }
 
 /**
  * The landing page: a sequence of typed content per docs/design/site-schema.md, every section on one grid per docs/design/grid-plan.md

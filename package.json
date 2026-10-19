@@ -5,13 +5,12 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "apps/web",
-    "packages/ui-tests"
+    "apps/web"
   ],
   "overrides": {
     "postcss": "^8.5.30"
   },
-  "description": "UI research repository delivered by the Archon factory.",
+  "description": "ui-tests: the landing page and the product documents.",
   "engines": {
     "node": ">=22.13"
   },
@@ -36,11 +35,12 @@
   "devDependencies": {
     "@axe-core/playwright": "4.14.0",
     "@playwright/test": "1.64.1",
-    "@types/better-sqlite3": "9.6.0",
     "@types/node": "26.6.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
     "lighthouse": "13.5.0",
+    "linkedom": "0.18.13",
+    "tsx": "4.23.15",
     "typescript": "5.9.3",
     "vitest": "5.0.5"
   }

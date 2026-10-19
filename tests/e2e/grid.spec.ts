@@ -27,7 +27,7 @@ async function read(page: Page): Promise<Reading[]> {
 const near = (value: number, target: number) => Math.abs(value - target) <= 2
 const readings: Record<string, unknown> = {}
 
-for (const [name, route, count] of [['landing', '/', 6], ['guide', '/docs/getting-started', 8]] as const) {
+for (const [name, route, count] of [['landing', '/', 6]] as const) {
   test(`the ${name} sits on one grid at 1440: headings at 96, leads ${name === 'landing' ? 'ending at 1344' : 'at 630'}, figures 1248 or 714`, async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 1000 })
     await page.goto(route)
@@ -98,7 +98,7 @@ for (const artefact of ['compile-section', 'sources-section', 'agents-section', 
 // Issue #51, item 3: no separators and one rhythm in three steps, --space-1 24, --space-2 48 and --space-3 96, which on a phone are
 // 24, 36 and 64. Every section opens with --space-3; a head is followed by --space-2; nothing else spaces a section's top-level
 // children but those steps; the last section closes with --space-3; the hero keeps --space-3 above and below.
-for (const [name, route] of [['landing', '/'], ['guide', '/docs/getting-started']] as const) for (const width of [1440, 375]) {
+for (const [name, route] of [['landing', '/']] as const) for (const width of [1440, 375]) {
   test(`the ${name} keeps one rhythm and no separators at ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 })
     await page.goto(route)
@@ -132,7 +132,7 @@ for (const [name, route] of [['landing', '/'], ['guide', '/docs/getting-started'
 
 // Issue #51, item 4: the footer on every page, on the grid: the wordmark at 96 and the links ending flush at 1344 at 1440; one column
 // at 375, the links left-aligned.
-for (const route of ['/', '/docs/getting-started', '/r/k2m9']) for (const width of [1440, 375]) {
+for (const route of ['/']) for (const width of [1440, 375]) {
   test(`the footer of ${route} sits on the grid at ${width}`, async ({ page }) => {
     await page.setViewportSize({ width, height: 1000 })
     await page.goto(route)

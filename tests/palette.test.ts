@@ -29,7 +29,7 @@ it('draws the texture in the line token with the wave accent, and keeps every te
 })
 
 it('draws the participant chrome as the inverse of its host, with every rendered pair at its floor', async () => {
-  const { chromeTheme, weekboardChrome, parseColour, contrast } = await import('../packages/ui-tests/src/player-styles')
+  const { chromeTheme, weekboardChrome, parseColour, contrast } = await import('../apps/web/components/player/player-styles')
   const css = await readFile('apps/web/app/globals.css', 'utf8')
   // The theme is the token block's; no component carries a theme class of its own.
   expect(css).not.toMatch(/theme-light|--light-/)

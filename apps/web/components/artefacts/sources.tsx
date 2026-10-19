@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Invitation, JoinSheet, weekboardChrome } from 'ui-tests/next'
+import { Invitation, JoinSheet, weekboardChrome } from '../player/screens'
 import { sources } from '../../lib/copy'
 import { Icon } from '../icon'
 import { Prose } from '../site/code'

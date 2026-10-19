@@ -1,4 +1,4 @@
-// Captures every block of the landing, the guide and the report page at 1440 and 375 and measures it against docs/design/grid-plan.md.
+// Captures every block of the landing at 1440 and 375 and measures it against docs/design/grid-plan.md.
 // Run against a running site, with Playwright's bundled Chromium:
 //   PLAYWRIGHT_BROWSERS_PATH=0 UI_HARNESS_ROOT=/path/to/ui-harness node apps/web/scripts/measure-blocks.mjs
 // Writes design/screens/blocks/<page>-<block>-<width>.png and design/screens/grid-readings.json.
@@ -13,9 +13,6 @@ const base = process.env.SITE_BASE_URL ?? 'http://localhost:3000'
 const harness = process.env.UI_HARNESS_ROOT
 const pages = [
   { name: 'landing', route: '/', blocks: [['L1', 'main > section.hero'], ...['comes-back', 'what-you-write', 'people', 'worth', 'agents', 'hosted'].map((id, i) => [`L${i + 2}`, `section.block[aria-labelledby="${id}"]`])] },
-  { name: 'guide', route: '/docs/getting-started', blocks: [['G0', '.guide-head'], ...['install', 'set-up', 'try-it', 'write-your-own', 'real-people', 'agent', 'paste', 'fill'].map((id, i) => [`G${i + 1}`, `#${id}`])] },
-  // The run report page, /r/<run> (issue #35): the share line and the report, one block.
-  { name: 'report', route: '/r/k2m9', blocks: [['R1', 'main .report-column']] },
 ]
 /** The typed content of a block: what the grid plan places. Everything else inside a block is either part of these or empty. */
 const content = '.guide-head > *, .piece-intro, .compile-tabs, .compile-intro, .report-share, .hero-copy, .hero-artefact, .section-head h2, .section-head p, [data-artefact], .caption, .terms, .actions, .step > h2, .step-intro, .step-label, .mount-steps, .step-see > p, .step-type > p'
