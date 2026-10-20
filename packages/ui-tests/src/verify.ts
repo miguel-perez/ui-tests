@@ -140,7 +140,8 @@ export function withBypass(context: APIRequestContext, baseURL: string, secret: 
         if (!sameOrigin(url)) return value.call(target, url, options)
         // The header goes only with `maxRedirects: 0`: each redirect is followed here by Playwright's rules, and the header goes
         // again only when the Location is still the target's own origin. A hop elsewhere is made without it, and without the
-        // credentials of the origin it left.
+        // credentials of the origin it left; Playwright follows it on the budget the own-origin hops left, so the caller's
+        // maxRedirects bounds the redirects of the whole chain.
         const request = typeof url === 'string' ? undefined : (url as { url: () => string; method?: () => string; headers?: () => Record<string, string>; postDataBuffer?: () => Buffer | null })
         const limit = options.maxRedirects ?? 20
         let address = request ? request.url() : url as string
@@ -149,7 +150,7 @@ export function withBypass(context: APIRequestContext, baseURL: string, secret: 
         let current: RequestOptions = options
         for (let hop = 0; ; hop++) {
           const own = sameOrigin(address)
-          const response = await (hop === 0 ? value : target.fetch).call(target, input, own ? { ...current, headers: { ...current.headers, [BYPASS_HEADER]: secret }, maxRedirects: 0 } : current) as APIResponse
+          const response = await (hop === 0 ? value : target.fetch).call(target, input, own ? { ...current, headers: { ...current.headers, [BYPASS_HEADER]: secret }, maxRedirects: 0 } : { ...current, maxRedirects: Math.max(0, limit - hop) }) as APIResponse
           const location = response.headers().location
           if (!location || ![301, 302, 303, 307, 308].includes(response.status()) || !own || limit === 0) return response
           if (hop >= limit) { await response.dispose(); throw new Error('Max redirect count exceeded') }

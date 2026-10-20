@@ -152,5 +152,25 @@ describe('outcome hooks against a protected preview', () => {
       expect((await context.get('/chain', { maxRedirects: 2 })).status()).toBe(200)
       await context.dispose()
     })
+
+    it('counts the redirects of a cross-origin hop against the same maxRedirects budget', async () => {
+      const far = createServer((req, res) => {
+        const url = req.url ?? ''
+        if (url === '/a') return void res.writeHead(302, { Location: '/b' }).end()
+        if (url === '/b') return void res.writeHead(302, { Location: '/c' }).end()
+        res.writeHead(200).end('ok')
+      })
+      servers.push(far)
+      await new Promise<void>(r => far.listen(0, '127.0.0.1', r))
+      const farBase = `http://127.0.0.1:${(far.address() as AddressInfo).port}`
+      const near = createServer((_req, res) => void res.writeHead(302, { Location: `${farBase}/a` }).end())
+      servers.push(near)
+      await new Promise<void>(r => near.listen(0, '127.0.0.1', r))
+      const nearBase = `http://127.0.0.1:${(near.address() as AddressInfo).port}`
+      const context = withBypass(await request.newContext({ baseURL: nearBase }), nearBase, SECRET)
+      await expect(context.get('/', { maxRedirects: 2 })).rejects.toThrow('Max redirect count exceeded')
+      expect((await context.get('/', { maxRedirects: 3 })).status()).toBe(200)
+      await context.dispose()
+    })
   })
 })
