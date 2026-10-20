@@ -20,7 +20,7 @@ export const verify: Command = async (args, io) => {
     await settleRun(store, id)
     io.stdout.write(`Verified ${verified} ${verified === 1 ? 'attempt' : 'attempts'}${disconnected ? `; ${disconnected} disconnected` : ''}.\n`)
     for (const attempt of await store.listAttempts(id)) {
-      const verdict = attempt.reason === 'disconnected' || attempt.reason === 'withdrew' ? attempt.reason : attempt.flags.includes('screened-out') ? 'screened out' : attempt.verification?.status ?? 'not verified'
+      const verdict = attempt.reason === 'disconnected' || attempt.reason === 'withdrew' ? attempt.reason : attempt.verification?.status ?? 'not verified'
       io.stdout.write(`${attempt.id}: ${verdict}${attempt.verification?.reason ? ` (${attempt.verification.reason})` : ''}\n`)
     }
     return 0

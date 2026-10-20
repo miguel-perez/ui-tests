@@ -70,8 +70,6 @@ export function entryScreen(view: ParticipantView): Screen {
 export function nextScreen(view: ParticipantView, current: Screen, answers: Record<string, unknown>): Screen {
   switch (current.kind) {
     case 'screener':
-      // The collector ended the attempt on a rejecting answer: the next screen is the thank-you, not consent.
-      if (view.status === 'finished') return { kind: 'thanks' }
       return current.index + 1 < view.screener.length ? { kind: 'screener', index: current.index + 1 } : { kind: 'consent' }
     case 'consent':
       return beforeCard(view)

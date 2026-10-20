@@ -1,6 +1,6 @@
 import { fillScenario, scenarioTemplate } from '../derive/scenario.ts'
 import type { CompiledQuestion } from '../schema/compiled.ts'
-import { SCREENED_OUT, type AttemptRow, type RunRow } from '../store/types.ts'
+import type { AttemptRow, RunRow } from '../store/types.ts'
 
 /** What the participant's page may know. Built by allowlist in `participantView`; nothing else crosses the boundary. */
 export type ParticipantView = {
@@ -12,8 +12,6 @@ export type ParticipantView = {
   consent: { text: string[]; purposes: string[]; payout: string }
   screener: { id: string; text: string; options: string[]; multi: boolean; open?: boolean }[]
   practice: boolean
-  /** The screener turned this person away; there is no task for them. */
-  screenedOut?: true
   /** About how long the whole study takes; the consent screen says so. */
   minutes: number
   impression?: { page: string; flashMs: number; question: string }
@@ -80,7 +78,6 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
     ...(goal.answer && { answer: { question: goal.answer.question, choices: goal.answer.choices } }),
     questions: last ? [...goal.questions, ...study.questions] : goal.questions,
     status: attempt.status,
-    ...(attempt.flags.includes(SCREENED_OUT) && { screenedOut: true as const }),
     record: study.record,
     rehearsal,
   }

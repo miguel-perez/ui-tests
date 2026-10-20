@@ -5,7 +5,7 @@ import type { Screen } from './flow.ts'
 import {
   AGREE, AGREEMENT_ENDS, CARD_FOOTER, CARD_TITLE, CONFIDENCE_ENDS, CONSENT_TITLE, CONTINUE, EASE_ENDS, POWERED_BY, RECORDING, SCREENER_TITLE,
   PRACTICE_CONFIRM, PRACTICE_DONE, PRACTICE_DONE_NOTE, PRACTICE_INTRO, PRACTICE_NOT_YET, PRACTICE_STUCK, PRACTICE_STUCK_NOTE, PRACTICE_TITLE, PRACTICE_YES,
-  SCREENED_BODY, START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, WITHDRAW, WITHDRAWN_BODY, WITHDRAWN_TITLE, contact, duration,
+  START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, WITHDRAW, WITHDRAWN_BODY, WITHDRAWN_TITLE, contact, duration,
 } from './copy.ts'
 
 export type ScreenProps = {
@@ -242,12 +242,12 @@ export function PlayerScreen(props: ScreenProps) {
       body = open('anything', false)
       break
     case 'thanks':
-      body = <><h1>{THANKS_TITLE}</h1><p>{view.screenedOut ? SCREENED_BODY : THANKS_BODY}</p></>
+      body = <><h1>{THANKS_TITLE}</h1><p>{THANKS_BODY}</p></>
       break
     case 'withdrawn':
       body = <><h1>{WITHDRAWN_TITLE}</h1><p>{WITHDRAWN_BODY}</p></>
       break
   }
-  const after = view.status !== 'created' && !view.screenedOut && !['screener', 'consent', 'withdrawn'].includes(screen.kind)
+  const after = view.status !== 'created' && !['screener', 'consent', 'withdrawn'].includes(screen.kind)
   return <Frame view={view} error={error} onWithdraw={after ? onWithdraw : undefined}>{body}</Frame>
 }

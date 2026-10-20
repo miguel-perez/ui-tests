@@ -43,6 +43,12 @@ function Attempt({ item, index }: { item: TraceAttempt; index: number }) {
   return (
     <section>
       <h3>Attempt {index + 1}{attempt.rehearsal ? ' (rehearsal)' : ''}: {attempt.reason ?? attempt.status}</h3>
+      {item.screener && (
+        <p>
+          Screener: {item.screener.matches ? 'matches the users' : `outside: ${item.screener.outside.join('; ')}`}. Fit {item.screener.fit.total} of 7: recency {item.screener.fit.recency} of 3, already doing something {item.screener.fit.solving} of 1, matters {item.screener.fit.importance} of 3.
+          {' '}The screener is a gate people can game.
+        </p>
+      )}
       <p>Outcome: {verification?.status ?? 'not verified'}{verification?.reason ? ` (${verification.reason})` : ''}</p>
       <p>Time on the task: {seconds(item.timings.onGoalMs)}</p>
       <p>Path taken: <code>{item.path.length ? item.path.join(' → ') : 'none recorded'}</code></p>

@@ -199,7 +199,9 @@ export const rules: Rule[] = [
   {
     id: 'users-did', severity: 'warning', source: 'this contract',
     reason: 'People are screened on what they did, not on what they say they are; without a behaviour the screener cannot ask when they last did it.',
-    run({ study }, emit) {
+    run({ study, compiled }, emit) {
+      // Agents are not screened, so a study only they take has no use for a behaviour.
+      if (compiled.actors.length > 0 && !compiled.actors.includes('human')) return
       const users = study.options.users
       const fields = typeof users === 'string' ? inferUsers(users).users : users
       if (!fields || typeof fields !== 'object' || fields.did) return

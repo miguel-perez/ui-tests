@@ -19,7 +19,7 @@ export function inferUsers(sentence: string): { users: Fields; inferred: string[
   if (time) {
     const unit = (time[2] ?? time[3])!.toLowerCase()
     const count = time[1] ? (NUMBERS[time[1].toLowerCase()] ?? Number(time[1])) : 1
-    within = `${count} ${unit}s`
+    within = `${count} ${unit}${count === 1 ? '' : 's'}`
     rest = (rest.slice(0, time.index) + rest.slice(time.index + time[0].length)).trim()
   }
   const did = clause.exec(rest)?.[1]?.trim().replace(/[,;]+$/, '')

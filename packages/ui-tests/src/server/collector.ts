@@ -1,7 +1,8 @@
 import { timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
-import { screen } from '../derive/screener.ts'
-import { SCREENED_OUT, type AttemptReason, type AttemptRow, type RecordedEvent, type RunRow, type RunStore } from '../store/types.ts'
+import { screenReport } from '../derive/screener.ts'
+import { fitScore } from '../derive/fit.ts'
+import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
 import { MORE_TIME, effectiveTimeout, participantView } from './view.ts'
 
 export type CollectorOptions = {
@@ -230,8 +231,13 @@ export function createCollector(options: CollectorOptions): (request: Request) =
           if (body.answer !== undefined && !goal.answer) return { status: 400, text: 'This task asks no question to answer' }
           const given: Record<string, unknown> = {}
           const prefix = `goal${goal.index}`
-          // Screener answers add up as the person goes, so a rejecting answer can end it early.
+          // Screener answers add up as the person goes.
           if (body.screener) given.screener = { ...(current.answers.screener as Record<string, unknown> | undefined), ...body.screener }
+          // On a link nothing is filtered: the answers are read against the rules and the result kept for the author, and the person goes on to consent.
+          if (body.screener && current.status === 'created') {
+            const report = screenReport(given.screener as Record<string, unknown>, run.compiled.screener)
+            given.screenerResult = { matches: report.result === 'accept', outside: report.outside, fit: fitScore(given.screener as Record<string, unknown>) }
+          }
           if (body.impression !== undefined) given.impression = body.impression
           if (body.ease !== undefined) given[`${prefix}.ease`] = body.ease
           if (body.difficulty !== undefined) given[`${prefix}.difficulty`] = body.difficulty
@@ -249,13 +255,10 @@ export function createCollector(options: CollectorOptions): (request: Request) =
             view.questions.every((q) => (q.askIf && !(typeof answers[q.askIf.id] === 'number' && (answers[q.askIf.id] as number) <= q.askIf.atOrBelow)) || answered(q.id)) &&
             (!goal.answer || answered(goal.answer.question))
           const finish = current.status === 'questions' && complete
-          // A reject ends the attempt here: no consent, no task, nothing to verify. Rehearsals are never screened.
-          const turnedAway = body.screener !== undefined && current.status === 'created' && !run.rehearsal && !current.rehearsal && screen(given.screener as Record<string, unknown>, run.compiled.screener) === 'reject'
           const environment = body.screener ? environmentOf(given.screener as Record<string, unknown>) : undefined
           const ok = await tx.updateAttempt(attempt.id, {
             answers,
             ...(finish && { status: 'finished' as const }),
-            ...(turnedAway && { status: 'finished' as const, flags: [...current.flags, SCREENED_OUT], endedAt: new Date(now()).toISOString() }),
             ...(environment && { environment }),
           }, current.status)
           return ok ? undefined : { status: 409, text: 'The attempt moved on; try again' }

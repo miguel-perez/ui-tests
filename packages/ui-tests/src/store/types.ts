@@ -39,9 +39,6 @@ export type RunRow = RunHandle & {
 export type NewRun = Omit<RunRow, 'run' | 'revision' | 'createdAt' | 'states' | 'result' | 'deadline'> &
   Partial<Pick<RunRow, 'states' | 'result' | 'deadline'>>
 
-/** The flag of an attempt the screener turned away: finished without a task, never verified, never counted. */
-export const SCREENED_OUT = 'screened-out'
-
 export type AttemptStatus = 'created' | 'consented' | 'active' | 'questions' | 'finished'
 export type AttemptReason = 'done' | 'gave up' | 'timeout' | 'withdrew' | 'disconnected'
 

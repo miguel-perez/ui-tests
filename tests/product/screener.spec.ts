@@ -67,24 +67,24 @@ test('the screener asks one question per screen, nothing preselected, then conse
   await expect(heading(page)).toHaveText('Your task')
 })
 
-test('a rejecting answer ends at a thank-you without the task', async ({ page }) => {
+test('an answer outside the users filters nobody: the person goes on to consent, and the screener result is kept', async ({ page }) => {
   const { runId, playerUrl } = await createLinkRun(fixture)
   await page.goto(playerUrl)
   await page.getByLabel("I haven't").check()
   await next(page).click()
-  await expect(heading(page)).toHaveText('Thank you')
-  await expect(page.getByText('nothing more to do')).toBeVisible()
-  await expect(page.getByRole('button', { name: /I agree|Start task/ })).toHaveCount(0)
-  await expect(page.getByRole('button', { name: 'Stop and delete my recording' })).toHaveCount(0)
-
-  // Reloading does not bring the questions back.
-  await page.reload()
-  await expect(heading(page)).toHaveText('Thank you')
+  await expect(heading(page)).toHaveText('Which of these do you use?')
+  await page.getByLabel('None of these').check()
+  await next(page).click()
+  await expect(heading(page)).toHaveText('Which of these apply to you?')
+  await page.getByLabel('Has used Weekboard').check()
+  await next(page).click()
+  await expect(heading(page)).toHaveText('When did you last need to plan the week together?')
 
   const store = await openStore()
   try {
     const [attempt] = await store.listAttempts(runId)
-    expect(attempt).toMatchObject({ status: 'finished', flags: ['screened-out'] })
-    expect(attempt!.startedAt).toBeUndefined()
+    expect(attempt).toMatchObject({ status: 'created', flags: [] })
+    expect(attempt!.answers.screenerResult).toMatchObject({ matches: false })
+    expect((attempt!.answers.screenerResult as { outside: string[] }).outside).toHaveLength(3)
   } finally { await store.close() }
 })

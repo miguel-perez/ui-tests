@@ -13,10 +13,9 @@ const nothing = /^(nothing|none|n\/a|no|i don'?t|i do not|not really)\b/i
  * keyed by question id.
  */
 export function fitScore(answers: Record<string, unknown>): Fit {
-  const recency = (3 - NEED_BANDS.indexOf(text(answers[FIT_IDS.need]) as (typeof NEED_BANDS)[number])) as number
+  const band = NEED_BANDS.indexOf(text(answers[FIT_IDS.need]) as (typeof NEED_BANDS)[number])
+  const recency = (band < 0 ? 0 : 3 - band) as Fit['recency']
   const solving = text(answers[FIT_IDS.today]) && !nothing.test(text(answers[FIT_IDS.today])) ? 1 : 0
-  const importance = Math.max(0, MATTERS.indexOf(text(answers[FIT_IDS.matters]) as (typeof MATTERS)[number]))
-  const r = (recency > 3 ? 0 : recency) as Fit['recency']
-  const i = importance as Fit['importance']
-  return { recency: r, solving, importance: i, total: r + solving + i }
+  const importance = Math.max(0, MATTERS.indexOf(text(answers[FIT_IDS.matters]) as (typeof MATTERS)[number])) as Fit['importance']
+  return { recency, solving, importance, total: recency + solving + importance }
 }

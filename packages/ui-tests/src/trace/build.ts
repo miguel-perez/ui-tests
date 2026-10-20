@@ -1,9 +1,10 @@
+import type { ScreenerResult } from '../derive/screener.ts'
 import { fillScenario } from '../derive/scenario.ts'
 import { sampleSentence, sentence } from '../derive/sentence.ts'
 import type { LintFinding } from '../lint.ts'
 import type { CompiledStudy } from '../schema/compiled.ts'
 import { attemptSignals, type Signal } from '../signals.ts'
-import { SCREENED_OUT, type AttemptRow, type RecordedEvent, type Revision, type RunRow, type RunStore, type Verification } from '../store/types.ts'
+import type { AttemptRow, RecordedEvent, Revision, RunRow, RunStore, Verification } from '../store/types.ts'
 
 export type TraceAttempt = {
   attempt: AttemptRow
@@ -16,6 +17,8 @@ export type TraceAttempt = {
   snapshotUrl?: string
   verification?: Verification
   signals: Signal[]
+  /** What the screener made of this person: whether they match the users, which rules they fell outside, and how well they fit the purpose. Absent when none was asked. */
+  screener?: ScreenerResult
   timings: { onGoalMs?: number }
 }
 
@@ -29,6 +32,12 @@ export type Trace = {
   sentence: string
   sampleSentence: string
   actor: 'human' | 'agent'
+}
+
+/** The screener's reading of a person, as the collector stored it with their answers. */
+function screenerOf(attempt: AttemptRow): ScreenerResult | undefined {
+  const stored = attempt.answers.screenerResult as ScreenerResult | undefined
+  return stored && typeof stored.matches === 'boolean' ? stored : undefined
 }
 
 const pathOf = (url: string) => new URL(url, 'http://placeholder').pathname.replace(/(.)\/$/, '$1')
@@ -48,8 +57,7 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
   const run = await store.getRun(runId)
   if (!run) throw new Error(`No run ${runId}`)
   const { compiled } = run
-  // People the screener turned away took no task; the report counts them as screened, not as attempts.
-  const rows = (await store.listAttempts(runId)).filter(a => !a.flags.includes(SCREENED_OUT))
+  const rows = await store.listAttempts(runId)
   const attempts: TraceAttempt[] = []
   for (const attempt of rows) {
     const goal = compiled.goals[attempt.goalIndex]
@@ -66,6 +74,7 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
       ...(goal?.path && { happyPath: goal.path }),
       ...(end && { snapshotUrl: end.url }),
       ...(verification && { verification }),
+      ...(screenerOf(attempt) && { screener: screenerOf(attempt)! }),
       signals: goal ? attemptSignals({ attempt, events, goal, ...(verification && { verification }) }) : [],
       timings: { ...(started !== undefined && ended !== undefined && { onGoalMs: ended - started }) },
     })
