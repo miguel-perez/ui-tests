@@ -16,7 +16,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "schema": "tsx scripts/write-schema.ts"
+    "schema": "tsx scripts/write-schema.ts",
+    "skill": "tsx scripts/write-skill-rules.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.131.0",
@@ -37,5 +38,12 @@
   },
   "devDependencies": {
     "ajv": "8.20.0"
-  }
+  },
+  "files": [
+    "bin",
+    "src",
+    "schemas",
+    "skills",
+    ".claude-plugin"
+  ]
 }

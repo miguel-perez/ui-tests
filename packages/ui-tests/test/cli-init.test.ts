@@ -113,13 +113,6 @@ describe('ui-tests arguments', () => {
     expect(await run('--help')).toBe(0)
     expect(out).toContain('Usage: ui-tests <command>')
   })
-  it('prints "not shipped yet" and exits 2 for commands later tasks build', async () => {
-    for (const name of ['estimate', 'mcp']) {
-      err = ''
-      expect(await run(name)).toBe(2)
-      expect(err).toBe(`${name}: not shipped yet\n`)
-    }
-  })
   it('host prints its plan and exits 2 with the not-shipped line', async () => {
     expect(await run('host')).toBe(2)
     expect(out).toContain('collector, the player and the store')

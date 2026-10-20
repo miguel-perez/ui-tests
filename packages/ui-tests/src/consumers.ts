@@ -27,3 +27,23 @@ export function combine<T extends Pick<RunRecord, 'actor'>>(records: T[]): { act
   if (actors.size > 1) throw new Error('human and agent records are never combined')
   return { actor: records[0]?.actor, records }
 }
+
+/**
+ * The record as a consumer for `use` may read it: an attempt whose purposes do not include that use keeps no words (its text answers, and what it said
+ * in the issues) and no recordings (the moments of its replay). Counts, verdicts and numbers stay: they are not the person's words or recording.
+ */
+export function readableRecord(record: RunRecord, use: Purpose): RunRecord {
+  const closed = record.attempts.filter(a => !canRead(a, use))
+  const byId = new Set(closed.map(a => a.id))
+  const byParticipant = new Set(closed.map(a => a.participant))
+  const numbersOnly = (answers: Record<string, unknown>) => Object.fromEntries(Object.entries(answers).filter(([, v]) => typeof v !== 'string'))
+  return {
+    ...record,
+    attempts: record.attempts.map(a => byId.has(a.id) ? { ...a, answers: numbersOnly(a.answers) } : a),
+    issues: record.issues.map(issue => ({
+      ...issue,
+      words: issue.words.filter(w => !byParticipant.has(w.participant)),
+      moments: issue.moments.filter(m => !byId.has(m.attempt)),
+    })),
+  }
+}

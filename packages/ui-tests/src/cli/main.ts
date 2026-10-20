@@ -5,8 +5,10 @@ import type { Tunnel } from '../tunnel/types.ts'
 import { check } from './check.ts'
 import { dev } from './dev.ts'
 import { host } from './host.ts'
+import { estimate } from './estimate.ts'
 import { init } from './init.ts'
 import { lintCommand } from './lint.ts'
+import { mcp } from './mcp.ts'
 import { recruit } from './recruit.ts'
 import { report } from './report.ts'
 import { status } from './status.ts'
@@ -39,11 +41,6 @@ export type Io = { stdout: { write(text: string): unknown }; stderr: { write(tex
 export type Args = { positionals: string[]; flags: Map<string, string | true> }
 export type Command = (args: Args, io: Io) => Promise<number>
 
-const notShipped = (name: string): Command => async (_args, io) => {
-  io.stderr.write(`${name}: not shipped yet\n`)
-  return 2
-}
-
 /** Commands by name; `''` is dev mode (no command given). Later tasks replace the placeholders and add `report`. */
 export const commands: Record<string, Command> = {
   init,
@@ -56,8 +53,8 @@ export const commands: Record<string, Command> = {
   host,
   recruit,
   check,
-  estimate: notShipped('estimate'),
-  mcp: notShipped('mcp'),
+  estimate,
+  mcp,
 }
 
 export const usage = () => `Usage: ui-tests <command> [options]
@@ -72,6 +69,8 @@ Commands:
   report <run>      the report in words, the run record (--json), or a signed link to share (--share)
   trace <run>       serve the trace of a run on this machine
   init              write ui-tests.config.ts, an example study and the Vitest exclude
+  estimate          how many people and how many minutes each, before anything is spent
+  mcp               serve lint, estimate, run, status, verify, report and trace as MCP tools over stdio
   lint [files...]   check studies against the rules and show what a run would do
   host              deploy the collector, the player and the store to your own account
 
@@ -88,7 +87,7 @@ const defaultIo = (): Io => ({ stdout: process.stdout, stderr: process.stderr, c
 
 /** The flags each command reads a value for (`--actor agent` or `--actor=agent`); every other flag is a boolean. */
 export const valueFlags: Record<string, string[]> = {
-  '': ['actor', 'port', 'project', 'study', 'task', 'key', 'commit'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit'], check: ['actor', 'key', 'study'], estimate: ['actor'],
+  '': ['actor', 'port', 'project', 'study', 'task', 'key', 'commit'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit'], check: ['actor', 'key', 'study'], estimate: ['actor', 'study'],
 }
 
 /** Splits `--flag`, `--flag=value` and, for flags the command declares, `--flag value`. */

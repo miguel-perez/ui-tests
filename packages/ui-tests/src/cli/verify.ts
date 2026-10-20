@@ -13,17 +13,20 @@ export async function settleRun(store: RunStore, runId: string, onResult?: Resul
 /** `ui-tests verify <run>`: runs the hooks against the stored snapshots and prints each attempt's verdict. */
 export const verify: Command = async (args, io) => {
   const [id] = args.positionals
-  if (!id) { io.stderr.write('Usage: ui-tests verify <run>\n'); return 2 }
+  if (!id) { io.stderr.write('Usage: ui-tests verify <run> [--json]\n'); return 2 }
   const store = await openStore(io.env)
   try {
     if (!(await store.getRun(id))) { io.stderr.write(`No such run: ${id}\n`); return 2 }
     const { verified, disconnected } = await verifyRun(store, id)
     await settleRun(store, id, reporterFor(io))
+    const verdicts = (await store.listAttempts(id)).map(attempt => ({
+      id: attempt.id,
+      verdict: attempt.reason === 'disconnected' || attempt.reason === 'withdrew' ? attempt.reason : attempt.verification?.status ?? 'not verified',
+      ...(attempt.verification?.reason && { reason: attempt.verification.reason }),
+    }))
+    if (args.flags.has('json')) { io.stdout.write(`${JSON.stringify({ run: id, verified, disconnected, attempts: verdicts }, null, 2)}\n`); return 0 }
     io.stdout.write(`Verified ${verified} ${verified === 1 ? 'attempt' : 'attempts'}${disconnected ? `; ${disconnected} disconnected` : ''}.\n`)
-    for (const attempt of await store.listAttempts(id)) {
-      const verdict = attempt.reason === 'disconnected' || attempt.reason === 'withdrew' ? attempt.reason : attempt.verification?.status ?? 'not verified'
-      io.stdout.write(`${attempt.id}: ${verdict}${attempt.verification?.reason ? ` (${attempt.verification.reason})` : ''}\n`)
-    }
+    for (const v of verdicts) io.stdout.write(`${v.id}: ${v.verdict}${v.reason ? ` (${v.reason})` : ''}\n`)
     return 0
   } finally { await store.close() }
 }

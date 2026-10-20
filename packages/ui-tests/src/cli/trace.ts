@@ -2,7 +2,7 @@ import { userInfo } from 'node:os'
 import { loadConfig } from '../config.ts'
 import { lint, type LintFinding } from '../lint.ts'
 import { openStore } from '../store/open.ts'
-import type { RunRow } from '../store/types.ts'
+import type { RunRow, RunStore } from '../store/types.ts'
 import { serveTrace } from '../trace/serve.ts'
 import { reporterFor } from './outward.ts'
 import { loadStudies, withProduct } from './lint.ts'
@@ -33,19 +33,25 @@ async function authorOf(io: Io): Promise<string> {
 
 const pause = (signal: AbortSignal) => new Promise<void>(resolve => (signal.aborted ? resolve() : signal.addEventListener('abort', () => resolve(), { once: true })))
 
+/** Starts the trace viewer for a run on the loopback address, as `ui-tests trace` and the MCP `trace` tool do. Returns the viewer's URL for the run, or undefined when there is no such run. */
+export async function startTrace(io: Io, store: RunStore, id: string, port?: number): Promise<{ url: string; close(): Promise<void> } | undefined> {
+  if (!(await store.getRun(id))) return undefined
+  const author = await authorOf(io)
+  const server = await serveTrace({ store, lint: await lintFor(io), author, onResult: reporterFor(io), ...(port !== undefined && { port }) })
+  return { url: `${server.url}/runs/${encodeURIComponent(id)}/`, close: server.close }
+}
+
 /** `ui-tests trace <run>`: serves the trace on this machine, opens it and runs until Ctrl-C. */
 export const trace: Command = async (args, io) => {
   const [id] = args.positionals
   if (!id) { io.stderr.write('Usage: ui-tests trace <run> [--port <port>] [--no-open]\n'); return 2 }
   const store = await openStore(io.env)
   try {
-    if (!(await store.getRun(id))) { io.stderr.write(`No such run: ${id}\n`); return 2 }
     const port = args.flags.get('port')
-    const author = await authorOf(io)
-    const server = await serveTrace({ store, lint: await lintFor(io), author, onResult: reporterFor(io), ...(typeof port === 'string' && { port: Number(port) }) })
-    const url = `${server.url}/runs/${encodeURIComponent(id)}/`
-    io.stdout.write(`Trace: ${url}\n`)
-    if (!args.flags.has('no-open')) await (io.deps?.openUrl ?? openUrl)(url)
+    const server = await startTrace(io, store, id, typeof port === 'string' ? Number(port) : undefined)
+    if (!server) { io.stderr.write(`No such run: ${id}\n`); return 2 }
+    io.stdout.write(`Trace: ${server.url}\n`)
+    if (!args.flags.has('no-open')) await (io.deps?.openUrl ?? openUrl)(server.url)
     await pause(io.deps?.signal ?? interrupt())
     await server.close()
     return 0
