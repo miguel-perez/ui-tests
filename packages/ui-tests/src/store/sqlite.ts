@@ -175,12 +175,49 @@ export class SqliteStore implements RunStore {
       const hash = hashToken(token)
       // Only the sha256 of a token is stored and looked up through the primary-key index. The presented token is never
       // compared byte by byte, so there is no secret-dependent comparison for timing to reveal.
-      const row = this.one('SELECT attempt_id, run_id FROM tokens WHERE hash = ?', hash)
-      if (!row) return undefined
-      const attempt = this.attemptRow(this.one('SELECT data FROM attempts WHERE id = ?', row.attempt_id as string))
-      const run = this.runRow(this.one('SELECT data FROM runs WHERE id = ?', row.run_id as string))
-      return attempt && run ? { run, attempt } : undefined
+      return this.holder(this.one("SELECT attempt_id, run_id FROM tokens WHERE hash = ? AND kind = 'participant'", hash))
     })
+  }
+
+  /** The run and attempt a token row belongs to. */
+  private holder(row: Row | undefined) {
+    if (!row) return undefined
+    const attempt = this.attemptRow(this.one('SELECT data FROM attempts WHERE id = ?', row.attempt_id as string))
+    const run = this.runRow(this.one('SELECT data FROM runs WHERE id = ?', row.run_id as string))
+    return attempt && run ? { run, attempt } : undefined
+  }
+
+  /** Stores the hash of a new expiring credential of `kind` for the attempt; returns the credential. */
+  private issue(attemptId: string, kind: 'handoff' | 'attempt-key', expiresAt: string) {
+    const credential = newToken()
+    const attempt = this.one('SELECT run_id FROM attempts WHERE id = ?', attemptId)
+    if (!attempt) throw new Error(`No such attempt: ${attemptId}`)
+    this.run('INSERT INTO tokens (hash, attempt_id, run_id, kind, expires_at) VALUES (?, ?, ?, ?, ?)', hashToken(credential), attemptId, attempt.run_id as string, kind, expiresAt)
+    return credential
+  }
+
+  createHandoff(attemptId: string, expiresAt: string) {
+    return this.op(() => this.issue(attemptId, 'handoff', expiresAt))
+  }
+
+  redeemHandoff(code: string, now: string) {
+    return this.op(() => {
+      // Deleted in the statement that reads it, so two redemptions cannot both succeed; a late code is spent by the try.
+      const row = this.one("DELETE FROM tokens WHERE hash = ? AND kind = 'handoff' RETURNING attempt_id, run_id, expires_at", hashToken(code))
+      return row && (row.expires_at as string) > now ? this.holder(row) : undefined
+    })
+  }
+
+  createAttemptKey(attemptId: string, expiresAt: string) {
+    return this.op(() => this.issue(attemptId, 'attempt-key', expiresAt))
+  }
+
+  authorizeAttemptKey(key: string, now: string) {
+    return this.op(() => this.holder(this.one("SELECT attempt_id, run_id FROM tokens WHERE hash = ? AND kind = 'attempt-key' AND expires_at > ?", hashToken(key), now)))
+  }
+
+  revokeAttemptKeys(attemptId: string) {
+    return this.op(() => { this.run("DELETE FROM tokens WHERE attempt_id = ? AND kind IN ('handoff', 'attempt-key')", attemptId) })
   }
 
   getAttempt(id: string) {

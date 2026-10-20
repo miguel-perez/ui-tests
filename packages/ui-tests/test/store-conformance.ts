@@ -75,6 +75,47 @@ export function describeStore(name: string, open: () => Promise<RunStore>) {
       expect(await store.getAttempt(a.attempt.id)).toBeDefined()
     })
 
+    it('issues handoff codes and attempt keys apart from participant tokens', async () => {
+      const { run } = await store.createRun(newRun('k1'))
+      const { attempt, token } = await store.createAttempt({ runId: run.run, participant: 'p_1', goalIndex: 0, rehearsal: false })
+      const code = await store.createHandoff(attempt.id, '2026-10-20T10:01:00.000Z')
+      expect(code).toMatch(/^[0-9a-f]{64}$/)
+      expect(await store.authorize(code)).toBeUndefined() // a code is not a token
+      expect((await store.redeemHandoff(code, '2026-10-20T10:00:30.000Z'))?.attempt.id).toBe(attempt.id)
+      expect(await store.redeemHandoff(code, '2026-10-20T10:00:31.000Z')).toBeUndefined() // single use
+      const late = await store.createHandoff(attempt.id, '2026-10-20T10:01:00.000Z')
+      expect(await store.redeemHandoff(late, '2026-10-20T10:01:00.000Z')).toBeUndefined() // expired at the instant
+      expect(await store.redeemHandoff(late, '2026-10-20T10:00:00.000Z')).toBeUndefined() // and spent by the failed try
+      expect(await store.redeemHandoff(token, '2026-10-20T10:00:00.000Z')).toBeUndefined() // a token is not a code
+      expect(await store.authorize(token)).toBeDefined() // and the failed try did not spend it
+      const key = await store.createAttemptKey(attempt.id, '2026-10-20T12:00:00.000Z')
+      expect(await store.authorize(key)).toBeUndefined() // a key is not a participant token
+      expect((await store.authorizeAttemptKey(key, '2026-10-20T11:00:00.000Z'))?.run.run).toBe(run.run)
+      expect(await store.authorizeAttemptKey(key, '2026-10-20T12:00:00.000Z')).toBeUndefined()
+      expect(await store.authorizeAttemptKey(token, '2026-10-20T11:00:00.000Z')).toBeUndefined() // a token is not a key
+      const spare = await store.createHandoff(attempt.id, '2026-10-20T10:01:00.000Z')
+      await store.revokeAttemptKeys(attempt.id)
+      expect(await store.authorizeAttemptKey(key, '2026-10-20T11:00:00.000Z')).toBeUndefined()
+      expect(await store.redeemHandoff(spare, '2026-10-20T10:00:00.000Z')).toBeUndefined()
+      expect(await store.authorize(token)).toBeDefined() // the token survives
+      const again = await store.createAttemptKey(attempt.id, '2026-10-20T12:00:00.000Z')
+      await store.revokeTokens(attempt.id)
+      expect(await store.authorizeAttemptKey(again, '2026-10-20T11:00:00.000Z')).toBeUndefined() // revokeTokens removes every kind
+    })
+
+    it('redeems a handoff code once when two redeem it together', async () => {
+      const { run } = await store.createRun(newRun('k1'))
+      const { attempt } = await store.createAttempt({ runId: run.run, participant: 'p_1', goalIndex: 0, rehearsal: false })
+      const code = await store.createHandoff(attempt.id, '2026-10-20T10:01:00.000Z')
+      const results = await Promise.all([store.redeemHandoff(code, '2026-10-20T10:00:00.000Z'), store.redeemHandoff(code, '2026-10-20T10:00:00.000Z')])
+      expect(results.filter(Boolean)).toHaveLength(1)
+    })
+
+    it('round-trips where participants open the app and the origins allowed', async () => {
+      const { run } = await store.createRun(newRun('k1', { appUrl: 'https://tunnel.example', origins: ['https://tunnel.example'] }))
+      expect(await store.getRun(run.run)).toMatchObject({ appUrl: 'https://tunnel.example', origins: ['https://tunnel.example'] })
+    })
+
     it('updates attempts, honouring the expected status', async () => {
       const { run } = await store.createRun(newRun('k1'))
       const { attempt } = await store.createAttempt({ runId: run.run, participant: 'p_1', goalIndex: 0, rehearsal: true })

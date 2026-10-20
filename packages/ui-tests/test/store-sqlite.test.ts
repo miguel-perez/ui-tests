@@ -5,6 +5,7 @@ import { DatabaseSync } from 'node:sqlite'
 import { afterAll, describe, expect, it } from 'vitest'
 import { newId, newRunId, newToken } from '../src/ids.ts'
 import { dataDirectory, openStore } from '../src/store/open.ts'
+import { sqliteMigrations } from '../src/store/migrations.ts'
 import { SqliteStore } from '../src/store/sqlite.ts'
 import { describeStore, newRun } from './store-conformance.ts'
 
@@ -83,6 +84,24 @@ describe('SqliteStore across connections', () => {
     expect(run.states.recruitment).toBe('open')
     expect(run.deadline).toBeTruthy()
     await store.close()
+  })
+})
+
+describe('SqliteStore migrations', () => {
+  it('opens a file at migration 2 and keeps its tokens authorising', async () => {
+    const file = tempFile()
+    const store = new SqliteStore(file)
+    const { run } = await store.createRun(newRun('k1'))
+    const { attempt, token } = await store.createAttempt({ runId: run.run, participant: 'p_1', goalIndex: 0, rehearsal: false })
+    await store.close()
+    // Take the file back to migration 2: tokens without kind or expires_at.
+    const db = new DatabaseSync(file)
+    db.exec('ALTER TABLE tokens DROP COLUMN kind; ALTER TABLE tokens DROP COLUMN expires_at; PRAGMA user_version = 2')
+    db.close()
+    expect(sqliteMigrations).toHaveLength(3)
+    const reopened = new SqliteStore(file)
+    expect((await reopened.authorize(token))?.attempt.id).toBe(attempt.id)
+    await reopened.close()
   })
 })
 

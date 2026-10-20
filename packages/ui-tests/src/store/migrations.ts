@@ -20,4 +20,7 @@ export const sqliteMigrations: string[] = [
   // Events carry the sender's sequence number so a replayed batch is stored once; events without one always insert (NULLs are distinct).
   `ALTER TABLE events ADD COLUMN client_seq INTEGER;
    CREATE UNIQUE INDEX events_client_seq ON events(attempt_id, client_seq);`,
+  // Tokens have a kind (participant token, handoff code, attempt key) and the last two expire; existing rows are participant tokens.
+  `ALTER TABLE tokens ADD COLUMN kind TEXT NOT NULL DEFAULT 'participant';
+   ALTER TABLE tokens ADD COLUMN expires_at TEXT;`,
 ]
