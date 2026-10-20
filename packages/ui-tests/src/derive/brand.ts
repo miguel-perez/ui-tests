@@ -4,6 +4,11 @@ import type { UiTestsConfig } from '../types.ts'
 const COLOUR = /^#(?:[\da-f]{3}|[\da-f]{6})$/i
 const IMAGE_DATA = /^data:image\/(?:png|jpeg|gif|webp|svg\+xml)[;,]/i
 
+/** A CSS value only when it cannot leave its declaration: a colour or a font name. The compiler and every page that prints the value agree on this one test. */
+export const cssValue = (value: string | undefined) => (value && /^[\w\s#.,%()-]{1,200}$/.test(value) ? value : undefined)
+/** The address of a stylesheet to link: https only, normalised; anything else is undefined. */
+export const stylesheet = (value: string | undefined) => { const parsed = value ? url(value) : undefined; return parsed?.protocol === 'https:' ? parsed.href : undefined }
+
 function url(value: string): URL | undefined { try { return new URL(value) } catch { return undefined } }
 /** An https address, or http to this machine while the author tries the study out. */
 function logoAllowed(value: string): boolean {
@@ -24,8 +29,8 @@ export function deriveBrand(config: UiTestsConfig, product: string): CompiledBra
   }
   if (brand.logo !== undefined && !logoAllowed(brand.logo)) throw new Error('brand.logo: use an https address, http://localhost, or a png, jpeg, gif, webp or svg data: image')
   if (brand.font) {
-    if (!brand.font.family.trim() || /[;{}<>"]/.test(brand.font.family)) throw new Error('brand.font.family: a font name, without ; { } < > or quotes')
-    if (brand.font.url !== undefined && url(brand.font.url)?.protocol !== 'https:') throw new Error('brand.font.url: use an https address')
+    if (!cssValue(brand.font.family)?.trim()) throw new Error('brand.font.family: a font name of letters, digits, spaces and . , % ( ) # - only')
+    if (brand.font.url !== undefined && !stylesheet(brand.font.url)) throw new Error('brand.font.url: use an https address')
   }
   return {
     name: brand.name ?? config.author ?? product,

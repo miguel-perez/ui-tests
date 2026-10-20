@@ -1,5 +1,6 @@
 /** @jsxRuntime automatic @jsxImportSource react */
 // Rendered in Node under tsx as well as inside a Next app, so the JSX mode is stated here.
+import { contrast, parseColour } from '../browser/theme.ts'
 import { canRead } from '../consumers.ts'
 import type { CSSProperties, ReactNode } from 'react'
 import { topThree } from '../issues.ts'
@@ -47,6 +48,20 @@ max-width:860px;margin:0 auto;padding:24px 16px 64px;font:16px/1.55 var(--uit-fo
  */
 export const mayShow = (attempt: Attempt): boolean =>
   canRead(attempt, 'recordings') && attempt.reason !== 'withdrew'
+
+/**
+ * The ground and ink the report is pinned to when the brand sets either: a colour the brand leaves out is whichever of black and
+ * white reads best against the one it sets, so a lone background or a lone text colour cannot meet the other scheme's default.
+ */
+function readable(brand: { background?: string; text?: string }): { ground?: string; ink?: string } {
+  const plainer = (known: string) => {
+    const colour = parseColour(known)
+    return colour && contrast(colour, [0, 0, 0]) >= contrast(colour, [255, 255, 255]) ? '#000000' : '#ffffff'
+  }
+  if (brand.background && !brand.text) return { ground: brand.background, ink: plainer(brand.background) }
+  if (brand.text && !brand.background) return { ink: brand.text, ground: plainer(brand.text) }
+  return { ...(brand.background && { ground: brand.background }), ...(brand.text && { ink: brand.text }) }
+}
 
 const identity = (path: string) => path
 const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`
@@ -106,10 +121,11 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
   )
   // The brand's colours and font replace the report's neutral ones, in the dark scheme too, since the author chose them.
   // The report's other greys follow from the ink and the ground so that they stay readable on either.
-  const own = brand.background || brand.text
+  const { ground, ink } = readable(brand)
+  const own = ground || ink
   const style = Object.fromEntries([
-    ['--uit-accent', brand.accent], ['--uit-ground', brand.background], ['--uit-ink', brand.text], ['--uit-font', brand.font?.family],
-    ...(own ? [['--uit-dim', 'color-mix(in srgb, var(--uit-ink) 72%, var(--uit-ground))'], ['--uit-line', 'color-mix(in srgb, var(--uit-ink) 20%, var(--uit-ground))'], ['--uit-card', 'color-mix(in srgb, var(--uit-ink) 5%, var(--uit-ground))']] : []),
+    ['--uit-accent', brand.accent], ['--uit-ground', ground], ['--uit-ink', ink], ['--uit-font', brand.font?.family],
+    ...(own ? [['--uit-link', 'var(--uit-ink)'], ['--uit-dim', 'color-mix(in srgb, var(--uit-ink) 72%, var(--uit-ground))'], ['--uit-line', 'color-mix(in srgb, var(--uit-ink) 20%, var(--uit-ground))'], ['--uit-card', 'color-mix(in srgb, var(--uit-ink) 5%, var(--uit-ground))']] : []),
   ].filter(([, value]) => value)) as CSSProperties
 
   if (attemptIndex !== undefined) {

@@ -1,9 +1,11 @@
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { beforeEach, describe, expect, it } from 'vitest'
+import { parseHTML } from 'linkedom'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { exampleFile } from '../../../apps/web/lib/example.ts'
 import * as api from '../src/index.ts'
 import { compileStudy } from '../src/compile.ts'
+import { mountBar } from '../src/browser/mount.tsx'
 import { FirstClickBar, Taskbar } from '../src/browser/taskbar.tsx'
 import { brandedHost, chromeTheme, chromeVars, readHost } from '../src/browser/theme.ts'
 import type { Screen } from '../src/player/flow.ts'
@@ -76,8 +78,9 @@ describe('the brand', () => {
     const record = await buildRecord(store, run.run)
     const report = reportDocument({ record, link: (path) => path, replayScript: '/ui-tests/assets/replay-abc.js' })!
     for (const page of [...pages, bar, first, shell, report]) {
-      // Addresses inside attributes are not read by the person; the text and the title are.
-      const read = text(page.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<title>([\s\S]*?)<\/title>/, ' $1 ')).toLowerCase()
+      // What a person or their screen reader meets: the text, the title, and the words in aria-label, title and alt. Addresses are not read.
+      const words = [...page.matchAll(/\s(?:aria-label|title|alt)="([^"]*)"/g)].map((m) => m[1]).join(' ')
+      const read = `${text(page.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<title>([\s\S]*?)<\/title>/, ' $1 '))} ${words}`.toLowerCase()
       expect(read).not.toContain('ui-tests')
       expect(read).not.toContain('powered by')
     }
@@ -94,6 +97,54 @@ describe('the brand', () => {
     expect(chromeVars(chromeTheme(brandedHost(host, {})))).toEqual(chromeVars(chromeTheme(host)))
     expect(chromeVars(chromeTheme(brandedHost(host, { font: { family: 'Inter' } })))['--uit-font']).toBe('Inter')
     expect(chromeVars(chromeTheme(brandedHost(host, { accent: '#0a7d4f' })))['--uit-accent']).toBeDefined()
+  })
+
+  it('accepts a font name the player page keeps, and refuses one it would drop', () => {
+    expect(compile({ brand: { font: { family: 'Inter (x)' } } }).brand.font?.family).toBe('Inter (x)')
+    expect(playerShell({ runId: 'r', brand: { name: 'A', font: { family: 'Inter (x)' } }, script: '/s.js' })).toContain('--pl-font:Inter (x)')
+    expect(() => compile({ brand: { font: { family: "'Open Sans'" } } })).toThrow(/brand\.font\.family/)
+  })
+
+  it('pins the report to a readable pair when the brand sets one colour', async () => {
+    const store = new SqliteStore(':memory:')
+    const page = async (colours: UiTestsConfig['brand']) => {
+      const { run } = await store.createRun(newRun(`k${Math.random()}`, { compiled: compile({ brand: colours }) }))
+      return reportDocument({ record: await buildRecord(store, run.run), link: (path) => path, replayScript: '/r.js' })!
+    }
+    const dark = await page({ background: '#101020' })
+    expect(dark).toContain('--uit-ground:#101020')
+    expect(dark).toContain('--uit-ink:#ffffff')
+    const light = await page({ text: '#202020' })
+    expect(light).toContain('--uit-ink:#202020')
+    expect(light).toContain('--uit-ground:#ffffff')
+    expect(await page({ background: '#fafafa' })).toContain('--uit-ink:#000000')
+    expect(await page({ accent: '#0a7d4f' })).toContain('<main class="uit-report" style="--uit-accent:#0a7d4f">')
+  })
+
+  it('links the brand font in the page head once while the bar is mounted, and only over https', async () => {
+    const dom = parseHTML('<!doctype html><html><head></head><body><main>App</main></body></html>')
+    vi.stubGlobal('window', dom.window)
+    vi.stubGlobal('document', dom.document)
+    const doc = dom.document as unknown as Document
+    const send = (url: string) => async () => ({ ...barView(...(await started())), brand: { name: 'Acme', font: { family: 'Inter', url } } })
+    const store = new SqliteStore(':memory:')
+    const started = async () => {
+      const { run } = await store.createRun(newRun(`f${Math.random()}`, { compiled: compile(config) }))
+      const { attempt } = await store.createAttempt({ runId: run.run, participant: 'p', goalIndex: 0, rehearsal: false })
+      return [run, attempt] as const
+    }
+    const client = (url: string) => ({ view: send(url), post: async () => new Response(), back() {} })
+    const unmount = mountBar(client('https://fonts.test/inter.css'), doc)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(doc.querySelectorAll('link[data-ui-tests-font]')).toHaveLength(1)
+    expect(doc.querySelector('link[data-ui-tests-font]')?.getAttribute('href')).toBe('https://fonts.test/inter.css')
+    unmount()
+    expect(doc.querySelectorAll('link[data-ui-tests-font]')).toHaveLength(0)
+    const plain = mountBar(client('http://fonts.test/inter.css'), doc)
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(doc.querySelectorAll('link[data-ui-tests-font]')).toHaveLength(0)
+    plain()
+    await new Promise((resolve) => setTimeout(resolve, 20))
   })
 
   it('carries the brand on the player page', () => {

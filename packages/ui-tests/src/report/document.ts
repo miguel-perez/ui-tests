@@ -1,3 +1,4 @@
+import { stylesheet } from '../derive/brand.ts'
 import { createElement, type ReactNode } from 'react'
 import { renderToString } from 'react-dom/server'
 import type { RunRecord } from '../record/schema.ts'
@@ -30,7 +31,7 @@ export type ReportDocumentInput = {
  */
 export function reportDocument(input: ReportDocumentInput): string | undefined {
   const { record, person, at, base, link } = input
-  const fontUrl = record.compiled.brand.font?.url
+  const fontUrl = stylesheet(record.compiled.brand.font?.url)
   const page = (body: ReactNode, script: boolean) => `<!doctype html>${renderToString(
     createElement('html', { lang: 'en' },
       createElement('head', null,

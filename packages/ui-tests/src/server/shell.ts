@@ -1,13 +1,9 @@
+import { cssValue, stylesheet } from '../derive/brand.ts'
 import type { CompiledBrand } from '../schema/compiled.ts'
 
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
 /** Text and attribute values, escaped for HTML. */
 export const escapeHtml = (value: string) => value.replace(/[&<>"']/g, (c) => ENTITIES[c]!)
-
-/** A CSS value only when it cannot leave its declaration: a colour or a font name; anything else is dropped. The player reads these variables. */
-const cssValue = (value: string | undefined) => (value && /^[\w\s#.,%()-]{1,200}$/.test(value) ? value : undefined)
-/** Only an https stylesheet is linked. */
-const stylesheet = (url: string | undefined) => { try { return url && new URL(url).protocol === 'https:' ? new URL(url).href : undefined } catch { return undefined } }
 
 /**
  * The player's page: a root naming the run and the module that renders into it, in the study's colours and font. It names no product
