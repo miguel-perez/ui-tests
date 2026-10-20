@@ -14,11 +14,11 @@ export function inviteLink(target: string, run: string, token: string, bypass?: 
  * Makes `count` invite slots for a run: each runs the study's `setup` once, so its values are its own, and gets its own participant
  * token. Returns the links in slot order. `setup` requests carry the bypass header when a secret is given.
  */
-export async function createInvites(input: { store: RunStore; run: RunRow; study: AuthoredStudy; count: number; target: string; bypass?: string }): Promise<string[]> {
-  const { store, run, study, count, target, bypass } = input
+export async function createInvites(input: { store: RunStore; run: RunRow; study: AuthoredStudy; count: number; target: string; bypass?: string; firstSlot?: number }): Promise<string[]> {
+  const { store, run, study, count, target, bypass, firstSlot = 1 } = input
   const goalIndex = Math.max(0, run.compiled.goals.findIndex(g => g.primary))
   const links: string[] = []
-  for (let slot = 1; slot <= count; slot++) {
+  for (let slot = firstSlot; slot < firstSlot + count; slot++) {
     const setupValues = await runSetup(study, target, bypass ? { [BYPASS_HEADER]: bypass } : {})
     const { token } = await store.createAttempt({ runId: run.run, participant: `invite-${slot}`, goalIndex, rehearsal: false, setupValues })
     links.push(inviteLink(target, run.run, token, bypass))

@@ -3,7 +3,8 @@ import { createServer, type IncomingHttpHeaders, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
+import { SqliteStore } from '../src/store/sqlite.ts'
 import { main, type CliDeps, type Io } from '../src/cli/main.ts'
 import { idempotencyKey } from '../src/runner/key.ts'
 import { refreshRun } from '../src/runner/progress.ts'
@@ -16,11 +17,17 @@ let targetUrl: string
 let work: string
 let data: string
 let seen: IncomingHttpHeaders[] = []
+/** When set, the target answers `boom` after this many more requests, which the flaky fixture's setup turns into a throw. */
+let boomAfter: number | undefined
 const cleanup: (() => Promise<unknown> | unknown)[] = []
 const hour = 3_600_000
 
 beforeAll(async () => {
-  target = createServer((req, res) => { seen.push(req.headers); res.end('ok') })
+  target = createServer((req, res) => {
+    seen.push(req.headers)
+    const boom = boomAfter !== undefined && boomAfter-- <= 0
+    res.end(boom ? 'boom' : 'ok')
+  })
   await new Promise<void>(resolve => target.listen(0, '127.0.0.1', resolve))
   targetUrl = `http://127.0.0.1:${(target.address() as AddressInfo).port}`
   work = await mkdtemp(join(fixtures, '.tmp-recruit-'))
@@ -276,12 +283,18 @@ describe('recruit --wait and status', () => {
     expect(polls).toBeGreaterThanOrEqual(3)
   })
 
-  it('exits 2 when the store throws', async () => {
+  it('exits 2 when the store throws while polling', async () => {
     const first = await recruit(['--json', '--key', 'wait-throws'])
     const run = first.json().run as string
     const s = await store()
     await finish(s, (await s.getRun(run))!, 'correct')
-    const result = await recruit(['--json', '--wait', '--key', 'wait-throws'], {}, { now: () => { throw new Error('store is down') } })
+    let calls = 0
+    const spy = vi.spyOn(SqliteStore.prototype, 'listAttempts').mockImplementation(async function (this: SqliteStore, ...args) {
+      if (++calls > 1) throw new Error('store is down')
+      return Object.getPrototypeOf(SqliteStore.prototype).listAttempts?.call(this, ...args) ?? []
+    })
+    cleanup.push(() => spy.mockRestore())
+    const result = await recruit(['--json', '--wait', '--key', 'wait-throws'])
     expect(result.code).toBe(2)
     expect(result.err).toContain('store is down')
   })
@@ -298,5 +311,95 @@ describe('recruit --wait and status', () => {
     expect(JSON.parse(asJson.out())).toMatchObject({ run, key: 'status-late', result: 'inconclusive' })
     expect(JSON.parse(asJson.out()).hooksBundle).toBeUndefined()
     expect((await runNamed('status-late')).result).toBe('inconclusive')
+  })
+})
+
+describe('recruit plan, repair and state', () => {
+  it('prints the plan and the unpaid line before the links, and keeps stdout JSON-only with --json', async () => {
+    const text = await recruit(['--key', 'plan-text'])
+    expect(text.out).toContain('Study: dev fixture')
+    expect(text.out).toContain('You can stop at any time. This is unpaid.')
+    expect(text.out.indexOf('Study:')).toBeLessThan(text.out.indexOf('Invite links:'))
+    const json = await recruit(['--json', '--key', 'plan-json'])
+    expect(json.err).toContain('Study: dev fixture')
+    expect(json.err).toContain('This is unpaid.')
+    expect(() => json.json()).not.toThrow()
+  })
+
+  it('prints the paid line when participants.link.amount is set', async () => {
+    const dir = await mkdtemp(join(fixtures, '.tmp-recruit-paid-'))
+    cleanup.push(() => rm(dir, { recursive: true, force: true }))
+    await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, participants: { sources: ['link'], link: { amount: 750 } } }\n`)
+    const s = session({}, {}, dir)
+    expect(await main(['recruit', '--key', 'paid-key'], s.io)).toBe(0)
+    expect(s.out()).toContain('You can stop at any time and still be paid $7.50.')
+  })
+
+  it('tops up missing invite slots when the same key is run again after setup failed part-way', async () => {
+    const dir = await mkdtemp(join(fixtures, '.tmp-recruit-flaky-'))
+    cleanup.push(() => rm(dir, { recursive: true, force: true }))
+    await writeFile(join(dir, 'flaky.ui.test.ts'), `import { outcome, setup, study, task } from 'ui-tests'
+study('flaky', { users: 'People who read docs', purpose: 'find the docs' }, () => {
+  setup(async ({ request }) => {
+    if ((await (await request.get('/')).text()) === 'boom') throw new Error('setup broke')
+    return { start: '/' }
+  })
+  task('Go', { path: ['/'] }, () => { outcome(async () => {}) })
+})
+`)
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' } }\n`)
+    const first = session({}, {}, dir)
+    boomAfter = 3
+    const code = await main(['recruit', '--json', '--key', 'flaky-key'], first.io)
+    expect(first.err()).toContain('setup broke')
+    expect(code).toBe(2)
+    boomAfter = undefined
+    const s = await store()
+    const run = await runNamed('flaky-key')
+    expect((await s.listAttempts(run.run)).length).toBe(2)
+    const again = session({}, {}, dir)
+    expect(await main(['recruit', '--json', '--key', 'flaky-key'], again.io)).toBe(0)
+    expect(JSON.parse(again.out()).invites).toHaveLength(3)
+    expect(await s.listAttempts(run.run)).toHaveLength(5)
+    const third = session({}, {}, dir)
+    expect(await main(['recruit', '--json', '--key', 'flaky-key'], third.io)).toBe(0)
+    expect(JSON.parse(third.out()).invites).toBeUndefined()
+    expect(await s.listAttempts(run.run)).toHaveLength(5)
+  })
+
+  it('status right after recruit still says waiting; the deadline stops recruitment', async () => {
+    const first = await recruit(['--json', '--key', 'state-waiting'])
+    const run = first.json().run as string
+    const now = session()
+    expect(await main(['status', run, '--json'], now.io)).toBe(0)
+    expect(JSON.parse(now.out()).states).toMatchObject({ collection: 'waiting', recruitment: 'open' })
+    const late = session({}, { now: () => new Date(Date.parse(first.json().deadline) + hour) })
+    await main(['status', run, '--json'], late.io)
+    expect(JSON.parse(late.out()).states).toMatchObject({ recruitment: 'stopped' })
+  })
+
+  it('exits 2 and lists the studies when several admit the actor and none is named', async () => {
+    const dir = await mkdtemp(join(fixtures, '.tmp-recruit-many-'))
+    cleanup.push(() => rm(dir, { recursive: true, force: true }))
+    await writeFile(join(dir, 'two.ui.test.ts'), `import { outcome, study, task } from 'ui-tests'
+study('one', { users: 'People who read docs' }, () => { task('Go', () => { outcome(async () => {}) }) })
+study('two', { users: 'People who write docs' }, () => { task('Go', () => { outcome(async () => {}) }) })
+`)
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' } }\n`)
+    const s = session({}, {}, dir)
+    expect(await main(['recruit'], s.io)).toBe(2)
+    expect(s.err()).toMatch(/--study[\s\S]*one[\s\S]*two/)
+    const named = session({}, {}, dir)
+    const code = await main(['recruit', '--study', 'two', '--key', 'many-key'], named.io)
+    expect(named.err()).toBe('')
+    expect(code).toBe(0)
+  })
+
+  it('reads back an existing run without checking the target', async () => {
+    const first = await recruit(['--json', '--key', 'existing-key'])
+    const second = await recruit(['--json', '--key', 'existing-key'], {}, { fetch: (async () => { throw new Error('down') }) as typeof fetch })
+    expect(second.code).toBe(0)
+    expect(second.json().run).toBe(first.json().run)
   })
 })
