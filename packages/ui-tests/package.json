@@ -3,7 +3,7 @@
   "version": "0.0.0",
   "license": "MIT",
   "engines": {
-    "node": ">=26"
+    "node": ">=24"
   },
   "type": "module",
   "description": "Usability tests as code: studies authored next to your tests, run with real people.",
