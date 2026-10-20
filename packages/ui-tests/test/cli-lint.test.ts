@@ -104,6 +104,21 @@ describe('the real binary', () => {
     expect(out).toContain('Study: invite flow')
     expect(code).toBe(0)
   })
+  it('keeps stderr free of the SQLite ExperimentalWarning while the store loads', async () => {
+    const { err } = await exec(join(fixtures, 'example'), 'lint')
+    expect(err).not.toContain('ExperimentalWarning')
+  })
+  it('filters only the SQLite ExperimentalWarning, as Node 22 emits it', async () => {
+    const { isSqliteWarning, quietSqliteWarning } = await import('../bin/quiet-sqlite.mjs')
+    const seen: unknown[] = []
+    const fake = { emitWarning: (w: unknown, _type?: unknown) => void seen.push(w) }
+    quietSqliteWarning(fake as never)
+    fake.emitWarning('SQLite is an experimental feature and might change at any time', 'ExperimentalWarning' as never)
+    fake.emitWarning('Other thing is experimental', 'ExperimentalWarning' as never)
+    fake.emitWarning('SQLite deprecated', 'DeprecationWarning' as never)
+    expect(seen).toEqual(['Other thing is experimental', 'SQLite deprecated'])
+    expect(isSqliteWarning('SQLite is an experimental feature', { type: 'ExperimentalWarning' })).toBe(true)
+  })
   it('exits 2 with file:line for a throwing study', async () => {
     const { code, err } = await exec(join(fixtures, 'throws'), 'lint')
     expect(code).toBe(2)
