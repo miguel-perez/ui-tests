@@ -28,6 +28,9 @@ The key is `${commit}:${contextId}:${fingerprint}:agent`; `--key` overrides. A r
 
 ## What the agent can do
 
+**The cli harness is not a security boundary.** It limits what the agent can start, not what the target CLI does once started. A target CLI can run code the agent writes or points it at: `ui-tests` itself does, since `lint`, `check`, `verify` and dev mode bundle and import study files by path, and any `target.cli` may do the same. Such code runs as the operator's user and can read or write any path that user can, and reach the network. The environment allowlist and the forced npm options only limit accidental reach (an inherited credential, the real home, a registry). Run agent trials in a disposable environment, such as a CI job's container or a VM, holding no secret beyond the model key.
+
+
 - **cli** (`target.cli`): each trial gets a fresh temporary directory holding a minimal npm project (its working directory), its own home and its own temp directory. One tool, `run`, runs exactly these, with no shell; the programs are found once, as absolute paths, when the harness is made:
   - the configured command with the arguments the agent adds (unless the configured command is itself `npm` or `npx`, as in `npx ui-tests`: then the npm forms below are all there is);
   - `npm install|i [-D|--save-dev] [ui-tests]` and `npm ci`, nothing else: no other subcommand (`exec`, `run`, `pkg`, `config`, `view`, `publish` …), no other package and no other option. The harness appends `--offline --ignore-scripts --no-audit --no-fund --no-update-notifier` and the trial's `--prefix`, `--userconfig`, `--cache` (and `--registry` the cache is keyed by) after the agent's words, and the agent cannot give any of them;
@@ -36,7 +39,7 @@ The key is `${commit}:${contextId}:${fingerprint}:agent`; `--key` overrides. A r
   - The environment is an allowlist: PATH (absolute entries only), `LANG`, `LC_*`, `TERM`, `CI`; `HOME`, `TMPDIR` and `XDG_CONFIG_HOME`/`XDG_CACHE_HOME`/`XDG_DATA_HOME` point into the trial; npm's cache and user config are inside the trial's home and `npm_config_offline=true`. Nothing else of the operator's environment passes.
   - The local `ui-tests` package is packed once per run (`npm pack` of this package with its dependencies bundled) and put in each trial's npm cache, so `npm i -D ui-tests` installs this code and `npx ui-tests` runs it, with no registry access. No lifecycle script of any package runs.
   - Each run stops after 120 s; stdout and stderr are capped at 64 KiB each.
-  - What is controlled: the working directory, home, environment, programs and their arguments, time and output. What is not: the file system outside the trial. A command can still read or write any absolute path the operator's user can; run agent trials on a machine or container you would let the CLI under test run on.
+  - What is controlled: the working directory, home, environment, programs and their arguments, time and output. What is not: the file system outside the trial, and whatever the target CLI itself does.
   - A relative path in the configured command (`node ./cli.mjs`) is a file of the project. `workspace.file(glob)` in a hook reads the trial's working directory (not `node_modules`): the first matching file's text, or `null` when none matches.
 - **http** (`target.http`, with `target.description` given to the agent as the API's description): one tool, `request({ method, path, body, headers })`, on that origin and under its base path only. Other origins and `..` out of the base path are refused, and redirects are not followed; 30 s per request, bodies read up to 64 KiB and the rest left unread. A 404 reads "called POST /invites, which does not exist".
 
