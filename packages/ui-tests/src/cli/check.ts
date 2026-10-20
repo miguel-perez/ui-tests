@@ -44,6 +44,7 @@ async function subjectOf(event: Event, io: Io, github: GitHubClient): Promise<{ 
 }
 
 async function checkPullRequest(args: Parameters<Command>[0], io: Io): Promise<number> {
+  if (args.flags.get('actor') === 'both') { io.stderr.write('--actor both is refused: a run has one actor. Check once for each.\n'); return 2 }
   const eventPath = io.env.GITHUB_EVENT_PATH
   if (!eventPath) { io.stderr.write('check: GITHUB_EVENT_PATH is not set; run it from GitHub Actions, or pass --reconcile\n'); return 2 }
   const github = githubFor(io)

@@ -1,3 +1,4 @@
+import { agentFingerprint } from './agents/config.ts'
 import { StudyLoadError } from './load.ts'
 import type { AuthoredStudy, AuthoredTask } from './authoring.ts'
 import { consentText } from './derive/consent.ts'
@@ -10,7 +11,7 @@ import { detectionChance, sampleSentence, sampleSize } from './derive/sample.ts'
 import { goalTimeout } from './derive/timeout.ts'
 import { contextId, validateUsers } from './derive/users.ts'
 import { compiledSchemaUrl, type CompiledGoal, type CompiledQuestion, type CompiledStudy } from './schema/compiled.ts'
-import type { UiTestsConfig, Users } from './types.ts'
+import type { Target, UiTestsConfig, Users } from './types.ts'
 
 export { compiledStudySchema, compiledSchemaUrl } from './schema/compiled.ts'
 export type { CompiledConsent, CompiledGoal, CompiledImpression, CompiledQuestion, CompiledScreenerQuestion, CompiledStudy } from './schema/compiled.ts'
@@ -37,6 +38,15 @@ function normalizeUsers(users: Users): CompiledStudy['users'] {
   const fields = typeof users === 'string' ? { are: users } : users
   const { where, uses, not, ...rest } = fields
   return { ...rest, ...(where !== undefined && { where }), ...(uses && { uses }), ...(not && { not }) } as CompiledStudy['users']
+}
+const DEFAULT_TRIALS = 5
+const targetKinds = [['cli', 'cli'], ['mcp', 'mcp'], ['http', 'http'], ['url', 'web']] as const
+/** The first target a task, then its study, then the config names; a task's target replaces the study's whole. */
+function agentTarget(...levels: (Target | undefined)[]): { kind: 'web' | 'cli' | 'mcp' | 'http'; value: string } {
+  for (const level of levels) {
+    for (const [key, kind] of targetKinds) { const value = level?.[key]; if (value) return { kind, value } }
+  }
+  return { kind: 'web', value: 'http://localhost:3000' }
 }
 function hostname(url: string) { try { return new URL(url).hostname } catch { return url } }
 
@@ -83,6 +93,10 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
   derive('record', study.options.record ? 'as authored' : 'events unless record is video', 'record')
   const actors = (study.options.actors ?? ['human']) as CompiledStudy['actors']
   derive('actors', study.options.actors ? 'as authored' : 'human unless actors says otherwise', 'actors')
+  if (actors.includes('agent')) {
+    derive('goals[].agent', 'the task target, else the study target, else the config target; 5 trials and reliability all unless the task says otherwise', 'task.target, task.trials, task.reliability, study.target, config.target')
+    derive('agents', 'config agents, pinned with a fingerprint so any change is a different run', 'config.agents')
+  }
   const product = config.product ?? hostname(config.target?.url ?? 'http://localhost:3000')
   derive('product', config.product ? 'config product' : 'hostname of the target url', 'config.product, config.target.url')
   derive('environment', study.options.environment ? 'as authored' : 'the target url', 'environment, config.target.url')
@@ -121,6 +135,11 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
       ...(minutes !== undefined && { minutes }),
       primary: task === primary,
       questions: goalQuestions(index, task),
+      ...(actors.includes('agent') && { agent: {
+        target: agentTarget(task.options.target, study.options.target, config.target),
+        trials: task.options.trials ?? DEFAULT_TRIALS,
+        reliability: task.options.reliability ?? 'all',
+      } }),
     }
   })
 
@@ -153,6 +172,8 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
     author: config.author ?? '',
     record,
     actors,
+    ...(study.options.independent !== undefined && { independent: study.options.independent }),
+    ...(actors.includes('agent') && config.agents && { agents: { config: config.agents, fingerprint: agentFingerprint(config.agents) } }),
     sample: { affecting: sampleOptions.affecting, confidence: sampleOptions.confidence, n, sentence: sampleSentence(n, sampleOptions.affecting) },
     impression,
     screener,

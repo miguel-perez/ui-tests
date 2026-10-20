@@ -51,6 +51,7 @@ export const dev: Command = async (args, io: Io) => {
   const deps = io.deps ?? {}
   const signal = deps.signal ?? interrupt()
   const actorFlag = args.flags.get('actor')
+  if (actorFlag === 'both') { io.stderr.write('--actor both is refused: a run has one actor.\n'); return 2 }
   if (actorFlag !== undefined && actorFlag !== 'human' && actorFlag !== 'agent') { io.stderr.write('--actor must be human or agent\n'); return 2 }
   const actor = actorFlag ?? 'human'
 

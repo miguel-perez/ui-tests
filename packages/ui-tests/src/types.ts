@@ -41,8 +41,8 @@ export type TaskOptions = {
   target?: Target
   [legacy: string]: unknown
 }
-/** Filled in when the agent runner ships. */
-export type AgentConfig = unknown
+export type { AgentConfig } from './agents/config.ts'
+import type { AgentConfig } from './agents/config.ts'
 /** The shape of `ui-tests.config.ts`; every key is optional. */
 export type UiTestsConfig = {
   target?: Target

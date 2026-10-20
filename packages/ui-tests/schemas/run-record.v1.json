@@ -348,6 +348,93 @@
             ]
           }
         },
+        "independent": {
+          "type": "boolean"
+        },
+        "agents": {
+          "type": "object",
+          "properties": {
+            "config": {
+              "type": "object",
+              "properties": {
+                "model": {
+                  "type": "object",
+                  "properties": {
+                    "provider": {
+                      "type": "string",
+                      "enum": [
+                        "anthropic",
+                        "scripted"
+                      ]
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "version": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "provider",
+                    "name"
+                  ],
+                  "additionalProperties": false
+                },
+                "system": {
+                  "type": "string"
+                },
+                "tools": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "permissions": {
+                  "type": "object",
+                  "properties": {
+                    "network": {
+                      "type": "boolean"
+                    },
+                    "write": {
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "budgets": {
+                  "type": "object",
+                  "properties": {
+                    "tokens": {
+                      "type": "number"
+                    },
+                    "calls": {
+                      "type": "number"
+                    },
+                    "seconds": {
+                      "type": "number"
+                    },
+                    "dollars": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              },
+              "required": [
+                "model"
+              ],
+              "additionalProperties": false
+            },
+            "fingerprint": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "config",
+            "fingerprint"
+          ],
+          "additionalProperties": false
+        },
         "sample": {
           "type": "object",
           "properties": {
@@ -656,6 +743,49 @@
                   ],
                   "additionalProperties": false
                 }
+              },
+              "agent": {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "type": "object",
+                    "properties": {
+                      "kind": {
+                        "type": "string",
+                        "enum": [
+                          "web",
+                          "cli",
+                          "mcp",
+                          "http"
+                        ]
+                      },
+                      "value": {
+                        "type": "string"
+                      }
+                    },
+                    "required": [
+                      "kind",
+                      "value"
+                    ],
+                    "additionalProperties": false
+                  },
+                  "trials": {
+                    "type": "number"
+                  },
+                  "reliability": {
+                    "type": "string",
+                    "enum": [
+                      "all",
+                      "any"
+                    ]
+                  }
+                },
+                "required": [
+                  "target",
+                  "trials",
+                  "reliability"
+                ],
+                "additionalProperties": false
               }
             },
             "required": [

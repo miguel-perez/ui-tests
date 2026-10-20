@@ -71,6 +71,21 @@ export const compiledConsentSchema = z.object({
 })
 export type CompiledConsent = z.infer<typeof compiledConsentSchema>
 
+export const agentConfigSchema = z.object({
+  model: z.object({ provider: z.enum(['anthropic', 'scripted']), name: z.string(), version: z.string().optional() }),
+  system: z.string().optional(),
+  tools: z.array(z.string()).optional(),
+  permissions: z.object({ network: z.boolean().optional(), write: z.boolean().optional() }).optional(),
+  budgets: z.object({ tokens: z.number().optional(), calls: z.number().optional(), seconds: z.number().optional(), dollars: z.number().optional() }).optional(),
+})
+
+/** What an agent trial of a task runs against and how its trials are read. */
+export const compiledAgentSchema = z.object({
+  target: z.object({ kind: z.enum(['web', 'cli', 'mcp', 'http']), value: z.string() }),
+  trials: z.number(),
+  reliability: z.enum(['all', 'any']),
+})
+
 export const compiledGoalSchema = z.object({
   index: z.number(),
   name: z.string(),
@@ -86,6 +101,8 @@ export const compiledGoalSchema = z.object({
   minutes: z.number().optional(),
   primary: z.boolean(),
   questions: z.array(compiledQuestionSchema),
+  /** Present when the study admits the agent actor. */
+  agent: compiledAgentSchema.optional(),
 })
 export type CompiledGoal = z.infer<typeof compiledGoalSchema>
 
@@ -114,6 +131,9 @@ export const compiledStudySchema = z.object({
   author: z.string(),
   record: z.enum(['events', 'video']),
   actors: z.array(z.enum(['human', 'agent'])),
+  independent: z.boolean().optional(),
+  /** The agent configuration pinned into the run, with its fingerprint; present when the study admits the agent actor. */
+  agents: z.object({ config: agentConfigSchema, fingerprint: z.string() }).optional(),
   sample: z.object({ affecting: z.number(), confidence: z.number(), n: z.number(), sentence: z.string() }),
   impression: compiledImpressionSchema,
   screener: z.array(screenerQuestionSchema),

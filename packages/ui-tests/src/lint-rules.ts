@@ -218,5 +218,17 @@ export const rules: Rule[] = [
       }
     },
   },
-  { id: 'actor-admitted', severity: 'error', source: 'this contract', reason: 'Filled in with the agent runner (Task 28).', run() {} },
+  {
+    id: 'actor-admitted', severity: 'error', source: 'this contract',
+    reason: 'A run has one actor, and only the actors a study lists may take it; a terminal, an MCP server or an HTTP API is not something a human harness drives yet.',
+    run({ study, compiled, actor }, emit) {
+      if (actor === 'agent' && !compiled.actors.includes('agent')) emit({ message: `study "${study.name}" does not admit the agent actor (actors: ${compiled.actors.join(', ') || 'none'})`, fix: "add 'agent' to actors", line: study.line })
+      if (!compiled.actors.includes('human')) return
+      const kinds = new Set<string>()
+      const studyTarget = study.options.target
+      for (const kind of ['cli', 'mcp', 'http'] as const) if (studyTarget?.[kind]) kinds.add(kind)
+      for (const task of study.tasks) for (const kind of ['cli', 'mcp', 'http'] as const) if (task.options.target?.[kind]) kinds.add(kind)
+      if (kinds.size) emit({ message: `study "${study.name}" lists human and targets ${[...kinds].join(', ')}: a human terminal harness is a planned omission`, fix: "set actors: ['agent'], or point target at a url", line: study.line })
+    },
+  },
 ]
