@@ -58,7 +58,7 @@ Commands:
   verify <run>      run the hooks against the stored snapshots
   recruit           make a run and print the invite links (--wait for the result, --tunnel to serve a local build)
   status <run>      show the four states of a run
-  report <run>      write the run record (--json) or the sentence
+  report <run>      the report in words, the run record (--json), or a signed link to share (--share)
   trace <run>       serve the trace of a run on this machine
   init              write ui-tests.config.ts, an example study and the Vitest exclude
   lint [files...]   check studies against the rules and show what a run would do

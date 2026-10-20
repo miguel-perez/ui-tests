@@ -1,12 +1,12 @@
-import { openStore } from '../store/open.ts'
-import type { RunStore } from '../store/types.ts'
 import { nullTranscriber, type Transcriber } from '../transcriber.ts'
 import { createCollector } from './collector.ts'
+import { getStore } from './store.ts'
 
 export { createCollector, type CollectorOptions } from './collector.ts'
 export { nullTranscriber, type Transcriber } from '../transcriber.ts'
 export { participantView, type ParticipantView } from './view.ts'
 export { PlayerPage } from './player-page.tsx'
+export { ReportPage, reportMetadata } from './report-page.tsx'
 
 /**
  * Spoken answers are kept as audio. To also get text, set `UI_TESTS_TRANSCRIBER` to a module (a package name or an absolute path)
@@ -22,12 +22,8 @@ const configured: Transcriber = {
   },
 }
 
-let store: Promise<RunStore> | undefined
 const handler = createCollector({
-  store: () => (store ??= openStore().catch((error) => {
-    store = undefined
-    throw error
-  })),
+  store: getStore,
   transcriber: configured,
   ...(process.env.UI_TESTS_CLI_SECRET && { cliSecret: process.env.UI_TESTS_CLI_SECRET }),
 })

@@ -21,6 +21,8 @@ export type ReplayProps = {
   moments: { start: number; end: number; label: string }[]
   /** rrweb-player's stylesheet, when the host page does not already carry it. */
   css?: string
+  /** Opens the recording at this moment (in the same clock as the events) instead of at the start. */
+  startAt?: number
 }
 
 const clock = (ms: number) => `${Math.floor(ms / 60_000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`
@@ -30,7 +32,7 @@ const stamp = (event: unknown) => (event as { timestamp: number }).timestamp
  * The recording, played by rrweb-player (fetched when this mounts, never with the page), with a button for each moment of the
  * highlight reel that seeks to it, and one that plays the reel moment after moment.
  */
-export function Replay({ events, moments, css }: ReplayProps) {
+export function Replay({ events, moments, css, startAt }: ReplayProps) {
   const target = useRef<HTMLDivElement>(null)
   const player = useRef<Player | undefined>(undefined)
   const reel = useRef<{ index: number } | undefined>(undefined)
@@ -50,6 +52,10 @@ export function Replay({ events, moments, css }: ReplayProps) {
       const width = Math.max(320, Math.min(host.clientWidth || 800, 1000))
       const made = new Constructor({ target: host, props: { events, width, height: Math.round(width * 0.6), autoPlay: false, showController: true, skipInactive: false } })
       player.current = made
+      if (startAt !== undefined) {
+        made.goto(offset(startAt), false)
+        setStatus(`Moment at ${clock(offset(startAt))}`)
+      }
       made.addEventListener('ui-update-current-time', ({ payload }) => {
         const ms = Number(payload)
         setNow(ms)
@@ -57,7 +63,7 @@ export function Replay({ events, moments, css }: ReplayProps) {
         const moment = playing && moments[playing.index]
         if (moment && ms >= offset(moment.end)) next(playing.index + 1)
       })
-      setStatus('Ready')
+      if (startAt === undefined) setStatus('Ready')
     }).catch(() => { if (alive) setStatus('The replay could not be loaded') })
     return () => { alive = false; player.current?.$destroy?.(); player.current = undefined; if (host) host.replaceChildren() }
     // eslint-disable-next-line react-hooks/exhaustive-deps

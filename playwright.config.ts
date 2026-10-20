@@ -21,7 +21,8 @@ export default defineConfig({
       url: 'http://127.0.0.1:3100',
       reuseExistingServer: false,
       timeout: 300_000,
-      env: { UI_TESTS_DATA_DIR: process.env.UI_TESTS_DATA_DIR },
+      // The secret share links are signed and checked with: tests/product/report.spec.ts signs with the same one.
+      env: { UI_TESTS_DATA_DIR: process.env.UI_TESTS_DATA_DIR, UI_TESTS_SHARE_SECRET: 'test' },
     },
   ],
 })

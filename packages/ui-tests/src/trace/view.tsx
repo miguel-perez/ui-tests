@@ -109,6 +109,7 @@ export function TraceView({ trace }: { trace: Trace }) {
       <p><strong>{actorLabel(run)}</strong> · run <code>{run.run}</code> · {run.result}</p>
       <p>{trace.sentence}</p>
       <p>{trace.sampleSentence}</p>
+      <p><a href={`/runs/${encodeURIComponent(run.run)}/report/`}>The report as it is shared</a></p>
 
       {Array.isArray(run.tunnels) && run.tunnels.length > 0 && (
         <>
