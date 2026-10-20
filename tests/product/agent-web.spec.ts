@@ -6,7 +6,7 @@ import type { AgentModel, AgentStep, ToolCall } from '../../packages/ui-tests/sr
 import { compileStudy } from '../../packages/ui-tests/src/compile.ts'
 import { bundleStudyFile, loadBundle } from '../../packages/ui-tests/src/load.ts'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
-import { PRODUCT_URL } from './helpers'
+import { PRODUCT_URL, SERVER_URL } from './helpers'
 
 /**
  * The web harness (Task 30): an agent uses the landing through the same player and collector a person uses, in a run of its own
@@ -45,7 +45,7 @@ async function setUp() {
     build: { url: PRODUCT_URL, commit: 'e2e' }, actor, compiled, hooksBundle: code, rehearsal: false, target: PRODUCT_URL,
   }).then(made => made.run)
   const [human, agent] = [await make('human'), await make('agent')]
-  const trials = (model: AgentModel) => runTrials({ store, run: agent, study: authored!, goal: compiled.goals[0]!, model, harness: webHarness({ target: PRODUCT_URL, playerUrl: `${PRODUCT_URL}/ui-tests/${agent.run}/` }) })
+  const trials = (model: AgentModel) => runTrials({ store, run: agent, study: authored!, goal: compiled.goals[0]!, model, harness: webHarness({ target: PRODUCT_URL, playerUrl: `${SERVER_URL}/ui-tests/${agent.run}/` }) })
   return { store, human, agent, compiled, trials }
 }
 
@@ -99,7 +99,7 @@ test('a trial the agent leaves without ending is read from the page it stopped o
 
 test('the agent opens only paths on the product', async () => {
   const { store, agent } = await setUp()
-  const harness = webHarness({ target: PRODUCT_URL, playerUrl: `${PRODUCT_URL}/ui-tests/${agent.run}/` }, { actionTimeoutMs: 2000 })
+  const harness = webHarness({ target: PRODUCT_URL, playerUrl: `${SERVER_URL}/ui-tests/${agent.run}/` }, { actionTimeoutMs: 2000 })
   try {
     const { attempt, token } = await store.createAttempt({ runId: agent.run, participant: 'agent:0:9', goalIndex: 0, rehearsal: false })
     await store.updateAttempt(attempt.id, { status: 'consented' }, 'created')

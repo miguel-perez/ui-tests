@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
-import { PRODUCT_URL, createRehearsalRun } from './helpers'
+import { PRODUCT_URL, SERVER_URL, createRehearsalRun, isBarCall } from './helpers'
 
 const fixture = join(import.meta.dirname, 'fixtures', 'mount.ui.test.ts')
 const COLLECTOR = `${PRODUCT_URL}/api/ui-tests/`
@@ -37,7 +37,7 @@ test('a rehearsal link opens the consent', async ({ page }) => {
   await expect(page.getByRole('button', { name: 'I agree and continue' })).toBeEnabled()
 })
 
-test('after consent the bar shows on the target, and Done returns to the questions with the cookie alone', async ({ page, context }) => {
+test('after consent the bar shows on the target, and Done returns to the questions with the attempt key alone', async ({ page, context }) => {
   const { runId, playerUrl } = await createRehearsalRun(fixture)
   await page.goto(playerUrl)
   await page.getByRole('button', { name: 'I agree and continue' }).click()
@@ -54,15 +54,18 @@ test('after consent the bar shows on the target, and Done returns to the questio
   await expect(bar).toBeVisible()
   await expect(bar.getByRole('button', { name: "I couldn't do this" })).toBeVisible()
 
-  const ended = page.waitForResponse((r) => r.url() === COLLECTOR && r.request().method() === 'POST' && r.request().postDataJSON()?.action === 'end')
+  const ended = page.waitForResponse((r) => isBarCall(r, 'end'))
   await bar.getByRole('button', { name: 'Done' }).click()
   await expect(bar.getByText('Finished this task?')).toBeVisible()
   await bar.getByRole('button', { name: 'Yes' }).click()
   const end = await ended
-  // Cookie-authenticated and same-origin: no Authorization header, an Origin the collector accepts.
-  expect(end.request().headers().authorization).toBeUndefined()
+  // The tag's bar, on this site too: the attempt key to the tag's server, and no cookie.
+  expect(new URL(end.url()).origin).toBe(SERVER_URL)
+  const headers = await end.request().allHeaders()
+  expect(headers.authorization).toMatch(/^Bearer [0-9a-f]{64}$/)
+  expect(headers.cookie).toBeUndefined()
   expect(end.status()).toBe(200)
-  await page.waitForURL(`${PRODUCT_URL}/ui-tests/${runId}/?after=1`)
+  await page.waitForURL(`${SERVER_URL}/ui-tests/${runId}/?after=1`)
   await expect(page.getByRole('heading', { name: 'Overall, how difficult or easy did you find this task?' })).toBeVisible()
 })
 
@@ -81,7 +84,7 @@ test('more time answers with the view the bar reads, and the limit grows once', 
   await page.clock.fastForward(Math.ceil(before.goal.timeoutSeconds * 0.85) * 1000)
   const offer = bar.getByRole('button', { name: 'More time' })
   await expect(offer).toBeVisible()
-  const replied = page.waitForResponse((r) => r.url() === COLLECTOR && r.request().postDataJSON()?.action === 'more-time')
+  const replied = page.waitForResponse((r) => isBarCall(r, 'more-time'))
   await offer.click()
   const reply = await replied
   expect(reply.status()).toBe(200)

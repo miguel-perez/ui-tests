@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { buildTrace } from '../../packages/ui-tests/src/trace/build.ts'
 import { serveTrace } from '../../packages/ui-tests/src/trace/serve.ts'
-import { PRODUCT_URL, createRehearsalRun } from './helpers'
+import { PRODUCT_URL, SERVER_URL, createRehearsalRun, isBarCall } from './helpers'
 
 /**
  * Event replay (Task 23): rrweb is fetched only once an attempt has begun, every typed value is masked and private fields are
@@ -70,11 +70,11 @@ test('during an attempt rrweb loads, typed values never reach the store, and the
   await page.locator('#inert').click()
   await page.waitForTimeout(800)
 
-  const ended = page.waitForResponse((r) => r.url() === `${PRODUCT_URL}/api/ui-tests/` && r.request().postDataJSON()?.action === 'end')
+  const ended = page.waitForResponse((r) => isBarCall(r, 'end'))
   await bar.getByRole('button', { name: 'Done' }).click()
   await bar.getByRole('button', { name: 'Yes' }).click()
   expect((await ended).status()).toBe(200)
-  await page.waitForURL(`${PRODUCT_URL}/ui-tests/${runId}/?after=1`)
+  await page.waitForURL(`${SERVER_URL}/ui-tests/${runId}/?after=1`)
 
   const store = await openStore()
   const trace = serveTrace({ store, port: 0 })

@@ -6,10 +6,12 @@ import { main, type Io } from '../../packages/ui-tests/src/cli/main.ts'
 import { lanAddress } from '../../packages/ui-tests/src/runner/hosts.ts'
 import { stubScreenshotter } from '../../packages/ui-tests/src/runner/screenshot.ts'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
+import { SERVER_URL, isBarCall } from './helpers'
 
 /**
  * Inside the perimeter (Task 34): the product server binds 0.0.0.0, and a participant opens an invite link on this machine's own
- * LAN address. Nothing here reaches outside the machine; a route guard fails the test on any request to another host.
+ * LAN address. Nothing here reaches outside the machine; a route guard fails the test on any request to another host, but for the
+ * site's tag, which loads the bar from `ui-tests serve` on this machine's loopback address.
  */
 
 const lan = lanAddress()
@@ -50,11 +52,11 @@ test('recruit --host gives links on the LAN address, and a participant there com
   for (const link of handle.invites) expect(link.startsWith(`http://${lan}:${PORT}/ui-tests/${handle.run}/?t=`), link).toBe(true)
   expect(err).toContain('Inside the perimeter')
 
-  // Nothing leaves for any host other than the LAN address.
+  // Nothing leaves for any host other than the LAN address and, for the tag's bar, the server on this machine.
   const elsewhere: string[] = []
   await context.route('**', route => {
     const url = new URL(route.request().url())
-    if (url.hostname === lan || url.protocol === 'data:' || url.protocol === 'blob:') return route.continue()
+    if (url.hostname === lan || url.origin === SERVER_URL || url.protocol === 'data:' || url.protocol === 'blob:') return route.continue()
     elsewhere.push(route.request().url())
     return route.abort()
   })
@@ -84,11 +86,14 @@ test('recruit --host gives links on the LAN address, and a participant there com
   await page.waitForURL(`${base}/`)
   const bar = page.getByRole('region', { name: 'Read the landing page' })
   await expect(bar).toBeVisible()
-  const ended = page.waitForResponse(r => r.url() === `${base}/api/ui-tests/` && r.request().postDataJSON()?.action === 'end')
+  const ended = page.waitForResponse(r => isBarCall(r, 'end'))
   await bar.getByRole('button', { name: 'Done' }).click()
   await bar.getByRole('button', { name: 'Yes' }).click()
   expect((await ended).status()).toBe(200)
-  await page.waitForURL(`${base}/ui-tests/${handle.run}/?after=1`)
+  // The tag's bar goes back to its own server's player, which this LAN participant holds no credential for; the invite link
+  // opens the questions where they left off.
+  await page.waitForURL(`${SERVER_URL}/ui-tests/${handle.run}/?after=1`)
+  await page.goto(handle.invites[0]!)
   await expect(page.getByRole('heading', { name: 'Overall, how difficult or easy did you find this task?' })).toBeVisible()
   expect(elsewhere).toEqual([])
 

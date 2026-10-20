@@ -24,7 +24,18 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 300_000,
       // The secret share links are signed and checked with: tests/product/report.spec.ts signs with the same one.
-      env: { UI_TESTS_DATA_DIR: process.env.UI_TESTS_DATA_DIR, UI_TESTS_SHARE_SECRET: 'test' },
+      // The tag in the layout points at the server below; Next inlines the address when it builds.
+      env: { UI_TESTS_DATA_DIR: process.env.UI_TESTS_DATA_DIR, UI_TESTS_SHARE_SECRET: 'test', NEXT_PUBLIC_UI_TESTS_URL: 'http://127.0.0.1:4300' },
     },
+    {
+      // ui-tests serve: the collector, the player and ui-tests.js, on the same store as the product server.
+      command: 'node packages/ui-tests/bin/ui-tests.mjs serve --port 4300',
+      url: 'http://127.0.0.1:4300/healthz',
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: { UI_TESTS_DATA_DIR: process.env.UI_TESTS_DATA_DIR, UI_TESTS_SHARE_SECRET: 'test', UI_TESTS_PUBLIC_URL: 'http://127.0.0.1:4300' },
+    },
+    // A plain static site that carries nothing but the tag.
+    { command: 'python3 -m http.server 3200 --bind 127.0.0.1 --directory tests/product/fixtures/plain', url: 'http://127.0.0.1:3200', reuseExistingServer: false, timeout: 30_000 },
   ],
 })

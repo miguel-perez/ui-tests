@@ -5,7 +5,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { buildTrace, type Trace } from '../../packages/ui-tests/src/trace/build.ts'
-import { PRODUCT_URL, createRehearsalRun } from './helpers'
+import { PRODUCT_URL, createRehearsalRun, hasFocus } from './helpers'
 
 /**
  * The rehearsal end to end (Task 15): the site is the first context under test. The author runs `npx ui-tests` in apps/web,
@@ -201,7 +201,7 @@ test.describe('the landing study, rehearsed with the CLI', () => {
     /** Tabs until `name` has focus, then presses `key`. */
     const press = async (role: 'button' | 'link' | 'radio' | 'textbox', name: string | undefined, key: 'Enter' | 'Space') => {
       const target = name === undefined ? page.getByRole(role).first() : page.getByRole(role, { name, exact: true }).first()
-      for (let i = 0; i < 400 && !(await target.evaluate(node => node === document.activeElement).catch(() => false)); i++) await page.keyboard.press('Tab')
+      for (let i = 0; i < 400 && !(await target.evaluate(hasFocus).catch(() => false)); i++) await page.keyboard.press('Tab')
       await expect(target).toBeFocused()
       await page.keyboard.press(key)
     }
@@ -219,7 +219,7 @@ test.describe('the landing study, rehearsed with the CLI', () => {
     await axe()
     await press('button', 'Start task', 'Enter')
     await page.waitForURL(`${PRODUCT_URL}/`)
-    await expect(page.locator(BAR)).toBeVisible()
+    await expect(page.locator(BAR).getByRole('region')).toBeVisible()
     await axe(BAR)
     await press('link', 'Get started', 'Enter')
     await page.waitForURL(`${PRODUCT_URL}/docs/getting-started/`)
@@ -346,10 +346,11 @@ test.describe('fixture studies through the same player and bar', () => {
   test('white label: no participant surface names ui-tests, and the bar takes its colours from the host\'s variables', async ({ page }) => {
     const { playerUrl } = await createRehearsalRun(fixture('sentinel'))
     const unbranded = async (scope: string) => {
+      // The bar is inside its host's shadow root: what it shows is there.
       const found = await page.locator(scope).evaluateAll(nodes => nodes.flatMap(node => [
-        (node as HTMLElement).innerText,
-        ...[...node.querySelectorAll('[alt]')].map(el => el.getAttribute('alt') ?? ''),
-        ...[...node.querySelectorAll('[href]'), ...(node.matches('[href]') ? [node] : [])].map(el => el.getAttribute('href') ?? ''),
+        node.shadowRoot ? [...node.shadowRoot.children].map(child => (child as HTMLElement).innerText ?? '').join('\n') : (node as HTMLElement).innerText,
+        ...[...(node.shadowRoot ?? node).querySelectorAll('[alt]')].map(el => el.getAttribute('alt') ?? ''),
+        ...[...(node.shadowRoot ?? node).querySelectorAll('[href]'), ...(node.matches('[href]') ? [node] : [])].map(el => el.getAttribute('href') ?? ''),
       ]))
       expect(found.filter(text => /ui-tests/i.test(text)), scope).toEqual([])
     }
@@ -364,7 +365,7 @@ test.describe('fixture studies through the same player and bar', () => {
     const colours = await page.evaluate(() => {
       const root = getComputedStyle(document.documentElement)
       const probe = (value: string) => { const el = document.createElement('i'); el.style.color = value; document.body.append(el); const rgb = getComputedStyle(el).color; el.remove(); return rgb }
-      const pill = getComputedStyle(document.querySelector('[data-ui-tests-root] .uit-pill')!)
+      const pill = getComputedStyle(document.querySelector('[data-ui-tests-root]')!.shadowRoot!.querySelector('.uit-pill')!)
       return { ink: probe(root.getPropertyValue('--ink').trim()), canvas: probe(root.getPropertyValue('--canvas').trim()), surface: pill.backgroundColor, text: pill.color }
     })
     // The inverse of the host page: its ink is the bar's surface, its ground the bar's text.

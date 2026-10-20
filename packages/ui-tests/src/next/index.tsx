@@ -12,6 +12,8 @@ export type UiTestsProps = {
 }
 
 const ACTIVE = /(?:^|;\s*)ui-tests-active=1(?:;|$)/
+/** The module script the tag appends once it has an attempt to show; its bar is then the page's one. */
+const TAG_LOADED = 'script[type="module"][src*="/ui-tests.js"]'
 
 /** The bar's client on a page served beside the collector: the participant's HttpOnly cookie is the credential. */
 function cookieClient(endpoint: string): BarClient {
@@ -41,7 +43,8 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
   const [active, setActive] = useState(false)
   // The marker cookie is readable on purpose: it only says that a run is on. The token itself is HttpOnly.
   useEffect(() => {
-    setActive(ACTIVE.test(document.cookie))
+    // The tag runs before React does, so by now it has appended its script or never will.
+    setActive(ACTIVE.test(document.cookie) && !document.querySelector(TAG_LOADED))
     // The player hands off with a code in the fragment for the tag; here the cookie is the credential, so the code only leaves the address.
     const { hash, href } = window.location
     const handoff = /(^#|&)ui-tests=[^&]*/.exec(hash)

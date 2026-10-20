@@ -2,8 +2,11 @@ import { createRoot } from 'react-dom/client'
 import { Bar, type BarClient } from './bar.tsx'
 import { ROOT_ATTRIBUTE } from './recorder.ts'
 
-/** The host page's inherited styles stop at the bar: it sets its own colours, font and size. */
-const HOST_CSS = ':host { all: initial; }'
+/**
+ * The host page's inherited styles stop at the bar: it sets its own colours, font and size. Important, so a page rule that unsets or
+ * hides every element (even with `!important`) loses to it: the shadow root's important declarations win over the page's.
+ */
+const HOST_CSS = ':host { all: initial !important; display: block !important; }'
 
 /**
  * Mounts the bar on the app's page: one host element at the end of the body, marked so the recorder, the replay and the snapshot leave
