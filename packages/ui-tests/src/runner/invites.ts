@@ -2,6 +2,7 @@ import type { AuthoredStudy } from '../authoring.ts'
 import type { AttemptRow, RunRow, RunStore } from '../store/types.ts'
 import { isAgentTrial } from '../agents/result.ts'
 import { runSetup } from './setup.ts'
+import { GOAL_ORDER, goalOrderFor, storedOrder } from './sequence.ts'
 
 export const BYPASS_HEADER = 'x-vercel-protection-bypass'
 
@@ -12,16 +13,27 @@ export function inviteLink(target: string, run: string, token: string, bypass?: 
 }
 
 /**
+ * Makes the first attempt of a link participant: the first goal of their order (declared, or shuffled per person when the study is
+ * `independent`), with the order stored on it. Later goals get their own attempts as the person finishes each one (`server/collector.ts`).
+ */
+export async function createParticipant(store: RunStore, input: { run: RunRow; participant: string; setupValues?: Record<string, unknown>; rehearsal?: boolean }): Promise<{ attempt: AttemptRow; token: string }> {
+  const order = goalOrderFor(input.run.compiled, `${input.run.run}:${input.participant}`)
+  const made = await store.createAttempt({ runId: input.run.run, participant: input.participant, goalIndex: order[0] ?? 0, rehearsal: input.rehearsal ?? false, setupValues: input.setupValues ?? {} })
+  const answers = { ...made.attempt.answers, [GOAL_ORDER]: order }
+  await store.updateAttempt(made.attempt.id, { answers }, 'created')
+  return { attempt: { ...made.attempt, answers }, token: made.token }
+}
+
+/**
  * Makes `count` invite slots for a run: each runs the study's `setup` once, so its values are its own, and gets its own participant
  * token. Returns the links in slot order. `setup` requests carry the bypass header when a secret is given.
  */
 export async function createInvites(input: { store: RunStore; run: RunRow; study: AuthoredStudy; count: number; target: string; bypass?: string; firstSlot?: number; linkBase?: string }): Promise<string[]> {
   const { store, run, study, count, target, bypass, firstSlot = 1, linkBase = target } = input
-  const goalIndex = Math.max(0, run.compiled.goals.findIndex(g => g.primary))
   const links: string[] = []
   for (let slot = firstSlot; slot < firstSlot + count; slot++) {
     const setupValues = await runSetup(study, target, bypass ? { [BYPASS_HEADER]: bypass } : {})
-    const { token } = await store.createAttempt({ runId: run.run, participant: `invite-${slot}`, goalIndex, rehearsal: false, setupValues })
+    const { token } = await createParticipant(store, { run, participant: `invite-${slot}`, setupValues })
     links.push(inviteLink(linkBase, run.run, token, bypass))
   }
   return links
@@ -44,7 +56,9 @@ export async function reissueInvites(input: { store: RunStore; run: RunRow; link
   for (const slot of (await store.listAttempts(run.run)).filter(unclaimed)) {
     if (!(await store.updateAttempt(slot.id, { flags: [...slot.flags, RETIRED] }, 'created'))) continue
     await store.revokeTokens(slot.id)
-    const { token } = await store.createAttempt({ runId: run.run, participant: slot.participant, goalIndex: slot.goalIndex, rehearsal: false, setupValues: slot.setupValues })
+    const { attempt, token } = await store.createAttempt({ runId: run.run, participant: slot.participant, goalIndex: slot.goalIndex, rehearsal: false, setupValues: slot.setupValues })
+    const order = storedOrder(slot)
+    if (order) await store.updateAttempt(attempt.id, { answers: { ...attempt.answers, [GOAL_ORDER]: order } }, 'created')
     links.push(inviteLink(linkBase, run.run, token, bypass))
   }
   return links
@@ -52,3 +66,6 @@ export async function reissueInvites(input: { store: RunStore; run: RunRow; link
 
 /** A slot that counts toward the run's planned invites: not a rehearsal, not one `reissueInvites` retired, and never an agent's trial attempt. */
 export const isSlot = (a: AttemptRow) => !a.rehearsal && !a.flags.includes(RETIRED) && !isAgentTrial(a.participant)
+
+/** How many invite slots a run has made: people, not attempts, since each person has one attempt for every goal they reach. */
+export const slotCount = (attempts: AttemptRow[]): number => new Set(attempts.filter(isSlot).map(a => a.participant)).size

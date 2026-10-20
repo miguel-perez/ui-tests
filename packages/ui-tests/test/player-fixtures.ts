@@ -17,6 +17,7 @@ export function view(overrides: Partial<ParticipantView> = {}): ParticipantView 
     practice: false,
     minutes: 4,
     goal: { index: 0, name: 'Send an invoice', scenario: 'You owe Dana 40 dollars. Send her an invoice.', start: '/invoices', steps: [], timeoutSeconds: 180 },
+    sequence: { position: 0, of: 1 },
     hasVerification: true,
     questions: [
       { id: 'goal0.ease', text: 'Overall, how difficult or easy did you find this task?', type: 'scale', points: 7 },

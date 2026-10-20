@@ -4,6 +4,7 @@ import { medians, uxLite } from '../measures.ts'
 import type { TextModel } from '../model.ts'
 import { FIRST_LOOK_SHOT, FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
 import { countedInResult, handleOf, resultComplete } from '../runner/progress.ts'
+import { placeOf, storedOrder } from '../runner/sequence.ts'
 import type { AttemptRow, HookResult, RunStore, Verification } from '../store/types.ts'
 import { VIDEO_KEY } from '../video.ts'
 import { buildTrace, type TraceAttempt } from '../trace/build.ts'
@@ -83,6 +84,9 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
   const revisions = await store.listRevisions(runId)
   const issues = await retitleWithModel(clusterIssues({ n, complete, attempts: trace.attempts.map(({ attempt, signals }) => ({ attempt, signals })) }), options.model)
 
+  // The first look is asked once, before a person's first goal: their later goals' attempts carry what it was for them.
+  const firstLooks = new Map<string, RunRecord['attempts'][number]['firstLook']>()
+  for (const item of trace.attempts) if (placeOf(compiled, item.attempt).position === 0 || !storedOrder(item.attempt)) firstLooks.set(item.attempt.participant, firstLookOf(compiled.impression.on, item.attempt, item))
   const attempts: RunRecord['attempts'] = trace.attempts.map(item => {
     const { attempt } = item
     const goal = compiled.goals[attempt.goalIndex]
@@ -100,7 +104,7 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
       verification: exportedVerification(attempt.verification, goal?.answer !== undefined),
       timings: { ...(attempt.startedAt && { startedAt: attempt.startedAt }), ...(attempt.endedAt && { endedAt: attempt.endedAt }), ...item.timings },
       path: item.path,
-      firstLook: firstLookOf(compiled.impression.on, attempt, item),
+      firstLook: storedOrder(attempt) && placeOf(compiled, attempt).position > 0 ? (firstLooks.get(attempt.participant) ?? 'pending') : firstLookOf(compiled.impression.on, attempt, item),
       // A withdrawn person's words are not exported; what is kept of them is the verdict.
       answers: attempt.reason === 'withdrew' ? {} : exportedAnswers(attempt.answers),
       environment: attempt.environment ?? {},
@@ -152,13 +156,19 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
   const noAnswer = asked.filter(t => t.impression!.code === 'no answer').length
 
   const real = trace.attempts.filter(t => !t.attempt.rehearsal)
-  const funnelOf = (rows: TraceAttempt[]) => ({
-    invited: rows.filter(t => !t.attempt.flags.includes('retired')).length,
-    screened: rows.filter(t => t.screener).length,
-    started: rows.filter(t => t.attempt.startedAt !== undefined).length,
-    finished: rows.filter(t => t.attempt.status === 'finished').length,
-    paid: 0,
-  })
+  // The funnel counts people: a person has one attempt for each goal they reached, and is finished once their last attempt is.
+  const funnelOf = (rows: TraceAttempt[]) => {
+    const people = (pick: (t: TraceAttempt) => boolean) => new Set(rows.filter(pick).map(t => t.attempt.participant)).size
+    const kept = rows.filter(t => !t.attempt.flags.includes('retired'))
+    const last = new Map(kept.map(t => [t.attempt.participant, t]))
+    return {
+      invited: people(t => !t.attempt.flags.includes('retired')),
+      screened: people(t => Boolean(t.screener)),
+      started: people(t => t.attempt.startedAt !== undefined),
+      finished: [...last.values()].filter(t => t.attempt.status === 'finished').length,
+      paid: 0,
+    }
+  }
 
   const partial = {
     schema: RUN_RECORD_SCHEMA_ID,

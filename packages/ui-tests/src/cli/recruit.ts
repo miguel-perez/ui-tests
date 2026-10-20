@@ -1,7 +1,7 @@
 import { loadConfig } from '../config.ts'
 import { formatFindings, lint, planLines } from '../lint.ts'
 import { StudyLoadError } from '../load.ts'
-import { BYPASS_HEADER, createInvites, isSlot, reissueInvites } from '../runner/invites.ts'
+import { BYPASS_HEADER, createInvites, reissueInvites, slotCount } from '../runner/invites.ts'
 import { createRun } from '../runner/create-run.ts'
 import { agentFingerprint } from '../agents/config.ts'
 import { gitCommit, idempotencyKey } from '../runner/key.ts'
@@ -153,7 +153,7 @@ export const recruit: Command = async (args, io) => {
       // A resumed run reopens its tunnel at a new address, so slots nobody opened get new links under it.
       const reissued = tunnel ? await reissueInvites({ store, run, linkBase, ...(bypass && { bypass }) }) : []
       // Invite slots are made up to n, so a run whose setup failed part-way is repaired by running the same command again.
-      const made = (await store.listAttempts(run.run)).filter(isSlot).length
+      const made = slotCount(await store.listAttempts(run.run))
       const missing = Math.max(0, run.compiled.sample.n - made)
       let invites: string[] | undefined
       if (missing) invites = await createInvites({ store, run, study: chosen.study, count: missing, firstSlot: made + 1, target, linkBase, ...(bypass && { bypass }) })

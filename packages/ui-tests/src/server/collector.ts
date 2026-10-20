@@ -11,6 +11,7 @@ import { nullTranscriber, type Transcriber } from '../transcriber.ts'
 import { MAX_VIDEO_BYTES, MAX_VIDEO_CHUNKS, MAX_VIDEO_SEGMENTS, VIDEO_CHUNK_BYTES, VIDEO_DECLINED, VIDEO_GAP, VIDEO_KEY, VIDEO_STOPPED, videoChunks, videoPauses } from '../video.ts'
 import { MORE_TIME, effectiveTimeout, isOwnSite, participantView, type ParticipantView } from './view.ts'
 import type { CompiledGoal } from '../schema/compiled.ts'
+import { GOAL_ORDER, nextGoalOf, placeOf, storedOrder } from '../runner/sequence.ts'
 
 export type CollectorOptions = {
   store: () => Promise<RunStore>
@@ -122,6 +123,32 @@ function onGoalPath(url: string, path: string[] | undefined, start: string): boo
   return wanted.includes(there)
 }
 
+/** The attempts of one person's sequence (one per goal they reached), in creation order; just the attempt itself when it is not one of a sequence. */
+async function sequenceOf(store: RunStore, attempt: AttemptRow): Promise<AttemptRow[]> {
+  if (!storedOrder(attempt)) return [attempt]
+  return (await store.listAttempts(attempt.runId)).filter((a) => a.participant === attempt.participant && storedOrder(a) && !a.flags.includes('retired'))
+}
+
+/**
+ * The attempt a participant's token or cookie stands for now. The token belongs to the person's first attempt; once that goal is
+ * finished the person has moved on to the attempt for their next goal, which is the latest of their sequence.
+ */
+async function currentAttempt(store: RunStore, attempt: AttemptRow): Promise<AttemptRow> {
+  if (attempt.status !== 'finished' || attempt.reason === 'withdrew' || !storedOrder(attempt)) return attempt
+  return (await sequenceOf(store, attempt)).at(-1) ?? attempt
+}
+
+/** Makes the attempt for the person's next goal, already consented (they agreed once, to the whole study), with their order, purposes, setup and environment. */
+async function startNextGoal(tx: RunStore, finished: AttemptRow): Promise<void> {
+  const goalIndex = nextGoalOf(finished)
+  if (goalIndex === undefined) return
+  const { attempt } = await tx.createAttempt({
+    runId: finished.runId, participant: finished.participant, goalIndex, rehearsal: finished.rehearsal, purposes: finished.purposes, setupValues: finished.setupValues,
+    ...(finished.environment && { environment: finished.environment }),
+  })
+  await tx.updateAttempt(attempt.id, { status: 'consented', answers: { [GOAL_ORDER]: storedOrder(finished) } }, 'created')
+}
+
 const first = (value: string | null) => value?.split(',')[0]?.trim() || undefined
 
 /** The origin the browser sees: forwarded host and protocol win over the internal URL behind a proxy or tunnel. */
@@ -209,7 +236,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     const via = query ? ('query' as const) : bearer ? ('bearer' as const) : cookie ? ('cookie' as const) : undefined
     const token = query ?? bearer ?? cookie
     const found = token ? await store.authorize(token) : undefined
-    return found && via && token ? { ...found, via, token } : undefined
+    return found && via && token ? { ...found, attempt: await currentAttempt(store, found.attempt), via, token } : undefined
   }
 
   /** The picture of the page for this attempt's first look; only its owner can ask. */
@@ -228,13 +255,15 @@ export function createCollector(options: CollectorOptions): (request: Request) =
 
   async function act(store: RunStore, run: RunRow, attempt: AttemptRow, body: Message, token: string | undefined, secure: boolean): Promise<Response> {
     const goal = run.compiled.goals[attempt.goalIndex]!
-    const reload = async (extra?: Headers) => respond(run, (await store.getAttempt(attempt.id)) ?? attempt, extra)
+    // After the last answer of a goal the person is on their next goal's attempt, so the reply is the view of that one.
+    const reload = async (extra?: Headers) => respond(run, await currentAttempt(store, (await store.getAttempt(attempt.id)) ?? attempt), extra)
     const conflict = (text: string) => refuse(409, text)
     // The first look is coded before the transaction opens, so a model call never holds a connection.
     const coded = body.action === 'answers' && body.impression !== undefined ? await codeImpressionWith(body.impression, run.compiled.purpose, options.model) : undefined
 
-    // After the run's deadline nobody new starts: consent and begin are refused. Attempts already under way finish.
-    if ((body.action === 'consent' || body.action === 'begin') && now() >= Date.parse(run.deadline)) return conflict('This study has closed')
+    // After the run's deadline nobody new starts: consent and begin are refused. Attempts already under way finish, and so does a person already on a later goal.
+    const underWay = body.action === 'begin' && placeOf(run.compiled, attempt).position > 0 && storedOrder(attempt) !== undefined
+    if ((body.action === 'consent' || body.action === 'begin') && !underWay && now() >= Date.parse(run.deadline)) return conflict('This study has closed')
     switch (body.action) {
       case 'consent': {
         if (attempt.status === 'created') {
@@ -404,7 +433,9 @@ export function createCollector(options: CollectorOptions): (request: Request) =
             ...(finish && { status: 'finished' as const }),
             ...(environment && { environment }),
           }, current.status)
-          return ok ? undefined : { status: 409, text: 'The attempt moved on; try again' }
+          if (!ok) return { status: 409, text: 'The attempt moved on; try again' }
+          if (finish) await startNextGoal(tx, { ...current, answers, ...(environment && { environment }) })
+          return undefined
         })
         return result ? refuse(result.status, result.text) : reload()
       }
@@ -430,26 +461,32 @@ export function createCollector(options: CollectorOptions): (request: Request) =
           const answers = { ...current.answers, [key]: words ?? (typeof current.answers[key] === 'string' ? current.answers[key] : ''), [`${key}.voice`]: blob }
           const complete = allAnswered(view, goal, answers)
           const ok = await tx.updateAttempt(attempt.id, { answers, ...(complete && { status: 'finished' as const }) }, 'questions')
-          return ok ? undefined : 'The attempt moved on; try again'
+          if (!ok) return 'The attempt moved on; try again'
+          if (complete) await startNextGoal(tx, { ...current, answers })
+          return undefined
         })
         return result ? conflict(result) : reload()
       }
       case 'withdraw': {
         // Allowed from any status until withdrawn, even after finishing: the reason becomes `withdrew`, which verification and counting skip.
+        // The person withdraws from the whole study: every attempt of theirs, one per goal they reached, is withdrawn and its recordings deleted.
         const result = await store.transaction(async (tx) => {
-          const current = await tx.getAttempt(attempt.id)
-          if (!current) return 'Attempt not found'
-          if (current.reason !== 'withdrew') {
-            const moved = await tx.updateAttempt(attempt.id, { status: 'finished', reason: 'withdrew', endedAt: new Date(now()).toISOString() }, current.status)
-            if (!moved) return 'The attempt moved on; try again'
+          const mine = await sequenceOf(tx, (await tx.getAttempt(attempt.id)) ?? attempt)
+          for (const each of mine) {
+            const current = await tx.getAttempt(each.id)
+            if (!current) return 'Attempt not found'
+            if (current.reason !== 'withdrew') {
+              const moved = await tx.updateAttempt(current.id, { status: 'finished', reason: 'withdrew', ...(!current.endedAt || current.id === attempt.id ? { endedAt: new Date(now()).toISOString() } : {}) }, current.status)
+              if (!moved) return 'The attempt moved on; try again'
+            }
+            await tx.deleteBlobs(current.id)
+            if (current.answers[VIDEO_KEY] !== undefined) {
+              const { [VIDEO_KEY]: _video, ...rest } = current.answers
+              await tx.updateAttempt(current.id, { answers: rest })
+            }
+            await tx.deleteEvents(current.id)
+            await tx.deleteSnapshots(current.id)
           }
-          await tx.deleteBlobs(attempt.id)
-          if (current.answers[VIDEO_KEY] !== undefined) {
-            const { [VIDEO_KEY]: _video, ...rest } = current.answers
-            await tx.updateAttempt(attempt.id, { answers: rest })
-          }
-          await tx.deleteEvents(attempt.id)
-          await tx.deleteSnapshots(attempt.id)
           return undefined
         })
         return result ? conflict(result) : reload()

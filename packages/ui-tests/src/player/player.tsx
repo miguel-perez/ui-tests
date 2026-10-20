@@ -71,6 +71,12 @@ export function Player({ runId }: { runId: string }) {
     if (view && screen?.kind === 'impression' && screen.phase === 'click') window.location.assign(view.goal.start)
   }, [screen, view])
 
+  /** The screen after `current`; once a goal's last answer is in and the person has a next goal, the view is that goal's, and its card comes next. */
+  function following(before: ParticipantView, updated: ParticipantView | undefined, current: Screen): Screen {
+    if (updated && updated.attempt !== before.attempt) return entryScreen(updated)
+    return nextScreen(updated ?? before, current, answers)
+  }
+
   async function send(body: Record<string, unknown>): Promise<ParticipantView> {
     const response = await request({ method: 'POST', body: JSON.stringify(body) })
     if (!response.ok) throw new Error(await response.text())
@@ -90,7 +96,7 @@ export function Player({ runId }: { runId: string }) {
         token.current = null
         window.history.replaceState(null, '', window.location.pathname)
       }
-      setScreen(nextScreen(updated ?? view, current, answers))
+      setScreen(following(view, updated, current))
     } catch {
       setError('That did not go through. Check your connection and try again.')
     } finally {
@@ -109,7 +115,7 @@ export function Player({ runId }: { runId: string }) {
       for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
       const updated = await send({ action: 'voice', question: id, audio: btoa(binary), contentType: blob.type || 'audio/webm', ...(typed && { typed }) })
       setView(updated)
-      setScreen(nextScreen(updated, current, answers))
+      setScreen(following(view, updated, current))
     } catch {
       setError('That did not go through. Check your connection and try again.')
     } finally {
