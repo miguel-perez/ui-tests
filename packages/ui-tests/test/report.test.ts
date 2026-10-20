@@ -287,7 +287,7 @@ describe('consent gates the words and the recording', () => {
   it('shows a withdrawn person as withdrawn, with no answers, and the report says it cannot be reproduced in full', () => {
     const withdrawn = { ...change({ reason: 'withdrew' }), quality: { ...record.quality, withdrawn: 1 } }
     const page = text(renderToStaticMarkup(ReportView({ record: withdrawn, attemptIndex: 0 })))
-    expect(page).toContain('This person withdrew. Their recording and answers were deleted.')
+    expect(page).toContain('This person withdrew. Their recording was deleted, and their answers are withheld.')
     expect(page).not.toContain('Ease')
     expect(text(renderToStaticMarkup(ReportView({ record: withdrawn })))).toContain('cannot be reproduced in full')
   })

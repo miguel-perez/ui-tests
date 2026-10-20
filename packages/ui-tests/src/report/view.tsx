@@ -83,6 +83,8 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
   const index = new Map(record.attempts.map((attempt, i) => [attempt.id, i + 1]))
   const shownTo = new Map(people.map((participant) => [participant, record.attempts.filter((a) => a.participant === participant).every(mayShow)]))
   const attemptById = new Map(record.attempts.map((attempt) => [attempt.id, attempt]))
+  // A person has one attempt for each goal they reached; withdrawing withdraws them all, so withdrawals are counted by person.
+  const withdrawnPeople = new Set(record.attempts.filter((a) => a.reason === 'withdrew').map((a) => a.participant)).size || record.quality.withdrawn
   const attemptLink = (n: number) => link(`${root}/p${n}`)
   // `at` goes after the signature's own parameters, so the signature (of the path alone) is unaffected by it.
   const momentLink = (attemptId: string, at: number) => {
@@ -112,7 +114,7 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
         {header}
         <p><a href={link(root)}>Back to the report</a></p>
         <h2>Person {personOf(attempt)}{goal ? ` · ${goal.name}` : ''}</h2>
-        {attempt.reason === 'withdrew' ? <p>This person withdrew. Their recording and answers were deleted.</p> : (<>
+        {attempt.reason === 'withdrew' ? <p>This person withdrew. Their recording was deleted, and their answers are withheld.</p> : (<>
         <dl>
           <dt>Ending</dt><dd>{ending(attempt)}</dd>
           {attempt.timings.onGoalMs !== undefined && <><dt>Time on the task</dt><dd>{seconds(attempt.timings.onGoalMs)}</dd></>}
@@ -239,7 +241,7 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
         <h2 id="uit-people">People</h2>
         {record.exclusions.length > 0 && <p>{plural(record.exclusions.length, 'person', 'people')} excluded by the author as not the audience. They are not counted, and they were still paid.</p>}
         {record.revisionLog.some(r => !r.undone) && <p className="uit-dim">The author has revised this report {plural(record.revisionLog.length, 'time')}; the original attempts are unchanged. Revision {record.handle.revision}.</p>}
-        {record.quality.withdrawn > 0 && <p>{plural(record.quality.withdrawn, 'person')} withdrew and their recordings were deleted, so this report cannot be reproduced in full.</p>}
+        {withdrawnPeople > 0 && <p>{plural(withdrawnPeople, 'person', 'people')} withdrew and their recordings were deleted, so this report cannot be reproduced in full.</p>}
         {seen.length === 0 ? <p>Nobody has started yet.</p> : (
           <ul className="uit-list">
             {seen.map(({ attempt, n }) => (

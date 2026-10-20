@@ -9,6 +9,7 @@ import type { AttemptRow, HookResult, RunStore, Verification } from '../store/ty
 import { VIDEO_KEY } from '../video.ts'
 import { buildTrace, type TraceAttempt } from '../trace/build.ts'
 import { agentResult, DEFAULT_TRIALS, TRANSCRIPT_ANSWER, TRIAL_ANSWER, type TrialState } from '../agents/result.ts'
+import { withoutTypedAnswer } from '../consumers.ts'
 import { AGENT_EVIDENCE_STATEMENT, clauseEvidence, EVIDENCE_STATEMENT } from './clauses.ts'
 import { RUN_RECORD_SCHEMA_ID, runRecordSchema, type RunRecord } from './schema.ts'
 
@@ -34,10 +35,12 @@ function withoutExpected<T extends HookResult>(result: T): T {
   if (!result.diff) return result
   return { ...result, diff: { actual: result.diff.actual } }
 }
-function exportedVerification(v: Verification | undefined, asksQuestion: boolean): Verification | null {
+function exportedVerification(v: Verification | undefined, asksQuestion: boolean, withdrew: boolean): Verification | null {
   if (!v) return null
   const strip = asksQuestion || v.answer !== undefined
-  return { ...(strip ? withoutExpected(v) : v), steps: v.steps, ...(v.answer && { answer: withoutExpected(v.answer) }) }
+  const exported = { ...(strip ? withoutExpected(v) : v), steps: v.steps, ...(v.answer && { answer: withoutExpected(v.answer) }) }
+  // A withdrawn person's words are withheld; their verdict stays.
+  return withdrew ? withoutTypedAnswer(exported)! : exported
 }
 
 function firstLookOf(on: boolean, attempt: AttemptRow, item: TraceAttempt): RunRecord['attempts'][number]['firstLook'] {
@@ -101,7 +104,7 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
       restrictions: [],
       purposesDeclined: consented ? compiled.consent.purposes.filter(p => !attempt.purposes.includes(p)) : [],
       reason: attempt.reason ?? null,
-      verification: exportedVerification(attempt.verification, goal?.answer !== undefined),
+      verification: exportedVerification(attempt.verification, goal?.answer !== undefined, attempt.reason === 'withdrew'),
       timings: { ...(attempt.startedAt && { startedAt: attempt.startedAt }), ...(attempt.endedAt && { endedAt: attempt.endedAt }), ...item.timings },
       path: item.path,
       firstLook: storedOrder(attempt) && placeOf(compiled, attempt).position > 0 ? (firstLooks.get(attempt.participant) ?? 'pending') : firstLookOf(compiled.impression.on, attempt, item),

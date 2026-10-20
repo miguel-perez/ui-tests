@@ -193,3 +193,22 @@ describe('run record', () => {
     expect(out).toBe('')
   })
 })
+
+describe('a withdrawn person', () => {
+  it('keeps their verdict and none of their typed answer: neither in the answers nor in the verdict\'s diff', async () => {
+    const own = new SqliteStore(':memory:')
+    try {
+      const { run } = await own.createRun(newRun('withdrawn', { compiled, hooksBundle: HOOKS }))
+      const { attempt } = await own.createAttempt({ runId: run.run, participant: 'p_w', goalIndex: 5, rehearsal: false })
+      await own.updateAttempt(attempt.id, {
+        status: 'finished', reason: 'withdrew', purposes: compiled.consent.purposes, startedAt: new Date(0).toISOString(), endedAt: new Date(40_000).toISOString(),
+        verification: { status: 'incorrect', reason: 'The answer differs from the expected one', diff: { expected: 'Team', actual: 'typed-by-the-person' }, steps: [], answer: { status: 'incorrect', diff: { expected: 'Team', actual: 'typed-by-the-person' } } },
+        answers: { 'Which plan was shown?': 'typed-by-the-person' },
+      })
+      const record = await buildRecord(own, run.run)
+      expect(JSON.stringify(record)).not.toContain('typed-by-the-person')
+      expect(record.attempts[0]!.verification).toMatchObject({ status: 'incorrect', answer: { status: 'incorrect' } })
+      expect(record.attempts[0]!.answers).toEqual({})
+    } finally { await own.close() }
+  })
+})
