@@ -53,3 +53,11 @@ describe('attemptSignals order', () => {
     expect(kinds(signals([click(500), click(0)]))).toEqual(['repeated-click'])
   })
 })
+
+describe('attemptSignals steps', () => {
+  it('carries the current step and falls back to the goal start page without events', () => {
+    const list = signals([{ type: 'step', at: 0, url: 'http://x/', step: 1 }, { type: 'click', at: 5, url: 'http://x/', target: 'a', changed: false }])
+    expect(list[0]).toMatchObject({ kind: 'dead-click', step: 1 })
+    expect(signals([], { reason: 'gave up' })[0]).toMatchObject({ kind: 'gave-up', url: '/' })
+  })
+})

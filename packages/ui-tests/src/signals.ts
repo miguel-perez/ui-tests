@@ -4,6 +4,7 @@ import type { AttemptRow, RecordedEvent, Verification } from './store/types.ts'
 export type Signal = {
   kind: 'gave-up' | 'timeout' | 'dead-click' | 'repeated-click' | 'pause' | 'deviation' | 'backtrack' | 'false-done' | 'low-ease'
   at: number
+  step?: number
   url?: string
   target?: string
   detail: string
@@ -21,14 +22,20 @@ export function attemptSignals(input: { attempt: AttemptRow; events: RecordedEve
   const events = [...input.events].sort((x, y) => x.at - y.at)
   const signals: Signal[] = []
   const endedAt = attempt.endedAt ? Date.parse(attempt.endedAt) : events.at(-1)?.at ?? 0
-  const endUrl = events.at(-1)?.url
+  const endUrl = events.at(-1)?.url ?? goal.path?.[0]
+  let step: number | undefined
+  let endStep: number | undefined
   if (attempt.reason === 'gave up' || attempt.reason === 'timeout') {
-    signals.push({ kind: attempt.reason === 'gave up' ? 'gave-up' : 'timeout', at: endedAt, url: endUrl, detail: attempt.reason === 'gave up' ? 'The participant said they could not do this' : 'The time limit ran out' })
+    signals.push({ kind: attempt.reason === 'gave up' ? 'gave-up' : 'timeout', at: endedAt, step: endStep, url: endUrl, detail: attempt.reason === 'gave up' ? 'The participant said they could not do this' : 'The time limit ran out' })
   }
   const onPath = goal.path?.map(pathOf)
   const visited: string[] = []
   let lastClick: RecordedEvent | undefined
   for (const event of events) {
+    if (event.type === 'step' && event.step !== undefined) step = event.step
+    const here = event.step ?? step
+    endStep = here
+    const before = signals.length
     if (event.type === 'click') {
       if (event.changed === false) signals.push({ kind: 'dead-click', at: event.at, url: event.url, target: event.target, detail: `Nothing changed within 300 ms after clicking ${event.target ?? 'an element'}` })
       if (lastClick && event.target !== undefined && event.target === lastClick.target && event.at - lastClick.at <= repeatWithinMs) signals.push({ kind: 'repeated-click', at: event.at, url: event.url, target: event.target, detail: `Clicked ${event.target} again` })
@@ -42,9 +49,10 @@ export function attemptSignals(input: { attempt: AttemptRow; events: RecordedEve
       if (visited.length >= 2 && visited.at(-2) === page) signals.push({ kind: 'backtrack', at: event.at, url: event.url, detail: `Went back to ${page}` })
       visited.push(page)
     }
+    for (const added of signals.slice(before)) added.step = here
   }
-  if (attempt.reason === 'done' && verification?.status === 'incorrect') signals.push({ kind: 'false-done', at: endedAt, url: endUrl, detail: 'The participant said Done but the outcome was not reached' })
+  if (attempt.reason === 'done' && verification?.status === 'incorrect') signals.push({ kind: 'false-done', at: endedAt, step: endStep, url: endUrl, detail: 'The participant said Done but the outcome was not reached' })
   const ease = attempt.answers[`goal${goal.index}.ease`]
-  if (typeof ease === 'number' && ease <= lowEase) signals.push({ kind: 'low-ease', at: endedAt, url: endUrl, detail: `Ease rating ${ease} of 7` })
+  if (typeof ease === 'number' && ease <= lowEase) signals.push({ kind: 'low-ease', at: endedAt, step: endStep, url: endUrl, detail: `Ease rating ${ease} of 7` })
   return signals
 }

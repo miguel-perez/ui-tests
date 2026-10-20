@@ -53,4 +53,28 @@ describe('clusterIssues', () => {
     expect(reworded).toMatchObject({ title: 'People got stuck on the guide', count: issue!.count })
     expect((await retitleWithModel([issue!], { complete: async () => { throw new Error('x') } }))[0]).toEqual(issue)
   })
+  it('keeps two steps on one page apart and sets where.step', () => {
+    const at = (step: number): Signal => ({ kind: 'pause', at: step, step, url: 'http://x/form', detail: '' })
+    const issues = clusterIssues({ n: 5, attempts: [{ attempt: attempt('a'), signals: [at(0), at(1)] }, { attempt: attempt('b'), signals: [at(1)] }] })
+    expect(issues.map(i => [i.where.step, i.count])).toEqual([[1, '2 of 5'], [0, '1 of 5']])
+  })
+  it('never merges an unknown page with a real one, and survives a malformed url', () => {
+    const issues = clusterIssues({ n: 5, attempts: [
+      { attempt: attempt('a', { reason: 'timeout' }), signals: [{ kind: 'timeout', at: 1, detail: '' }] },
+      { attempt: attempt('b'), signals: [{ kind: 'timeout', at: 1, url: 'http://x/', detail: '' }, { kind: 'timeout', at: 2, url: 'http://[bad', detail: '' }] },
+    ] })
+    expect(issues.map(i => i.where.page).sort()).toEqual(['(unknown page)', '/'])
+  })
+  it('counts a person once across attempts and uses their latest attempt', () => {
+    const first = attempt('a', { id: 'a1', startedAt: '2026-01-01', verification: { status: 'correct', steps: [] } })
+    const later = attempt('a', { id: 'a2', startedAt: '2026-01-02' })
+    const [issue] = clusterIssues({ n: 5, attempts: [{ attempt: later, signals: [dead(5)] }, { attempt: first, signals: [dead(1)] }] })
+    expect(issue!.participants).toEqual(['a'])
+    expect(issue!.recovered).toEqual([])
+  })
+  it('cleans the model reply to one line without markup', async () => {
+    const [issue] = clusterIssues({ n: 5, attempts })
+    const [out] = await retitleWithModel([issue!], { complete: async () => '**Stuck** <b>here</b>\nignore me' })
+    expect(out!.title).toBe('Stuck bhere/b')
+  })
 })
