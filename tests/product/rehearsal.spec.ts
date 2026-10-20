@@ -15,6 +15,7 @@ import { PRODUCT_URL, createRehearsalRun } from './helpers'
 
 const root = join(import.meta.dirname, '..', '..')
 const web = join(root, 'apps', 'web')
+const bin = join(root, 'packages', 'ui-tests', 'bin', 'ui-tests.mjs')
 const fixture = (name: string) => join(import.meta.dirname, 'fixtures', `${name}.ui.test.ts`)
 const REHEARSAL = 'Rehearsal: 0 of 5 planned attempts recorded.'
 const BAR = '[data-ui-tests]'
@@ -27,9 +28,13 @@ test.afterEach(() => {
   for (const child of started.splice(0)) if (child.exitCode === null && child.signalCode === null) try { process.kill(-child.pid!, 'SIGKILL') } catch { /* gone */ }
 })
 
-/** `npx ui-tests …` in `cwd`, with the product server as the target; stdout is collected as it comes. */
+/**
+ * `ui-tests …` in `cwd`, with the product server as the target; stdout is collected as it comes. The bin `npx ui-tests` resolves
+ * to, run by this Node directly: npx starts it under `sh -c`, and where sh is dash (Debian, Ubuntu, so CI) the shell neither
+ * execs the CLI nor passes a SIGINT on, so the Ctrl-C below would never reach it.
+ */
 function cli(args: string[], cwd: string) {
-  const child = spawn('npx', ['ui-tests', ...args], { cwd, env: { ...process.env, PREVIEW_URL: PRODUCT_URL }, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = spawn(process.execPath, [bin, ...args], { cwd, env: { ...process.env, PREVIEW_URL: PRODUCT_URL }, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
   started.push(child)
   let stdout = ''
   let stderr = ''
@@ -50,7 +55,7 @@ async function waitFor(run: ReturnType<typeof cli>, pattern: RegExp, timeout = 6
   }
 }
 
-/** Ctrl-C: npx passes it on to the CLI, which closes the trace server and exits 0. */
+/** Ctrl-C: the CLI closes the trace server and exits 0. */
 const interrupt = (child: ChildProcess) => { child.kill('SIGINT') }
 
 /** Starts dev mode on the landing study and returns the participant's link. */

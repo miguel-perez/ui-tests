@@ -8,6 +8,13 @@ import { mixOklab, over, darken } from '../oklab'
 
 /** Every content type's component on the landing page (docs/design/site-schema.md). */
 const artefacts = ['terminal-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'worth', 'agents', 'host']
+/**
+ * Cursor Follies (issue #75) swallow a click that lands on a cursor in trouble, and their stages include the compile tabs, the
+ * frames' buttons and the hero's Get started; the scenes are random and run on the wall clock, so on a slow runner a test's click
+ * on one of those can be caught instead. A test that clicks them turns the troupe off the way a visitor can, with reduced motion;
+ * tests/e2e/follies.spec.ts covers the troupe itself.
+ */
+const withoutTroupe = (page: Page) => page.emulateMedia({ reducedMotion: 'reduce' })
 /** Relative luminance of a computed rgb() colour. */
 const luminance = (rgb: string) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return r * .2126 + g * .7152 + b * .0722 }
 /** The distinct colours of the text inside each matched element. */
@@ -295,6 +302,7 @@ for (const width of [1440, 375]) test(`what you write, what they see: the comman
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
   page.on('pageerror', error => errors.push(error.message))
   await page.setViewportSize({ width, height: 1000 })
+  await withoutTroupe(page)
   await page.goto('/')
   await page.evaluate(() => document.fonts.ready)
   const section = page.locator('section.compilation')
@@ -655,6 +663,7 @@ test('the run\'s time never breaks across a line, in the sentence or the arithme
 for (const width of [1440, 375]) test(`the hero's Get started opens the getting-started page: the commands, the mount lines and the study, accessible and in the site's fonts at ${width}px`, async ({ page }) => {
   const { gettingStarted } = await import('../../apps/web/lib/getting-started')
   await page.setViewportSize({ width, height: 1000 })
+  await withoutTroupe(page)
   await page.goto('/')
   await page.locator('.hero .actions').getByRole('link', { name: landing.start }).click()
   await page.waitForURL('**/docs/getting-started/')

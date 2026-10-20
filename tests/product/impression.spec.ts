@@ -72,6 +72,9 @@ test('keyboard: Tab to a link and Enter records that element, not a position', a
   await page.getByRole('textbox').fill('A planner')
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.waitForURL(`${PRODUCT_URL}/`)
+  // The bar is the sign that the first click is being taken; an Enter pressed before the page has mounted it is the page's own, and
+  // simply follows the link.
+  await expect(page.getByRole('region', { name: 'Click where you would start.' })).toBeVisible()
   const link = page.getByRole('link', { name: 'Get started' }).first()
   await link.focus()
   await page.keyboard.press('Enter')
