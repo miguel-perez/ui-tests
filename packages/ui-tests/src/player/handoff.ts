@@ -1,3 +1,14 @@
+import type { ParticipantView } from '../server/view.ts'
+
+/**
+ * Begins the task when it has not begun, then hands the person over. The begun view is passed on before the handoff, so a retry after a
+ * failed handoff only hands off again: a second `begin` would be refused.
+ */
+export async function beginAndHandOff(view: ParticipantView, steps: { begin(): Promise<ParticipantView>; begun(view: ParticipantView): void; handoff(): Promise<void> }): Promise<void> {
+  if (view.status === 'consented') steps.begun(await steps.begin())
+  await steps.handoff()
+}
+
 /** The invite's query parameter that carries a Vercel protection bypass, and where the player keeps it for its run. */
 const BYPASS_PARAM = 'bypass'
 const bypassKey = (run: string) => `ui-tests-bypass:${run}`

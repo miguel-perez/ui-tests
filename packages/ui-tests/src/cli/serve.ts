@@ -55,7 +55,10 @@ export const serve: Command = async (args, io) => {
     ...(env.UI_TESTS_CLI_SECRET && { cliSecret: env.UI_TESTS_CLI_SECRET }),
     ...(env.UI_TESTS_SHARE_SECRET && { shareSecret: env.UI_TESTS_SHARE_SECRET }),
   })
-  const address = publicUrl ?? `http://localhost:${new URL(server.url).port}`
+  // A wildcard or loopback bind is reached here as localhost; a specific address only at that address.
+  const host = typeof bindFlag === 'string' ? bindFlag : '0.0.0.0'
+  const local = ['0.0.0.0', '::', '127.0.0.1', '::1', 'localhost'].includes(host)
+  const address = publicUrl ?? (local ? `http://localhost:${new URL(server.url).port}` : server.url)
   io.stdout.write(`ui-tests server: ${address}\n${tagFor(address)}\n`)
   await pause(io.deps?.signal ?? stopped())
   await server.close()

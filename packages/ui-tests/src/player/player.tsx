@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ParticipantView } from '../server/view.ts'
 import { entryScreen, messageFor, nextScreen } from './flow.ts'
-import { rememberBypass, withBypass } from './handoff.ts'
+import { beginAndHandOff, rememberBypass, withBypass } from './handoff.ts'
 import type { Screen } from './flow.ts'
 import { PlayerScreen } from './screens.tsx'
 
@@ -163,8 +163,7 @@ export function Player({ runId, endpoint = '/api/ui-tests/' }: { runId: string; 
     setBusy(true)
     setError(undefined)
     try {
-      if (view.status === 'consented') await send({ action: 'begin' })
-      await handoff()
+      await beginAndHandOff(view, { begin: () => send({ action: 'begin' }), begun: setView, handoff })
     } catch {
       setError('That did not go through. Check your connection and try again.')
       setBusy(false)

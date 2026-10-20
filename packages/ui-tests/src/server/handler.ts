@@ -50,9 +50,11 @@ export function createHandler(options: ServerOptions): (request: Request) => Pro
   })
 
   async function route(request: Request): Promise<Response> {
-    const path = new URL(request.url).pathname
+    const url = new URL(request.url)
+    const path = url.pathname
     if (COLLECTOR.has(path)) return collector(request)
-    if (request.method !== 'GET' && request.method !== 'HEAD') return text(405, 'Method not allowed')
+    // Anything but a read of a known path is a 404.
+    if (request.method !== 'GET' && request.method !== 'HEAD') return notFound()
     if (path === '/healthz') return Response.json({ ok: true, name: 'ui-tests' }, { headers: { 'Cache-Control': 'no-store' } })
     if (path === '/ui-tests.js') return new Response((await getBundles()).loader, { headers: { ...SCRIPT_HEADERS, 'Cache-Control': 'no-cache' } })
     const asset = /^\/ui-tests\/assets\/([\w-]+\.js)$/.exec(path)?.[1]
@@ -62,7 +64,8 @@ export function createHandler(options: ServerOptions): (request: Request) => Pro
     }
     const player = /^\/ui-tests\/([^/]+)(\/?)$/.exec(path)
     if (player) {
-      if (!player[2]) return new Response(null, { status: 308, headers: { Location: `${path}/` } })
+      // The invite's query (`?t=`) goes along.
+      if (!player[2]) return new Response(null, { status: 308, headers: { Location: `${path}/${url.search}` } })
       let id: string
       try { id = decodeURIComponent(player[1]!) } catch { return notFound() }
       const run = await (await options.store()).getRun(id)

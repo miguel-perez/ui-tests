@@ -68,6 +68,9 @@ describe('ui-tests serve', () => {
     const bare = await get(`/ui-tests/${run.run}`)
     expect(bare.status).toBe(308)
     expect(bare.headers.get('location')).toBe(`/ui-tests/${run.run}/`)
+    const invited = await get(`/ui-tests/${run.run}?t=tok&bypass=s`)
+    expect(invited.status).toBe(308)
+    expect(invited.headers.get('location')).toBe(`/ui-tests/${run.run}/?t=tok&bypass=s`)
     expect((await get('/ui-tests/r_nope/')).status).toBe(404)
   }, 60_000)
 
@@ -120,6 +123,9 @@ describe('ui-tests serve', () => {
 
   it('answers 404 to anything else', async () => {
     for (const path of ['/', '/ui-tests', '/api/other', '/ui-tests/a/b', '/runs/x/']) expect((await get(path)).status, path).toBe(404)
+    for (const [method, path] of [['POST', '/healthz'], ['DELETE', '/ui-tests.js'], ['PUT', `/ui-tests/${run.run}/`], ['POST', '/nope']] as const) {
+      expect((await handlerWith()(new Request(`${server}${path}`, { method }))).status, `${method} ${path}`).toBe(404)
+    }
   })
 
   it('honours the public address behind a proxy', async () => {

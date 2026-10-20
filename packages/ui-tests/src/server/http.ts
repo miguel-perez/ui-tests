@@ -44,6 +44,8 @@ export async function startServer(options: ServerOptions & { port?: number; host
     server.once('error', reject)
     server.listen(wanted ?? 4300, host, resolve)
   })
+  // Once listening, a server error (a socket failing under it) is logged; it does not end the process.
+  server.on('error', (error) => console.error(`ui-tests: server error: ${error.message}`))
   const { port } = server.address() as AddressInfo
   const shown = host === '0.0.0.0' || host === '::' ? 'localhost' : host.includes(':') ? `[${host}]` : host
   return {

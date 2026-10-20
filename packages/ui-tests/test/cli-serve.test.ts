@@ -1,5 +1,5 @@
 import { mkdtemp, rm } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { networkInterfaces, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { main, type Io } from '../src/cli/main.ts'
@@ -31,6 +31,16 @@ describe('ui-tests serve', () => {
     const health = await fetch(`http://127.0.0.1:${port}/healthz`)
     expect(health.status).toBe(200)
     expect(await health.json()).toEqual({ ok: true, name: 'ui-tests' })
+    expect(await server.stop()).toBe(0)
+  }, 60_000)
+
+  const lan = Object.values(networkInterfaces()).flat().find((info) => info && info.family === 'IPv4' && !info.internal)?.address
+  it.skipIf(!lan)('names the address it is bound to when that is one interface, not every one', async () => {
+    const server = await serve(['--port', '0', '--bind', lan!])
+    const [first, second] = server.out().split('\n')
+    expect(first).toMatch(new RegExp(`^ui-tests server: http://${lan!.replace(/\./g, '\\.')}:\\d+$`))
+    expect(second).toContain(`<script data-ui-tests="http://${lan}:`)
+    expect((await fetch(`${first!.slice('ui-tests server: '.length)}/healthz`)).status).toBe(200)
     expect(await server.stop()).toBe(0)
   }, 60_000)
 
