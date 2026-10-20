@@ -12,7 +12,9 @@ export default defineConfig({
     // The landing as it ships: built, then served as plain files.
     { name: 'site', testDir: './tests/e2e', use: { baseURL: process.env.SITE_BASE_URL ?? 'http://localhost:3000' } },
     // The product: apps/web built and started in server mode, with the player and the collector mounted.
-    { name: 'product', testDir: './tests/product', testMatch: '**/*.spec.ts', use: { baseURL: 'http://127.0.0.1:3100' } },
+    { name: 'product', testDir: './tests/product', testMatch: '**/*.spec.ts', testIgnore: '**/lan.spec.ts', use: { baseURL: 'http://127.0.0.1:3100' } },
+    // The same server, reached by this machine's own LAN address: it always binds 0.0.0.0, so no second server is started.
+    { name: 'lan', testDir: './tests/product', testMatch: '**/lan.spec.ts' },
   ],
   webServer: [
     { command: 'npm run build && python3 -m http.server 3000 --bind 127.0.0.1 --directory apps/web/out', url: 'http://localhost:3000', reuseExistingServer: false, timeout: 300_000 },

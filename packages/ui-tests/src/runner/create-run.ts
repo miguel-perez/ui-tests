@@ -1,3 +1,4 @@
+import type { Reachability } from './hosts.ts'
 import type { CompiledStudy } from '../schema/compiled.ts'
 import type { RunRow, RunStore } from '../store/types.ts'
 
@@ -11,8 +12,8 @@ export type CreateRunInput = {
   rehearsal: boolean
   commit?: string
   deadlineHours?: number
-  /** Whether the target answered when the run was made: a fact of the run, not of the compiled study. */
-  reachability?: { url: string; reachable: boolean; checkedAt: string }
+  /** Whether the target answered when the run was made, and how participants reach it: facts of the run, not of the compiled study. */
+  reachability?: { url: string; reachable: boolean; checkedAt: string; mode?: Reachability }
 }
 
 /** Creates the run for a compiled study, idempotent on `key`: a repeated key returns the existing run with `created: false`. */

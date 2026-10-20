@@ -21,6 +21,7 @@ code,pre{font:13px ui-monospace,monospace}pre{background:#f5f5f5;padding:8px;ove
 
 const seconds = (ms?: number) => (ms === undefined ? 'not recorded' : `${(ms / 1000).toFixed(1)} s`)
 const json = (value: unknown) => JSON.stringify(value, null, 2)
+const reachabilityMode = (run: RunRow) => (run.reachability as { mode?: string } | undefined)?.mode
 const actorLabel = (run: RunRow) => `${run.rehearsal ? 'Rehearsal' : 'Study'} · ${run.actor}`
 
 function Shell({ title, actor, children }: { title: string; actor: string; children: React.ReactNode }) {
@@ -171,6 +172,7 @@ export function TraceView({ trace, issues = [], exclusions = [], author }: { tra
     <Shell title={`Trace · ${compiled.name}`} actor={actorLabel(run)}>
       <h1>{compiled.name}</h1>
       <p><strong>{actorLabel(run)}</strong> · run <code>{run.run}</code> · {run.result}</p>
+      {reachabilityMode(run) && <p>Reached by: <strong>{reachabilityMode(run)}</strong></p>}
       <p>{trace.sentence}</p>
       <p>{trace.sampleSentence}</p>
       <p><a href={`/runs/${encodeURIComponent(run.run)}/report/`}>The report as it is shared</a></p>

@@ -63,7 +63,8 @@ Commands:
   (none)            rehearse a study on yourself: open the player, verify, show the trace
   --actor agent     run the study's tasks as agent trials: a capability test, not usability
   verify <run>      run the hooks against the stored snapshots
-  recruit           make a run and print the invite links (--wait for the result, --tunnel to serve a local build)
+  recruit           make a run and print the invite links (--wait for the result, --tunnel to serve a local build,
+                    --host <name> for links inside your network, --local for this machine only)
   status <run>      show the four states of a run
   check             post the pull request check for a preview (--reconcile updates the open ones)
   report <run>      the report in words, the run record (--json), or a signed link to share (--share)
@@ -87,7 +88,7 @@ const defaultIo = (): Io => ({ stdout: process.stdout, stderr: process.stderr, c
 
 /** The flags each command reads a value for (`--actor agent` or `--actor=agent`); every other flag is a boolean. */
 export const valueFlags: Record<string, string[]> = {
-  '': ['actor', 'port', 'project', 'study', 'task', 'key', 'commit'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit'], check: ['actor', 'key', 'study'], estimate: ['actor', 'study'],
+  '': ['actor', 'port', 'project', 'study', 'task', 'key', 'commit'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit', 'host'], check: ['actor', 'key', 'study'], estimate: ['actor', 'study'],
 }
 
 /** Splits `--flag`, `--flag=value` and, for flags the command declares, `--flag value`. */

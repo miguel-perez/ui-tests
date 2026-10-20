@@ -7,6 +7,7 @@ import { agentFingerprint } from '../agents/config.ts'
 import { gitCommit, idempotencyKey } from '../runner/key.ts'
 import { handleOf, refreshRun } from '../runner/progress.ts'
 import { attachFirstLook, playwrightScreenshotter } from '../runner/screenshot.ts'
+import { isLoopbackHost, linkBaseFor, probeLocal, reachabilityOf } from '../runner/hosts.ts'
 import { checkReachable } from '../runner/setup.ts'
 import { openStore } from '../store/open.ts'
 import type { RunHandle, RunRow, RunStore } from '../store/types.ts'
@@ -30,12 +31,12 @@ const pause = (ms: number, signal?: AbortSignal) => new Promise<void>(resolve =>
 })
 
 /** Polls the run, verifying and refreshing it, until it has a result. Exits with the result's code, or 3 when stopped first. */
-async function waitForResult(store: RunStore, runId: string, io: Io, signal?: AbortSignal): Promise<{ handle: RunHandle; code: number }> {
+async function waitForResult(store: RunStore, runId: string, io: Io, signal?: AbortSignal, localOnly = false): Promise<{ handle: RunHandle; code: number }> {
   const deps = io.deps ?? {}
   const now = deps.now ?? (() => new Date())
   for (;;) {
     await verifyRun(store, runId)
-    const run = await refreshRun(store, runId, now(), { onResult: reporterFor(io) })
+    const run = await refreshRun(store, runId, now(), { ...(!localOnly && { onResult: reporterFor(io) }) })
     if (run.result !== 'pending') return { handle: handleOf(run), code: exitCodeFor(run.result) }
     if (signal?.aborted) return { handle: handleOf(run), code: 3 }
     io.stderr.write(`waiting: ${run.states.collection}, result pending\n`)
@@ -83,8 +84,23 @@ export const recruit: Command = async (args, io) => {
   if (findings.some(f => f.severity === 'error')) { io.stderr.write(`${formatFindings(findings)}\n`); return 1 }
 
   const target = config.target?.url ?? 'http://localhost:3000'
+  // Local only: this machine alone. Nothing leaves it, so the things that would (a tunnel, a result hook for GitHub or a webhook) are off, and a target that is not on this machine is refused.
+  const localOnly = args.flags.has('local')
+  const hostFlag = args.flags.get('host')
+  if (hostFlag !== undefined && (typeof hostFlag !== 'string' || !hostFlag)) { io.stderr.write('--host takes a hostname, such as 10.0.0.5 or staging.corp.internal\n'); return 2 }
+  if (localOnly && args.flags.has('tunnel')) { io.stderr.write('--local and --tunnel cannot be combined: local only opens no tunnel.\n'); return 2 }
+  if (localOnly && typeof hostFlag === 'string') { io.stderr.write('--local and --host cannot be combined: local only gives links on this machine; use --host to serve people inside your network.\n'); return 2 }
+  if (args.flags.has('tunnel') && typeof hostFlag === 'string') { io.stderr.write('--host and --tunnel cannot be combined: a tunnel has its own address.\n'); return 2 }
+  let hostBase: string | undefined
+  try {
+    if (localOnly && !isLoopbackHost(new URL(target).hostname.replace(/^\[|\]$/g, ''))) { io.stderr.write(`--local needs a target on this machine, not ${target}.\n`); return 2 }
+    if (typeof hostFlag === 'string') hostBase = linkBaseFor(target, hostFlag)
+  } catch { io.stderr.write(`${typeof hostFlag === 'string' ? `--host ${hostFlag} is not a hostname` : `target is not a URL: ${target}`}\n`); return 2 }
+  const mode = reachabilityOf(hostBase ?? target, { tunnel: args.flags.has('tunnel') })
   const diagnostics = json ? io.stderr : io.stdout
   diagnostics.write(`${planLines(chosen.compiled).join('\n')}\n${chosen.compiled.consent.payout}\n\n`)
+  if (localOnly) diagnostics.write('Local only: no tunnel, model, GitHub or webhook call is made. The run, its records and the links stay on this machine.\n\n')
+  else if (hostBase) diagnostics.write(`Inside the perimeter: links are on ${hostBase}. The collector and the store stay where you run them; nothing leaves unless you export the record.\n\n`)
 
   const commitFlag = args.flags.get('commit')
   const commit = typeof commitFlag === 'string' ? commitFlag : await gitCommit(io.cwd)
@@ -98,7 +114,7 @@ export const recruit: Command = async (args, io) => {
   try {
     // A key that already has a run is read back without touching the target, so it still works while the target is down.
     const existing = (await store.listRuns()).find(r => r.key === key)
-    if (!existing && !(await checkReachable(target, deps.fetch))) { io.stderr.write(`target not reachable: ${target}\n`); return 2 }
+    if (!existing && !(await (localOnly ? probeLocal(target) : checkReachable(target, deps.fetch)))) { io.stderr.write(`target not reachable: ${target}\n`); return 2 }
     const now = deps.now ?? (() => new Date())
     const stop = new AbortController()
     const onSignal = () => stop.abort()
@@ -126,10 +142,10 @@ export const recruit: Command = async (args, io) => {
       ;({ run, created } = await createRun({
         store, compiled: chosen.compiled, hooksBundle: chosen.code, target, actor, rehearsal: false, key, commit,
         ...(hours !== undefined && { deadlineHours: Number(hours) }),
-        reachability: { url: target, reachable: true, checkedAt: new Date().toISOString() },
+        reachability: { url: target, reachable: true, checkedAt: new Date().toISOString(), mode },
       }))
       if (opened) tunnel = await recordTunnel({ store, runId: run.run, opened, now })
-      const linkBase = tunnel?.url ?? target
+      const linkBase = tunnel?.url ?? hostBase ?? target
       // A resumed run reopens its tunnel at a new address, so slots nobody opened get new links under it.
       const reissued = tunnel ? await reissueInvites({ store, run, linkBase, ...(bypass && { bypass }) }) : []
       // Invite slots are made up to n, so a run whose setup failed part-way is repaired by running the same command again.
@@ -149,7 +165,7 @@ export const recruit: Command = async (args, io) => {
       if (args.flags.has('wait')) {
         if (json) io.stderr.write(`Run ${run.run}\n${tunnelLine}${(invites ?? []).join('\n')}\n`)
         else io.stdout.write(`Run ${run.run}\n${tunnelLine}${(invites ?? []).map(l => `${l}\n`).join('')}`)
-        ;({ handle, code } = await waitForResult(store, run.run, io, stop.signal))
+        ;({ handle, code } = await waitForResult(store, run.run, io, stop.signal, localOnly))
       }
       if (json) io.stdout.write(`${JSON.stringify({ ...handle, ...(invites && { invites }), ...(tunnel && { tunnel: tunnel.url }) }, null, 2)}\n`)
       else if (!args.flags.has('wait')) {
