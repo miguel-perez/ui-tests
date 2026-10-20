@@ -5,6 +5,8 @@ export const promise = 'See where people get stuck on what you just shipped.'
 export const intro = 'Say who your users are, what they are trying to do, and how you would know they did it, in one small file next to your code. One command puts real people in front of your site, records every attempt, and hands back the problems they hit, ranked, with the moment to watch, the words they said, and what to change.'
 export const landing = {
   access: 'Open source. Nothing to sign up for. Runs on your preview or your live site.',
+  /** The hero's second action: the getting-started page. */
+  start: 'Get started',
   caption: "Each line opens to the moment to watch, the person's words, and the smallest change that would fix it.",
   scenario: "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.example.",
 }

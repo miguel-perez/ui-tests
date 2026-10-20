@@ -31,6 +31,7 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
   const [busy, setBusy] = useState(false)
   const [lateWarning, setLateWarning] = useState(false)
   const [moreTimeUsed, setMoreTimeUsed] = useState(false)
+  const [stepIndex, setStepIndex] = useState(0)
   const buffer = useRef<Buffer | undefined>(undefined)
 
   // The marker cookie is readable on purpose: it only says that a run is on. The token itself is HttpOnly.
@@ -54,6 +55,8 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
 
   const active = view?.status === 'active' ? view : undefined
   const attempt = active?.attempt
+  // Which step is on survives a full navigation for this attempt; the collector keeps each step's snapshot.
+  useEffect(() => { if (attempt) setStepIndex(readStep(attempt)) }, [attempt])
 
   // Recording: events go to the buffer, the buffer to the collector.
   useEffect(() => {
@@ -72,6 +75,8 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
     const flushSoon = () => { clearTimeout(timer); timer = setTimeout(() => void kept.flush(), FLUSH_AFTER_MS) }
     const recorder = createRecorder((events) => void kept.push(events).then(flushSoon), { now: Date.now, mutationWindowMs: 300, pauseMs: 5000 })
     const detach = recorder.attach(document)
+    // The page this document opened on. A full navigation starts a new recorder, which sees no change of address of its own.
+    void kept.push([{ type: 'url', at: Date.now(), url: location.href.slice(0, 2000) }]).then(flushSoon)
     const replay = () => void kept.flush()
     // What was left from a lost connection or a reload replays now; what still cannot be sent stays kept for the next visit.
     replay()
@@ -104,6 +109,9 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
     try {
       await buffer.current?.flush()
       const snapshot = fitSnapshot(serializeSnapshot(document))
+      // Done on the last step is that step's Done too: its check reads the same snapshot as the outcome.
+      const steps = active.goal.steps.length
+      if (reason === 'done' && steps) await post({ action: 'step', index: Math.min(stepIndex, steps - 1), snapshot })
       const response = await post({ action: 'end', reason, snapshot })
       // A second end (another tab, or Done racing the time limit) is refused with 409; the first one stands, so go on either way.
       if (response.ok || response.status === 409) {
@@ -113,6 +121,22 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
       }
     } catch {
       // Offline: stay on the page and let the person press again.
+    }
+    setBusy(false)
+  }
+
+  async function finishStep(index: number) {
+    if (!active || busy) return
+    setBusy(true)
+    try {
+      await buffer.current?.flush()
+      const response = await post({ action: 'step', index, snapshot: fitSnapshot(serializeSnapshot(document)) })
+      if (response.ok) {
+        writeStep(active.attempt, index + 1)
+        setStepIndex(index + 1)
+      }
+    } catch {
+      // Offline: stay on this step and let the person press again.
     }
     setBusy(false)
   }
@@ -134,10 +158,20 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
 
   const theme = useMemo(() => (active ? chromeTheme(readHost(document, active.brand.accent)) : undefined), [active])
   if (!active || !theme) return null
+  const steps = active.goal.steps
+  const step = steps.length ? { index: Math.min(stepIndex, steps.length - 1), count: steps.length, name: steps[Math.min(stepIndex, steps.length - 1)]! } : undefined
   return createPortal(
-    <Taskbar view={active} theme={theme} busy={busy} offerMoreTime={lateWarning && !moreTimeUsed} onEnd={(reason) => void finish(reason)} onMoreTime={() => void moreTime()} />,
+    <Taskbar view={active} theme={theme} busy={busy} step={step} offerMoreTime={lateWarning && !moreTimeUsed} onEnd={(reason) => void finish(reason)} onStep={(index) => void finishStep(index)} onMoreTime={() => void moreTime()} />,
     document.body,
   )
+}
+
+/** The step this attempt is on, as this device last saw it. */
+function readStep(attempt: string): number {
+  try { return Number(sessionStorage.getItem(`ui-tests-step:${attempt}`)) || 0 } catch { return 0 }
+}
+function writeStep(attempt: string, index: number) {
+  try { sessionStorage.setItem(`ui-tests-step:${attempt}`, String(index)) } catch { /* the step resets on a reload without storage */ }
 }
 
 /** When this attempt's clock began on this device: the first time the bar saw it. The collector keeps the real clock. */

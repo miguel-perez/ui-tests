@@ -1,3 +1,5 @@
+/** @jsxRuntime automatic @jsxImportSource react */
+// Rendered in Node under tsx, which takes the JSX mode from the tsconfig of the folder it runs in (a Next app's says `preserve`).
 import type { Trace, TraceAttempt } from './build.ts'
 import type { RunRow } from '../store/types.ts'
 

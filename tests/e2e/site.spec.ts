@@ -137,10 +137,13 @@ for (const width of [1440, 375]) {
         await expect(agents.locator('pre, code, .terminal-window, .code-window, .caption')).toHaveCount(0)
         await expect(agents).not.toContainText(agent.closing)
         expect(await page.locator('main').innerText()).not.toMatch(/ui-tests \(agent\)|instead of a person/)
-        // No guide and no package yet: the hero's one action is the repository.
-        await expect(page.locator('.hero .actions a')).toHaveCount(1)
-        await expect(page.locator('.hero .actions a')).toHaveAttribute('href', 'https://github.com/miguel-perez/ui-tests')
-        await expect(page.locator('a[href^="/docs"], a[href^="/r/"]')).toHaveCount(0)
+        // The hero's two actions: the repository, and the getting-started page, the one link into /docs; no report links.
+        await expect(page.locator('.hero .actions a')).toHaveCount(2)
+        await expect(page.locator('.hero .actions a').first()).toHaveAttribute('href', 'https://github.com/miguel-perez/ui-tests')
+        await expect(page.locator('.hero .actions a').nth(1)).toHaveText(landing.start)
+        await expect(page.locator('a[href^="/docs"]')).toHaveCount(1)
+        await expect(page.locator('a[href^="/docs"]')).toHaveAttribute('href', '/docs/getting-started/')
+        await expect(page.locator('a[href^="/r/"]')).toHaveCount(0)
       }
       if (process.env.CAPTURE_SITE === '1') {
         await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' })
@@ -647,4 +650,25 @@ test('the run\'s time never breaks across a line, in the sentence or the arithme
     expect(await times.evaluateAll(nodes => nodes.map(node => node.getClientRects().length)), `at ${width}px`).toEqual([1, 1])
     expect(await times.last().evaluate(node => { const range = document.createRange(); range.setStart(node.firstChild!, 0); range.setEnd(node.nextSibling!, 1); return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size }), `the full stop at ${width}px`).toBe(1)
   }
+})
+
+for (const width of [1440, 375]) test(`the hero's Get started opens the getting-started page: the commands, the mount lines and the study, accessible and in the site's fonts at ${width}px`, async ({ page }) => {
+  const { gettingStarted } = await import('../../apps/web/lib/getting-started')
+  await page.setViewportSize({ width, height: 1000 })
+  await page.goto('/')
+  await page.locator('.hero .actions').getByRole('link', { name: landing.start }).click()
+  await page.waitForURL('**/docs/getting-started/')
+  await page.evaluate(() => document.fonts.ready)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(gettingStarted.title)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  const blocks = await page.locator('.docs-code pre').allInnerTexts()
+  for (const step of gettingStarted.steps) {
+    if ('command' in step) expect(blocks).toContain(step.command)
+    if ('lines' in step) expect(blocks).toContain(step.lines.join('\n'))
+    if ('code' in step) expect(blocks).toContain(step.code)
+  }
+  expect(blocks).toContain(gettingStarted.clone.commands.join('\n'))
+  expect(offences(await page.locator('main').innerText(), shown)).toEqual([])
+  await expect(page.locator('pre').first()).toHaveCSS('font-family', /Fira[_ ]Code/)
 })

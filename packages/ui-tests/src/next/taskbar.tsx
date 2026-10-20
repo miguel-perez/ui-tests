@@ -7,13 +7,19 @@ import type { ChromeTheme } from './theme.ts'
 
 export type EndReason = 'done' | 'gave up'
 
+/** The step on now, when the task has steps: one at a time, each with its own Done. */
+export type CurrentStep = { index: number; count: number; name: string }
+
 export type TaskbarProps = {
   view: Pick<ParticipantView, 'goal' | 'brand'>
   theme: ChromeTheme
   /** Shown once the time is nearly spent and the participant has not yet asked for more. */
   offerMoreTime: boolean
   busy: boolean
+  /** The step on now; Done on any step but the last moves to the next one. */
+  step?: CurrentStep
   onEnd(reason: EndReason): void
+  onStep?(index: number): void
   onMoreTime(): void
 }
 
@@ -32,7 +38,7 @@ const css = `
 .uit-bar .uit-plain { box-shadow: none; }
 .uit-bar .uit-summary { box-shadow: none; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .uit-handle { width: 20px; align-self: stretch; cursor: grab; touch-action: none; display: grid; place-items: center; color: var(--uit-dim); user-select: none; }
-.uit-question { padding: 0 8px; font-weight: 500; }
+.uit-question, .uit-step { padding: 0 8px; font-weight: 500; }
 @media (max-width: 600px) { .uit-handle { display: none; } .uit-bar { left: 8px; right: 8px; transform: none; } .uit-pill { width: 100%; } }
 @media (pointer: coarse) { .uit-bar button { min-height: 44px; } }
 `
@@ -49,12 +55,16 @@ export function isTyping(active: Element | null, root: Element | null): boolean 
 }
 
 /** The one floating pill: the task, Done, and I couldn't do this. Draggable; steps aside while the participant types in the page. */
-export function Taskbar({ view, theme, offerMoreTime, busy, onEnd, onMoreTime }: TaskbarProps) {
+export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep, onMoreTime }: TaskbarProps) {
   const [confirming, setConfirming] = useState(false)
+  const lastStep = !step || step.index === step.count - 1
   const [reading, setReading] = useState(false)
   const [typing, setTyping] = useState(false)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const root = useRef<HTMLDivElement>(null)
+  const yes = useRef<HTMLButtonElement>(null)
+  // The pressed Done is gone once the question shows; focus moves to its answer, so a keyboard user is not sent back to the top.
+  useEffect(() => { if (confirming) yes.current?.focus() }, [confirming])
   const drag = useRef<{ x: number; y: number; from: { x: number; y: number } } | undefined>(undefined)
 
   useEffect(() => {
@@ -99,13 +109,14 @@ export function Taskbar({ view, theme, offerMoreTime, busy, onEnd, onMoreTime }:
         <div className="uit-handle" aria-hidden="true" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>⋮⋮</div>
         {confirming ? (
           <>
-            <span className="uit-question">Finished this task?</span>
-            <button type="button" className="uit-primary" disabled={busy} onClick={() => onEnd('done')}>Yes</button>
+            <span className="uit-question">{lastStep ? 'Finished this task?' : 'Finished this step?'}</span>
+            <button ref={yes} type="button" className="uit-primary" disabled={busy} onClick={() => { if (step && !lastStep) { setConfirming(false); onStep?.(step.index) } else onEnd('done') }}>Yes</button>
             <button type="button" disabled={busy} onClick={() => setConfirming(false)}>Not yet</button>
           </>
         ) : (
           <>
             <button type="button" className="uit-summary" aria-expanded={reading} onClick={() => setReading((open) => !open)}>{view.goal.name}</button>
+            {step && <span className="uit-step">Step {step.index + 1} of {step.count}: {step.name}</span>}
             <button type="button" className="uit-primary" disabled={busy} onClick={() => setConfirming(true)}>Done</button>
             <button type="button" disabled={busy} onClick={() => onEnd('gave up')}>I couldn&apos;t do this</button>
             {offerMoreTime && <button type="button" className="uit-plain" disabled={busy} onClick={onMoreTime}>More time</button>}
