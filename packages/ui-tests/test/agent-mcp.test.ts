@@ -80,10 +80,42 @@ describe('agent trials through the mcp harness', () => {
     await harness.dispose()
   })
 
-  it('says so when the server does not start', async () => {
+  it('says so when the server does not start, with the end of its stderr', async () => {
     const harness = mcpHarness('node ./missing-server.mjs', { cwd: fixtures })
     await vitestExpect(harness.reset()).rejects.toThrow(/did not start/)
+    const dies = mcpHarness(`${command} --fail`, { cwd: fixtures })
+    await vitestExpect(dies.reset()).rejects.toThrow(/did not start[^]*Its stderr ended: fake-mcp: cannot open its database/)
     await harness.dispose()
+  })
+
+  it('offers a server tool named done, give_up or cannot as mcp__<name>, so it cannot end a trial', async () => {
+    const colliding = `${command} --colliding`
+    const harness = mcpHarness(colliding, { cwd: fixtures })
+    await harness.reset()
+    vitestExpect(harness.tools().map(t => t.name)).toEqual(['add_member', 'add_members', 'list_members', 'env_names', 'mcp__done', 'mcp__give_up', 'mcp__cannot'])
+    vitestExpect(await harness.call('mcp__done', {})).toEqual({ output: 'server done' })
+    vitestExpect((await harness.call('done', {})).error).toBe('called done, which is not a tool of this server')
+    await harness.dispose()
+    // The loop's own done is still the one that ends the trial, and the server's is a call like any other.
+    const made = await agentStudy({ target: { mcp: colliding }, hook: adaAdded, trials: 1 })
+    stores.push(made.store)
+    const [trial] = await runTrials({ ...made, model: scriptedModel([call('mcp__done'), call('add_member', { name: 'Ada' }), done]), harness: mcpHarness(colliding, { cwd: fixtures }) })
+    vitestExpect(trial).toMatchObject({ state: 'verified', claimedDone: true })
+    vitestExpect(trial.transcript.filter(m => m.role === 'tool').map(m => m.role === 'tool' && m.output)).toEqual(['server done', 'added Ada', ''])
+  })
+
+  it('does not end a trial when a harness\'s own done fails; only a done that worked ends it', async () => {
+    const made = await agentStudy({ target: { mcp: command }, hook: async () => {}, trials: 1 })
+    stores.push(made.store)
+    let presses = 0
+    const harness = {
+      tools: () => [{ name: 'done', description: 'presses done', input: { type: 'object' as const, properties: {} } }],
+      async call() { presses++; return presses === 1 ? { output: '', error: 'could not press the task bar' } : { output: 'the task has ended' } },
+      async endState() { return {} }, async reset() {}, async dispose() {},
+    }
+    const [trial] = await runTrials({ ...made, model: scriptedModel([done, done]), harness })
+    vitestExpect(presses).toBe(2)
+    vitestExpect(trial).toMatchObject({ claimedDone: true, cost: { calls: 2 }, recovered: true })
   })
 
   it('refuses to run agent trials in a run that is not an agent run, and disposes the harness', async () => {

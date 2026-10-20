@@ -20,6 +20,11 @@ export type McpHarnessOptions = {
   env?: Record<string, string | undefined>
 }
 
+/** Names the loop uses to end a trial; a server tool called one of these is offered as `mcp__<name>`. */
+const RESERVED = new Set(['done', 'give_up', 'cannot'])
+/** The last of the server's stderr kept to explain a start that failed. */
+const STDERR_TAIL = 2000
+
 const message = (error: unknown) => error instanceof Error ? error.message : String(error)
 
 type Content = { type: string; text?: string; mimeType?: string; resource?: { text?: string; uri?: string } }
@@ -54,6 +59,8 @@ export function mcpHarness(command: string, options: McpHarnessOptions = {}): Ha
   let trial: { root: string; work: string; client: Client; transport: StdioClientTransport } | undefined
   let offered: ToolSpec[] = []
   let readOnly = new Set<string>()
+  /** Offered name -> the server's own name, for the tools renamed because the loop uses their name. */
+  let renamed = new Map<string, string>()
   let effects: string[] = []
   let before = new Map<string, string>()
 
@@ -62,6 +69,7 @@ export function mcpHarness(command: string, options: McpHarnessOptions = {}): Ha
     trial = undefined
     offered = []
     readOnly = new Set()
+    renamed = new Map()
     if (!current) return
     await current.client.close().catch(() => {})
     removeWorkspace(current.root)
@@ -73,7 +81,10 @@ export function mcpHarness(command: string, options: McpHarnessOptions = {}): Ha
     for (const dir of Object.values(dirs)) mkdirSync(dir, { recursive: true })
     // The transport adds HOME, SHELL, USER and LOGNAME from the operator's environment under what it is given: the last three are blanked.
     const childEnv = { ...trialEnv(env, dirs), SHELL: '', USER: '', LOGNAME: '' }
-    const transport = new StdioClientTransport({ command: program, args, cwd: dirs.work, env: childEnv, stderr: 'ignore' })
+    const transport = new StdioClientTransport({ command: program, args, cwd: dirs.work, env: childEnv, stderr: 'pipe' })
+    let stderr = ''
+    transport.stderr?.on('data', (chunk: Buffer) => { stderr = `${stderr}${chunk.toString('utf8')}`.slice(-STDERR_TAIL) })
+    const listedNames = new Map<string, string>()
     const client = new Client({ name: 'ui-tests', version: '0.0.0' })
     try {
       await client.connect(transport, { timeout: timeoutMs })
@@ -83,16 +94,21 @@ export function mcpHarness(command: string, options: McpHarnessOptions = {}): Ha
         const page = await client.listTools(cursor ? { cursor } : {}, { timeout: timeoutMs })
         for (const tool of page.tools) {
           const schema = tool.inputSchema as { properties?: Record<string, unknown>; required?: string[] }
-          listed.push({ name: tool.name, description: tool.description ?? '', input: { type: 'object', properties: schema.properties ?? {}, ...(schema.required && { required: schema.required }) } })
-          if (tool.annotations?.readOnlyHint) readOnly.add(tool.name)
+          const offeredAs = RESERVED.has(tool.name) ? `mcp__${tool.name}` : tool.name
+          if (offeredAs !== tool.name) listedNames.set(offeredAs, tool.name)
+          listed.push({ name: offeredAs, description: tool.description ?? '', input: { type: 'object', properties: schema.properties ?? {}, ...(schema.required && { required: schema.required }) } })
+          if (tool.annotations?.readOnlyHint) readOnly.add(offeredAs)
         }
         cursor = page.nextCursor
       } while (cursor)
       offered = listed
+      renamed = listedNames
     } catch (error) {
       await client.close().catch(() => {})
       removeWorkspace(root)
-      throw new Error(`The mcp server \`${command}\` did not start: ${message(error)}`)
+      readOnly = new Set()
+      const said = stderr.trim()
+      throw new Error(`The mcp server \`${command}\` did not start: ${message(error)}${said ? `\nIts stderr ended: ${said}` : ''}`)
     }
     trial = { root, work: dirs.work, client, transport }
     before = fingerprintFiles(dirs.work)
@@ -106,7 +122,7 @@ export function mcpHarness(command: string, options: McpHarnessOptions = {}): Ha
       if (!current || !offered.some(tool => tool.name === name)) return { output: '', error: `called ${name}, which is not a tool of this server` }
       const args = input && typeof input === 'object' && !Array.isArray(input) ? input as Record<string, unknown> : {}
       try {
-        const result = await current.client.callTool({ name, arguments: args }, undefined, { timeout: timeoutMs })
+        const result = await current.client.callTool({ name: renamed.get(name) ?? name, arguments: args }, undefined, { timeout: timeoutMs })
         const text = textOf(result.content, result.structuredContent)
         const output = text.length > cap ? `${text.slice(0, cap)}\n[output cut at ${cap} characters]` : text
         if (result.isError) return { output, error: `called ${name}, which failed${text.trim() ? `: ${text.trim().split('\n')[0]!.slice(0, 160)}` : ''}` }

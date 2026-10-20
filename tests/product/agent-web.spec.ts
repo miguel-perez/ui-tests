@@ -112,3 +112,45 @@ test('the agent opens only paths on the product', async () => {
     expect((await harness.call('click', { ref: 'e9999' })).error).toMatch(/^called click e9999, which failed/)
   } finally { await harness.dispose(); await store.close() }
 })
+
+test('a time-limit end the collector stored stands: the loop neither overwrites its reason nor ends the attempt twice', async () => {
+  const { store, agent, trials } = await setUp()
+  try {
+    let ended: string | undefined
+    const [trial] = await trials({
+      async step({ messages }) {
+        if (!messages.some(m => m.role === 'tool')) return step({ name: 'look', input: {} })
+        // The collector ends the attempt as the time limit passes, while the agent is still working (what its `end` action stores).
+        if (!ended) {
+          const [attempt] = await store.listAttempts(agent.run)
+          ended = new Date().toISOString()
+          await store.updateAttempt(attempt!.id, { status: 'questions', reason: 'timeout', endedAt: ended }, 'active')
+        }
+        return messages.some(m => m.role === 'tool' && m.name === 'click') ? step({ name: 'done', input: {} }) : step({ name: 'click', input: { ref: 'e1' } })
+      },
+    })
+    const [attempt] = await store.listAttempts(agent.run)
+    expect(attempt).toMatchObject({ status: 'finished', reason: 'timeout', endedAt: ended })
+    expect(trial!.verification).toMatchObject({ status: 'incorrect', reason: 'Terminal reason: timeout' })
+    expect(trial!.state).toBe('stopped')
+  } finally { await store.close() }
+})
+
+test('a done that could not press the bar does not end the trial', async () => {
+  const { store, agent, trials } = await setUp()
+  try {
+    const [trial] = await trials({
+      async step({ messages }) {
+        const answers = messages.filter(m => m.role === 'tool')
+        if (!answers.length) return step({ name: 'goto', input: { path: '/docs/getting-started' } })
+        // The page is the guide, which has the bar: leave for an origin-less page first so the bar is absent, by pressing done on a blank page.
+        if (answers.length === 1) return step({ name: 'goto', input: { path: '/api/ui-tests/' } })
+        return answers.length === 2 ? step({ name: 'done', input: {} }) : answers.length === 3 ? step({ name: 'goto', input: { path: '/docs/getting-started' } }) : step({ name: 'done', input: {} })
+      },
+    })
+    const done = trial!.transcript.filter(m => m.role === 'tool' && m.name === 'done')
+    expect(done[0]).toMatchObject({ error: expect.stringContaining('could not press the task bar') })
+    expect(done[1]).toMatchObject({ output: 'the task has ended' })
+    expect(trial).toMatchObject({ state: 'verified', claimedDone: true, recovered: true })
+  } finally { await store.close() }
+})

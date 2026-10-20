@@ -5,6 +5,7 @@ import { agentFingerprint, type AgentConfig } from '../agents/config.ts'
 import { cliHarness } from '../agents/harness-cli.ts'
 import { httpHarness } from '../agents/harness-http.ts'
 import { mcpHarness } from '../agents/harness-mcp.ts'
+import { webHarness } from '../agents/harness-web.ts'
 import { DEFAULT_TRIALS, runTrials, TRIAL_ANSWER, type Trial } from '../agents/loop.ts'
 import { packLocalPackage, type LocalPackage } from '../agents/pack.ts'
 import type { AgentModel, Harness } from '../agents/model.ts'
@@ -37,8 +38,8 @@ async function modelFor(agent: AgentConfig, io: Io): Promise<AgentModel> {
   return scriptedModel(script as ScriptedTurn[] | ScriptedTurn[][])
 }
 
-/** The harness for a goal's target; the web harness needs a running player and is used from code, not from here yet. */
-function harnessFor(goal: CompiledGoal, io: Io, localPackage?: LocalPackage): Harness | string {
+/** The harness for a goal's target. The web harness opens the player of the run `runId` on the target's own origin. */
+function harnessFor(goal: CompiledGoal, io: Io, localPackage?: LocalPackage, runId = 'preflight'): Harness | string {
   const target = goal.agent?.target
   if (!target) return `The task "${goal.name}" has no agent target`
   if (target.kind === 'cli') {
@@ -48,7 +49,10 @@ function harnessFor(goal: CompiledGoal, io: Io, localPackage?: LocalPackage): Ha
   if (target.kind === 'mcp') {
     try { return mcpHarness(target.value, { cwd: io.cwd, env: io.env }) } catch (error) { return error instanceof Error ? error.message : String(error) }
   }
-  return `The ${target.kind} harness is not run from the command line yet`
+  if (target.kind === 'web') {
+    try { return webHarness({ target: target.value, playerUrl: `${new URL(target.value).origin}/ui-tests/${runId}/` }) } catch { return `The web target is not a URL: ${target.value}` }
+  }
+  return `The ${target.kind} harness is not shipped yet`
 }
 
 /**
@@ -104,6 +108,13 @@ export const agentRun: Command = async (args, io) => {
     if (typeof harness === 'string') { io.stderr.write(`${harness}\n`); return 2 }
     await harness.dispose()
     if (goal.agent?.target.kind === 'http' && !(await checkReachable(goal.agent.target.value, io.deps?.fetch))) { io.stderr.write(`target not reachable: ${goal.agent.target.value}\n`); return 2 }
+    if (goal.agent?.target.kind === 'web') {
+      const url = goal.agent.target.value
+      if (!(await checkReachable(url, io.deps?.fetch))) { io.stderr.write(`target not reachable: ${url}\n`); return 2 }
+      // The player and collector are mounted in server mode: the collector answers 401 to a request with no token, a static site 404.
+      const probe = await (io.deps?.fetch ?? fetch)(`${new URL(url).origin}/api/ui-tests/`, { redirect: 'manual', signal: AbortSignal.timeout(5000) }).catch(() => undefined)
+      if (probe?.status !== 401) { io.stderr.write(`target does not serve the ui-tests player: ${url}\n`); return 2 }
+    }
   }
   let model: AgentModel
   try { model = await modelFor(config.agents, io) } catch (error) { io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`); return 2 }
@@ -113,7 +124,8 @@ export const agentRun: Command = async (args, io) => {
   const keyFlag = args.flags.get('key')
   const fingerprint = chosen.compiled.agents?.fingerprint ?? agentFingerprint(config.agents)
   const key = typeof keyFlag === 'string' ? keyFlag : idempotencyKey({ commit, contextId: chosen.compiled.id, actor: 'agent', fingerprint })
-  const target = config.target?.url ?? 'http://localhost:3000'
+  // The run's target is the web page the agent uses when a task has one: its player and collector are there.
+  const target = goals.find(g => g.agent?.target.kind === 'web')?.agent?.target.value ?? config.target?.url ?? 'http://localhost:3000'
 
   const signal = io.deps?.signal ?? interrupt()
   let localPackage: LocalPackage | undefined
@@ -136,7 +148,7 @@ export const agentRun: Command = async (args, io) => {
       const kept: Trial[] = stored.filter(a => a.goalIndex === goal.index).map(a => ({ ...(a.answers[TRIAL_ANSWER] as Omit<Trial, 'transcript'>), transcript: [] })).sort((a, b) => a.index - b.index)
       const added = kept.length < k && !signal.aborted
         ? await runTrials({
-          store, run, study: chosen.study, goal, model, harness: harnessFor(goal, io, localPackage) as Harness, firstIndex: (kept.at(-1)?.index ?? 0) + 1, signal,
+          store, run, study: chosen.study, goal, model, harness: harnessFor(goal, io, localPackage, run.run) as Harness, firstIndex: (kept.at(-1)?.index ?? 0) + 1, signal,
           onTrial: t => out.write(`  trial ${t.index} of ${k}: ${t.state}\n`),
         })
         : []

@@ -2,7 +2,7 @@ import { request as playwrightRequest, type APIRequestContext } from 'playwright
 import type { AuthoredStudy } from '../authoring.ts'
 import { runSetup } from '../runner/setup.ts'
 import type { CompiledGoal } from '../schema/compiled.ts'
-import type { RunRow, RunStore, Verification } from '../store/types.ts'
+import type { AttemptRow, RunRow, RunStore, Verification } from '../store/types.ts'
 import { verifyAttempt } from '../verify.ts'
 import type { AgentConfig } from './config.ts'
 import type { AgentMessage, AgentModel, AgentStep, Harness, ToolSpec } from './model.ts'
@@ -92,7 +92,9 @@ async function runAgent(input: { model: AgentModel; harness: Harness; system: st
   const cost: Trial['cost'] = { tokens: 0, calls: 0, wallMs: 0 }
   const offered = harness.tools()
   const own = new Set(offered.map(t => t.name))
-  const tools = [...offered, ...[DONE_TOOL, GIVE_UP_TOOL].filter(t => !own.has(t.name))]
+  // A harness that gives up through its own tool (the web bar's "I couldn't do this") is not also offered give_up, and the prompt names the one it has.
+  const tools = [...offered, ...[DONE_TOOL, GIVE_UP_TOOL].filter(t => !own.has(t.name) && !(t.name === GIVE_UP_TOOL.name && own.has(CANNOT_TOOL)))]
+  const system = own.has(CANNOT_TOOL) ? input.system.replaceAll(GIVE_UP_TOOL.name, CANNOT_TOOL) : input.system
   let hadError = false
   let lastFailed: string | undefined
   let questions = 0
@@ -115,7 +117,7 @@ async function runAgent(input: { model: AgentModel; harness: Harness; system: st
     let timer: NodeJS.Timeout | undefined
     try {
       cost.calls++
-      const call = model.step({ system: input.system, messages: transcript, tools })
+      const call = model.step({ system, messages: transcript, tools })
       // The model step counts against the time budget too: it is not waited for past the end of it.
       step = budgets.seconds === undefined ? await call : await Promise.race([call, new Promise<never>((_, reject) => { timer = setTimeout(() => reject(new OutOfTime()), Math.max(0, started + budgets.seconds! * 1000 - Date.now())) })])
     } catch (error) {
@@ -142,8 +144,10 @@ async function runAgent(input: { model: AgentModel; harness: Harness; system: st
           }
         }
         transcript.push({ role: 'tool', id: call.id, name: call.name, output: result.output, ...(result.error && { error: result.error }) })
-        if (call.name === DONE_TOOL.name) return end(true)
-        if (call.name === GIVE_UP_TOOL.name || (call.name === CANNOT_TOOL && own.has(call.name))) {
+        // A harness's own done or cannot that failed (the bar was not there to press) ends nothing: the agent reads the error and goes on.
+        const ended = ending && !(own.has(call.name) && result.error)
+        if (ended && call.name === DONE_TOOL.name) return end(true)
+        if (ended) {
           const reason = (call.input as { reason?: unknown } | undefined)?.reason
           return end(false, { said: typeof reason === 'string' && reason.trim() ? reason.trim() : 'gave up without saying why' })
         }
@@ -229,7 +233,10 @@ export async function runTrials(input: RunTrialsInput): Promise<Trial[]> {
       const ran = await runAgent({ model, harness, system, prompt: goal.scenario.text, budgets })
       const end = await harness.endState()
       if (end.snapshot) await store.putSnapshot(attempt.id, 'end', end.snapshot)
-      const verification = await verifyAttempt({ run, attempt: { ...attempt, status: 'active', startedAt }, task, store, request, ...(end.workspace && { workspace: end.workspace }) })
+      // Through the player the collector may already have ended the attempt (Done, I couldn't do this, or the time limit): that end stands.
+      const ended = harness.begin ? await store.getAttempt(attempt.id) : undefined
+      const endedBy = ended?.reason
+      const verification = await verifyAttempt({ run, attempt: { ...attempt, status: 'active', startedAt, ...(endedBy && { reason: endedBy }) }, task, store, request, ...(end.workspace && { workspace: end.workspace }) })
       const outage = ran.infrastructure && verification.status !== 'correct'
       const state = verification.status === 'correct' ? 'verified' : outage || verification.status === 'unknown' ? 'unknown' : 'stopped'
       const trial: Trial = {
@@ -248,10 +255,21 @@ export async function runTrials(input: RunTrialsInput): Promise<Trial[]> {
       }
       const { transcript, ...summary } = trial
       const transcriptBlob = await store.putBlob(attempt.id, 'transcript', new TextEncoder().encode(JSON.stringify(transcript)), 'application/json')
-      await store.updateAttempt(attempt.id, {
-        status: 'finished', reason: ran.claimedDone ? 'done' : 'gave up', endedAt: new Date().toISOString(), verification,
-        answers: { [TRIAL_ANSWER]: summary, [TRANSCRIPT_ANSWER]: transcriptBlob },
+      const finish = (current?: AttemptRow): Partial<AttemptRow> => ({
+        status: 'finished',
+        // The first end is the only end: a reason and time the collector stored are kept.
+        reason: current?.reason ?? (ran.claimedDone ? 'done' : 'gave up'),
+        endedAt: current?.endedAt ?? new Date().toISOString(),
+        verification,
+        answers: { ...current?.answers, [TRIAL_ANSWER]: summary, [TRANSCRIPT_ANSWER]: transcriptBlob },
       })
+      if (!harness.begin) await store.updateAttempt(attempt.id, finish())
+      else {
+        // Compare and swap on the status read, so a collector end that lands in between is not overwritten.
+        for (let current = ended; current; current = await store.getAttempt(attempt.id)) {
+          if (await store.updateAttempt(attempt.id, finish(current), current.status)) break
+        }
+      }
       trials.push(trial)
       input.onTrial?.(trial)
     }

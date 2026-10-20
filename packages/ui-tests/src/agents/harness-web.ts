@@ -98,15 +98,15 @@ export function webHarness(input: WebHarnessInput, options: WebHarnessOptions = 
       })
       // Consent was given with the attempt, so the player never sets the cookies a person's consent does; the same two are set here.
       await context.addCookies([
-        { name: 'ui-tests-run', value: attempt.token, url: player.origin, httpOnly: true, sameSite: 'Lax' },
-        { name: 'ui-tests-active', value: '1', url: player.origin, sameSite: 'Lax' },
+        { name: 'ui-tests-run', value: attempt.token, url: player.origin, httpOnly: true, sameSite: 'Lax', secure: player.protocol === 'https:' },
+        { name: 'ui-tests-active', value: '1', url: player.origin, sameSite: 'Lax', secure: player.protocol === 'https:' },
       ])
       const page = await context.newPage()
       const state = { context, page, ended: false }
       session = state
       page.on('response', response => {
         const request = response.request()
-        if (request.method() !== 'POST' || !response.ok() || new URL(request.url()).pathname !== '/api/ui-tests/') return
+        if (request.method() !== 'POST' || !(response.ok() || response.status() === 409) || new URL(request.url()).pathname !== '/api/ui-tests/') return
         try { if ((request.postDataJSON() as { action?: string } | null)?.action === 'end') state.ended = true } catch { /* not a json body */ }
       })
       const url = new URL(player)
@@ -121,6 +121,8 @@ export function webHarness(input: WebHarnessInput, options: WebHarnessOptions = 
       if (!current) return { output: '', error: `called ${name}, but no page is open` }
       const { page } = current
       const args = (input && typeof input === 'object' ? input : {}) as Record<string, unknown>
+      // The attempt ended (Done, I couldn't do this, or the time limit): the product is no longer the agent's to use.
+      if (current.ended && name !== 'done' && name !== 'cannot') return { output: '', error: `called ${name}, but the task has ended` }
       const ref = typeof args.ref === 'string' ? args.ref.trim() : ''
       try {
         switch (name) {
