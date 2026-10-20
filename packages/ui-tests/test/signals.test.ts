@@ -46,3 +46,10 @@ describe('attemptSignals', () => {
     expect(kinds(signals([], { reason: 'timeout' }))).toEqual(['timeout'])
   })
 })
+
+describe('attemptSignals order', () => {
+  it('reads events by time, not arrival', () => {
+    const click = (at: number): RecordedEvent => ({ type: 'click', at, url: 'http://x/', target: 'a#go', changed: true })
+    expect(kinds(signals([click(500), click(0)]))).toEqual(['repeated-click'])
+  })
+})
