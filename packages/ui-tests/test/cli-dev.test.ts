@@ -218,6 +218,11 @@ describe('runner helpers', () => {
     expect(await checkReachable(targetUrl)).toBe(true)
     expect(await checkReachable('http://127.0.0.1:1')).toBe(false)
     expect(await checkReachable('http://x.test', async () => { throw new Error('down') })).toBe(false)
+    // A cold dev server answers its first request slowly: a timeout earns one longer try; a refusal does not.
+    let calls = 0
+    const slowFirst = (async (_url: string, init?: RequestInit) => { if (calls++ === 0) { await new Promise((_, reject) => init!.signal!.addEventListener('abort', () => reject(init!.signal!.reason))); } return new Response('ok') }) as unknown as typeof fetch
+    expect(await checkReachable('http://x.test', slowFirst, [20, 2000])).toBe(true)
+    expect(calls).toBe(2)
   })
   it('returns no values for a study without setup', async () => {
     expect(await runSetup({ name: 's', options: { users: 'x' }, tasks: [], file: 'f', line: 1, legacy: [] }, targetUrl)).toEqual({})

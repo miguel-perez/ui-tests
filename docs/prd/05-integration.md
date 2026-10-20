@@ -19,7 +19,7 @@ Any framework can implement the recorder and collector contract; it is a handful
 
 ## Reachability
 
-Participants have to reach the build. The mode is declared in the config, shown in the trace, and limits what a run can license. The link `ui-tests recruit` prints (runs with your own link and your visitors are built: [#71](https://github.com/miguel-perez/ui-tests/issues/71)) can point at a branch preview, at the author's laptop through a tunnel, or at the live site: the first three rows.
+Participants have to reach the build. The mode is declared in the config, shown in the trace, and limits what a run can license. The link `ui-tests recruit` prints (runs with your own invite links are built; the visitors source is not: [#71](https://github.com/miguel-perez/ui-tests/issues/71)) can point at a branch preview, at the author's laptop through a tunnel, or at the live site: the first three rows.
 
 | Mode | How participants reach the build | Where the collector and store live | Limit |
 | --- | --- | --- | --- |

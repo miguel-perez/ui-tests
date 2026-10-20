@@ -8,10 +8,18 @@ export async function runSetup(study: AuthoredStudy, target: string, headers: Re
   try { return { ...await study.setup({ request }) } } finally { await request.dispose() }
 }
 
-/** Whether anything answers at `url`; any HTTP response counts, a refused or timed-out connection does not. */
-export async function checkReachable(url: string, fetchImpl: typeof fetch = fetch): Promise<boolean> {
-  try {
-    await fetchImpl(url, { method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(3000) })
-    return true
-  } catch { return false }
+/**
+ * Whether anything answers at `url`; any HTTP response counts, a refused connection does not. A dev server compiles its first page
+ * on the first request, which can take longer than a few seconds, so a request that only timed out gets one longer try.
+ */
+export async function checkReachable(url: string, fetchImpl: typeof fetch = fetch, timeouts: number[] = [3000, 30000]): Promise<boolean> {
+  for (const ms of timeouts) {
+    try {
+      await fetchImpl(url, { method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(ms) })
+      return true
+    } catch (error) {
+      if (!(error instanceof Error && error.name === 'TimeoutError')) return false
+    }
+  }
+  return false
 }

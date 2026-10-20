@@ -11,7 +11,7 @@ it('carries the landing\'s promise and example study word for word', async () =>
   expect(text).toContain('```ts\n' + example + '\n```')
 })
 
-it('shows each command the landing shows, all of which are built', async () => {
+it('shows each command the landing shows', async () => {
   const text = await readme()
   for (const { command } of compilation.commands) expect(text, command).toContain(command)
 })

@@ -11,7 +11,7 @@ Built and verified offline from a clone: the `ui-tests` package (the authoring A
 What does not work yet:
 
 - The package is not on npm, so `npm install -D ui-tests` finds nothing. Run it from a clone, as below.
-- Paying a panel is not built: `recruit` makes your own link and your visitors' links. `ui-tests host` prints its plan and stops.
+- Paying a panel is not built: `recruit` makes your own invite links; inviting visitors on a live site is not built. `ui-tests host` prints its plan and stops.
 - Several steps need your own accounts and are written down in [getting started](apps/web/app/docs/getting-started/page.tsx), not run from here: a Neon database, the Vercel Preview environment, a GitHub token and secrets, an `ANTHROPIC_API_KEY` for agent runs, a named cloudflared tunnel, and a VoiceOver check on Safari.
 - Nobody has yet run the landing study with five real people, or an agent through all five trials with a real model. See [`docs/story-map.md`](docs/story-map.md).
 
@@ -50,7 +50,7 @@ npx ui-tests recruit
 npx ui-tests check
 ```
 
-`init` writes a study file and a config. With no command, the study runs on you, in your browser, and recruits nobody. `recruit` runs it with real people through your link. `check`, in the job that deploys your preview, posts the result as a check on the pull request.
+`init` writes a study file and a config. With no command, the study runs on you, in your browser, and recruits nobody. `recruit` runs it with real people through your link. `check`, in the job that deploys your preview, posts the result as a check on the pull request. The package is not on npm yet, so the first line works only after it is published; until then use the clone below.
 
 ## What is here
 
