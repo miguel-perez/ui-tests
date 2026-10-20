@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ui-tests.com/schemas/run-record.v1.json",
   "type": "object",
   "properties": {
     "schema": {
@@ -871,6 +872,12 @@
               "type": "string"
             }
           },
+          "purposesDeclined": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
           "reason": {
             "anyOf": [
               {
@@ -1051,6 +1058,7 @@
           "source",
           "purposes",
           "restrictions",
+          "purposesDeclined",
           "reason",
           "verification",
           "timings",
@@ -1161,11 +1169,49 @@
                 },
                 "mean": {
                   "type": "number"
+                },
+                "useful": {
+                  "type": "object",
+                  "properties": {
+                    "scores": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "mean": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "scores"
+                  ],
+                  "additionalProperties": false
+                },
+                "easy": {
+                  "type": "object",
+                  "properties": {
+                    "scores": {
+                      "type": "array",
+                      "items": {
+                        "type": "number"
+                      }
+                    },
+                    "mean": {
+                      "type": "number"
+                    }
+                  },
+                  "required": [
+                    "scores"
+                  ],
+                  "additionalProperties": false
                 }
               },
               "required": [
                 "n",
-                "scores"
+                "scores",
+                "useful",
+                "easy"
               ],
               "additionalProperties": false
             }
@@ -1601,7 +1647,6 @@
     "evidence",
     "evidenceStatement"
   ],
-  "additionalProperties": false,
   "title": "ui-tests run record",
   "description": "Published at https://ui-tests.com/schemas/run-record.v1.json; the file names it in its schema field."
 }

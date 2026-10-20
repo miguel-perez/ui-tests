@@ -1,10 +1,15 @@
 import { resultOf } from '../derive/sentence.ts'
-import type { RunHandle, RunRow, RunStore } from '../store/types.ts'
+import type { AttemptRow, RunHandle, RunRow, RunStore } from '../store/types.ts'
 
 /** The run handle of PRD 05: the stored run without the compiled study, hooks, target and other internals. */
 export function handleOf(run: RunRow): RunHandle {
   const { run: id, key, context, build, actor, states, result, deadline, revision } = run
   return { run: id, key, context, build, actor, states, result, deadline, revision }
+}
+
+/** Whether an attempt counts toward n: real, finished, started, verified, and neither withdrawn, disconnected nor retired. One predicate for the run's states and the run record. */
+export function countsTowardN(a: AttemptRow): boolean {
+  return !a.rehearsal && a.status === 'finished' && a.reason !== 'withdrew' && a.reason !== 'disconnected' && !a.flags.includes('retired') && a.startedAt !== undefined && a.verification !== undefined
 }
 
 /**
@@ -19,7 +24,7 @@ export async function refreshRun(store: RunStore, runId: string, now: Date = new
     const live = (await store.listAttempts(runId)).filter(a => a.reason !== 'withdrew' && a.status !== 'created' && a.status !== 'consented')
     const finished = live.filter(a => a.status === 'finished')
     const pending = finished.some(a => a.reason !== 'disconnected' && !a.verification)
-    const counted = finished.filter(a => !a.rehearsal && a.reason !== 'disconnected' && a.startedAt !== undefined && a.verification)
+    const counted = finished.filter(countsTowardN)
     const verification = finished.length && !pending ? 'complete' : 'pending'
     const n = run.compiled.sample.n
     const collection = !live.length ? 'waiting' : run.rehearsal ? (finished.length ? 'complete' : 'collecting') : counted.length >= n ? 'complete' : 'collecting'

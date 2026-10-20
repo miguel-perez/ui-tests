@@ -2,7 +2,7 @@ import { clusterIssues, retitleWithModel } from '../issues.ts'
 import { medians, uxLite } from '../measures.ts'
 import type { TextModel } from '../model.ts'
 import { FIRST_LOOK_SHOT, FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
-import { handleOf } from '../runner/progress.ts'
+import { countsTowardN, handleOf } from '../runner/progress.ts'
 import type { AttemptRow, HookResult, RunStore, Verification } from '../store/types.ts'
 import { buildTrace, type TraceAttempt } from '../trace/build.ts'
 import { clauseEvidence, EVIDENCE_STATEMENT } from './clauses.ts'
@@ -15,10 +15,6 @@ const LIMITS =
 const mean = (values: number[]) => (values.length ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100 : undefined)
 const numbers = (values: unknown[]) => values.filter((v): v is number => typeof v === 'number')
 
-/** Counted like `refreshRun` counts: a real, finished, started and verified attempt that was neither withdrawn, disconnected nor retired. */
-const isCounted = (a: AttemptRow) =>
-  !a.rehearsal && a.status === 'finished' && a.reason !== 'withdrew' && a.reason !== 'disconnected' && !a.flags.includes('retired') && a.startedAt !== undefined && a.verification !== undefined
-
 /** Answers as the record carries them: without the raw screener answers, recording references or voice blobs. */
 function exportedAnswers(answers: Record<string, unknown>): Record<string, unknown> {
   const kept: Record<string, unknown> = {}
@@ -29,14 +25,15 @@ function exportedAnswers(answers: Record<string, unknown>): Record<string, unkno
   return kept
 }
 
-/** A verdict without the author's expected answer. */
-function withoutExpected<T extends HookResult>(result: T, expected: string | undefined): T {
-  if (expected === undefined || !result.diff || result.diff.expected !== expected) return result
+/** A verdict without the author's expected answer: whenever the task asks a validation question, no verdict carries an `expected` in its diff. */
+function withoutExpected<T extends HookResult>(result: T): T {
+  if (!result.diff) return result
   return { ...result, diff: { actual: result.diff.actual } }
 }
-function exportedVerification(v: Verification | undefined, expected: string | undefined): Verification | null {
+function exportedVerification(v: Verification | undefined, asksQuestion: boolean): Verification | null {
   if (!v) return null
-  return { ...withoutExpected(v, expected), steps: v.steps, ...(v.answer && { answer: withoutExpected(v.answer, expected) }) }
+  const strip = asksQuestion || v.answer !== undefined
+  return { ...(strip ? withoutExpected(v) : v), steps: v.steps, ...(v.answer && { answer: withoutExpected(v.answer) }) }
 }
 
 function firstLookOf(on: boolean, attempt: AttemptRow, item: TraceAttempt): RunRecord['attempts'][number]['firstLook'] {
@@ -46,7 +43,7 @@ function firstLookOf(on: boolean, attempt: AttemptRow, item: TraceAttempt): RunR
 }
 
 /** Everything a consumer needs about one run, read from the store: nothing here comes from the participant's browser. */
-export async function buildRecord(store: RunStore, runId: string, options: { model?: TextModel } = {}): Promise<RunRecord> {
+export async function buildRecord(store: RunStore, runId: string, options: { model?: TextModel; currency?: string } = {}): Promise<RunRecord> {
   const trace = await buildTrace(store, runId)
   const { run, compiled } = trace
   const n = compiled.sample.n
@@ -64,9 +61,10 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
       status: attempt.status,
       source: 'link',
       purposes: attempt.purposes,
-      restrictions: consented ? compiled.consent.purposes.filter(p => !attempt.purposes.includes(p)) : [],
+      restrictions: [],
+      purposesDeclined: consented ? compiled.consent.purposes.filter(p => !attempt.purposes.includes(p)) : [],
       reason: attempt.reason ?? null,
-      verification: exportedVerification(attempt.verification, goal?.answer?.expected),
+      verification: exportedVerification(attempt.verification, goal?.answer !== undefined),
       timings: { ...(attempt.startedAt && { startedAt: attempt.startedAt }), ...(attempt.endedAt && { endedAt: attempt.endedAt }), ...item.timings },
       path: item.path,
       firstLook: firstLookOf(compiled.impression.on, attempt, item),
@@ -79,7 +77,7 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
 
   const byGoal: RunRecord['measures']['byGoal'] = {}
   for (const goal of compiled.goals) {
-    const mine = trace.attempts.filter(t => t.attempt.goalIndex === goal.index && isCounted(t.attempt))
+    const mine = trace.attempts.filter(t => t.attempt.goalIndex === goal.index && countsTowardN(t.attempt))
     const timed = mine.map(t => ({ ...(t.timings.onGoalMs !== undefined && { durationMs: t.timings.onGoalMs }), verified: t.attempt.verification?.status === 'correct' }))
     const { allMs, verifiedMs } = medians(timed)
     byGoal[String(goal.index)] = {
@@ -101,12 +99,14 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
   }
 
   const live = trace.attempts.filter(t => !t.attempt.rehearsal && t.attempt.reason !== 'withdrew' && t.attempt.reason !== 'disconnected' && !t.attempt.flags.includes('retired'))
-  const scores = live.flatMap(({ attempt }) => {
+  const rated = live.flatMap(({ attempt }) => {
     const { useful, easy } = attempt.answers
-    return Number.isInteger(useful) && Number.isInteger(easy) && (useful as number) >= 1 && (useful as number) <= 5 && (easy as number) >= 1 && (easy as number) <= 5
-      ? [uxLite(useful as 1, easy as 1).score]
-      : []
+    const point = (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 5
+    return point(useful) && point(easy) ? [uxLite(useful as 1, easy as 1)] : []
   })
+  const scores = rated.map(r => r.score)
+  const usefulScores = rated.map(r => r.useful)
+  const easyScores = rated.map(r => r.easy)
   const screened = live.filter(t => t.screener)
   const fitTotals = screened.map(t => t.screener!.fit.total)
   const matched = screened.filter(t => t.screener!.matches).length
@@ -136,7 +136,13 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
     attempts,
     measures: {
       byGoal,
-      satisfaction: { uxLite: { n: scores.length, scores, ...(mean(scores) !== undefined && { mean: mean(scores) }) } },
+      satisfaction: {
+        uxLite: {
+          n: scores.length, scores, ...(mean(scores) !== undefined && { mean: mean(scores) }),
+          useful: { scores: usefulScores, ...(mean(usefulScores) !== undefined && { mean: mean(usefulScores) }) },
+          easy: { scores: easyScores, ...(mean(easyScores) !== undefined && { mean: mean(easyScores) }) },
+        },
+      },
       fit: { scores: fitTotals, summary: { n: fitTotals.length, ...(mean(fitTotals) !== undefined && { mean: mean(fitTotals) }), outOf: FIT_OUT_OF } },
     },
     impression: {
@@ -154,10 +160,10 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
         : 'No one answered the screener.',
     },
     issues,
-    money: { estimate: 0, reserved: 0, paid: 0, truedUp: 0, currency: 'USD' },
+    money: { estimate: 0, reserved: 0, paid: 0, truedUp: 0, currency: options.currency ?? 'USD' },
     quality: {
       attempts: trace.attempts.length,
-      counted: trace.attempts.filter(t => isCounted(t.attempt)).length,
+      counted: trace.attempts.filter(t => countsTowardN(t.attempt)).length,
       rehearsal: trace.attempts.filter(t => t.attempt.rehearsal).length,
       withdrawn: trace.attempts.filter(t => t.attempt.reason === 'withdrew').length,
       disconnected: trace.attempts.filter(t => t.attempt.reason === 'disconnected').length,

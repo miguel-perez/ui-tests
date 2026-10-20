@@ -46,8 +46,10 @@ const attempt = z.object({
   source: z.literal('link'),
   /** What this person agreed to, and only that. */
   purposes: z.array(z.string()),
-  /** The study's purposes this person did not agree to. */
+  /** The source's own restrictions (panel terms); none for a link. */
   restrictions: z.array(z.string()),
+  /** The study's purposes this person did not agree to (what `purposes` leaves out). */
+  purposesDeclined: z.array(z.string()),
   reason: z.enum(['done', 'gave up', 'timeout', 'withdrew', 'disconnected']).nullable(),
   verification: verification.nullable(),
   timings: z.object({ startedAt: z.string().optional(), endedAt: z.string().optional(), onGoalMs: z.number().optional() }),
@@ -96,7 +98,12 @@ export const runRecordSchema = z
     attempts: z.array(attempt),
     measures: z.object({
       byGoal: z.record(z.string(), goalMeasures),
-      satisfaction: z.object({ uxLite: z.object({ n: z.number(), scores: z.array(z.number()), mean: z.number().optional() }) }),
+      satisfaction: z.object({ uxLite: z.object({
+        n: z.number(), scores: z.array(z.number()), mean: z.number().optional(),
+        /** The usefulness item on its own (adoption signal), each response as (response - 1) x 25. */
+        useful: z.object({ scores: z.array(z.number()), mean: z.number().optional() }),
+        easy: z.object({ scores: z.array(z.number()), mean: z.number().optional() }),
+      }) }),
       fit: z.object({ scores: z.array(z.number()), summary: z.object({ n: z.number(), mean: z.number().optional(), outOf: z.number() }) }),
     }),
     impression: z.object({
@@ -124,3 +131,12 @@ export const runRecordSchema = z
 
 export type RunRecord = z.infer<typeof runRecordSchema>
 export type Clause = z.infer<typeof clauseSchema>
+
+/**
+ * The published JSON Schema: zod's output with the schema's own `$id`, and the root left open so a later v1 addition (revisions detail,
+ * agent trials) does not make a v1 validator reject a newer record. Everything below the root stays closed.
+ */
+export function runRecordJsonSchema(): Record<string, unknown> {
+  const { additionalProperties: _closed, ...schema } = z.toJSONSchema(runRecordSchema) as Record<string, unknown>
+  return { $schema: schema.$schema, $id: RUN_RECORD_SCHEMA_ID, ...schema }
+}

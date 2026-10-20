@@ -12,7 +12,8 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  */
 export function clauseEvidence(record: Omit<RunRecord, 'evidence' | 'evidenceStatement'>): Clause[] {
   const { compiled, attempts, measures, fit, issues, revisions, handle } = record
-  const real = attempts.filter(a => !a.rehearsal)
+  // Only people who began: unopened invite slots, retired slots and rehearsals are not people who took part.
+  const real = attempts.filter(a => !a.rehearsal && a.timings.startedAt !== undefined && !a.flags.includes('retired'))
   const consented = real.filter(a => a.purposes.length > 0)
   const withEnvironment = real.filter(a => Object.keys(a.environment).length > 0)
   const goalsWithCriteria = compiled.goals.filter(g => g.hasOutcome || g.answer)
@@ -36,11 +37,11 @@ export function clauseEvidence(record: Omit<RunRecord, 'evidence' | 'evidenceSta
     },
     {
       clause: '7.3', title: 'User requirements',
-      shows: `${goalsWithCriteria.length} of ${plural(compiled.goals.length, 'goal')} have a verified outcome as a measurable criterion: ${compiled.goals.map(g => g.name).join('; ') || 'none'}.`,
+      shows: `${goalsWithCriteria.length} of ${plural(compiled.goals.length, 'goal')} have a verified outcome as a measurable criterion${goalsWithCriteria.length ? ': ' : ''}${goalsWithCriteria.map(g => g.name).join('; ')}.`,
     },
     {
       clause: '7.5.4', title: 'User-based testing',
-      shows: `${plural(real.length, 'attempt')} by people performing the goals themselves. Effectiveness: ${reached} of ${counted} counted attempts reached the verified outcome. Efficiency: time on goal for ${timed} of ${plural(compiled.goals.length, 'goal')}. Satisfaction: ease rated on ${rated} of ${plural(compiled.goals.length, 'goal')}.`,
+      shows: `${plural(real.length, 'attempt')} by people who began, performing the goals themselves. Effectiveness: ${reached} of ${counted} counted attempts reached the verified outcome. Efficiency: time on goal for ${timed} of ${plural(compiled.goals.length, 'goal')}. Satisfaction: ease rated on ${rated} of ${plural(compiled.goals.length, 'goal')}.`,
     },
   ]
 }
