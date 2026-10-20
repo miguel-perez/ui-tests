@@ -53,7 +53,7 @@ describe('restGitHub', () => {
     const answer = (body: unknown) => new Response(JSON.stringify(body), { status: 200 })
     const fetchStub: typeof fetch = async (url, init) => {
       seen.push(`${init?.method} ${String(url).replace('https://api.github.com', '')} ${String(init?.body ?? '')}`)
-      return String(url).endsWith('/comments?per_page=100') ? answer([{ id: 9, body: 'x <!-- ui-tests -->' }]) : answer({ id: 7 })
+      return String(url).includes('/comments?per_page=100&page=1') ? answer([{ id: 9, body: '<!-- ui-tests --> x' }]) : answer({ id: 7 })
     }
     const github = restGitHub('tok', fetchStub)
     expect(await github.createCheck({ owner: 'o', repo: 'r', headSha: 'abc', name: 'ui-tests', status: 'in_progress', title: 't', summary: 's' })).toEqual({ id: 7 })
@@ -285,5 +285,155 @@ describe('the check page and the sticky comment', () => {
     expect(comment[0]).toBe('<!-- ui-tests -->')
     expect(comment.length - 1).toBeGreaterThanOrEqual(3)
     expect(comment.length - 1).toBeLessThanOrEqual(5)
+  })
+})
+
+describe('a failing delivery is retried by the next one', () => {
+  const closedPort = async () => {
+    const probe = createServer()
+    await new Promise<void>(resolve => probe.listen(0, '127.0.0.1', resolve))
+    const port = (probe.address() as AddressInfo).port
+    await new Promise(resolve => probe.close(resolve))
+    return port
+  }
+  const writeWith = (webhook: string, extra = '') =>
+    writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, ci: { on: ['label:ui-test'] }, webhook: { url: '${webhook}', secret: 'hook-secret' }, ${extra} }\n`)
+
+  it('does not deliver, and records nothing, when the config cannot be read; the next status with the right config fails the check', async () => {
+    await writeConfig("check: { block_on: 'problems' },")
+    cleanup.push(() => writeConfig())
+    const github = fakeGitHub()
+    await run(['check'], github, { GITHUB_EVENT_PATH: await event('cfg', pullRequest(110, 'sha-110', ['ui-test'])) })
+    const s = await store()
+    const row = (await s.listRuns()).find(r => r.key.startsWith('pr-110:'))!
+    await finishAll(s, row, ['incorrect', 'correct', 'correct', 'correct', 'correct'])
+    await writeFile(join(work, 'ui-tests.config.ts'), 'export default {')
+    const broken = await run(['status', row.run], github)
+    expect(broken.code).toBe(2)
+    expect(broken.err).toContain('cannot tell GitHub or the webhook')
+    expect([...github.checks.values()][0]!.status).toBe('in_progress')
+    expect((await s.getRun(row.run))!.delivered).toBeUndefined()
+    await writeConfig("check: { block_on: 'problems' },")
+    await run(['check', '--reconcile'], github)
+    expect([...github.checks.values()][0]).toMatchObject({ status: 'completed', conclusion: 'failure' })
+  })
+
+  it('reconcile retries a webhook that failed after the check was delivered, and covers a run with no check', async () => {
+    const dead = `http://127.0.0.1:${await closedPort()}/hook`
+    await writeWith(dead)
+    cleanup.push(() => writeConfig())
+    const github = fakeGitHub()
+    await run(['check'], github, { GITHUB_EVENT_PATH: await event('retry', pullRequest(111, 'sha-111', ['ui-test'])) })
+    const s = await store()
+    const row = (await s.listRuns()).find(r => r.key.startsWith('pr-111:'))!
+    await finishAll(s, row, ['correct', 'correct', 'correct', 'correct', 'correct'])
+    const failed = await run(['status', row.run], github)
+    expect(failed.err).toContain('webhook')
+    expect([...github.checks.values()][0]!.status).toBe('completed')
+    expect((await s.getRun(row.run))!.delivered).toMatchObject({ check: 'none-found' })
+    expect((await s.getRun(row.run))!.delivered).not.toHaveProperty('webhook')
+
+    // A run no pull request owns: only its webhook is owed.
+    const bare = await run(['recruit', '--json', '--key', 'bare-key'], github)
+    const bareRun = JSON.parse(bare.out).run as string
+    await finishAll(s, (await s.getRun(bareRun))!, ['correct', 'correct', 'correct', 'correct', 'correct'])
+
+    await writeWith(hookUrl)
+    const before = hooks.length
+    const calls = github.calls.length
+    const code = await run(['check', '--reconcile'], github)
+    expect(code.code).toBe(0)
+    const runs = hooks.slice(before).map(h => JSON.parse(h.body).run)
+    expect(runs).toContain(row.run)
+    expect(runs).toContain(bareRun)
+    expect(github.calls.length).toBe(calls) // the check and comment were already told
+  })
+
+  it('one run failing does not stop the others, and the exit code says so', async () => {
+    const github = fakeGitHub()
+    const s = await store()
+    const bad = await run(['recruit', '--json', '--key', 'bad-key'], github)
+    const badRun = (await s.getRun(JSON.parse(bad.out).run))!
+    const good = await run(['recruit', '--json', '--key', 'good-key'], github)
+    const goodRun = (await s.getRun(JSON.parse(good.out).run))!
+    await finishAll(s, goodRun, ['correct', 'correct', 'correct', 'correct', 'correct'])
+    await finishAll(s, badRun, ['correct'])
+    // The bad run's stored study is damaged, so settling it throws.
+    await s.updateRun(badRun.run, { compiled: undefined as never }, (await s.getRun(badRun.run))!.revision)
+    const before = hooks.length
+    const result = await run(['check', '--reconcile'], github)
+    expect(result.code).toBe(2)
+    expect(result.err).toContain(badRun.run)
+    expect(hooks.slice(before).map(h => JSON.parse(h.body).run)).toContain(goodRun.run)
+  })
+})
+
+describe('creating the check', () => {
+  it('two pushes racing make one check', async () => {
+    const github = fakeGitHub()
+    const [a, b] = await Promise.all([
+      run(['check'], github, { GITHUB_EVENT_PATH: await event('race-a', pullRequest(112, 'sha-a', ['ui-test'])) }),
+      run(['check'], github, { GITHUB_EVENT_PATH: await event('race-b', pullRequest(112, 'sha-b', ['ui-test'])) }),
+    ])
+    expect([a.code, b.code]).toEqual([0, 0])
+    expect(checkCalls(github, 'createCheck')).toHaveLength(1)
+  })
+
+  it('releases the claim when GitHub refuses, so the next push can make the check', async () => {
+    const github = fakeGitHub()
+    const real = github.createCheck
+    github.createCheck = async () => { throw new Error('GitHub is down') }
+    const failed = await run(['check'], github, { GITHUB_EVENT_PATH: await event('down', pullRequest(113, 'sha-113', ['ui-test'])) })
+    expect(failed.code).toBe(2)
+    github.createCheck = real
+    const again = await run(['check'], github, { GITHUB_EVENT_PATH: await event('up', pullRequest(113, 'sha-113', ['ui-test'])) })
+    expect(again.code).toBe(0)
+    expect(github.checks.size).toBe(1)
+  })
+})
+
+describe('the page with clustered issues', () => {
+  const issue = (id: string, impact: 'blocked' | 'slowed' | 'confused', people: number, attempt: string, element?: string) => ({
+    id, goalIndex: 0, where: { page: `/${id}`, ...(element && { element }) }, title: `Title ${id}`, participants: Array.from({ length: people }, (_, i) => `x${i}`),
+    count: `${people} of 5`, impact, words: [], access: [], moments: [{ attempt, at: 4200 }], recovered: [], suggestedChange: 's', source: 'found from traces' as const,
+  })
+
+  async function recordWithIssues() {
+    const github = fakeGitHub()
+    await run(['check'], github, { GITHUB_EVENT_PATH: await event('issues', pullRequest(114, 'sha-114', ['ui-test'])) })
+    const s = await store()
+    const row = (await s.listRuns()).find(r => r.key.startsWith('pr-114:'))!
+    await finishAll(s, row, ['incorrect', 'correct', 'correct', 'correct', 'correct'])
+    await refreshRun(s, row.run)
+    const record = await buildRecord(s, row.run)
+    const second = record.attempts[1]!.id
+    return { ...record, issues: [
+      issue('a', 'confused', 1, second), issue('b', 'blocked', 2, second, '#save'), issue('c', 'slowed', 3, second),
+      issue('d', 'blocked', 4, second), issue('e', 'slowed', 1, second, '.menu'),
+    ] }
+  }
+
+  it('ranks by impact then people, shows three, links each moment, and folds the rest', async () => {
+    const record = await recordWithIssues()
+    const links = { report: 'https://x/r/1', attempt: (n: number, at?: number) => `https://x/r/1/p${n}?sig=s${at === undefined ? '' : `&at=${at}`}` }
+    const page = checkPage(record, { links })
+    const [shown, folded] = page.split('<details>')
+    // d (blocked, 4 people), b (blocked, 2), c (slowed, 3) are shown, in that order.
+    expect(shown!.indexOf('Title d')).toBeLessThan(shown!.indexOf('Title b'))
+    expect(shown!.indexOf('Title b')).toBeLessThan(shown!.indexOf('Title c'))
+    expect(shown).not.toContain('Title e')
+    expect(shown).not.toContain('Title a')
+    expect(shown).toContain('1. **Title d**')
+    expect(shown).toContain('   /b, #save · 2 of 5 people · Blocked · [Watch the moment](https://x/r/1/p')
+    expect(shown).toContain('?sig=s&at=4200)')
+    expect(shown).toMatch(/\[Watch the moment\]\(https:\/\/x\/r\/1\/p2\?/)
+    // e (slowed, 1) and a (confused, 1) follow, numbered on from three, inside the fold.
+    expect(folded).toContain('#### More problems')
+    expect(folded).toContain('4. **Title e**')
+    expect(folded).toContain('5. **Title a**')
+    expect(folded!.indexOf('Title e')).toBeLessThan(folded!.indexOf('Title a'))
+    // Without links there is no moment link.
+    expect(checkPage(record)).not.toContain('Watch the moment')
+    expect(stickyComment(record, { links })).toContain('Most serious: Title d (/d).')
   })
 })

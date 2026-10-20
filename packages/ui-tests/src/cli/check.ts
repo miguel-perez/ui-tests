@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises'
 import { loadConfig } from '../config.ts'
-import { patchRun, pendingSummary, reportLinks } from '../github/check.ts'
-import type { Delivered, GitHubClient, GitHubLink } from '../github/types.ts'
+import { owedDeliveries, patchRun, pendingSummary, reportLinks } from '../github/check.ts'
+import type { GitHubClient, GitHubLink } from '../github/types.ts'
 import { openStore } from '../store/open.ts'
 import type { RunRow } from '../store/types.ts'
 import type { UiTestsConfig } from '../types.ts'
@@ -70,37 +70,62 @@ async function checkPullRequest(args: Parameters<Command>[0], io: Io): Promise<n
 
   const store = await openStore(io.env)
   try {
-    const run = (await store.getRun(handle.run))!
-    if (run.github) { io.stdout.write(`check: ${run.run} already has its check\n`); return 0 }
     const name = handle.actor === 'agent' ? 'ui-tests (agent)' : 'ui-tests'
+    // Claim the run's check before making it: the claim is stored against the run's revision, so of two pushes racing, one wins.
+    const claim: GitHubLink = { ...subject, checkId: null, name }
+    let run: RunRow | undefined
+    for (let tries = 0; tries < 5 && !run; tries++) {
+      const current = (await store.getRun(handle.run))!
+      if (current.github) { io.stdout.write(`check: ${current.run} already has its check\n`); return 0 }
+      if (await store.updateRun(current.run, { github: claim }, current.revision)) run = current
+    }
+    if (!run) { io.stderr.write(`check: ${handle.run} kept changing; try again\n`); return 2 }
     const options = { ...(config.check?.block_on && { blockOn: config.check.block_on }), ...(reportLinks(run, io.env.UI_TESTS_SHARE_SECRET) && { links: reportLinks(run, io.env.UI_TESTS_SHARE_SECRET)! }) }
     const { title, summary } = pendingSummary(run, options)
-    const { id } = await github.createCheck({
-      ...subject, name, status: 'in_progress', title, summary, ...(options.links && { detailsUrl: options.links.report }),
-    })
-    const link: GitHubLink = { ...subject, checkId: id, name }
-    await patchRun(store, run.run, () => ({ github: link }))
+    let id: number
+    try {
+      ;({ id } = await github.createCheck({ ...subject, name, status: 'in_progress', title, summary, ...(options.links && { detailsUrl: options.links.report }) }))
+    } catch (error) {
+      await patchRun(store, run.run, () => ({ github: undefined })) // nothing was made: let the next try claim again
+      throw error
+    }
+    try { await patchRun(store, run.run, () => ({ github: { ...claim, checkId: id } satisfies GitHubLink })) } catch (error) {
+      // The check exists but could not be recorded: say so on the check rather than leave it pending without an owner.
+      await github.updateCheck(id, { ...subject, status: 'completed', conclusion: 'neutral', title: 'Could not be recorded', summary: 'The run was made but this check could not be linked to it. Push again to retry.' }).catch(() => undefined)
+      throw error
+    }
     io.stdout.write(`check: ${name} is pending for ${run.run}\n`)
     return 0
   } finally { await store.close() }
 }
 
-/** Runs `verify` then `status` for every run with a check that still has something to tell; each of them updates the check. */
+/** Runs `verify` then `status` for every run that still owes its check, comment or webhook something (or is waiting for a result); each of them delivers. One run failing does not stop the rest. */
 async function reconcile(io: Io): Promise<number> {
+  let config: UiTestsConfig
+  try { config = (await loadConfig(io.cwd)).config } catch (error) {
+    io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
+    return 2
+  }
   const store = await openStore(io.env)
   let open: RunRow[]
   try {
     open = (await store.listRuns()).filter(run => {
-      if (!run.github || run.rehearsal) return false
-      const done = (run.delivered ?? {}) as Delivered
-      return run.result === 'pending' || done.check !== run.result
+      if (run.rehearsal) return false
+      if (run.result === 'pending') return Boolean(run.github) || Boolean(config.webhook?.url)
+      const owed = owedDeliveries(run, config)
+      return owed.check || owed.comment || owed.webhook
     })
   } finally { await store.close() }
   let worst = 0
   for (const run of open) {
     const quiet = { ...io, stdout: { write: () => true } }
-    for (const command of [verify, status]) worst = Math.max(worst, await command({ positionals: [run.run], flags: new Map() }, quiet))
-    io.stdout.write(`reconciled ${run.run}\n`)
+    try {
+      for (const command of [verify, status]) worst = Math.max(worst, await command({ positionals: [run.run], flags: new Map() }, quiet))
+      io.stdout.write(`reconciled ${run.run}\n`)
+    } catch (error) {
+      worst = 2
+      io.stderr.write(`${run.run}: ${error instanceof Error ? error.message : String(error)}\n`)
+    }
   }
   if (!open.length) io.stdout.write('reconcile: no open checks\n')
   return worst

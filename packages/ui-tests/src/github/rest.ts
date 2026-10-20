@@ -34,14 +34,19 @@ export function restGitHub(token: string, fetchImpl: typeof fetch = fetch): GitH
       await call('PATCH', `/repos/${input.owner}/${input.repo}/check-runs/${id}`, payload(input))
     },
     async upsertComment({ owner, repo, pr, marker, body }) {
-      const comments = await call('GET', `/repos/${owner}/${repo}/issues/${pr}/comments?per_page=100`) as { id: number; body?: string }[]
-      const mine = comments.find(c => c.body?.includes(marker))
+      // The marker opens our own comment; a reply that quotes it does not match. Every page is read.
+      let mine: { id: number } | undefined
+      for (let page = 1; !mine; page++) {
+        const comments = await call('GET', `/repos/${owner}/${repo}/issues/${pr}/comments?per_page=100&page=${page}`) as { id: number; body?: string }[]
+        mine = comments.find(c => c.body?.startsWith(marker))
+        if (comments.length < 100) break
+      }
       if (mine) await call('PATCH', `/repos/${owner}/${repo}/issues/comments/${mine.id}`, { body })
       else await call('POST', `/repos/${owner}/${repo}/issues/${pr}/comments`, { body })
     },
     async pullRequestsForCommit({ owner, repo, headSha }) {
       const found = await call('GET', `/repos/${owner}/${repo}/commits/${headSha}/pulls`) as { number: number; state: string; head: { sha: string }; labels: { name: string }[] }[]
-      return found.filter(p => p.state === 'open').map(p => ({ number: p.number, headSha: p.head.sha, labels: p.labels.map(l => l.name) }))
+      return found.filter(p => p.state === 'open' && p.head.sha === headSha).map(p => ({ number: p.number, headSha: p.head.sha, labels: p.labels.map(l => l.name) }))
     },
   }
 }

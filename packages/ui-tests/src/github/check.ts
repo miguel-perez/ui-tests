@@ -125,14 +125,28 @@ export function pendingSummary(run: RunRow, options: PageOptions = {}): { title:
   }
 }
 
+/** Applies `change` to the stored run, retrying when the run moved underneath; throws when it keeps moving. */
 async function patchRun(store: RunStore, id: string, change: (run: RunRow) => Partial<RunRow>): Promise<void> {
   for (let tries = 0; tries < 5; tries++) {
     const run = await store.getRun(id)
     if (!run) return
     if (await store.updateRun(id, change(run), run.revision)) return
   }
+  throw new Error(`run ${id} kept changing; the update was not stored`)
 }
 const markDelivered = (store: RunStore, id: string, part: Delivered) => patchRun(store, id, run => ({ delivered: { ...(run.delivered as Delivered | undefined), ...part } }))
+
+/** What the run's current result still owes the outside: its check, its sticky comment, its webhook. Each is tracked on its own. */
+export function owedDeliveries(run: RunRow, config: UiTestsConfig): { check: boolean; comment: boolean; webhook: boolean } {
+  if (run.result === 'pending' || run.rehearsal) return { check: false, comment: false, webhook: false }
+  const link = run.github as GitHubLink | undefined
+  const done = (run.delivered ?? {}) as Delivered
+  return {
+    check: Boolean(link?.checkId) && done.check !== run.result,
+    comment: Boolean(link?.checkId) && config.check?.comment !== false && done.comment !== outcomeOf(run.result),
+    webhook: Boolean(config.webhook?.url) && done.webhook !== run.result,
+  }
+}
 
 export type DeliverInput = {
   store: RunStore
@@ -154,9 +168,10 @@ export async function deliverResult(input: DeliverInput): Promise<string[]> {
   const link = run.github as GitHubLink | undefined
   const done = (run.delivered ?? {}) as Delivered
   const outcome = outcomeOf(result)
-  const wantCheck = Boolean(github && link && done.check !== result)
-  const wantComment = Boolean(github && link && config.check?.comment !== false && done.comment !== outcome)
-  const wantWebhook = Boolean(config.webhook?.url && done.webhook !== result)
+  const owed = owedDeliveries(run, config)
+  const wantCheck = Boolean(github && link?.checkId && owed.check)
+  const wantComment = Boolean(github && link?.checkId && owed.comment)
+  const wantWebhook = owed.webhook
   if (!wantCheck && !wantComment && !wantWebhook) return []
 
   const failures: string[] = []
@@ -166,7 +181,7 @@ export async function deliverResult(input: DeliverInput): Promise<string[]> {
     try { await markDelivered(store, run.run, await step()) } catch (error) { failures.push(`${what}: ${error instanceof Error ? error.message : String(error)}`) }
   }
   if (wantCheck) await attempt('check', async () => {
-    await github!.updateCheck(link!.checkId, {
+    await github!.updateCheck(link!.checkId!, {
       owner: link!.owner, repo: link!.repo, status: 'completed', conclusion: checkConclusion(result, config.check?.block_on),
       title: titleOf(record), summary: record.sentence, text: checkPage(record, options), ...(options.links && { detailsUrl: options.links.report }),
     })

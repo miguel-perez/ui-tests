@@ -17,7 +17,8 @@ export function githubFor(io: Io): GitHubClient | undefined {
 export function reporterFor(io: Io): ResultHook {
   let config: UiTestsConfig | undefined
   return async (run, store) => {
-    config ??= await loadConfig(io.cwd).then(c => c.config, () => ({}))
+    // A config that cannot be read fails the delivery: nothing is recorded as told, so a later run from the right place tells it with the right block_on.
+    config ??= await loadConfig(io.cwd).then(c => c.config, error => { throw new Error(`cannot tell GitHub or the webhook: ${error instanceof Error ? error.message : String(error)}`) })
     const github = githubFor(io)
     const failures = await deliverResult({
       store, run, config, ...(github && { github }), ...(io.env.UI_TESTS_SHARE_SECRET && { shareSecret: io.env.UI_TESTS_SHARE_SECRET }),

@@ -25,8 +25,8 @@ export interface GitHubClient {
   pullRequestsForCommit(input: { owner: string; repo: string; headSha: string }): Promise<PullRequestInfo[]>
 }
 
-/** Where a run's check lives, stored on the run (`RunRow.github`). */
-export type GitHubLink = { owner: string; repo: string; pr: number; headSha: string; checkId: number; name: string }
+/** Where a run's check lives, stored on the run (`RunRow.github`). `checkId` is null while the check is being created: the claim that keeps two pushes from making two. */
+export type GitHubLink = { owner: string; repo: string; pr: number; headSha: string; checkId: number | null; name: string }
 
 /** What has already been told to the outside for the run's current result, stored on the run (`RunRow.delivered`). */
 export type Delivered = { check?: string; comment?: string; webhook?: string }
