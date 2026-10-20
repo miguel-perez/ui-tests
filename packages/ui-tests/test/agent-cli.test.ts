@@ -1,10 +1,12 @@
 import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
-import { tmpdir } from 'node:os'
+import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { afterEach, describe, expect as vitestExpect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect as vitestExpect, it } from 'vitest'
 import { main, type Io } from '../src/cli/main.ts'
-import { cliHarness, splitWords, strippedEnv } from '../src/agents/harness-cli.ts'
+import { absolutePath, cliHarness, splitWords } from '../src/agents/harness-cli.ts'
 import { runTrials, type Trial } from '../src/agents/loop.ts'
+import type { AgentModel } from '../src/agents/model.ts'
+import { packLocalPackage, type LocalPackage } from '../src/agents/pack.ts'
 import { scriptedModel, type ScriptedTurn } from '../src/agents/scripted.ts'
 import { globToRegExp } from '../src/agents/workspace.ts'
 import { expect } from '../src/expect.ts'
@@ -17,22 +19,23 @@ const reportExists = async ({ workspace }: { workspace: { file(glob: string): st
   expect(workspace.file('.ui-tests/runs/*/report.json')).toExist()
 }
 const run = (args = ''): ScriptedTurn => ({ toolCalls: [{ name: 'run', input: { command: `${command}${args}` } }] })
-const done: ScriptedTurn = { text: 'The report is written.' }
+const done: ScriptedTurn = { text: 'The report is written.', toolCalls: [{ name: 'done', input: { summary: 'wrote the report' } }] }
+const envOf = (output: string) => Object.fromEntries(output.split('\n').filter(l => l.includes('=')).map(l => [l.slice(0, l.indexOf('=')), l.slice(l.indexOf('=') + 1)]))
 
 let stores: RunStore[] = []
 afterEach(async () => { for (const store of stores) await store.close(); stores = [] })
 
-async function trialsOf(script: ScriptedTurn[] | ScriptedTurn[][], trials = 5): Promise<Trial[]> {
+async function trialsOf(script: ScriptedTurn[] | ScriptedTurn[][], trials = 5, model?: AgentModel, budgets?: Record<string, number>): Promise<{ trials: Trial[]; store: RunStore; runId: string }> {
   const made = await agentStudy({ target: { cli: command }, hook: reportExists, trials })
   stores.push(made.store)
-  return runTrials({ ...made, model: scriptedModel(script), harness: cliHarness(command, { cwd: fixtures }) })
+  if (budgets) made.run.compiled.agents = { config: { model: { provider: 'scripted', name: 'fixture' }, budgets }, fingerprint: 'x' }
+  const result = await runTrials({ ...made, model: model ?? scriptedModel(script), harness: cliHarness(command, { cwd: fixtures }) })
+  return { trials: result, store: made.store, runId: made.run.run }
 }
 
 describe('agent trials through the cli harness', () => {
   it('runs five trials, each verified by the PRD 04 outcome, in a different workspace each', async () => {
-    const made = await agentStudy({ target: { cli: command }, hook: reportExists })
-    stores.push(made.store)
-    const trials = await runTrials({ ...made, model: scriptedModel([run(), done]), harness: cliHarness(command, { cwd: fixtures }) })
+    const { trials, store, runId } = await trialsOf([run(), done])
     vitestExpect(trials.map(t => t.state)).toEqual(['verified', 'verified', 'verified', 'verified', 'verified'])
     vitestExpect(trials.every(t => t.claimedDone && !t.recovered && t.stoppedBy === undefined)).toBe(true)
     const outputs = trials.map(t => t.transcript.find(m => m.role === 'tool')).map(m => m?.role === 'tool' ? m.output : '')
@@ -40,12 +43,13 @@ describe('agent trials through the cli harness', () => {
     vitestExpect(trials[0].sideEffects).toEqual(['created .ui-tests/runs/r1/report.json'])
     vitestExpect(trials[0].cost).toMatchObject({ tokens: 240, calls: 2 })
     vitestExpect(trials[0].transcript[0]).toEqual({ role: 'user', text: 'Get a first result from the tool.' })
-    const attempts = await made.store.listAttempts(made.run.run)
+    const attempts = await store.listAttempts(runId)
     vitestExpect(attempts.map(a => [a.status, a.reason, a.verification?.status])).toEqual(Array(5).fill(['finished', 'done', 'correct']))
+    vitestExpect(attempts.map(a => a.participant)).toEqual(['agent:0:1', 'agent:0:2', 'agent:0:3', 'agent:0:4', 'agent:0:5'])
   })
 
-  it('reads a claimed done without the file as stopped: a false success, with what stopped it in one line', async () => {
-    const [trial] = await trialsOf([done], 1)
+  it('reads done without the file as stopped: a false success, with what stopped it in one line', async () => {
+    const { trials: [trial] } = await trialsOf([done], 1)
     vitestExpect(trial).toMatchObject({ state: 'stopped', claimedDone: true, recovered: false })
     vitestExpect(trial.stoppedBy).toMatch(/^said it was done, but toExist/)
     vitestExpect(trial.stoppedBy).not.toContain('\n')
@@ -54,58 +58,99 @@ describe('agent trials through the cli harness', () => {
   })
 
   it('marks a trial that hit an error and still verified as recovered', async () => {
-    const [trial] = await trialsOf([run(' --bad'), run(), done], 1)
+    const { trials: [trial] } = await trialsOf([run(' --bad'), run(), done], 1)
     vitestExpect(trial).toMatchObject({ state: 'verified', recovered: true })
     const failed = trial.transcript.find(m => m.role === 'tool' && m.error)
     vitestExpect(failed).toMatchObject({ error: 'ran `node ./fake-cli.mjs --bad`, which exited 1: unknown flag --bad' })
   })
 
-  it('names the failed call a stopped trial ended on, and counts its cost', async () => {
-    const [trial] = await trialsOf([run(' --bad'), { text: 'I could not get it to work.' }], 1)
-    vitestExpect(trial).toMatchObject({ state: 'stopped', claimedDone: true, stoppedBy: 'ran `node ./fake-cli.mjs --bad`, which exited 1: unknown flag --bad' })
+  it('reads a final message without done as giving up, with that message as what stopped it', async () => {
+    const { trials: [trial], store, runId } = await trialsOf([run(' --bad'), { text: 'I could not get it to work.' }], 1)
+    vitestExpect(trial).toMatchObject({ state: 'stopped', claimedDone: false, stoppedBy: 'I could not get it to work.' })
     vitestExpect(trial.cost.calls).toBe(2)
     vitestExpect(trial.cost.tokens).toBeGreaterThan(0)
+    vitestExpect((await store.listAttempts(runId))[0].reason).toBe('gave up')
+  })
+
+  it('reads give_up as giving up with its reason, and names the failed call when the agent says nothing', async () => {
+    const { trials } = await trialsOf([[run(' --bad'), { toolCalls: [{ name: 'give_up', input: { reason: 'The flag is not known and there is no help.' } }] }], [run(' --bad'), { text: '' }]], 2)
+    vitestExpect(trials.map(t => [t.claimedDone, t.stoppedBy])).toEqual([[false, 'The flag is not known and there is no help.'], [false, 'stopped without calling done']])
+    const { trials: [quiet] } = await trialsOf([run(' --bad')], 1, undefined, { calls: 1 })
+    vitestExpect(quiet.stoppedBy).toBe('ran `node ./fake-cli.mjs --bad`, which exited 1: unknown flag --bad')
   })
 
   it('records a clarifying question as a behaviour, not a failure', async () => {
-    const [trial] = await trialsOf([{ text: 'Which folder should the report go in?' }, run(), done], 1)
+    const { trials: [trial] } = await trialsOf([{ text: 'Which folder should the report go in?' }, run(), done], 1)
     vitestExpect(trial.state).toBe('verified')
     vitestExpect(trial.behaviours).toEqual(['asked: Which folder should the report go in?'])
     vitestExpect(trial.transcript.some(m => m.role === 'user' && m.text.startsWith('Nobody can answer questions'))).toBe(true)
   })
 
-  it('ends a trial at its call budget, a model failure or a refusal, and says so', async () => {
-    const made = await agentStudy({ target: { cli: command }, hook: reportExists, trials: 3 })
-    stores.push(made.store)
-    made.run.compiled.agents = { config: { model: { provider: 'scripted', name: 'fixture' }, budgets: { calls: 2 } }, fingerprint: 'x' }
+  it('ends a trial at its call budget, a reply cut off, or a refusal, and says so', async () => {
     const loop = Array(5).fill({ toolCalls: [{ name: 'run', input: { command: `${command} --env` } }] })
-    const trials = await runTrials({ ...made, model: scriptedModel([loop, [{ throws: 'overloaded' }], [{ text: 'I will not do that.', stop: 'refusal' }]]), harness: cliHarness(command, { cwd: fixtures }) })
-    vitestExpect(trials.map(t => t.stoppedBy)).toEqual(['ran out of its budget of 2 model calls', 'the model failed: overloaded', 'declined the task: I will not do that.'])
-    vitestExpect(trials.map(t => t.claimedDone)).toEqual([false, false, false])
-    vitestExpect((await made.store.listAttempts(made.run.run)).map(a => a.reason)).toEqual(['gave up', 'gave up', 'gave up'])
+    const { trials, store, runId } = await trialsOf([loop, [{ text: 'Let me', stop: 'max_tokens' }], [{ text: 'I will not do that.', stop: 'refusal' }]], 3, undefined, { calls: 2 })
+    vitestExpect(trials.map(t => t.stoppedBy)).toEqual(['ran out of its budget of 2 model calls', 'ran out of output tokens in the middle of a reply', 'declined the task: I will not do that.'])
+    vitestExpect(trials.map(t => [t.state, t.claimedDone])).toEqual([['stopped', false], ['stopped', false], ['stopped', false]])
+    vitestExpect((await store.listAttempts(runId)).map(a => a.reason)).toEqual(['gave up', 'gave up', 'gave up'])
+  })
+
+  it('reads a provider outage as unknown, not stopped', async () => {
+    const { trials: [trial] } = await trialsOf([{ throws: 'overloaded' }], 1)
+    vitestExpect(trial).toMatchObject({ state: 'unknown', claimedDone: false, infrastructure: 'the model provider failed: overloaded' })
+    vitestExpect(trial.stoppedBy).toBeUndefined()
+    vitestExpect(trial.cost.calls).toBe(1)
+  })
+
+  it('stops a trial at its seconds budget while the model is still thinking, and at a dollars budget it cannot keep', async () => {
+    const slow: AgentModel = { step: () => new Promise(resolve => setTimeout(() => resolve({ toolCalls: [], usage: { inputTokens: 1, outputTokens: 1 }, stop: 'done' }), 5000)) }
+    const started = Date.now()
+    const { trials: [late] } = await trialsOf([], 1, slow, { seconds: 0.2 })
+    vitestExpect(late.stoppedBy).toBe('ran out of its budget of 0.2 seconds')
+    vitestExpect(Date.now() - started).toBeLessThan(3000)
+    const { trials: [unpriced] } = await trialsOf([run(), done], 1, undefined, { dollars: 1 })
+    vitestExpect(unpriced.stoppedBy).toBe('cannot keep its budget of $1: the model reports no price')
+    const { trials: [priced] } = await trialsOf([{ ...run(' --bad'), usage: { dollars: 0.6 } }, { ...run(), usage: { dollars: 0.6 } }, done], 1, undefined, { dollars: 1 })
+    vitestExpect(priced.stoppedBy).toBe('ran `node ./fake-cli.mjs --bad`, which exited 1: unknown flag --bad')
+    vitestExpect(priced.cost).toMatchObject({ calls: 2, dollars: 1.2 })
+    vitestExpect(priced.transcript.filter(m => m.role === 'tool')).toHaveLength(1)
   })
 })
 
 describe('the cli harness sandbox', () => {
-  it('runs only the configured command, without a shell', async () => {
+  it('runs only the configured command, npm and npx, without a shell', async () => {
     const harness = cliHarness(command, { cwd: fixtures })
     await harness.reset()
-    for (const line of ['rm -rf /', 'node -e "1"', 'node ./other.mjs']) {
-      vitestExpect((await harness.call('run', { command: line })).error).toBe(`tried to run \`${line}\`, but only \`node ./fake-cli.mjs …\` can be run here`)
+    for (const line of ['rm -rf /', 'node -e "1"', 'node ./other.mjs', 'sh -c ls']) {
+      vitestExpect((await harness.call('run', { command: line })).error).toBe(`tried to run \`${line}\`, but only \`node ./fake-cli.mjs …\`, \`npm …\` and \`npx …\` can be run here`)
     }
     const injected = await harness.call('run', { command: `${command}; touch pwned` })
-    vitestExpect(injected.error).toContain('only `node ./fake-cli.mjs …`')
+    vitestExpect(injected.error).toContain('can be run here')
+    vitestExpect((await harness.endState()).sideEffects).toEqual([])
     vitestExpect((await harness.call('shell', { command: 'ls' })).error).toBe('called shell, which is not a tool here')
+    vitestExpect((await harness.call('run', { command: 'npm --version' })).output).toMatch(/^exit 0\n\d+\.\d+/)
     await harness.dispose()
   })
 
-  it('strips secrets from the environment', async () => {
-    const harness = cliHarness(command, { cwd: fixtures, env: { PATH: process.env.PATH, HOME: '/tmp', ANTHROPIC_API_KEY: 'k', GITHUB_TOKEN: 't', UI_TESTS_CLI_SECRET: 's', UI_TESTS_DATA_DIR: '/x', DATABASE_URL: 'p', MY_PASSWORD: 'p' } })
+  it('passes only an allowlist of the environment, with home, temp and the npm cache inside the trial', async () => {
+    const env = { PATH: `relbin${':'}${process.env.PATH}`, HOME: homedir(), LANG: 'en_GB.UTF-8', LC_ALL: 'C', TERM: 'xterm', CI: '1', POSTGRES_URL: 'postgres://u:p@neon/db', NODE_OPTIONS: '--require /x.js', FOO_SECRET: 's', ANTHROPIC_API_KEY: 'k', npm_config_registry: 'https://registry.example' }
+    const harness = cliHarness(command, { cwd: fixtures, env })
     await harness.reset()
-    const { output } = await harness.call('run', { command: `${command} --env` })
-    vitestExpect(output.split('\n')).toEqual(vitestExpect.arrayContaining(['HOME', 'PATH']))
-    for (const name of ['ANTHROPIC_API_KEY', 'GITHUB_TOKEN', 'UI_TESTS_CLI_SECRET', 'UI_TESTS_DATA_DIR', 'DATABASE_URL', 'MY_PASSWORD']) vitestExpect(output).not.toContain(name)
-    vitestExpect(Object.keys(strippedEnv({ NPM_TOKEN: 'x', LANG: 'en' }))).toEqual(['LANG'])
+    const seen = envOf((await harness.call('run', { command: `${command} --env` })).output)
+    for (const name of ['POSTGRES_URL', 'NODE_OPTIONS', 'FOO_SECRET', 'ANTHROPIC_API_KEY']) vitestExpect(seen[name]).toBeUndefined()
+    vitestExpect(seen).toMatchObject({ LANG: 'en_GB.UTF-8', LC_ALL: 'C', TERM: 'xterm', CI: '1', npm_config_offline: 'true' })
+    vitestExpect(seen.HOME).not.toBe(homedir())
+    const root = seen.HOME.replace(/\/home$/, '')
+    vitestExpect(seen.HOME).toBe(`${root}/home`)
+    vitestExpect(seen.TMPDIR).toBe(`${root}/tmp`)
+    vitestExpect(seen.npm_config_cache).toBe(`${root}/home/.npm`)
+    vitestExpect(seen.npm_config_userconfig).toBe(`${root}/home/.npmrc`)
+    vitestExpect(seen.XDG_CONFIG_HOME).toBe(`${root}/home/.config`)
+    vitestExpect(seen.npm_config_registry).toBeUndefined()
+    vitestExpect(seen.PATH.split(':')).not.toContain('relbin')
+    vitestExpect(absolutePath('a:/b::./c:/d')).toBe('/b:/d')
+    await harness.reset()
+    const next = envOf((await harness.call('run', { command: `${command} --env` })).output)
+    vitestExpect(next.HOME).not.toBe(seen.HOME)
     await harness.dispose()
   })
 
@@ -119,6 +164,10 @@ describe('the cli harness sandbox', () => {
     await harness.dispose()
   })
 
+  it('refuses an empty command', () => {
+    vitestExpect(() => cliHarness('  ')).toThrow('The cli target has no command')
+  })
+
   it('splits words with quotes and matches globs', () => {
     vitestExpect(splitWords(`npx ui-tests --study "first run" 'a b' c\\ d`)).toEqual(['npx', 'ui-tests', '--study', 'first run', 'a b', 'c d'])
     vitestExpect(globToRegExp('.ui-tests/runs/*/report.json').test('.ui-tests/runs/r1/report.json')).toBe(true)
@@ -128,34 +177,59 @@ describe('the cli harness sandbox', () => {
   })
 })
 
-describe('ui-tests --actor agent', () => {
-  const studySource = `import { expect, outcome, study, task } from 'ui-tests'
+describe('the package installed in a trial', () => {
+  let local: LocalPackage
+  beforeAll(async () => { local = await packLocalPackage() }, 180_000)
+  afterAll(() => local?.dispose())
 
-study('first run', { users: 'developers trying ui-tests for the first time', purpose: 'find out whether an agent gets a result', actors: ['agent'], target: { cli: 'node ./fake-cli.mjs' } }, () => {
-  task('get a result on the example', { trials: 2 }, () => {
+  it('installs the local ui-tests offline with npm i -D, and npx ui-tests runs the local CLI', async () => {
+    const harness = cliHarness('npx ui-tests', { localPackage: local })
+    await harness.reset()
+    const install = await harness.call('run', { command: 'npm i -D ui-tests' })
+    vitestExpect(install.error).toBeUndefined()
+    const help = await harness.call('run', { command: 'npx ui-tests --help' })
+    vitestExpect(help.error).toBeUndefined()
+    vitestExpect(help.output).toContain('--actor agent     run the study\'s tasks as agent trials')
+    const { workspace, sideEffects } = await harness.endState()
+    vitestExpect(JSON.parse(workspace!.file('package.json')!).devDependencies).toEqual({ 'ui-tests': `^${local.version}` })
+    vitestExpect(sideEffects).toEqual(vitestExpect.arrayContaining(['created node_modules/', 'changed package.json']))
+    const registry = await harness.call('run', { command: 'npm i -D left-pad' })
+    vitestExpect(registry.error).toMatch(/^ran `npm i -D left-pad`, which exited 1/)
+    vitestExpect(registry.output).toMatch(/ENOTCACHED|offline/i)
+    await harness.dispose()
+  }, 120_000)
+})
+
+describe('ui-tests --actor agent', () => {
+  const studySource = (trials: number, cli = 'node ./fake-cli.mjs') => `import { expect, outcome, study, task } from 'ui-tests'
+
+study('first run', { users: 'developers trying ui-tests for the first time', purpose: 'find out whether an agent gets a result', actors: ['agent'], target: { cli: '${cli}' } }, () => {
+  task('get a result on the example', { trials: ${trials} }, () => {
     outcome(async ({ workspace }) => {
       expect(workspace.file('.ui-tests/runs/*/report.json')).toExist()
     })
   })
 })
 `
-  async function project(agents: string, script?: unknown) {
+  async function project(agents: string, script?: unknown, trials = 2, cli?: string) {
     const work = await mkdtemp(join(fixtures, '.tmp-agent-run-'))
     const data = await mkdtemp(join(tmpdir(), 'ui-tests-agent-run-'))
     await copyFile(join(fixtures, 'fake-cli.mjs'), join(work, 'fake-cli.mjs'))
-    await writeFile(join(work, 'first-run.ui.test.ts'), studySource)
+    await writeFile(join(work, 'first-run.ui.test.ts'), studySource(trials, cli))
     await writeFile(join(work, 'ui-tests.config.ts'), `export default { reporters: ['default', 'json'], agents: ${agents} }\n`)
     if (script) await writeFile(join(work, 'agent-script.json'), JSON.stringify(script))
-    const cli = async (argv: string[], env: Record<string, string> = {}) => {
+    const cli_ = async (argv: string[], deps: Io['deps'] = {}) => {
       let out = '', err = ''
-      const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, PATH: process.env.PATH ?? '', ...env } }
+      const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, PATH: process.env.PATH ?? '' }, deps: { packLocal: async () => undefined, signal: new AbortController().signal, ...deps } }
       return { code: await main(argv, io), out, err }
     }
-    return { work, cli, cleanup: async () => { await rm(work, { recursive: true, force: true }); await rm(data, { recursive: true, force: true }) } }
+    return { work, cli: cli_, cleanup: async () => { await rm(work, { recursive: true, force: true }); await rm(data, { recursive: true, force: true }) } }
   }
+  const scripted = "{ model: { provider: 'scripted', name: './agent-script.json' } }"
+  const passing = [{ toolCalls: [{ name: 'run', input: { command: 'node ./fake-cli.mjs' } }] }, { toolCalls: [{ name: 'done', input: {} }] }]
 
   it('runs the trials, prints the table under the capability heading, and writes report.json', async () => {
-    const p = await project("{ model: { provider: 'scripted', name: './agent-script.json' } }", [{ toolCalls: [{ name: 'run', input: { command: 'node ./fake-cli.mjs' } }] }, { text: 'Done.' }])
+    const p = await project(scripted, passing)
     try {
       const first = await p.cli(['--actor', 'agent', '--commit', 'abc'])
       vitestExpect(first.code).toBe(0)
@@ -169,12 +243,33 @@ study('first run', { users: 'developers trying ui-tests for the first time', pur
       vitestExpect(report.tasks[0].trials.map((t: Trial) => t.state)).toEqual(['verified', 'verified'])
       const again = await p.cli(['--actor', 'agent', '--commit', 'abc'])
       vitestExpect(again.out).toContain(`Run ${runId} already exists for key`)
+      vitestExpect(again.out).not.toContain('trial 1 of')
       vitestExpect(again.code).toBe(0)
     } finally { await p.cleanup() }
   })
 
-  it('exits 1 when a trial stops, and 2 without an agent model it can run', async () => {
-    const p = await project("{ model: { provider: 'scripted', name: './agent-script.json' } }", [{ text: 'Done.' }])
+  it('finishes an interrupted run on the next invocation, and reads no verdict from fewer than k trials', async () => {
+    const p = await project(scripted, passing, 5)
+    try {
+      const stop = new AbortController()
+      let out = ''
+      const io: Io = { stdout: { write: t => { out += t; if (t.includes('trial 1 of 5')) stop.abort(); return true } }, stderr: { write: () => true }, cwd: p.work, env: { UI_TESTS_DATA_DIR: join(p.work, 'data'), PATH: process.env.PATH ?? '' }, deps: { signal: stop.signal, packLocal: async () => undefined } }
+      vitestExpect(await main(['--actor', 'agent', '--commit', 'def'], io)).toBe(3)
+      vitestExpect(out).toContain('pass^k: pending · 1 of 1 verified · 1 of 5 trials run; run the same command again to finish')
+      const runId = /Agent run (r_\w+)/.exec(out)![1]
+      vitestExpect(JSON.parse(await readFile(join(p.work, '.ui-tests', 'runs', runId, 'report.json'), 'utf8')).tasks[0].result).toBe('pending')
+      out = ''
+      const resumed = { ...io, deps: { signal: new AbortController().signal, packLocal: async () => undefined } }
+      vitestExpect(await main(['--actor', 'agent', '--commit', 'def'], resumed)).toBe(0)
+      vitestExpect(out).toContain('its 1 stored trial is kept')
+      vitestExpect(out).toContain('trial 5 of 5: verified')
+      vitestExpect(out).toContain('pass^k: pass · 5 of 5 verified')
+      vitestExpect(out).toMatch(/\n  1  verified[^\n]*\n  2  verified[^\n]*\n  3  verified[^\n]*\n  4  verified[^\n]*\n  5  verified/)
+    } finally { await p.cleanup() }
+  }, 30_000)
+
+  it('exits 1 when a trial stops, and 2 without an agent model it can run or a command to run', async () => {
+    const p = await project(scripted, [{ toolCalls: [{ name: 'done', input: {} }] }])
     try {
       const failed = await p.cli(['--actor', 'agent'])
       vitestExpect(failed.code).toBe(1)
@@ -187,5 +282,11 @@ study('first run', { users: 'developers trying ui-tests for the first time', pur
       vitestExpect(result.code).toBe(2)
       vitestExpect(result.err).toContain('ANTHROPIC_API_KEY')
     } finally { await keyless.cleanup() }
+    const empty = await project(scripted, passing, 2, ' ')
+    try {
+      const result = await empty.cli(['--actor', 'agent'])
+      vitestExpect(result.code).toBe(2)
+      vitestExpect(result.err).toContain('The cli target has no command')
+    } finally { await empty.cleanup() }
   })
 })

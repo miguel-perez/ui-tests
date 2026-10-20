@@ -11,6 +11,22 @@ const DROPPED_HEADERS = new Set(['host', 'connection', 'content-length', 'transf
 
 export type HttpHarnessOptions = { timeoutMs?: number; outputCap?: number; fetch?: typeof fetch }
 
+/** Reads at most `cap` characters of the body and cancels the rest, so a large answer is never held whole. */
+async function readCapped(response: Response, cap: number): Promise<{ text: string; cut: boolean }> {
+  if (!response.body) return { text: '', cut: false }
+  const reader = response.body.getReader()
+  const decoder = new TextDecoder()
+  let text = ''
+  try {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) return { text: text + decoder.decode(), cut: false }
+      text += decoder.decode(value, { stream: true })
+      if (text.length > cap) { await reader.cancel(); return { text: text.slice(0, cap), cut: true } }
+    }
+  } catch { return { text, cut: false } }
+}
+
 type RequestInput = { method?: unknown; path?: unknown; body?: unknown; headers?: unknown }
 
 /**
@@ -48,6 +64,7 @@ export function httpHarness(baseUrl: string, description?: string, options: Http
     const prefix = base.pathname.replace(/\/$/, '')
     const url = new URL(path.startsWith(`${prefix}/`) || !prefix ? path : `${prefix}${path}`, base.origin)
     if (url.origin !== base.origin) return { output: '', error: `called ${method} ${path}, which is not on ${base.origin}` }
+    if (prefix && url.pathname !== prefix && !url.pathname.startsWith(`${prefix}/`)) return { output: '', error: `called ${method} ${path}, which is outside ${base.origin}${prefix}` }
     const headers: Record<string, string> = {}
     if (input.headers && typeof input.headers === 'object') {
       for (const [name, value] of Object.entries(input.headers)) if (typeof value === 'string' && !DROPPED_HEADERS.has(name.toLowerCase())) headers[name] = value
@@ -65,8 +82,8 @@ export function httpHarness(baseUrl: string, description?: string, options: Http
       const timedOut = error instanceof Error && error.name === 'TimeoutError'
       return { output: '', error: timedOut ? `called ${called}, which took longer than ${Math.round(timeoutMs / 1000)} s` : `called ${called}, which could not be reached` }
     }
-    const text = method === 'HEAD' ? '' : await response.text().catch(() => '')
-    const shown = text.length > cap ? `${text.slice(0, cap)}\n[body cut at ${cap} characters]` : text
+    const { text, cut } = method === 'HEAD' ? { text: '', cut: false } : await readCapped(response, cap)
+    const shown = cut ? `${text}\n[body cut at ${cap} characters]` : text
     const output = `${response.status} ${response.statusText}\ncontent-type: ${response.headers.get('content-type') ?? ''}${response.headers.get('location') ? `\nlocation: ${response.headers.get('location')}` : ''}\n\n${shown}`
     if (!SAFE.has(method) && response.status < 400) effects.push(`${called} answered ${response.status}`)
     if (response.status === 404) return { output, error: `called ${called}, which does not exist` }

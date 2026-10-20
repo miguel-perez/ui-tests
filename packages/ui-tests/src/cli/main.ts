@@ -1,3 +1,4 @@
+import type { LocalPackage } from '../agents/pack.ts'
 import type { GitHubClient } from '../github/types.ts'
 import type { Screenshotter } from '../runner/screenshot.ts'
 import type { Tunnel } from '../tunnel/types.ts'
@@ -29,6 +30,8 @@ export type CliDeps = {
   tunnel?: Tunnel
   /** The GitHub `check` talks to; the default is the REST API with `GITHUB_TOKEN`. */
   github?: GitHubClient
+  /** Packs the local package for agent cli trials; the default runs `npm pack` once per run, tests pass a stub. */
+  packLocal?: () => Promise<LocalPackage | undefined>
   /** The first wait before the webhook is retried; it doubles each time. */
   webhookBackoffMs?: number
 }

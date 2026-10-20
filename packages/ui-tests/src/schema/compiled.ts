@@ -81,7 +81,7 @@ export const agentConfigSchema = z.object({
 
 /** What an agent trial of a task runs against and how its trials are read. */
 export const compiledAgentSchema = z.object({
-  target: z.object({ kind: z.enum(['web', 'cli', 'mcp', 'http']), value: z.string() }),
+  target: z.object({ kind: z.enum(['web', 'cli', 'mcp', 'http']), value: z.string(), description: z.string().optional() }),
   trials: z.number(),
   reliability: z.enum(['all', 'any']),
 })

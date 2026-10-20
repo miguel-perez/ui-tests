@@ -42,9 +42,9 @@ function normalizeUsers(users: Users): CompiledStudy['users'] {
 const DEFAULT_TRIALS = 5
 const targetKinds = [['cli', 'cli'], ['mcp', 'mcp'], ['http', 'http'], ['url', 'web']] as const
 /** The first target a task, then its study, then the config names; a task's target replaces the study's whole. */
-function agentTarget(...levels: (Target | undefined)[]): { kind: 'web' | 'cli' | 'mcp' | 'http'; value: string } {
+function agentTarget(...levels: (Target | undefined)[]): { kind: 'web' | 'cli' | 'mcp' | 'http'; value: string; description?: string } {
   for (const level of levels) {
-    for (const [key, kind] of targetKinds) { const value = level?.[key]; if (value) return { kind, value } }
+    for (const [key, kind] of targetKinds) { const value = level?.[key]; if (value) return { kind, value, ...(level?.description && { description: level.description }) } }
   }
   return { kind: 'web', value: 'http://localhost:3000' }
 }

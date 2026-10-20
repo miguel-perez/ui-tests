@@ -21,8 +21,11 @@ export type AgentStep = {
   text?: string
   toolCalls: ToolCall[]
   usage: { inputTokens: number; outputTokens: number; dollars?: number }
-  /** `tool`: it called tools and waits for their answers. `done`: it ended its turn. `refusal`: it declined. */
-  stop: 'done' | 'tool' | 'refusal'
+  /**
+   * `tool`: it called tools and waits for their answers. `done`: it ended its turn (which is not a claim that the task is
+   * done: that is the `done` tool). `refusal`: it declined. `max_tokens`: its reply was cut off at the output limit.
+   */
+  stop: 'done' | 'tool' | 'refusal' | 'max_tokens'
   /** Provider content to keep on the assistant message, sent back unchanged on the next step. */
   raw?: unknown
 }

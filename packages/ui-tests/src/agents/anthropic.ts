@@ -64,7 +64,7 @@ export function anthropicModel(config: AgentConfig['model'], apiKey = process.en
         ...(text && { text }),
         toolCalls,
         usage: { inputTokens, outputTokens, ...(price && { dollars: (inputTokens * price[0] + outputTokens * price[1]) / 1_000_000 }) },
-        stop: response.stop_reason === 'refusal' ? 'refusal' : toolCalls.length ? 'tool' : 'done',
+        stop: response.stop_reason === 'refusal' ? 'refusal' : response.stop_reason === 'max_tokens' ? 'max_tokens' : toolCalls.length ? 'tool' : 'done',
         raw: response.content,
       }
     },

@@ -2,8 +2,8 @@ import type { APIRequestContext } from 'playwright-core'
 
 /** Who the study is for: a plain description, or the screening fields (`are` is required). */
 export type Users = string | { are: string; did?: string; within?: string; often?: string; role?: string | string[]; uses?: string[]; not?: string[]; where?: string | string[]; language?: string; age?: string | { min?: number; max?: number } }
-/** Where the product under test runs. */
-export type Target = { url?: string; cli?: string; mcp?: string; http?: string }
+/** Where the product under test runs. `description` is what an agent is told about it, such as an API's description. */
+export type Target = { url?: string; cli?: string; mcp?: string; http?: string; description?: string }
 /** What a hook can read of the stored end state of an attempt. */
 export type SnapshotPage = { url(): string; textContent(selector: string): string | null; query(selector: string): Element | null; state(): unknown }
 /**

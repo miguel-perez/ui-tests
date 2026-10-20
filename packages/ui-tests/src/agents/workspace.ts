@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, relative, sep } from 'node:path'
 import type { Workspace } from '../types.ts'
@@ -19,14 +19,17 @@ export function globToRegExp(glob: string): RegExp {
   return new RegExp(`^${source}$`)
 }
 
-/** Every file under `root`, as sorted `/`-separated relative paths (stops at a large number of files). */
+/**
+ * Every file under `root`, as sorted `/`-separated relative paths (stops at a large number of files). Installed packages
+ * (`node_modules`) are not listed: they are what `npm i` put there, not what the trial made.
+ */
 export function listFiles(root: string): string[] {
   const files: string[] = []
   const walk = (dir: string) => {
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
       if (files.length >= MAX_FILES) return
       const path = join(dir, entry.name)
-      if (entry.isDirectory()) walk(path)
+      if (entry.isDirectory()) { if (entry.name !== 'node_modules') walk(path) }
       else if (entry.isFile()) files.push(relative(root, path).split(sep).join('/'))
     }
   }
@@ -49,6 +52,7 @@ export function workspaceAt(root: string): Workspace {
 /** A fingerprint of every file in `root` (path to content hash), to tell what a trial created, changed or deleted. */
 export function fingerprintFiles(root: string): Map<string, string> {
   const map = new Map<string, string>()
+  if (existsSync(join(root, 'node_modules'))) map.set('node_modules/', 'present')
   for (const path of listFiles(root)) {
     try {
       const full = join(root, path)

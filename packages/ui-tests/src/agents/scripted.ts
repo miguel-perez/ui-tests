@@ -7,7 +7,7 @@ const defaultUsage = { inputTokens: 100, outputTokens: 20 }
 
 /**
  * A model that plays back a script, for tests and offline runs. Each trial starts from the top of the script: a step whose
- * transcript holds only the prompt is the first turn. Past the end of the script it says it is done.
+ * transcript holds only the prompt is the first turn. Past the end of the script it calls `done`.
  * A script of scripts gives each trial its own: trial n plays `script[n % script.length]`.
  */
 export function scriptedModel(script: ScriptedTurn[] | ScriptedTurn[][]): AgentModel {
@@ -18,7 +18,7 @@ export function scriptedModel(script: ScriptedTurn[] | ScriptedTurn[][]): AgentM
     async step({ messages }) {
       if (!messages.some(m => m.role === 'assistant')) { trial++; turn = 0 }
       const turns = scripts[trial % scripts.length] ?? []
-      const next = turns[turn++] ?? { text: 'Done.' }
+      const next = turns[turn++] ?? { toolCalls: [{ name: 'done', input: {} }] }
       if (next.throws) throw new Error(next.throws)
       const toolCalls = next.toolCalls ?? []
       return {

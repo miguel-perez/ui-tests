@@ -4,7 +4,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 const args = process.argv.slice(2)
 if (args.includes('--bad')) { console.error('unknown flag --bad\nrun with --help'); process.exit(1) }
 if (args.includes('--sleep')) setTimeout(() => {}, 60_000)
-else if (args.includes('--env')) console.log(Object.keys(process.env).sort().join('\n'))
+else if (args.includes('--env')) console.log(Object.entries(process.env).map(([k, v]) => `${k}=${v}`).sort().join('\n'))
 else if (args.includes('--big')) process.stdout.write('x'.repeat(200_000))
 else {
   mkdirSync('.ui-tests/runs/r1', { recursive: true })
