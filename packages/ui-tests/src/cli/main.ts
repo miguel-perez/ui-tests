@@ -5,6 +5,7 @@ import { host } from './host.ts'
 import { init } from './init.ts'
 import { lintCommand } from './lint.ts'
 import { recruit } from './recruit.ts'
+import { report } from './report.ts'
 import { status } from './status.ts'
 import { trace } from './trace.ts'
 import { verify } from './verify.ts'
@@ -41,6 +42,7 @@ export const commands: Record<string, Command> = {
   '': dev,
   verify,
   status,
+  report,
   trace,
   host,
   recruit,
@@ -56,6 +58,7 @@ Commands:
   verify <run>      run the hooks against the stored snapshots
   recruit           make a run and print the invite links (--wait for the result, --tunnel to serve a local build)
   status <run>      show the four states of a run
+  report <run>      write the run record (--json) or the sentence
   trace <run>       serve the trace of a run on this machine
   init              write ui-tests.config.ts, an example study and the Vitest exclude
   lint [files...]   check studies against the rules and show what a run would do

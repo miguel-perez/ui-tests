@@ -11,10 +11,12 @@
     ".": "./src/index.ts",
     "./next": "./src/next/index.tsx",
     "./config": "./src/define-config.ts",
-    "./server": "./src/server/index.ts"
+    "./server": "./src/server/index.ts",
+    "./schemas/*": "./schemas/*"
   },
   "scripts": {
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "schema": "tsx scripts/write-schema.ts"
   },
   "dependencies": {
     "@electric-sql/pglite": "0.5.8",
@@ -30,5 +32,8 @@
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0"
   }
 }
