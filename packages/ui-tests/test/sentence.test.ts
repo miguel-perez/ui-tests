@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { resultOf, sampleSentence, sentence } from '../src/derive/sentence.ts'
 
-const base = { n: 5, affecting: 1 / 3, f: 0, x: 5, result: 'none-found' as const, rehearsal: false, shape: 'happy-path' as const, goal: 'g' }
+const base = { n: 5, affecting: 1 / 3, attempted: 5, reached: 5, failed: 0, unknown: 0, result: 'none-found' as const, rehearsal: false, shape: 'happy-path' as const, goal: 'g' }
 
 describe('sentence', () => {
   it('writes the sample sentence', () => {
@@ -14,7 +14,7 @@ describe('sentence', () => {
     expect(sentence({ ...base, rehearsal: true })).toBe('Rehearsal: 0 of 5 planned attempts recorded.')
   })
   it('says what happened when problems were found, by shape', () => {
-    const found = { ...base, f: 2, x: 3, result: 'problems-found' as const, goal: 'invite a colleague' }
+    const found = { ...base, failed: 2, reached: 3, result: 'problems-found' as const, goal: 'invite a colleague' }
     expect(sentence(found)).toBe('2 of 5 could not invite a colleague; 3 of 5 reached the outcome by their own route.')
     expect(sentence({ ...found, shape: 'goal-only' })).toContain('by their own route')
     expect(sentence({ ...found, shape: 'steps' })).toBe('2 of 5 could not invite a colleague; 3 of 5 completed the steps.')
@@ -25,7 +25,9 @@ describe('sentence', () => {
   })
   it('keeps pending on the sample sentence and inconclusive honest', () => {
     expect(sentence({ ...base, result: 'pending' })).toBe(sampleSentence(5, 1 / 3))
-    expect(sentence({ ...base, x: 2, result: 'inconclusive' })).toContain('2 of 5 attempts completed')
+    expect(sentence({ ...base, attempted: 2, reached: 2, result: 'inconclusive' })).toContain('2 of 5 attempts completed')
+    // Four reached it and one could not be read: five completed, as the check title says, and the unknown is named, never rounded.
+    expect(sentence({ ...base, attempted: 5, reached: 4, unknown: 1, result: 'inconclusive' })).toMatch(/^Inconclusive: 5 of 5 attempts completed, 1 of them could not be verified, /)
   })
 })
 

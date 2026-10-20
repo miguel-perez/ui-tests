@@ -1,6 +1,7 @@
 import type { RunRecord } from '../record/schema.ts'
 import { buildRecord } from '../record/build.ts'
-import { countedInResult, resultComplete } from '../runner/progress.ts'
+import { resultComplete, resultFigures } from '../runner/progress.ts'
+import { primaryGoalIndex } from '../runner/sequence.ts'
 import { signedUrl } from '../report/sign.ts'
 import type { RunResult, RunRow, RunStore } from '../store/types.ts'
 import type { UiTestsConfig } from '../types.ts'
@@ -36,11 +37,10 @@ export function checkConclusion(result: Finished, blockOn?: 'problems'): 'neutra
 /** The numbers a title needs, read from the record: people counted toward n, and how many of them reached the outcome. */
 export function figuresOf(record: RunRecord) {
   const complete = resultComplete({ states: record.handle.states, result: record.handle.result })
-  const counted = record.attempts.filter(a => countedInResult({ ...a, startedAt: a.timings.startedAt }, complete))
-  const reached = counted.filter(a => a.verification?.status === 'correct').length
+  const { attempted, reached } = resultFigures(record.attempts.map(a => ({ ...a, startedAt: a.timings.startedAt })), primaryGoalIndex(record.compiled), complete)
   const result = record.handle.result === 'pending' ? 'inconclusive' : record.handle.result
   const problems = result === 'problems-found' ? Math.max(record.issues.length, 1) : 0
-  return { n: record.compiled.sample.n, reached, attempted: counted.length, problems, result } as const
+  return { n: record.compiled.sample.n, reached, attempted, problems, result } as const
 }
 
 export const titleOf = (record: RunRecord) => checkTitle(figuresOf(record))

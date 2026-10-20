@@ -2,6 +2,8 @@ import type { ScreenerResult } from '../derive/screener.ts'
 import { fillScenario } from '../derive/scenario.ts'
 import { sampleSentence, sentence } from '../derive/sentence.ts'
 import { FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
+import { resultComplete, resultFigures } from '../runner/progress.ts'
+import { primaryGoalIndex } from '../runner/sequence.ts'
 import { videoSegments, type VideoSegments } from '../video.ts'
 import { highlightReel, type ReelMoment } from './reel.ts'
 import type { LintFinding } from '../lint.ts'
@@ -129,9 +131,9 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
       timings: { ...(started !== undefined && ended !== undefined && { onGoalMs: ended - started }) },
     })
   }
-  const counted = attempts.filter(a => !a.attempt.rehearsal && !a.attempt.flags.includes('excluded'))
-  const f = counted.filter(a => a.verification?.status === 'incorrect').length
-  const x = counted.filter(a => a.verification?.status === 'correct').length
+  // The same figures as the check title: the primary goal's attempts counted in the result, by the one counting rule.
+  const primary = compiled.goals[primaryGoalIndex(compiled)]
+  const figures = resultFigures(rows, primaryGoalIndex(compiled), resultComplete(run))
   const first = compiled.goals[0]
   const firstAttempt = rows.find(a => a.goalIndex === 0)
   return {
@@ -145,7 +147,7 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
     revisions: numbered(revisions),
     attempts,
     lint,
-    sentence: sentence({ n: compiled.sample.n, affecting: compiled.sample.affecting, shape: first?.shape ?? 'goal-only', f, x, result: run.result, rehearsal: run.rehearsal, goal: (first?.name ?? '').toLowerCase() }),
+    sentence: sentence({ n: compiled.sample.n, affecting: compiled.sample.affecting, shape: primary?.shape ?? 'goal-only', ...figures, result: run.result, rehearsal: run.rehearsal, goal: (primary?.name ?? '').toLowerCase() }),
     sampleSentence: sampleSentence(compiled.sample.n, compiled.sample.affecting),
     actor: run.actor,
   }
