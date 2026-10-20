@@ -15,6 +15,7 @@ import { refreshRun } from '../src/runner/progress.ts'
 import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { openStore } from '../src/store/open.ts'
 import type { RunRow, RunStore } from '../src/store/types.ts'
+import { stubServer } from './server-stub.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 
@@ -70,6 +71,8 @@ describe('restGitHub', () => {
 // The command, end to end against a local target, a fake GitHub and a local webhook receiver.
 let target: Server
 let targetUrl: string
+/** The ui-tests server the invite links are on. */
+let server: Awaited<ReturnType<typeof stubServer>>
 let work: string
 let data: string
 let hookServer: Server
@@ -81,6 +84,7 @@ beforeAll(async () => {
   target = createServer((_req, res) => res.end('ok'))
   await new Promise<void>(resolve => target.listen(0, '127.0.0.1', resolve))
   targetUrl = `http://127.0.0.1:${(target.address() as AddressInfo).port}`
+  server = await stubServer()
   hookServer = createServer((req, res) => {
     let body = ''
     req.on('data', c => (body += c))
@@ -94,6 +98,7 @@ beforeAll(async () => {
   await writeConfig()
 })
 afterAll(async () => {
+  await server.close()
   for (const s of [target, hookServer]) { s.closeAllConnections(); await new Promise(resolve => s.close(resolve)) }
   await rm(work, { recursive: true, force: true })
   await rm(data, { recursive: true, force: true })
@@ -101,7 +106,7 @@ afterAll(async () => {
 afterEach(async () => { while (cleanup.length) await cleanup.pop()!() })
 
 const writeConfig = (extra = '') =>
-  writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, ci: { on: ['label:ui-test'] }, webhook: { url: '${hookUrl}', secret: 'hook-secret' }, ${extra} }\n`)
+  writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, ci: { on: ['label:ui-test'] }, webhook: { url: '${hookUrl}', secret: 'hook-secret' }, ${extra} }\n`)
 
 async function event(name: string, payload: unknown) {
   const file = join(work, `${name}.json`)
@@ -297,7 +302,7 @@ describe('a failing delivery is retried by the next one', () => {
     return port
   }
   const writeWith = (webhook: string, extra = '') =>
-    writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, ci: { on: ['label:ui-test'] }, webhook: { url: '${webhook}', secret: 'hook-secret' }, ${extra} }\n`)
+    writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, ci: { on: ['label:ui-test'] }, webhook: { url: '${webhook}', secret: 'hook-secret' }, ${extra} }\n`)
 
   it('does not deliver, and records nothing, when the config cannot be read; the next status with the right config fails the check', async () => {
     await writeConfig("check: { block_on: 'problems' },")

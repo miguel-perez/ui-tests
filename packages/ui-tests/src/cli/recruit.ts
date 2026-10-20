@@ -1,4 +1,4 @@
-import { loadConfig } from '../config.ts'
+import { DEFAULT_SERVER_URL, loadConfig } from '../config.ts'
 import { formatFindings, lint, planLines } from '../lint.ts'
 import { StudyLoadError } from '../load.ts'
 import { BYPASS_HEADER, createInvites, reissueInvites, slotCount } from '../runner/invites.ts'
@@ -16,6 +16,7 @@ import type { UiTestsConfig } from '../types.ts'
 import { verifyRun } from '../verify.ts'
 import { loadStudies, withProduct } from './lint.ts'
 import type { Command, Io } from './main.ts'
+import { answersAsServer, ensureServer, ServerUnreachable } from './ensure-server.ts'
 import { reporterFor } from './outward.ts'
 
 const DEFAULT_POLL_MS = 30_000
@@ -85,6 +86,7 @@ export const recruit: Command = async (args, io) => {
   if (findings.some(f => f.severity === 'error')) { io.stderr.write(`${formatFindings(findings)}\n`); return 1 }
 
   const target = config.target?.url ?? 'http://localhost:3000'
+  const server = (config.server?.url ?? DEFAULT_SERVER_URL).replace(/\/+$/, '')
   // Local only: this machine alone. Nothing leaves it, so the things that would (a tunnel, a result hook for GitHub or a webhook) are off, and a target that is not on this machine is refused.
   const localOnly = args.flags.has('local')
   const hostFlag = args.flags.get('host')
@@ -94,17 +96,25 @@ export const recruit: Command = async (args, io) => {
   if (args.flags.has('tunnel') && typeof hostFlag === 'string') { io.stderr.write('--host and --tunnel cannot be combined: a tunnel has its own address.\n'); return 2 }
   const databaseUrl = io.env.UI_TESTS_DATABASE_URL
   if (localOnly && databaseUrl && !databaseUrl.startsWith('pglite:')) { io.stderr.write('--local keeps the store on this machine: unset UI_TESTS_DATABASE_URL or use pglite:<dir>, not a remote database.\n'); return 2 }
+  // With --host, people reach the app and the ui-tests server by that name: the app's address, and the links on the server's.
   let hostBase: string | undefined
+  let serverBase = server
   try {
     if (localOnly && !isLoopbackHost(new URL(target).hostname.replace(/^\[|\]$/g, ''))) { io.stderr.write(`--local needs a target on this machine, not ${target}.\n`); return 2 }
     if (localOnly && new URL(target).protocol !== 'http:') { io.stderr.write(`--local supports http targets on this machine; ${target} is ${new URL(target).protocol.replace(':', '')}. Serve the build over http on localhost.\n`); return 2 }
     if (typeof hostFlag === 'string') hostBase = linkBaseFor(target, hostFlag)
   } catch { io.stderr.write(`${typeof hostFlag === 'string' ? `--host ${hostFlag} is not a hostname` : `target is not a URL: ${target}`}\n`); return 2 }
+  try {
+    if (localOnly && !isLoopbackHost(new URL(server).hostname.replace(/^\[|\]$/g, ''))) { io.stderr.write(`--local needs the ui-tests server on this machine, not ${server}.\n`); return 2 }
+    if (typeof hostFlag === 'string') serverBase = linkBaseFor(server, hostFlag)
+  } catch { io.stderr.write(`the ui-tests server is not a URL: ${server}\n`); return 2 }
+  // The links open the player on the ui-tests server, so it must answer before any run is made. Local only starts one if it can.
+  if (!localOnly && !(await answersAsServer(server))) { io.stderr.write(`${new ServerUnreachable(server).message}\n`); return 2 }
   const mode = reachabilityOf(hostBase ?? target, { tunnel: args.flags.has('tunnel') })
   const diagnostics = json ? io.stderr : io.stdout
   diagnostics.write(`${planLines(chosen.compiled).join('\n')}\n${chosen.compiled.consent.payout}\n\n`)
   if (localOnly) diagnostics.write('Local only: no tunnel, model, GitHub or webhook call is made. The run, its records and the links stay on this machine.\n\n')
-  else if (hostBase && mode === 'perimeter') diagnostics.write(`Inside the perimeter: links are on ${hostBase}. The collector and the store stay where you run them; nothing leaves unless you export the record.\n\n`)
+  else if (hostBase && mode === 'perimeter') diagnostics.write(`Inside the perimeter: links are on ${serverBase}. The collector and the store stay where you run them; nothing leaves unless you export the record.\n\n`)
 
   const commitFlag = args.flags.get('commit')
   const commit = typeof commitFlag === 'string' ? commitFlag : await gitCommit(io.cwd)
@@ -115,7 +125,14 @@ export const recruit: Command = async (args, io) => {
   const bypass = io.env.VERCEL_AUTOMATION_BYPASS_SECRET || undefined
 
   const store = await openStore(io.env)
+  let started: Awaited<ReturnType<typeof ensureServer>> | undefined
   try {
+    if (localOnly) {
+      try { started = await ensureServer({ url: server, store, io }) } catch (error) {
+        io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
+        return 2
+      }
+    }
     // A key that already has a run is read back without touching the target, so it still works while the target is down.
     const existing = (await store.listRuns()).find(r => r.key === key)
     if (!existing && !(await (localOnly ? probeLocal(target) : checkReachable(target, deps.fetch)))) { io.stderr.write(`target not reachable: ${target}\n`); return 2 }
@@ -137,19 +154,19 @@ export const recruit: Command = async (args, io) => {
         return 2
       }
       for (const event of ['SIGINT', 'SIGTERM', 'exit'] as const) process.once(event, event === 'exit' ? onExit : onSignal)
-    }
+    } else if (started?.started) for (const event of ['SIGINT', 'SIGTERM'] as const) process.once(event, onSignal)
     deps.signal?.addEventListener('abort', onSignal, { once: true })
     if (deps.signal?.aborted) stop.abort()
     let created = false
     let run!: RunRow
     try {
       ;({ run, created } = await createRun({
-        store, compiled: chosen.compiled, hooksBundle: chosen.code, target, actor, rehearsal: false, key, commit,
+        store, compiled: chosen.compiled, hooksBundle: chosen.code, target, appUrl: hostBase ?? target, actor, rehearsal: false, key, commit,
         ...(hours !== undefined && { deadlineHours: Number(hours) }),
         reachability: { url: target, reachable: true, checkedAt: new Date().toISOString(), mode, ...(localOnly && { localOnly: true }) },
       }))
       if (opened) tunnel = await recordTunnel({ store, runId: run.run, opened, now })
-      const linkBase = tunnel?.url ?? hostBase ?? target
+      const linkBase = tunnel?.url ?? serverBase
       // A resumed run reopens its tunnel at a new address, so slots nobody opened get new links under it.
       const reissued = tunnel ? await reissueInvites({ store, run, linkBase, ...(bypass && { bypass }) }) : []
       // Invite slots are made up to n, so a run whose setup failed part-way is repaired by running the same command again.
@@ -178,6 +195,10 @@ export const recruit: Command = async (args, io) => {
       if (tunnel && !args.flags.has('wait')) {
         io.stderr.write('The tunnel stays open for the participants. Press Ctrl-C to close it.\n')
         await holdUntil(run.deadline, now, deps.pollMs ?? DEFAULT_POLL_MS, stop.signal)
+      } else if (started?.started && !args.flags.has('wait')) {
+        // The links open the server this command started: it serves them until the deadline, like a tunnel.
+        io.stderr.write('The ui-tests server stays up for the participants. Press Ctrl-C to stop it.\n')
+        await holdUntil(run.deadline, now, deps.pollMs ?? DEFAULT_POLL_MS, stop.signal)
       }
       return code
     } finally {
@@ -186,5 +207,8 @@ export const recruit: Command = async (args, io) => {
       process.removeListener('exit', onExit)
       await (tunnel ?? opened)?.close()
     }
-  } finally { await store.close() }
+  } finally {
+    await started?.close()
+    await store.close()
+  }
 }

@@ -5,7 +5,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { buildTrace, type Trace } from '../../packages/ui-tests/src/trace/build.ts'
-import { PRODUCT_URL, createRehearsalRun, hasFocus } from './helpers'
+import { PRODUCT_URL, SERVER_URL, createRehearsalRun, hasFocus } from './helpers'
 
 /**
  * The rehearsal end to end (Task 15): the site is the first context under test. The author runs `npx ui-tests` in apps/web,
@@ -29,12 +29,12 @@ test.afterEach(() => {
 })
 
 /**
- * `ui-tests …` in `cwd`, with the product server as the target; stdout is collected as it comes. The bin `npx ui-tests` resolves
+ * `ui-tests …` in `cwd`, with the product server as the target and `ui-tests serve` as the server; stdout is collected as it comes. The bin `npx ui-tests` resolves
  * to, run by this Node directly: npx starts it under `sh -c`, and where sh is dash (Debian, Ubuntu, so CI) the shell neither
  * execs the CLI nor passes a SIGINT on, so the Ctrl-C below would never reach it.
  */
 function cli(args: string[], cwd: string) {
-  const child = spawn(process.execPath, [bin, ...args], { cwd, env: { ...process.env, PREVIEW_URL: PRODUCT_URL }, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = spawn(process.execPath, [bin, ...args], { cwd, env: { ...process.env, PREVIEW_URL: PRODUCT_URL, UI_TESTS_PUBLIC_URL: SERVER_URL }, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
   started.push(child)
   let stdout = ''
   let stderr = ''
@@ -58,10 +58,12 @@ async function waitFor(run: ReturnType<typeof cli>, pattern: RegExp, timeout = 6
 /** Ctrl-C: the CLI closes the trace server and exits 0. */
 const interrupt = (child: ChildProcess) => { child.kill('SIGINT') }
 
-/** Starts dev mode on the landing study and returns the participant's link. */
+/** Starts dev mode on the landing study and returns the participant's link: the player on the running ui-tests server, which it reuses. */
 async function rehearse() {
   const run = cli(['--no-open', '--port', '0'], web)
   const [, player] = await waitFor(run, /\{"player":"([^"]+)"\}/)
+  expect(player).toMatch(new RegExp(`^${SERVER_URL}/ui-tests/r_\\w+/\\?t=[0-9a-f]{64}$`))
+  expect(run.errors()).not.toContain('Started the ui-tests server')
   return { run, player }
 }
 

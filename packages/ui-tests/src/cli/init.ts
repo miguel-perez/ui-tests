@@ -1,6 +1,8 @@
 import { existsSync } from 'node:fs'
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
+import { TAG_SETUPS } from '../browser/setups.ts'
+import { tagFor } from '../browser/tag.ts'
 import { configTemplate } from '../templates/config.ts'
 import { exampleTemplate } from '../templates/example.ts'
 import type { Command } from './main.ts'
@@ -8,11 +10,8 @@ import type { Command } from './main.ts'
 const pattern = '**/*.ui.test.ts'
 const quoted = `'${pattern}'`
 
-export const mountLines = [
-  "import { UiTests } from 'ui-tests/next'   and   <UiTests />   in your root layout",
-  "app/api/ui-tests/[[...path]]/route.ts:   export { GET, POST } from 'ui-tests/server'",
-  "app/ui-tests/[run]/page.tsx:   export { PlayerPage as default } from 'ui-tests/server'",
-]
+/** The tag `init` prints, for a ui-tests server on this machine at its default port. */
+export const initTag = tagFor('http://localhost:4300')
 
 async function hasVitest(cwd: string): Promise<boolean> {
   try {
@@ -82,7 +81,7 @@ async function writeNew(cwd: string, relative: string, content: string, io: { st
   io.stdout.write(`wrote ${relative}\n`)
 }
 
-/** Writes the config, the example study and the Vitest exclude, then prints the three lines to mount. Overwrites nothing. */
+/** Writes the config, the example study and the Vitest exclude, then prints the tag, where it goes in each setup, and how to start the server. Overwrites nothing. */
 export const init: Command = async (_args, io) => {
   await writeNew(io.cwd, 'ui-tests.config.ts', configTemplate, io)
   await writeNew(io.cwd, 'ui-tests/invite.ui.test.ts', exampleTemplate, io)
@@ -92,6 +91,8 @@ export const init: Command = async (_args, io) => {
     if (result === 'created') io.stdout.write(`wrote vitest.config.ts with ${quoted} excluded\n`)
     else if (result === 'updated') io.stdout.write(`vitest: ${quoted} is excluded\n`)
   } catch (error) { io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`); failed = true }
-  io.stdout.write(`\nMount these three lines in your app:\n${mountLines.map(line => `  ${line}`).join('\n')}\n`)
+  io.stdout.write(`\nAdd this tag to your app's HTML layout:\n  ${initTag}\n\nThe address differs between rehearsal, previews and production. Read it from the environment:\n`)
+  io.stdout.write(TAG_SETUPS.map(setup => `  ${setup.name}: ${setup.line}\n`).join(''))
+  io.stdout.write('\nStart the server with: npx ui-tests serve (rehearsal starts it for you)\n')
   return failed ? 1 : 0
 }

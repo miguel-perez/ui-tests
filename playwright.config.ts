@@ -28,12 +28,13 @@ export default defineConfig({
       env: { UI_TESTS_DATA_DIR: process.env.UI_TESTS_DATA_DIR, UI_TESTS_SHARE_SECRET: 'test', NEXT_PUBLIC_UI_TESTS_URL: 'http://127.0.0.1:4300' },
     },
     {
-      // ui-tests serve: the collector, the player and ui-tests.js, on the same store as the product server.
+      // ui-tests serve: the collector, the player and ui-tests.js, on the same store as the product server. No public address is
+      // set, so it is its own origin at whichever address a request names: 127.0.0.1, and this machine's LAN address for lan.spec.ts.
       command: 'node packages/ui-tests/bin/ui-tests.mjs serve --port 4300',
       url: 'http://127.0.0.1:4300/healthz',
       reuseExistingServer: false,
       timeout: 120_000,
-      env: { UI_TESTS_DATA_DIR: process.env.UI_TESTS_DATA_DIR, UI_TESTS_SHARE_SECRET: 'test', UI_TESTS_PUBLIC_URL: 'http://127.0.0.1:4300' },
+      env: { UI_TESTS_DATA_DIR: process.env.UI_TESTS_DATA_DIR, UI_TESTS_SHARE_SECRET: 'test' },
     },
     // A plain static site that carries nothing but the tag.
     { command: 'python3 -m http.server 3200 --bind 127.0.0.1 --directory tests/product/fixtures/plain', url: 'http://127.0.0.1:3200', reuseExistingServer: false, timeout: 30_000 },

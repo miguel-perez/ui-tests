@@ -14,11 +14,13 @@ import { cloudflaredTunnel, parseTunnelUrl } from '../src/tunnel/cloudflared.ts'
 import { isSlot } from '../src/runner/invites.ts'
 import { fakeTunnel } from '../src/tunnel/fake.ts'
 import type { TunnelRecord } from '../src/tunnel/types.ts'
+import { stubServer } from './server-stub.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 const hour = 3_600_000
 let target: Server
 let targetUrl: string
+let server: Awaited<ReturnType<typeof stubServer>>
 let work: string
 let data: string
 let collectorStore: RunStore
@@ -42,11 +44,13 @@ beforeAll(async () => {
   })
   await new Promise<void>(resolve => target.listen(0, '127.0.0.1', resolve))
   targetUrl = `http://127.0.0.1:${(target.address() as AddressInfo).port}`
+  server = await stubServer()
   work = await mkdtemp(join(fixtures, '.tmp-tunnel-'))
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
-  await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' } }\n`)
+  await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' } }\n`)
 })
 afterAll(async () => {
+  await server.close()
   target.closeAllConnections()
   await new Promise(resolve => target.close(resolve))
   await collectorStore.close()

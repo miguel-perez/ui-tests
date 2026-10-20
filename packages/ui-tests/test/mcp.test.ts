@@ -13,9 +13,12 @@ import { createMcpServer } from '../src/mcp/server.ts'
 import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { openStore } from '../src/store/open.ts'
 import type { RunRecord } from '../src/record/schema.ts'
+import { stubServer } from './server-stub.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 let target: Server
+/** The ui-tests server the invite links are on. */
+let server: Awaited<ReturnType<typeof stubServer>>
 let work: string
 let data: string
 const cleanup: (() => Promise<unknown> | unknown)[] = []
@@ -24,12 +27,14 @@ beforeAll(async () => {
   target = createServer((_req, res) => res.end('ok'))
   await new Promise<void>(resolve => target.listen(0, '127.0.0.1', resolve))
   const url = `http://127.0.0.1:${(target.address() as AddressInfo).port}`
+  server = await stubServer()
   work = await mkdtemp(join(fixtures, '.tmp-mcp-'))
   data = await mkdtemp(join(tmpdir(), 'ui-tests-mcp-'))
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
-  await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${url}' } }\n`)
+  await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${url}' } }\n`)
 })
 afterAll(async () => {
+  await server.close()
   target.closeAllConnections()
   await new Promise(resolve => target.close(resolve))
   await rm(work, { recursive: true, force: true })

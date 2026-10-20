@@ -62,16 +62,17 @@ export const commands: Record<string, Command> = {
 export const usage = () => `Usage: ui-tests <command> [options]
 
 Commands:
-  (none)            rehearse a study on yourself: open the player, verify, show the trace
+  (none)            rehearse a study on yourself: open the player on the ui-tests server (started for you on this
+                    machine when none answers), verify, show the trace
   --actor agent     run the study's tasks as agent trials: a capability test, not usability
   verify <run>      run the hooks against the stored snapshots
-  recruit           make a run and print the invite links (--wait for the result, --tunnel to serve a local build,
-                    --host <name> for links inside your network, --local for this machine only)
+  recruit           make a run and print the invite links to the player on the ui-tests server (--wait for the result,
+                    --tunnel to serve a local build, --host <name> for links inside your network, --local for this machine only)
   status <run>      show the four states of a run
   check             post the pull request check for a preview (--reconcile updates the open ones)
   report <run>      the report in words, the run record (--json), or a signed link to share (--share)
   trace <run>       serve the trace of a run on this machine
-  init              write ui-tests.config.ts, an example study and the Vitest exclude
+  init              write ui-tests.config.ts, an example study and the Vitest exclude, and print the script tag for your app
   estimate          how many people and how many minutes each, before anything is spent (--out <file> also writes the JSON)
   mcp               serve lint, estimate, run, status, verify, report and trace as MCP tools over stdio
   lint [files...]   check studies against the rules and show what a run would do (--out <file> also writes the JSON)

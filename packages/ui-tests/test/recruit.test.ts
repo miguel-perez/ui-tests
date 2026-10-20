@@ -11,10 +11,14 @@ import { refreshRun } from '../src/runner/progress.ts'
 import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { openStore } from '../src/store/open.ts'
 import type { HookResult, RunRow, RunStore } from '../src/store/types.ts'
+import { stubServer } from './server-stub.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 let target: Server
 let targetUrl: string
+/** The ui-tests server the links are on: a stub that answers its health check. */
+let server: Awaited<ReturnType<typeof stubServer>>
+let serverUrl: string
 let work: string
 let data: string
 let seen: IncomingHttpHeaders[] = []
@@ -31,12 +35,15 @@ beforeAll(async () => {
   })
   await new Promise<void>(resolve => target.listen(0, '127.0.0.1', resolve))
   targetUrl = `http://127.0.0.1:${(target.address() as AddressInfo).port}`
+  server = await stubServer()
+  serverUrl = server.url
   work = await mkdtemp(join(fixtures, '.tmp-recruit-'))
   data = await mkdtemp(join(tmpdir(), 'ui-tests-recruit-'))
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
-  await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' } }\n`)
+  await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' } }\n`)
 })
 afterAll(async () => {
+  await server.close()
   target.closeAllConnections()
   await new Promise(resolve => target.close(resolve))
   await rm(work, { recursive: true, force: true })
@@ -93,12 +100,13 @@ describe('ui-tests recruit', () => {
     expect(Object.keys(handle).sort()).toEqual(['actor', 'build', 'context', 'deadline', 'invites', 'key', 'result', 'revision', 'run', 'states'])
     expect(handle.invites).toHaveLength(5)
     expect(new Set(handle.invites).size).toBe(5)
-    for (const link of handle.invites) expect(link).toMatch(new RegExp(`^${targetUrl}/ui-tests/${handle.run}/\\?t=\\S+$`))
+    // The links open the player on the ui-tests server; the run sends people on to the target.
+    for (const link of handle.invites) expect(link).toMatch(new RegExp(`^${serverUrl}/ui-tests/${handle.run}/\\?t=[0-9a-f]{64}$`))
     const s = await store()
     const attempts = await s.listAttempts(handle.run)
     expect(attempts).toHaveLength(5)
     expect(attempts.every(a => !a.rehearsal && a.setupValues.start === '/')).toBe(true)
-    expect((await s.getRun(handle.run))?.reachability).toMatchObject({ url: targetUrl, reachable: true })
+    expect(await s.getRun(handle.run)).toMatchObject({ reachability: { url: targetUrl, reachable: true }, target: targetUrl, appUrl: targetUrl })
   })
 
   it('returns the same run for the same commit and creates no attempts or invites the second time', async () => {
@@ -150,7 +158,7 @@ describe('ui-tests recruit', () => {
     const dir = await mkdtemp(join(fixtures, '.tmp-recruit-down-'))
     cleanup.push(() => rm(dir, { recursive: true, force: true }))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
-    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${url}' } }\n`)
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${url}' } }\n`)
     const empty = await mkdtemp(join(tmpdir(), 'ui-tests-recruit-empty-'))
     cleanup.push(() => rm(empty, { recursive: true, force: true }))
     const s = session({ UI_TESTS_DATA_DIR: empty }, {}, dir)
@@ -159,20 +167,36 @@ describe('ui-tests recruit', () => {
     expect(await (await openStore({ UI_TESTS_DATA_DIR: empty })).listRuns()).toEqual([])
   })
 
-  it('puts both bypass parameters on every link and the header on setup when the secret is set', async () => {
+  it('exits 2 with "ui-tests server not reachable" before any run exists', async () => {
+    const down = await stubServer()
+    await down.close()
+    const dir = await mkdtemp(join(fixtures, '.tmp-recruit-no-server-'))
+    cleanup.push(() => rm(dir, { recursive: true, force: true }))
+    await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${down.url}' }, target: { url: '${targetUrl}' } }\n`)
+    const empty = await mkdtemp(join(tmpdir(), 'ui-tests-recruit-empty-'))
+    cleanup.push(() => rm(empty, { recursive: true, force: true }))
+    const s = session({ UI_TESTS_DATA_DIR: empty }, {}, dir)
+    expect(await main(['recruit', '--json'], s.io)).toBe(2)
+    expect(s.err()).toBe(`ui-tests server not reachable: ${down.url}\n`)
+    const runs = await openStore({ UI_TESTS_DATA_DIR: empty })
+    cleanup.push(() => runs.close())
+    expect(await runs.listRuns()).toEqual([])
+  })
+
+  it('puts the bypass on every link for the player to pass on, and the header on setup, when the secret is set', async () => {
     seen = []
-    const secret = 'bypass-secret-value'
+    const secret = 's'
     const result = await recruit(['--json', '--key', 'bypass-key'], { VERCEL_AUTOMATION_BYPASS_SECRET: secret })
     const links: string[] = result.json().invites
     expect(links).toHaveLength(5)
     for (const link of links) {
-      const url = new URL(link)
-      expect(url.searchParams.get('x-vercel-protection-bypass')).toBe(secret)
-      expect(url.searchParams.get('x-vercel-set-bypass-cookie')).toBe('samesitenone')
-      expect(url.searchParams.get('t')).toBeTruthy()
+      expect(link).toMatch(new RegExp(`^${serverUrl}/ui-tests/${result.json().run}/\\?t=[0-9a-f]{64}&bypass=s$`))
+      expect(link).not.toContain('x-vercel')
     }
     expect(seen.filter(h => h['x-vercel-protection-bypass'] === secret).length).toBeGreaterThanOrEqual(5)
-    expect(result.err).not.toContain(secret)
+    // Diagnostics never carry the secret: they name no bypass at all.
+    expect(result.err).not.toContain('bypass')
   })
 
   it('without the secret no link carries a bypass parameter, no request a header, and nothing logs it', async () => {
@@ -331,7 +355,7 @@ describe('recruit plan, repair and state', () => {
     const dir = await mkdtemp(join(fixtures, '.tmp-recruit-paid-'))
     cleanup.push(() => rm(dir, { recursive: true, force: true }))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
-    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, participants: { sources: ['link'], link: { amount: 750 } } }\n`)
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' }, participants: { sources: ['link'], link: { amount: 750 } } }\n`)
     const s = session({}, {}, dir)
     expect(await main(['recruit', '--key', 'paid-key'], s.io)).toBe(0)
     expect(s.out()).toContain('You can stop at any time and still be paid $7.50.')
@@ -349,7 +373,7 @@ study('flaky', { users: 'People who read docs', purpose: 'find the docs' }, () =
   task('Go', { path: ['/'] }, () => { outcome(async () => {}) })
 })
 `)
-    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' } }\n`)
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' } }\n`)
     const first = session({}, {}, dir)
     boomAfter = 3
     const code = await main(['recruit', '--json', '--key', 'flaky-key'], first.io)
@@ -387,7 +411,7 @@ study('flaky', { users: 'People who read docs', purpose: 'find the docs' }, () =
 study('one', { users: 'People who read docs' }, () => { task('Go', () => { outcome(async () => {}) }) })
 study('two', { users: 'People who write docs' }, () => { task('Go', () => { outcome(async () => {}) }) })
 `)
-    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' } }\n`)
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' } }\n`)
     const s = session({}, {}, dir)
     expect(await main(['recruit'], s.io)).toBe(2)
     expect(s.err()).toMatch(/--study[\s\S]*one[\s\S]*two/)
@@ -410,7 +434,7 @@ describe('recruit takes the first-look picture', () => {
     const dir = await mkdtemp(join(fixtures, '.tmp-recruit-look-'))
     cleanup.push(() => rm(dir, { recursive: true, force: true }))
     await writeFile(join(dir, 'look.ui.test.ts'), `import { study, task } from 'ui-tests'\nstudy('look', { users: { are: 'People who read docs', did: 'read documentation', within: '3 months' }, purpose: 'find the docs', firstLook: { page: '/landing' } }, () => { task('Read', { path: ['/', '/docs'], minutes: 2 }, () => {}) })\n`)
-    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' } }\n`)
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' } }\n`)
     const urls: string[] = []
     const s = session({}, { screenshotter: stubScreenshotter(new Uint8Array([7]), urls) }, dir)
     const code = await main(['recruit', '--json'], s.io)

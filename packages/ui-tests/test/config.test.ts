@@ -13,7 +13,16 @@ describe('loadConfig', () => {
   it('runs with defaults against localhost:3000 when there is no config', async () => {
     const { config, file } = await loadConfig(dir())
     expect(config.target.url).toBe('http://localhost:3000')
+    expect(config.server.url).toBe('http://localhost:4300')
     expect(file).toBeUndefined()
+  })
+  it('reads the ui-tests server address, and falls back to localhost:4300 when it is unset', async () => {
+    const named = dir()
+    writeFileSync(join(named, 'ui-tests.config.ts'), `export default { server: { url: 'https://tests.example.com' } }`)
+    expect((await loadConfig(named)).config.server.url).toBe('https://tests.example.com')
+    const unset = dir()
+    writeFileSync(join(unset, 'ui-tests.config.ts'), `export default { server: { url: process.env.UI_TESTS_NOT_SET } }`)
+    expect((await loadConfig(unset)).config.server.url).toBe('http://localhost:4300')
   })
   it('prefers ui-tests.config.ts over vite.config.ts', async () => {
     const cwd = dir()

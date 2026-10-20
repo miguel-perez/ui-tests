@@ -11,10 +11,14 @@ import type { GitHubClient } from '../src/github/types.ts'
 import type { Tunnel } from '../src/tunnel/types.ts'
 import { reporterFor } from '../src/cli/outward.ts'
 import { buildTrace } from '../src/trace/build.ts'
+import { answersAsServer } from '../src/cli/ensure-server.ts'
+import { freePort, stubServer } from './server-stub.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 let target: Server
 let targetUrl: string
+/** The ui-tests server the links are on, already running on this machine. */
+let server: Awaited<ReturnType<typeof stubServer>>
 let work: string
 let data: string
 const cleanup: (() => Promise<unknown> | unknown)[] = []
@@ -23,13 +27,15 @@ beforeAll(async () => {
   target = createServer((_req, res) => res.end('ok'))
   await new Promise<void>(resolve => target.listen(0, '127.0.0.1', resolve))
   targetUrl = `http://127.0.0.1:${(target.address() as AddressInfo).port}`
+  server = await stubServer()
   work = await mkdtemp(join(fixtures, '.tmp-perimeter-'))
   data = await mkdtemp(join(tmpdir(), 'ui-tests-perimeter-'))
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
   // A webhook is configured on purpose: local only must not call it.
-  await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+  await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
 })
 afterAll(async () => {
+  await server.close()
   target.closeAllConnections()
   await new Promise(resolve => target.close(resolve))
   await rm(work, { recursive: true, force: true })
@@ -47,16 +53,19 @@ async function recruit(argv: string[], deps: CliDeps = {}, env: Record<string, s
 
 describe('recruit --host', () => {
   it('puts the invite links on the internal hostname and records the run as inside the perimeter', async () => {
-    const { code, json } = await recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-1'])
+    const { code, json, err } = await recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-1'])
     expect(code).toBe(0)
-    const port = new URL(targetUrl).port
+    // The links are on the ui-tests server's port under that name; the app is reached there on its own port.
+    const serverPort = new URL(server.url).port
     expect(json().invites).toHaveLength(5)
-    for (const link of json().invites) expect(link).toMatch(new RegExp(`^http://10\\.0\\.0\\.5:${port}/ui-tests/r_\\w+/\\?t=\\S+$`))
+    for (const link of json().invites) expect(link).toMatch(new RegExp(`^http://10\\.0\\.0\\.5:${serverPort}/ui-tests/r_\\w+/\\?t=\\S+$`))
+    expect(err).toContain(`Inside the perimeter: links are on http://10.0.0.5:${serverPort}.`)
     const s = await openStore({ UI_TESTS_DATA_DIR: data })
     cleanup.push(() => s.close())
     const run = (await s.listRuns()).find(r => r.key === 'perimeter-1')!
     expect(run.reachability).toMatchObject({ url: targetUrl, reachable: true, mode: 'perimeter' })
     expect(run.target).toBe(targetUrl)
+    expect(run.appUrl).toBe(`http://10.0.0.5:${new URL(targetUrl).port}`)
   })
 
   it('shows how the run was reached in the trace', async () => {
@@ -121,18 +130,58 @@ describe('recruit --local', () => {
     for (const call of Object.values(net.calls)) expect(call).not.toHaveBeenCalled()
   })
 
+  it('starts the ui-tests server when none answers on this machine, and keeps it up for the links until stopped', async () => {
+    const net = failingNetwork()
+    const url = `http://127.0.0.1:${await freePort()}`
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${url}' }, target: { url: '${targetUrl}' } }\n`)
+    try {
+      const stop = new AbortController()
+      const running = recruit(['--json', '--local', '--key', 'local-start'], { ...net.deps, signal: stop.signal })
+      // While the command holds, the links open the player on the server it started.
+      // (asked over a socket, as the check itself does: the global fetch is the failing one here).
+      let up = false
+      for (let i = 0; i < 200 && !up; i++) {
+        up = await answersAsServer(url)
+        if (!up) await new Promise(resolve => setTimeout(resolve, 50))
+      }
+      expect(up).toBe(true)
+      stop.abort()
+      const { code, err, json } = await running
+      expect(code).toBe(0)
+      expect(err).toContain(`Started the ui-tests server on ${url}`)
+      expect(err).toContain('The ui-tests server stays up for the participants. Press Ctrl-C to stop it.')
+      for (const link of json().invites) expect(link.startsWith(`${url}/ui-tests/${json().run}/?t=`)).toBe(true)
+      expect(net.fetchSpy).not.toHaveBeenCalled()
+    } finally {
+      await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+    }
+  })
+
+  it('refuses a ui-tests server that is not on this machine', async () => {
+    const net = failingNetwork()
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: 'https://tests.example.com' }, target: { url: '${targetUrl}' } }\n`)
+    try {
+      const away = await recruit(['--local', '--key', 'away-server'], net.deps)
+      expect(away.code).toBe(2)
+      expect(away.err).toBe('--local needs the ui-tests server on this machine, not https://tests.example.com.\n')
+    } finally {
+      await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+    }
+    expect(net.fetchSpy).not.toHaveBeenCalled()
+  })
+
   it('refuses a tunnel, and a target that is not on this machine', async () => {
     const net = failingNetwork()
     const tunnelled = await recruit(['--local', '--tunnel'], net.deps)
     expect(tunnelled.code).toBe(2)
     expect(tunnelled.err).toContain('--local and --tunnel cannot be combined')
-    await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: 'http://10.0.0.5:3100' } }\n`)
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: 'http://10.0.0.5:3100' } }\n`)
     try {
       const away = await recruit(['--local', '--key', 'away'], net.deps)
       expect(away.code).toBe(2)
       expect(away.err).toContain('--local needs a target on this machine')
     } finally {
-      await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+      await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
     }
     expect(net.fetchSpy).not.toHaveBeenCalled()
   })
@@ -142,13 +191,13 @@ describe('recruit --local', () => {
     const remote = await recruit(['--local', '--key', 'remote'], net.deps, { UI_TESTS_DATABASE_URL: 'postgres://user:pw@db.example.com/ui' })
     expect(remote.code).toBe(2)
     expect(remote.err).toContain('--local keeps the store on this machine')
-    await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: 'https://localhost:3100' } }\n`)
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: 'https://localhost:3100' } }\n`)
     try {
       const secure = await recruit(['--local', '--key', 'secure'], net.deps)
       expect(secure.code).toBe(2)
       expect(secure.err).toContain('--local supports http targets')
     } finally {
-      await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+      await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
     }
     expect(net.fetchSpy).not.toHaveBeenCalled()
   })

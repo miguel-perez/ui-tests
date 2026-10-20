@@ -49,6 +49,8 @@ import type { AgentConfig } from './agents/config.ts'
 /** The shape of `ui-tests.config.ts`; every key is optional. */
 export type UiTestsConfig = {
   target?: Target
+  /** The ui-tests server: the collector, the player and the tag's script. Rehearsal starts one here when it is on this machine and none answers. */
+  server?: { url?: string }
   participants?: { sources?: ('link' | 'prolific' | 'connect')[]; budget?: { max: number; currency: string }; link?: { amount?: number } }
   check?: { block_on?: 'problems'; comment?: boolean }
   ci?: { on?: string[] }

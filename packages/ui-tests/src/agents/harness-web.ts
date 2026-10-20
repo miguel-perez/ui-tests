@@ -12,7 +12,7 @@ const MAX_SNAPSHOT_CHARS = 2_000_000
 export type WebHarnessInput = {
   /** The product under test; the agent's pages are on this origin. */
   target: string
-  /** The player for the agent run, `<origin>/ui-tests/<run>/`. The trial's own token is added when it starts. */
+  /** The player for the agent run on the ui-tests server, `<server>/ui-tests/<run>/`. The trial's own token is added when it starts. */
   playerUrl: string
 }
 export type WebHarnessOptions = { actionTimeoutMs?: number; outputCap?: number; headless?: boolean }
@@ -39,6 +39,8 @@ export function webHarness(input: WebHarnessInput, options: WebHarnessOptions = 
   const target = new URL(input.target)
   const player = new URL(input.playerUrl)
   const allowed = new Set([target.origin, player.origin])
+  /** On the player: the server's own pages, not a page of the product that happens to share the path. */
+  const onPlayer = (address: string | URL) => { const url = new URL(address); return url.origin === player.origin && url.pathname.startsWith('/ui-tests/') }
   const timeout = options.actionTimeoutMs ?? WEB_ACTION_TIMEOUT_MS
   const cap = options.outputCap ?? WEB_OUTPUT_CAP
   let browser: Browser | undefined
@@ -78,7 +80,7 @@ export function webHarness(input: WebHarnessInput, options: WebHarnessOptions = 
     if (current.ended) return { output: 'the task has ended' }
     try {
       await pressBar(page, buttons)
-      await page.waitForURL(url => new URL(url).pathname.startsWith('/ui-tests/'), { timeout })
+      await page.waitForURL(onPlayer, { timeout })
     } catch {
       return { output: '', error: 'could not press the task bar: it is not on this page. Use goto to open the product, then try again' }
     }
@@ -106,14 +108,16 @@ export function webHarness(input: WebHarnessInput, options: WebHarnessOptions = 
       session = state
       page.on('response', response => {
         const request = response.request()
-        if (request.method() !== 'POST' || !(response.ok() || response.status() === 409) || new URL(request.url()).pathname !== '/api/ui-tests/') return
+        // The collector is the server's: the bar on the product posts there with the attempt key.
+        const url = new URL(request.url())
+        if (request.method() !== 'POST' || !(response.ok() || response.status() === 409) || url.origin !== player.origin || url.pathname !== '/api/ui-tests/') return
         try { if ((request.postDataJSON() as { action?: string } | null)?.action === 'end') state.ended = true } catch { /* not a json body */ }
       })
       const url = new URL(player)
       url.search = new URLSearchParams({ t: attempt.token }).toString()
       await page.goto(url.toString(), { timeout })
       await page.getByRole('button', { name: 'Start task' }).click({ timeout })
-      await page.waitForURL(address => !new URL(address).pathname.startsWith('/ui-tests/'), { timeout })
+      await page.waitForURL(address => !onPlayer(address), { timeout })
       await settle(page)
     },
     async call(name, input) {

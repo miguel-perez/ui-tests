@@ -9,13 +9,15 @@ import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { SERVER_URL, isBarCall } from './helpers'
 
 /**
- * Inside the perimeter (Task 34): the product server binds 0.0.0.0, and a participant opens an invite link on this machine's own
- * LAN address. Nothing here reaches outside the machine; a route guard fails the test on any request to another host, but for the
- * site's tag, which loads the bar from `ui-tests serve` on this machine's loopback address.
+ * Inside the perimeter (Task 34): the product server and `ui-tests serve` bind 0.0.0.0, and a participant opens an invite link to the
+ * player on this machine's own LAN address. Nothing here reaches outside the machine; a route guard fails the test on any request to
+ * another host, but for the site's tag, which loads the bar from `ui-tests serve` on this machine's loopback address.
  */
 
 const lan = lanAddress()
 const PORT = 3100
+/** `ui-tests serve`'s port, which the config's default server address names. */
+const SERVER_PORT = 4300
 const fixture = join(import.meta.dirname, 'fixtures', 'mount.ui.test.ts')
 
 test.skip(!lan, 'This machine has no non-loopback IPv4 interface, so there is no LAN address to test on.')
@@ -49,7 +51,7 @@ test('recruit --host gives links on the LAN address, and a participant there com
   expect(code, err).toBe(0)
   const handle = JSON.parse(out) as { run: string; invites: string[] }
   expect(handle.invites.length).toBeGreaterThan(0)
-  for (const link of handle.invites) expect(link.startsWith(`http://${lan}:${PORT}/ui-tests/${handle.run}/?t=`), link).toBe(true)
+  for (const link of handle.invites) expect(link.startsWith(`http://${lan}:${SERVER_PORT}/ui-tests/${handle.run}/?t=`), link).toBe(true)
   expect(err).toContain('Inside the perimeter')
 
   // Nothing leaves for any host other than the LAN address and, for the tag's bar, the server on this machine.
@@ -62,6 +64,7 @@ test('recruit --host gives links on the LAN address, and a participant there com
   })
 
   const base = `http://${lan}:${PORT}`
+  const player = `http://${lan}:${SERVER_PORT}`
   await page.goto(handle.invites[0]!)
   // A link run meets the screener, consent and the practice screen before the card; answer whichever screen is up.
   const heading = page.locator('h1')
@@ -81,7 +84,7 @@ test('recruit --host gives links on the LAN address, and a participant there com
     await expect(heading.first()).not.toHaveText(title)
   }
   await expect(heading.first()).toHaveText('Your task')
-  expect(new URL(page.url()).origin).toBe(base)
+  expect(new URL(page.url()).origin).toBe(player)
   await page.getByRole('button', { name: 'Start task' }).click()
   await page.waitForURL(`${base}/`)
   const bar = page.getByRole('region', { name: 'Read the landing page' })
@@ -90,8 +93,8 @@ test('recruit --host gives links on the LAN address, and a participant there com
   await bar.getByRole('button', { name: 'Done' }).click()
   await bar.getByRole('button', { name: 'Yes' }).click()
   expect((await ended).status()).toBe(200)
-  // The tag's bar goes back to its own server's player, which this LAN participant holds no credential for; the invite link
-  // opens the questions where they left off.
+  // The tag's bar goes back to the player on its own server's address, built into the site as 127.0.0.1, where this LAN participant
+  // holds no credential; the invite link opens the questions where they left off.
   await page.waitForURL(`${SERVER_URL}/ui-tests/${handle.run}/?after=1`)
   await page.goto(handle.invites[0]!)
   await expect(page.getByRole('heading', { name: 'Overall, how difficult or easy did you find this task?' })).toBeVisible()

@@ -1,4 +1,4 @@
-import { loadConfig } from '../config.ts'
+import { DEFAULT_SERVER_URL, loadConfig } from '../config.ts'
 import { agentRun } from './agent-run.ts'
 import { formatFindings, lint, planLines } from '../lint.ts'
 import { StudyLoadError } from '../load.ts'
@@ -11,6 +11,7 @@ import type { AttemptRow, RunStore } from '../store/types.ts'
 import { serveTrace } from '../trace/serve.ts'
 import { buildTrace } from '../trace/build.ts'
 import { verifyRun } from '../verify.ts'
+import { ensureServer } from './ensure-server.ts'
 import { loadStudies, withProduct } from './lint.ts'
 import type { Command, Io } from './main.ts'
 import { interrupt, lintFor, openUrl, pause } from './trace.ts'
@@ -44,9 +45,10 @@ async function waitForAttempt(store: RunStore, runId: string, attemptId: string,
 }
 
 /**
- * `ui-tests` with no command: rehearse a study on yourself. Prints the plan, creates a rehearsal run (never counted toward n),
- * runs `setup`, opens the player, waits for the attempt, verifies it, prints the outcome, the signals and the sentence,
- * and serves the trace until Ctrl-C. With `--actor agent` it runs the agent trials instead (`agent-run.ts`).
+ * `ui-tests` with no command: rehearse a study on yourself. Prints the plan, finds the ui-tests server (or starts one on this machine
+ * for the length of the rehearsal), creates a rehearsal run (never counted toward n) for the target, runs `setup`, opens the player on
+ * the server, waits for the attempt, verifies it, prints the outcome, the signals and the sentence, and serves the trace until Ctrl-C.
+ * With `--actor agent` it runs the agent trials instead (`agent-run.ts`).
  */
 export const dev: Command = async (args, io: Io) => {
   const deps = io.deps ?? {}
@@ -86,9 +88,14 @@ export const dev: Command = async (args, io: Io) => {
   if (!(await checkReachable(target, deps.fetch))) { io.stderr.write(`target not reachable: ${target}\n`); return 2 }
 
   const store = await openStore(io.env)
+  let uiServer: Awaited<ReturnType<typeof ensureServer>> | undefined
   try {
+    try { uiServer = await ensureServer({ url: config.server?.url ?? DEFAULT_SERVER_URL, store, io }) } catch (error) {
+      io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
+      return 2
+    }
     const { run } = await createRun({
-      store, compiled: chosen.compiled, hooksBundle: chosen.code, target, actor, rehearsal: true,
+      store, compiled: chosen.compiled, hooksBundle: chosen.code, target, appUrl: target, actor, rehearsal: true,
       key: `rehearsal:${chosen.compiled.id}:${Date.now()}`,
       reachability: { url: target, reachable: true, checkedAt: new Date().toISOString() },
     })
@@ -96,7 +103,7 @@ export const dev: Command = async (args, io: Io) => {
     const { attempt, token } = await store.createAttempt({ runId: run.run, participant: 'rehearsal', goalIndex, rehearsal: true, setupValues })
     const shot = await attachFirstLook({ store, run, target, screenshotter: deps.screenshotter ?? playwrightScreenshotter() })
     if (shot.error) io.stderr.write(`${shot.error}\n`)
-    const player = `${target.replace(/\/$/, '')}/ui-tests/${run.run}/?t=${token}`
+    const player = `${uiServer.url}/ui-tests/${run.run}/?t=${token}`
     if (args.flags.has('no-open')) io.stdout.write(`${JSON.stringify({ player })}\n`)
     else {
       io.stdout.write(`Player: ${player}\n`)
@@ -132,5 +139,9 @@ export const dev: Command = async (args, io: Io) => {
     await pause(signal)
     await server.close()
     return 0
-  } finally { await store.close() }
+  } finally {
+    // A server this rehearsal started stops with it; one that was already running is left as it was.
+    await uiServer?.close()
+    await store.close()
+  }
 }
