@@ -1,4 +1,4 @@
-import { STORAGE_KEY, forgetAttempt, readAttempt, writeAttempt } from './attempt.ts'
+import { STORAGE_KEY, forgetAttempt, readAttempt, writeAttempt, type StoredAttempt } from './attempt.ts'
 import { keyClient } from './key-client.ts'
 import type { mountBar } from './mount.tsx'
 
@@ -40,9 +40,9 @@ const isExchanged = (value: unknown): value is Exchanged => {
 
 /**
  * What `ui-tests.js` runs, with the address it was loaded from. A fragment `#<run>.<code>` (the tag passes on the handoff code) is
- * traded for an attempt key, which replaces any attempt kept before; then, for the attempt kept for this server, the bar is loaded and
- * mounted. Another tab ending or replacing that attempt unmounts it. Every failure leaves the page as it was: nothing is thrown and
- * nothing is added.
+ * traded for an attempt key, which replaces any attempt kept before; then, for that attempt or the one kept for this server, the bar
+ * is loaded and mounted. Another tab ending or replacing that attempt unmounts it. Every failure leaves the page as it was: nothing
+ * is thrown and nothing is added.
  */
 export async function start(moduleUrl: string, deps?: Partial<LoaderDeps>): Promise<void> {
   try {
@@ -50,12 +50,13 @@ export async function start(moduleUrl: string, deps?: Partial<LoaderDeps>): Prom
     const url = new URL(moduleUrl)
     const server = url.origin
     const handoff = url.hash.slice(1)
+    let exchanged: StoredAttempt | undefined
     if (handoff) {
       const dot = handoff.lastIndexOf('.')
       if (dot < 1) return
       const run = handoff.slice(0, dot)
       const older = readAttempt(storage, server, -Infinity)
-      let body: unknown
+      let refused = false
       try {
         const response = await send(`${server}/api/ui-tests/exchange?run=${encodeURIComponent(run)}`, {
           method: 'POST',
@@ -63,16 +64,20 @@ export async function start(moduleUrl: string, deps?: Partial<LoaderDeps>): Prom
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ code: handoff.slice(dot + 1) }),
         })
-        body = response.ok ? await response.json() : undefined
-      } catch { /* the server is not there: treated as a refusal */ }
-      if (!isExchanged(body) || body.run !== run) {
-        // The code is spent or refused, so an older attempt of the same run is over too; another run's attempt stays.
-        if (older?.run === run) forgetAttempt(storage, idb, older.attempt)
+        const body: unknown = response.ok ? await response.json().catch(() => undefined) : undefined
+        if (isExchanged(body) && body.run === run) exchanged = { v: 1, server, run, attempt: body.attempt, key: body.key, expiresAt: body.expiresAt }
+        else refused = response.ok || (response.status >= 400 && response.status < 500)
+      } catch { /* the server is not there: no answer, so nothing is known to be over */ }
+      if (!exchanged) {
+        // A refused code means an older attempt of the same run is over too; another run's attempt, or one the server could not
+        // answer for, stays.
+        if (refused && older?.run === run) forgetAttempt(storage, idb, older.attempt)
         return
       }
-      writeAttempt(storage, { v: 1, server, run: body.run, attempt: body.attempt, key: body.key, expiresAt: body.expiresAt })
+      writeAttempt(storage, exchanged)
     }
-    const stored = readAttempt(storage, server, Date.now())
+    // The attempt just traded for is shown even where storage cannot keep it: then the bar lasts this page.
+    const stored = exchanged ?? readAttempt(storage, server, Date.now())
     if (!stored) return
     const { mountBar } = await importBar()
     const unmount = mountBar(keyClient(server, stored, { fetch: send, location, storage, idb }), document)

@@ -42,5 +42,5 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
   // The marker cookie is readable on purpose: it only says that a run is on. The token itself is HttpOnly.
   useEffect(() => { setActive(ACTIVE.test(document.cookie)) }, [])
   const client = useMemo(() => cookieClient(endpoint), [endpoint])
-  return active ? createPortal(<Bar client={client} />, document.body) : null
+  return active ? createPortal(<Bar client={client} markRoot />, document.body) : null
 }

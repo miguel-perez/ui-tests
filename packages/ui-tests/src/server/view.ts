@@ -111,14 +111,14 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
 }
 
 /**
- * What the bar on the app's page may know: the page holds only an attempt key, so no consent text, scenario, screener, question,
- * answer or start address crosses here.
+ * What the bar on the app's page may know: the page holds only an attempt key, so no consent text, screener, question, answer or start
+ * address crosses here. The scenario does, filled as the person read it: the bar shows it again on request.
  */
 export type BarView = {
   run: string
   attempt: string
   status: AttemptStatus
-  goal: { name: string; steps: string[]; timeoutSeconds: number }
+  goal: { name: string; scenario: string; steps: string[]; timeoutSeconds: number }
   record: 'events' | 'video'
   brand: ParticipantView['brand']
   /** The bar is there to take the first click on the author's own site: the question was answered and the click is pending. */
@@ -133,7 +133,7 @@ export function barView(run: RunRow, attempt: AttemptRow): BarView {
     run: view.run,
     attempt: view.attempt,
     status: view.status,
-    goal: { name: view.goal.name, steps: view.goal.steps, timeoutSeconds: view.goal.timeoutSeconds },
+    goal: { name: view.goal.name, scenario: view.goal.scenario, steps: view.goal.steps, timeoutSeconds: view.goal.timeoutSeconds },
     record: view.record,
     brand: view.brand,
     firstClick: Boolean(view.status === 'consented' && view.impression?.asked && view.impression.click),

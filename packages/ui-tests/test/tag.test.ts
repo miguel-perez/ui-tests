@@ -21,6 +21,7 @@ function run({ href, server = SERVER, stored, storageThrows, now = 1_000_000 }: 
     location: { href: url.href, hash: url.hash },
     history: { state: { kept: true }, replaceState: (state: unknown, title: string, next: string) => replaced.push([state, title, next]) },
     Date: { now: () => now },
+    URL,
   }
   Object.defineProperty(context, 'localStorage', {
     get() {
@@ -56,6 +57,12 @@ describe('the script tag', () => {
     expect(appended[0]!.src).toBe('https://tests.example.com/ui-tests.js#r_A.c')
   })
 
+  it('compares and loads by the normalised origin', () => {
+    const now = 1_000_000
+    const { appended } = run({ href: 'https://app.test/next', server: 'https://Tests.Example.com:443/', now, stored: { server: 'https://tests.example.com', expiresAt: now + 1 } })
+    expect(appended.map((element) => element.src)).toEqual(['https://tests.example.com/ui-tests.js'])
+  })
+
   it('removes the code from the address', () => {
     expect(run({ href: 'https://app.test/start#ui-tests=r_A.c' }).replaced).toEqual([[{ kept: true }, '', 'https://app.test/start']])
     expect(run({ href: 'https://app.test/#/board&ui-tests=r_A.c' }).replaced[0]![2]).toBe('https://app.test/#/board')
@@ -64,7 +71,7 @@ describe('the script tag', () => {
   })
 
   it('refuses a server that is not an absolute http(s) origin', () => {
-    for (const server of ['', 'javascript:alert(1)', '/relative', 'https://x.test/path']) {
+    for (const server of ['', 'javascript:alert(1)', '/relative', 'https://x.test/path', 'https://x.test#a', 'https://x.test?a', 'https://x .test']) {
       expect(run({ href: 'https://app.test/#ui-tests=r_A.c', server }).appended, server).toHaveLength(0)
     }
   })

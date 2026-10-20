@@ -152,7 +152,10 @@ describe('attempt key', () => {
     const view = await (await get(key)).json()
     expect(Object.keys(view).sort()).toEqual([...barKeys].sort())
     const keys = (value: unknown): string[] => typeof value === 'object' && value !== null ? Object.entries(value).flatMap(([k, v]) => [k, ...keys(v)]) : []
-    for (const hidden of ['consent', 'scenario', 'questions', 'screener', 'answer', 'start']) expect(keys(view)).not.toContain(hidden)
+    for (const hidden of ['consent', 'questions', 'screener', 'answer', 'start']) expect(keys(view)).not.toContain(hidden)
+    // The task text the bar shows again on request, as the person read it on the player.
+    expect(Object.keys(view.goal).sort()).toEqual(['name', 'scenario', 'steps', 'timeoutSeconds'])
+    expect(view.goal.scenario).toEqual(expect.any(String))
     expect(view).toMatchObject({ run: run.run, attempt: attempt.id, status: 'questions', firstClick: false })
   })
 

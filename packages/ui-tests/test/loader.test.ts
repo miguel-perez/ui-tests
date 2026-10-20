@@ -85,6 +85,31 @@ describe('the loader', () => {
     expect(mountBar).not.toHaveBeenCalled()
   })
 
+  it('keeps the older attempt when the server fails to answer', async () => {
+    const { deps, mountBar } = fakes(async () => new Response('Bad gateway', { status: 502 }))
+    writeAttempt(deps.storage, stored('a1'))
+    await start(`${SERVER}/ui-tests.js#r_A.c0de`, deps)
+    expect(readAttempt(deps.storage, SERVER, Date.now())?.attempt).toBe('a1')
+    expect(mountBar).not.toHaveBeenCalled()
+  })
+
+  it('treats a key for another run as a refusal', async () => {
+    const { deps, mountBar } = fakes(async () => Response.json({ key: KEY, run: 'r_B', attempt: 'a2', expiresAt: LATER }))
+    writeAttempt(deps.storage, stored('a1'))
+    await start(`${SERVER}/ui-tests.js#r_A.c0de`, deps)
+    expect(deps.storage.getItem(STORAGE_KEY)).toBeNull()
+    expect(mountBar).not.toHaveBeenCalled()
+  })
+
+  it('shows the bar for this page when storage cannot keep the attempt', async () => {
+    for (const storage of [undefined, new Proxy(memoryStorage(), { get() { throw new Error('blocked') } })]) {
+      const { deps, mountBar } = fakes(exchanged('a1'))
+      deps.storage = storage as Storage
+      await start(`${SERVER}/ui-tests.js#r_A.c0de`, deps)
+      expect(mountBar).toHaveBeenCalledTimes(1)
+    }
+  })
+
   it('leaves the page alone when the server is down', async () => {
     const before = document.documentElement.outerHTML
     const down = fakes(() => Promise.reject(new TypeError('Failed to fetch')))

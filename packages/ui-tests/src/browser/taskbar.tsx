@@ -19,8 +19,7 @@ export type ScreenBar =
 export const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds) % 60).padStart(2, '0')}`
 
 export type TaskbarProps = {
-  /** No scenario: the player shows it before the task, and the app's page may not know it. */
-  view: { goal: { name: string }; brand: BarView['brand'] }
+  view: { goal: Pick<BarView['goal'], 'name' | 'scenario'>; brand: BarView['brand'] }
   theme: ChromeTheme
   /** Shown once the time is nearly spent and the participant has not yet asked for more. */
   offerMoreTime: boolean
@@ -32,6 +31,8 @@ export type TaskbarProps = {
   onMoreTime(): void
   /** Present only when the study records the screen and the person has not said no. */
   screen?: ScreenBar
+  /** Marks the bar's root for the recorder and the snapshot; in a shadow root the host carries the mark instead. */
+  markRoot?: boolean
 }
 
 const css = `
@@ -70,7 +71,7 @@ export function isTyping(active: Element | null, root: Element | null): boolean 
 }
 
 /** The one floating pill: the task, Done, and I couldn't do this. Draggable; steps aside while the participant types in the page. */
-export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep, onMoreTime, screen }: TaskbarProps) {
+export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep, onMoreTime, screen, markRoot = false }: TaskbarProps) {
   const [confirming, setConfirming] = useState(false)
   const lastStep = !step || step.index === step.count - 1
   const [reading, setReading] = useState(false)
@@ -120,7 +121,7 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
   return (
     <div
       ref={root}
-      {...{ [ROOT_ATTRIBUTE]: '' }}
+      {...(markRoot && { [ROOT_ATTRIBUTE]: '' })}
       className="uit-bar"
       role="region"
       aria-label={view.goal.name}
@@ -129,6 +130,7 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
       <style>{css}</style>
       {reading && (
         <div className="uit-card">
+          <p>{view.goal.scenario}</p>
           <p className="uit-dim">When you think you&apos;ve finished, press Done. If you get stuck, press I couldn&apos;t do this.</p>
         </div>
       )}
@@ -178,9 +180,9 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
 }
 
 /** The bar while the first click is taken: one line, no Done and no way out of the task, since the task has not begun. */
-export function FirstClickBar({ theme, poweredBy }: { theme: ChromeTheme; poweredBy: boolean }) {
+export function FirstClickBar({ theme, poweredBy, markRoot = false }: { theme: ChromeTheme; poweredBy: boolean; markRoot?: boolean }) {
   return (
-    <div {...{ [ROOT_ATTRIBUTE]: '' }} className="uit-bar" role="region" aria-label={FIRST_CLICK_PROMPT} style={chromeVars(theme)}>
+    <div {...(markRoot && { [ROOT_ATTRIBUTE]: '' })} className="uit-bar" role="region" aria-label={FIRST_CLICK_PROMPT} style={chromeVars(theme)}>
       <style>{css}</style>
       <div className="uit-pill">
         <span className="uit-question">{FIRST_CLICK_PROMPT}</span>

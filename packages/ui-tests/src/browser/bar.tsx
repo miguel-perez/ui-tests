@@ -33,9 +33,10 @@ const REPLAY_WAIT_MS = 3000
 
 /**
  * The bar and everything behind it: it records the attempt, keeps events until the collector has them, and shows the task, its steps,
- * Done and the time. It renders nothing until the client has a view of an attempt that is on, or of a first click to take.
+ * Done and the time. It renders nothing until the client has a view of an attempt that is on, or of a first click to take. `markRoot`
+ * marks the bar itself for the recorder and the snapshot, where no marked shadow host holds it.
  */
-export function Bar({ client }: { client: BarClient }) {
+export function Bar({ client, markRoot = false }: { client: BarClient; markRoot?: boolean }) {
   const [view, setView] = useState<BarView>()
   const [busy, setBusy] = useState(false)
   const [lateWarning, setLateWarning] = useState(false)
@@ -263,7 +264,7 @@ export function Bar({ client }: { client: BarClient }) {
 
   const shown = active ?? looking
   const theme = useMemo(() => (shown ? chromeTheme(readHost(document, shown.brand.accent)) : undefined), [shown])
-  if (looking && theme) return <FirstClickBar theme={theme} poweredBy={looking.brand.poweredBy} />
+  if (looking && theme) return <FirstClickBar theme={theme} poweredBy={looking.brand.poweredBy} markRoot={markRoot} />
   if (!active || !theme) return null
   const steps = active.goal.steps
   const step = steps.length ? { index: Math.min(stepIndex, steps.length - 1), count: steps.length, name: steps[Math.min(stepIndex, steps.length - 1)]! } : undefined
@@ -271,7 +272,7 @@ export function Bar({ client }: { client: BarClient }) {
     screenState === 'asking' ? { state: 'asking', onShare: () => void shareScreen(), onDecline: () => void declineScreen() }
     : screenState === 'on' || screenState === 'paused' ? { state: screenState, seconds: screenSeconds, onPause: () => { screenRecording.current?.pause(); setScreenState('paused') }, onResume: () => { screenRecording.current?.resume(); setScreenState('on') } }
     : undefined
-  return <Taskbar view={active} theme={theme} busy={busy} step={step} {...(screen && { screen })} offerMoreTime={lateWarning && !moreTimeUsed} onEnd={(reason) => void finish(reason)} onStep={(index) => void finishStep(index)} onMoreTime={() => void moreTime()} />
+  return <Taskbar view={active} theme={theme} markRoot={markRoot} busy={busy} step={step} {...(screen && { screen })} offerMoreTime={lateWarning && !moreTimeUsed} onEnd={(reason) => void finish(reason)} onStep={(index) => void finishStep(index)} onMoreTime={() => void moreTime()} />
 }
 
 /** What the person chose about sharing their screen on this device. */
