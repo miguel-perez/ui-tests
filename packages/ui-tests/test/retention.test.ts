@@ -92,7 +92,7 @@ describe('video chunks in the collector', () => {
     expect((await post(token, chunk(9000, 0, [9]))).status).toBe(200)
     const stored = (await store.getAttempt(attempt.id))!
     expect(videoChunks(stored.answers)).toHaveLength(3)
-    expect(videoSegments(stored.answers)).toEqual([{ startedAt: 1000, chunks: 2 }, { startedAt: 9000, chunks: 1 }])
+    expect(videoSegments(stored.answers)).toEqual([{ startedAt: 1000, chunks: 2, pauses: [], gap: false }, { startedAt: 9000, chunks: 1, pauses: [], gap: false }])
     expect(Array.from((await assembleVideo(store, stored))!.bytes)).toEqual([1, 2, 3, 4, 5])
     expect(Array.from((await assembleVideo(store, stored, 9000))!.bytes)).toEqual([9])
     expect(clipAt(videoSegments(stored.answers), 4500)).toEqual({ segment: 1000, seconds: 3.5 })

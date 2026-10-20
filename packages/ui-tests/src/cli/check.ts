@@ -3,6 +3,7 @@ import { loadConfig } from '../config.ts'
 import { checkName, owedDeliveries, patchRun, pendingSummary, reportLinks } from '../github/check.ts'
 import type { GitHubClient, GitHubLink } from '../github/types.ts'
 import { openStore } from '../store/open.ts'
+import { applyRetention } from '../store/retention.ts'
 import type { RunRow } from '../store/types.ts'
 import type { UiTestsConfig } from '../types.ts'
 import type { Command, Io } from './main.ts'
@@ -116,6 +117,8 @@ async function reconcile(io: Io): Promise<number> {
       const owed = owedDeliveries(run, config)
       return owed.check || owed.comment || owed.webhook
     })
+    // Whatever is past retention goes on every reconcile, even when no run is waiting for a check.
+    await applyRetention(store, io.deps?.now?.() ?? new Date())
   } finally { await store.close() }
   let worst = 0
   for (const run of open) {

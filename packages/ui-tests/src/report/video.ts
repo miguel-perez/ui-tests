@@ -26,7 +26,7 @@ export async function assembleVideo(store: RunStore, attempt: AttemptRow, segmen
 /** The video as a response, honouring a `Range` request so the browser can seek. */
 export function videoResponse(video: Video, range: string | null): Response {
   const size = video.bytes.length
-  const headers = { 'Content-Type': video.contentType, 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' }
+  const headers = { 'Content-Type': video.contentType, 'Accept-Ranges': 'bytes', 'X-Content-Type-Options': 'nosniff', 'Cache-Control': 'no-store' }
   const asked = range && /^bytes=(\d*)-(\d*)$/.exec(range)
   if (asked && (asked[1] || asked[2])) {
     const start = asked[1] ? Number(asked[1]) : Math.max(0, size - Number(asked[2]))

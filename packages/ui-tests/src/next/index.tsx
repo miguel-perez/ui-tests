@@ -10,6 +10,7 @@ import { ROOT_ATTRIBUTE, createRecorder, fitSnapshot, serializeSnapshot, shortSe
 import { startReplay } from './replay-recorder.ts'
 import { startScreenRecording } from './screen-recorder.ts'
 import type { ScreenRecording } from './screen-recorder.ts'
+import { uploadChunk } from './video-upload.ts'
 import { FirstClickBar, Taskbar } from './taskbar.tsx'
 import type { EndReason, ScreenBar } from './taskbar.tsx'
 import { chromeTheme, readHost } from './theme.ts'
@@ -178,18 +179,10 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
 
   async function shareScreen() {
     if (!attempt) return
-    const segment = Date.now()
-    const result = await startScreenRecording(async (chunk, seq) => {
-      const data = await toBase64(chunk)
-      // A chunk is retried a few times on a failed connection; a refusal (4xx) is final.
-      for (let tries = 0; tries < 4; tries++) {
-        try {
-          const response = await post({ action: 'video', segment, seq, contentType: chunk.type || 'video/webm', data }, { keepalive: false })
-          if (response.ok || (response.status >= 400 && response.status < 500)) return
-        } catch { /* try again */ }
-        await new Promise((resolve) => setTimeout(resolve, 500 * (tries + 1)))
-      }
-    }, { onEnded: () => { screenRecording.current = undefined; setScreenState('declined') } })
+    const result = await startScreenRecording(async (chunk, seq, info) => {
+      // A chunk that could not be stored is a hole in the video; the attempt is marked so the trace says so.
+      if (!(await uploadChunk((body) => post(body, { keepalive: false }), chunk, seq, info))) void post({ action: 'video-note', note: 'gap' }).catch(() => {})
+    }, { onEnded: () => { screenRecording.current = undefined; setScreenState('declined'); void post({ action: 'video-note', note: 'stopped' }).catch(() => {}) } })
     if (result === 'declined') { void declineScreen(); return }
     screenRecording.current = result
     setScreenSeconds(0)
@@ -296,14 +289,6 @@ function readVideoChoice(attempt: string): string | null {
 }
 function writeVideoChoice(attempt: string, choice: string) {
   try { sessionStorage.setItem(`ui-tests-video:${attempt}`, choice) } catch { /* asked again on the next page */ }
-}
-
-/** A chunk of video as base64, for the JSON the collector takes. */
-async function toBase64(chunk: Blob): Promise<string> {
-  const bytes = new Uint8Array(await chunk.arrayBuffer())
-  let text = ''
-  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
-  return btoa(text)
 }
 
 /** The step this attempt is on, as this device last saw it. */

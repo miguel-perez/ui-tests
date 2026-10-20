@@ -10,6 +10,8 @@ export function getStore(): Promise<RunStore> {
     // What is past retention goes when the store opens; a failure is told and does not keep the server from serving.
     .then(async (opened) => {
       await applyRetention(opened, new Date()).catch((error) => console.error(`ui-tests: retention failed: ${error instanceof Error ? error.message : String(error)}`))
+      // A server that stays up for months expires what is past retention once a day.
+      setInterval(() => { void applyRetention(opened, new Date()).catch(() => {}) }, 24 * 60 * 60 * 1000).unref()
       return opened
     })
     .catch((error) => {

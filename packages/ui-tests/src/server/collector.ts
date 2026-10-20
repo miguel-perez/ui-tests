@@ -8,7 +8,7 @@ import { fitScore } from '../derive/fit.ts'
 import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
 import { UXLITE_VERSION } from '../measures.ts'
 import { nullTranscriber, type Transcriber } from '../transcriber.ts'
-import { VIDEO_CHUNK_BYTES, VIDEO_DECLINED, VIDEO_KEY, videoChunks } from '../video.ts'
+import { MAX_VIDEO_BYTES, MAX_VIDEO_CHUNKS, MAX_VIDEO_SEGMENTS, VIDEO_CHUNK_BYTES, VIDEO_DECLINED, VIDEO_GAP, VIDEO_KEY, VIDEO_STOPPED, videoChunks, videoPauses } from '../video.ts'
 import { MORE_TIME, effectiveTimeout, isOwnSite, participantView, type ParticipantView } from './view.ts'
 import type { CompiledGoal } from '../schema/compiled.ts'
 
@@ -78,7 +78,9 @@ const message = z.discriminatedUnion('action', [
   }),
   z.object({ action: z.literal('more-time') }),
   /** A chunk of the screen video, base64: `segment` is when that recording began, `seq` its place in it. */
-  z.object({ action: z.literal('video'), segment: z.number().int().nonnegative(), seq: z.number().int().nonnegative(), contentType: z.string().regex(/^video\/[a-z0-9.+-]+/i).max(100), data: z.string().max(VIDEO_CHARS) }),
+  z.object({ action: z.literal('video'), segment: z.number().int().nonnegative(), seq: z.number().int().nonnegative(), contentType: z.string().regex(/^video\/[a-z0-9.+-]+(?:;\s*codecs=[a-z0-9.,"' -]+)?$/i).max(100), data: z.string().max(VIDEO_CHARS), pauses: z.array(z.tuple([z.number().nonnegative(), z.number().nonnegative()])).max(200).optional() }),
+  /** The recording is not whole: a chunk could not be sent (`gap`), or the person ended the share from the browser (`stopped`). */
+  z.object({ action: z.literal('video-note'), note: z.enum(['gap', 'stopped']) }),
   /** The participant said no to sharing their screen. */
   z.object({ action: z.literal('video-declined') }),
   /** An open question answered by voice: the audio (base64), and the words when the browser already has them. */
@@ -261,8 +263,11 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         await store.appendEvents(attempt.id, body.events as RecordedEvent[])
         // A page too large to record stops the replay; the trace says so rather than show a recording that ends for no reason.
         if (body.truncated) {
-          const current = await store.getAttempt(attempt.id)
-          if (current?.status === 'active') await store.updateAttempt(attempt.id, { answers: { ...current.answers, [REPLAY_TRUNCATED]: true } }, 'active')
+          // In a transaction, like every other write of the answers, so a video reference stored at the same moment is not lost.
+          await store.transaction(async (tx) => {
+            const current = await tx.getAttempt(attempt.id)
+            if (current?.status === 'active') await tx.updateAttempt(attempt.id, { answers: { ...current.answers, [REPLAY_TRUNCATED]: true } }, 'active')
+          })
         }
         return reload()
       }
@@ -271,15 +276,31 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         const bytes = new Uint8Array(Buffer.from(body.data, 'base64'))
         if (!bytes.length) return refuse(400, 'No video')
         if (bytes.length > VIDEO_CHUNK_BYTES) return refuse(413, 'Request too large')
-        const result = await store.transaction(async (tx) => {
+        // One transaction reads and writes the list of chunks, so two chunks arriving together both keep their reference.
+        const result = await store.transaction(async (tx): Promise<{ status: number; text: string } | undefined> => {
           const current = await tx.getAttempt(attempt.id)
           // A chunk may arrive just after the end, from the last flush; never after the person withdrew.
-          if (!current || current.reason === 'withdrew' || (current.status !== 'active' && current.status !== 'questions')) return 'Attempt is not recording'
+          if (!current || current.reason === 'withdrew' || (current.status !== 'active' && current.status !== 'questions')) return { status: 409, text: 'Attempt is not recording' }
           const chunks = videoChunks(current.answers)
           // A chunk sent again (a retry after a lost reply) is stored once.
           if (chunks.some((c) => c.segment === body.segment && c.seq === body.seq)) return undefined
+          const segments = new Set(chunks.map((c) => c.segment))
+          const held = chunks.reduce((sum, c) => sum + (c.size ?? VIDEO_CHUNK_BYTES), 0)
+          if (chunks.length >= MAX_VIDEO_CHUNKS || held + bytes.length > MAX_VIDEO_BYTES || (!segments.has(body.segment) && segments.size >= MAX_VIDEO_SEGMENTS)) return { status: 413, text: 'Too much video for one attempt' }
           const blob = await tx.putBlob(attempt.id, 'video', bytes, body.contentType)
-          await tx.updateAttempt(attempt.id, { answers: { ...current.answers, [VIDEO_KEY]: { chunks: [...chunks, { segment: body.segment, seq: body.seq, blob }] } } })
+          const pauses = { ...videoPauses(current.answers), ...(body.pauses && { [String(body.segment)]: body.pauses }) }
+          await tx.updateAttempt(attempt.id, { answers: { ...current.answers, [VIDEO_KEY]: { chunks: [...chunks, { segment: body.segment, seq: body.seq, blob, size: bytes.length }], pauses } } })
+          return undefined
+        })
+        return result ? refuse(result.status, result.text) : reload()
+      }
+      case 'video-note': {
+        if (run.compiled.record !== 'video') return conflict('This study does not record the screen')
+        const flag = body.note === 'gap' ? VIDEO_GAP : VIDEO_STOPPED
+        const result = await store.transaction(async (tx) => {
+          const current = await tx.getAttempt(attempt.id)
+          if (!current || current.reason === 'withdrew') return 'Attempt is not recording'
+          if (!current.flags.includes(flag)) await tx.updateAttempt(attempt.id, { flags: [...current.flags, flag] })
           return undefined
         })
         return result ? conflict(result) : reload()

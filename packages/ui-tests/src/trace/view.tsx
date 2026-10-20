@@ -62,6 +62,8 @@ function Clips({ item, index, run }: { item: TraceAttempt; index: number; run: s
   return (
     <>
       <h4>Screen video</h4>
+      {(video.some((segment) => segment.gap) || item.attempt.flags.includes('video-gap')) && <p>Part of this recording is missing: a piece could not be sent.</p>}
+      {item.attempt.flags.includes('video-stopped') && <p>The person ended the screen share from the browser before the task was over.</p>}
       {item.reel.map((moment, i) => {
         const clip = clipOf(video, moment.start, moment.end)
         return clip && (
