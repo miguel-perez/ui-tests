@@ -41,6 +41,11 @@ export interface AgentModel {
  */
 export interface Harness {
   tools(): ToolSpec[]
+  /**
+   * Called once per trial, after `reset`, by a harness that acts through the participant player (web): the trial's attempt
+   * already holds the agent's consent, and its token lets the harness open the player as that attempt.
+   */
+  begin?(attempt: { id: string; token: string }): Promise<void>
   call(name: string, input: unknown): Promise<{ output: string; error?: string }>
   endState(): Promise<{ workspace?: Workspace; snapshot?: Snapshot; sideEffects?: string[] }>
   reset(): Promise<void>

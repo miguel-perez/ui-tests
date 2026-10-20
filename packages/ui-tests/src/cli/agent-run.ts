@@ -4,6 +4,7 @@ import { anthropicModel } from '../agents/anthropic.ts'
 import { agentFingerprint, type AgentConfig } from '../agents/config.ts'
 import { cliHarness } from '../agents/harness-cli.ts'
 import { httpHarness } from '../agents/harness-http.ts'
+import { mcpHarness } from '../agents/harness-mcp.ts'
 import { DEFAULT_TRIALS, runTrials, TRIAL_ANSWER, type Trial } from '../agents/loop.ts'
 import { packLocalPackage, type LocalPackage } from '../agents/pack.ts'
 import type { AgentModel, Harness } from '../agents/model.ts'
@@ -36,7 +37,7 @@ async function modelFor(agent: AgentConfig, io: Io): Promise<AgentModel> {
   return scriptedModel(script as ScriptedTurn[] | ScriptedTurn[][])
 }
 
-/** The harness for a goal's target; the mcp and web harnesses are not here yet. */
+/** The harness for a goal's target; the web harness needs a running player and is used from code, not from here yet. */
 function harnessFor(goal: CompiledGoal, io: Io, localPackage?: LocalPackage): Harness | string {
   const target = goal.agent?.target
   if (!target) return `The task "${goal.name}" has no agent target`
@@ -44,7 +45,10 @@ function harnessFor(goal: CompiledGoal, io: Io, localPackage?: LocalPackage): Ha
     try { return cliHarness(target.value, { cwd: io.cwd, env: io.env, ...(localPackage && { localPackage }) }) } catch (error) { return error instanceof Error ? error.message : String(error) }
   }
   if (target.kind === 'http') return httpHarness(target.value, target.description)
-  return `The ${target.kind} harness is not shipped yet`
+  if (target.kind === 'mcp') {
+    try { return mcpHarness(target.value, { cwd: io.cwd, env: io.env }) } catch (error) { return error instanceof Error ? error.message : String(error) }
+  }
+  return `The ${target.kind} harness is not run from the command line yet`
 }
 
 /**

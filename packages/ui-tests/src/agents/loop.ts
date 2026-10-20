@@ -46,6 +46,9 @@ const MAX_QUESTIONS = 3
 export const DONE_TOOL: ToolSpec = { name: 'done', description: 'Call this when the task is done. Nothing after it runs.', input: { type: 'object', properties: { summary: { type: 'string', description: 'What you did, in one line' } } } }
 export const GIVE_UP_TOOL: ToolSpec = { name: 'give_up', description: 'Call this when you cannot do the task, with what stopped you. Nothing after it runs.', input: { type: 'object', properties: { reason: { type: 'string', description: 'What stopped you, in one line' } }, required: ['reason'] } }
 
+/** The web harness's own name for giving up, which presses the player bar's "I couldn't do this". */
+const CANNOT_TOOL = 'cannot'
+
 export const DEFAULT_SYSTEM = [
   'You are using a product through the tools you are given, to get one task done.',
   'Use only those tools. Nobody can answer questions while you work: decide for yourself.',
@@ -131,7 +134,7 @@ async function runAgent(input: { model: AgentModel; harness: Harness; system: st
     if (step.stop === 'max_tokens') return end(false, { limit: 'ran out of output tokens in the middle of a reply' })
     if (toolCalls.length) {
       for (const call of toolCalls) {
-        const ending = call.name === DONE_TOOL.name || call.name === GIVE_UP_TOOL.name
+        const ending = call.name === DONE_TOOL.name || call.name === GIVE_UP_TOOL.name || (call.name === CANNOT_TOOL && own.has(call.name))
         let result: { output: string; error?: string } = { output: '' }
         if (!ending || own.has(call.name)) {
           try { result = await harness.call(call.name, call.input) } catch (error) {
@@ -140,7 +143,7 @@ async function runAgent(input: { model: AgentModel; harness: Harness; system: st
         }
         transcript.push({ role: 'tool', id: call.id, name: call.name, output: result.output, ...(result.error && { error: result.error }) })
         if (call.name === DONE_TOOL.name) return end(true)
-        if (call.name === GIVE_UP_TOOL.name) {
+        if (call.name === GIVE_UP_TOOL.name || (call.name === CANNOT_TOOL && own.has(call.name))) {
           const reason = (call.input as { reason?: unknown } | undefined)?.reason
           return end(false, { said: typeof reason === 'string' && reason.trim() ? reason.trim() : 'gave up without saying why' })
         }
@@ -199,6 +202,8 @@ export type RunTrialsInput = {
  */
 export async function runTrials(input: RunTrialsInput): Promise<Trial[]> {
   const { store, run, study, goal, model, harness } = input
+  // An agent's attempts never share a run with people: they would be counted toward the people's n.
+  if (run.actor !== 'agent') { await harness.dispose(); throw new Error(`Agent trials run in an agent run, not in ${run.run}, which is for ${run.actor}s`) }
   const task = study.tasks[goal.index]
   if (!task) throw new Error(`The task "${goal.name}" is not in the study`)
   const config = run.compiled.agents?.config
@@ -214,9 +219,13 @@ export async function runTrials(input: RunTrialsInput): Promise<Trial[]> {
       if (input.signal?.aborted) break
       await harness.reset()
       const setupValues = await runSetup(study, baseURL)
-      const { attempt } = await store.createAttempt({ runId: run.run, participant: `agent:${goal.index}:${index}`, goalIndex: goal.index, rehearsal: run.rehearsal, setupValues })
+      const { attempt, token } = await store.createAttempt({ runId: run.run, participant: `agent:${goal.index}:${index}`, goalIndex: goal.index, rehearsal: run.rehearsal, setupValues })
       const startedAt = new Date().toISOString()
-      await store.updateAttempt(attempt.id, { status: 'active', startedAt })
+      if (harness.begin) {
+        // Through the player: the attempt starts consented, and the player's own Start task makes it active.
+        await store.updateAttempt(attempt.id, { status: 'consented', purposes: run.compiled.consent.purposes }, 'created')
+        await harness.begin({ id: attempt.id, token })
+      } else await store.updateAttempt(attempt.id, { status: 'active', startedAt })
       const ran = await runAgent({ model, harness, system, prompt: goal.scenario.text, budgets })
       const end = await harness.endState()
       if (end.snapshot) await store.putSnapshot(attempt.id, 'end', end.snapshot)

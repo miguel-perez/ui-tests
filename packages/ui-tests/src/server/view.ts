@@ -70,6 +70,8 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
   const last = attempt.goalIndex === study.goals.length - 1
   const impression = study.impression
   const rehearsal = attempt.rehearsal || run.rehearsal
+  // An agent is not screened and does not practise: it is put through the task, and it consented when its attempt was made.
+  const asked = !rehearsal && run.actor !== 'agent'
   return {
     run: run.run,
     attempt: attempt.id,
@@ -78,8 +80,8 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
     brand: study.brand,
     consent: { text: study.consent.text, purposes: study.consent.purposes, payout: study.consent.payout },
     // Only link participants are screened and practise; a rehearsal is the author taking their own study.
-    screener: rehearsal ? [] : study.screener.map((q) => ({ id: q.id, text: q.text, options: q.options.map((o) => o.label), multi: q.multi, ...(q.open && { open: true }) })),
-    practice: study.practice && !rehearsal,
+    screener: !asked ? [] : study.screener.map((q) => ({ id: q.id, text: q.text, options: q.options.map((o) => o.label), multi: q.multi, ...(q.open && { open: true }) })),
+    practice: study.practice && asked,
     minutes: Math.max(1, study.goals.reduce((sum, g) => sum + (g.minutes ?? Math.ceil(g.timeout.seconds / 60)), 0)),
     ...(impression.on && attempt.answers[FIRST_LOOK_SHOT] !== undefined && !firstLookDone(attempt) && {
       impression: { page: impression.page ?? goal.start, flashMs: impression.flashMs, question: impression.question, asked: typeof (attempt.answers.impression as { text?: unknown } | undefined)?.text === 'string', click: isOwnSite(impression.page ?? goal.start, run.target) },

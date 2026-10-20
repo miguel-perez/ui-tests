@@ -55,7 +55,7 @@ export function absolutePath(path: string | undefined): string {
 }
 
 /** Where `program` is on `path`, as an absolute file; a path given with a slash is resolved against `base`. */
-function which(program: string, path: string, base: string): string | undefined {
+export function which(program: string, path: string, base: string): string | undefined {
   if (program.includes('/')) return resolve(base, program)
   for (const dir of path.split(delimiter)) {
     const candidate = join(dir, program)
