@@ -22,8 +22,9 @@ export function highlightReel(input: { events: RecordedEvent[]; signals: Signal[
   if (!input.events.length) { first = -Infinity; last = Infinity }
   const windows: ReelMoment[] = []
   for (const signal of [...input.signals].sort((a, b) => a.at - b.at)) {
-    const start = Math.max(first, signal.at - pad)
-    const end = Math.min(last, signal.at + pad)
+    // A signal outside the recorded span pins to its nearer edge, so a window never ends before it starts.
+    const end = Math.max(first, Math.min(last, signal.at + pad))
+    const start = Math.min(end, Math.max(first, signal.at - pad))
     const previous = windows.at(-1)
     if (previous && start <= previous.end) previous.end = Math.max(previous.end, end)
     else windows.push({ start, end, signal, words: [] })

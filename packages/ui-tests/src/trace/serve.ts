@@ -168,6 +168,9 @@ export async function serveTrace(options: { store: RunStore; port?: number; host
         let id: string
         try { id = decodeURIComponent(clip[1]!) } catch { return send(404, 'text/plain', 'Not found') }
         const attempt = (await store.listAttempts(id))[Number(clip[2]) - 1]
+        // The same gate as the report page: a person who did not agree to analysis by the author, or withdrew, has no video served.
+        const recorded = attempt && (await buildRecord(store, id)).attempts[Number(clip[2]) - 1]
+        if (!recorded || !mayShow(recorded)) return send(404, 'text/plain', 'Not found')
         const asked = new URL(req.url ?? '/', 'http://localhost').searchParams.get('s')
         const video = attempt && (await assembleVideo(store, attempt, asked === null ? undefined : Number(asked)))
         if (!video) return send(404, 'text/plain', 'Not found')

@@ -325,6 +325,22 @@ describe('consent gates the words and the recording', () => {
     } finally { await store.updateAttempt(first!.id, { purposes: first!.purposes }) }
   })
 
+  it('serves a person\'s video on this machine only when the report may show it', async () => {
+    const [first] = await store.listAttempts(runId)
+    const blob = await store.putBlob(first!.id, 'video', new Uint8Array([1, 2, 3]), 'video/webm')
+    await store.updateAttempt(first!.id, { answers: { ...first!.answers, video: { chunks: [{ segment: 1000, seq: 0, blob, size: 3 }], pauses: {} } } })
+    const server = await serveTrace({ store, port: 0 })
+    try {
+      expect((await fetch(`${server.url}/runs/${runId}/video/1`)).status).toBe(200)
+      await store.updateAttempt(first!.id, { purposes: [] })
+      expect((await fetch(`${server.url}/runs/${runId}/video/1`)).status).toBe(404)
+    } finally {
+      await server.close()
+      await store.updateAttempt(first!.id, { purposes: first!.purposes, answers: first!.answers })
+      await store.deleteBlob(blob)
+    }
+  })
+
   it('--share --json prints the link as JSON', async () => {
     let out = ''
     const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: () => {} }, cwd: data, env: { UI_TESTS_DATA_DIR: data, UI_TESTS_SHARE_SECRET: SECRET } }

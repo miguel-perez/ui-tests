@@ -23,6 +23,14 @@ describe('highlightReel', () => {
     expect(reel.map((moment) => moment.words)).toEqual([['where is it'], ['huh']])
   })
 
+  it('never ends a window before it starts, for a signal outside the recorded span', () => {
+    for (const at of [-10_000, 70_000]) {
+      const [moment] = highlightReel({ events, signals: [signal(at)], words: [] })
+      expect(moment!.start).toBeLessThanOrEqual(moment!.end)
+      expect([moment!.start, moment!.end]).toEqual(at < 0 ? [0, 0] : [60_000, 60_000])
+    }
+  })
+
   it('stays inside the recorded span and honours padMs', () => {
     expect(highlightReel({ events, signals: [signal(1000), signal(59_000)], words: [] }).map((m) => [m.start, m.end])).toEqual([[0, 4000], [56_000, 60_000]])
     expect(highlightReel({ events, signals: [signal(20_000), signal(22_000)], words: [], padMs: 500 })).toHaveLength(2)

@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterEach, describe, expect, it } from 'vitest'
-import { SIGNATURE_HEADER, sendWebhook, signBody, verifySignature } from '../src/notify/webhook.ts'
+import { SIGNATURE_HEADER, WEBHOOK_TIMEOUT_MS, sendWebhook, signBody, verifySignature } from '../src/notify/webhook.ts'
 import type { RunRecord } from '../src/record/schema.ts'
 
 const recordOf = (run: string, revision: number, result: RunRecord['handle']['result'] = 'problems-found') =>
@@ -65,6 +65,25 @@ describe('sendWebhook', () => {
     await expect(sendWebhook(recordOf('r_down', 1), { url }, { sleep: async () => {} })).rejects.toThrow('500')
     expect(hits).toHaveLength(4)
     expect(hits[0]!.signature).toBeUndefined()
+  })
+
+  it('gives up on a stalled delivery after its timeout and retries it', async () => {
+    const signals: (AbortSignal | undefined)[] = []
+    const fetchStub: typeof fetch = async (_url, init) => { signals.push(init?.signal ?? undefined); return new Response(null, { status: signals.length < 2 ? 503 : 200 }) }
+    await sendWebhook(recordOf('r_t', 1), { url: 'http://hook.test/' }, { fetch: fetchStub, sleep: async () => {} })
+    expect(signals).toHaveLength(2)
+    for (const signal of signals) expect(signal).toBeInstanceOf(AbortSignal)
+    // A real endpoint that never answers: each try is abandoned at the timeout and retried, then the failure is thrown, not a hang.
+    let tries = 0
+    const stalled = createServer(() => { tries++ })
+    await new Promise<void>(resolve => stalled.listen(0, '127.0.0.1', resolve))
+    const started = Date.now()
+    try {
+      await expect(sendWebhook(recordOf('r_s', 1), { url: `http://127.0.0.1:${(stalled.address() as AddressInfo).port}/` }, { sleep: async () => {}, timeoutMs: 200 })).rejects.toThrow()
+      expect(Date.now() - started).toBeLessThan(5000)
+      expect(tries).toBe(4)
+    } finally { stalled.closeAllConnections(); await new Promise(resolve => stalled.close(resolve)) }
+    expect(WEBHOOK_TIMEOUT_MS).toBe(10_000)
   })
 
   it('sends nothing when no webhook is configured', async () => {

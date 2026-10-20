@@ -21,7 +21,10 @@ export function verifySignature(body: string, header: string | null | undefined,
 /** The (run, revision) pairs already delivered in this process. */
 const sent = new Set<string>()
 
-export type WebhookOptions = { fetch?: typeof fetch; backoffMs?: number; sleep?: (ms: number) => Promise<void> }
+export type WebhookOptions = { fetch?: typeof fetch; backoffMs?: number; sleep?: (ms: number) => Promise<void>; /** Default `WEBHOOK_TIMEOUT_MS`. */ timeoutMs?: number }
+
+/** How long one delivery may take before it is abandoned and retried. */
+export const WEBHOOK_TIMEOUT_MS = 10_000
 
 /**
  * Tells the configured URL that a run has a result: POST `{ run, revision, result }`, signed with the secret when there is one.
@@ -44,6 +47,8 @@ export async function sendWebhook(record: RunRecord, webhook: UiTestsConfig['web
         method: 'POST',
         headers: { 'content-type': 'application/json', ...(webhook.secret && { [SIGNATURE_HEADER]: signBody(body, webhook.secret) }) },
         body,
+        // A stalled endpoint is a failed try, not a hang: the retries and backoff go on.
+        signal: AbortSignal.timeout(options.timeoutMs ?? WEBHOOK_TIMEOUT_MS),
       })
       if (response.ok) { sent.add(key); return }
       failure = new Error(`webhook answered ${response.status}`)
