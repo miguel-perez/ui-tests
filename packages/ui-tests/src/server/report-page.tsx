@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation'
 import { AttemptReplay } from '../report/attempt-replay.tsx'
 import { signedUrl, verifyPath } from '../report/sign.ts'
-import { ReportView } from '../report/view.tsx'
+import { mayShow, ReportView } from '../report/view.tsx'
 import { buildRecord } from '../record/build.ts'
 import { buildTrace } from '../trace/build.ts'
 import { momentLabel } from '../trace/reel.ts'
@@ -50,7 +50,7 @@ export async function ReportPage({ params, searchParams }: { params: Params; sea
   const asked = (await searchParams).at
   const at = typeof asked === 'string' && asked !== '' ? Number(asked) : NaN
   const begun = item?.replay?.length ? (item.replay[0]!.data as { timestamp?: number }).timestamp : undefined
-  const replay = item?.replay && (
+  const replay = item?.replay && mayShow(attempt) && (
     <AttemptReplay
       events={item.replay.map((event) => event.data)}
       moments={item.reel.map((moment) => ({ start: moment.start, end: moment.end, label: momentLabel(moment) }))}

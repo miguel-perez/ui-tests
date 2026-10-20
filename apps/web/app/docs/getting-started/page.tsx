@@ -16,7 +16,7 @@ function Command({ text, label }: { text: string; label: string }) {
  * task ends on. Every word is lib/getting-started.ts.
  */
 export default function GettingStarted() {
-  const { title, lead, clone, ci, accessibility, steps } = gettingStarted
+  const { title, lead, clone, ci, sharing, accessibility, steps } = gettingStarted
   return <SiteShell><main id="content" className="site-width docs">
     <h1>{title}</h1>
     <p className="docs-lead">{lead}</p>
@@ -41,6 +41,10 @@ export default function GettingStarted() {
       <p><Prose text={ci.text} /></p>
       <ol>{ci.steps.map(text => <li key={text}><Prose text={text} /></li>)}</ol>
       <p><Prose text={ci.then} /></p>
+    </section>
+    <section id="sharing" aria-labelledby="sharing-heading">
+      <h2 id="sharing-heading">{sharing.heading}</h2>
+      <p><Prose text={sharing.text} /></p>
     </section>
     <section id="accessibility" aria-labelledby="accessibility-heading">
       <h2 id="accessibility-heading">{accessibility.heading}</h2>

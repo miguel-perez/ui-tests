@@ -35,7 +35,8 @@ export const report: Command = async (args, io) => {
     const run = await store.getRun(id)
     if (!run) { io.stderr.write(`No such run: ${id}\n`); return 2 }
     if (args.flags.has('share')) {
-      io.stdout.write(`${run.target.replace(/\/+$/, '')}/r/${run.run}?sig=${signPath(`/r/${run.run}`, secret!)}\n`)
+      const url = `${run.target.replace(/\/+$/, '')}/r/${run.run}?sig=${signPath(`/r/${run.run}`, secret!)}`
+      io.stdout.write(args.flags.has('json') ? `${JSON.stringify({ url })}\n` : `${url}\n`)
       return 0
     }
     await refreshRun(store, id, io.deps?.now?.())

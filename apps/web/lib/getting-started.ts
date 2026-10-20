@@ -26,6 +26,10 @@ export const gettingStarted = {
     ],
     then: 'For a local try-out without Neon, `UI_TESTS_DATABASE_URL=pglite:memory` runs the same store in memory. The tables are created on first use.',
   },
+  sharing: {
+    heading: 'Sharing a report',
+    text: 'Set `UI_TESTS_SHARE_SECRET` on the server, then `npx ui-tests report <run> --share` prints a link to the report. Anyone with the link sees the report and its recordings; without the secret there are no share links. A link has no expiry. To revoke every link you have made, change `UI_TESTS_SHARE_SECRET`: the old links stop opening.',
+  },
   accessibility: {
     heading: 'Accessibility',
     text: 'Everything a participant meets works with the keyboard alone: Tab and Shift+Tab to move between questions and buttons, the arrow keys to choose within a set of choices, Space to tick a box, Enter to press a button. Every screen has one heading, one question and labelled controls; the bar announces the question it asks and any offer of more time. The checks run in a real browser with axe on every screen. What they cannot do is listen, so before you publish a study, check it by ear.',

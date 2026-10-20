@@ -16,7 +16,7 @@ export function consentText(study: { product: string; author: string }, options:
   if (options.workflows) purposes.push('sharing the record with an automated workflow')
   const who = study.author || `the team behind ${study.product}`
   const sentence: Record<Purpose, string> = {
-    'analysis by the author': `${who} will watch your recording and read what you say to learn where ${study.product} is hard to use.`,
+    'analysis by the author': `${who} will watch your recording and read what you say to learn where ${study.product} is hard to use, and may share the report, including your recording, with others by a private link.`,
     'model-assisted analysis of the trace': 'A model may read the trace of your attempt to help find those places.',
     'sharing the record with an automated workflow': 'The record of your attempt may be passed to an automated workflow that files what was found.',
   }

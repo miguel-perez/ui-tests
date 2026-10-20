@@ -92,9 +92,13 @@ describe('signed paths', () => {
     expect(verifyPath('/r/r_1', '', SECRET)).toBe(false)
   })
 
-  it('compares in constant time', async () => {
-    const source = await (await import('node:fs/promises')).readFile(join(import.meta.dirname, '..', 'src', 'report', 'sign.ts'), 'utf8')
-    expect(source).toContain('timingSafeEqual')
+  it('rejects a wrong signature of the right length, and ones of other lengths, whatever they share with the right one', () => {
+    const sig = signPath('/r/r_1', SECRET)
+    const wrong = `${'A'.repeat(sig.length - 1)}${sig.at(-1) === 'A' ? 'B' : 'A'}`
+    expect(wrong).toHaveLength(sig.length)
+    expect(verifyPath('/r/r_1', wrong, SECRET)).toBe(false)
+    expect(verifyPath('/r/r_1', `${sig}A`, SECRET)).toBe(false)
+    expect(verifyPath('/r/r_1', sig.slice(0, 10), SECRET)).toBe(false)
   })
 
   it('makes a link of a path with its slash and its signature', () => {
@@ -121,8 +125,11 @@ describe('the report', () => {
     expect(words).toContain('I could not tell which button to press')
     expect(words).toContain('Suggested change')
     expect(html).toMatch(/class="uit-chip" href="\/r\/[^"]+\/p1\?at=4000"/)
-    expect(html.lastIndexOf('What worked')).toBeGreaterThan(html.lastIndexOf('People<'))
-    expect(html.indexOf('Problems')).toBeLessThan(html.indexOf('People<'))
+    // What worked is the last card, and the people are under the cards.
+    expect(html.indexOf('What worked')).toBeGreaterThan(html.lastIndexOf('Suggested change'))
+    expect(html.indexOf('What worked')).toBeLessThan(html.indexOf('People<'))
+    expect(html).toMatch(/<li class="uit-card"[^>]*><h3 id="uit-worked">What worked/)
+    expect(words).toContain('The three most serious problems for each task are named')
   })
 
   it('lists each person who began, linking to their own page through the link it is given', () => {
@@ -251,5 +258,77 @@ describe('report in the CLI and the local trace', () => {
       expect(one).not.toContain(HOOKS)
       expect((await fetch(`${server.url}/runs/r_nope/report/`)).status).toBe(404)
     } finally { await server.close() }
+  })
+})
+
+describe('consent gates the words and the recording', () => {
+  const change = (patch: Partial<RunRecord['attempts'][number]>): RunRecord => ({ ...record, attempts: record.attempts.map((a, i) => (i === 0 ? { ...a, ...patch } : a)) })
+  const WORDS = 'I could not tell which button to press'
+
+  it('shows words and a play chip only for a person who agreed to analysis by the author', () => {
+    expect(text(render())).toContain(WORDS)
+    const declined = renderToStaticMarkup(ReportView({ record: change({ purposes: [] }) }))
+    expect(text(declined)).not.toContain(WORDS)
+    expect(declined).not.toContain('/p1?at=')
+    // The other person's page is untouched.
+    expect(declined).toContain('/p2')
+    const restricted = renderToStaticMarkup(ReportView({ record: change({ restrictions: ['panel terms: no sharing'] }) }))
+    expect(text(restricted)).not.toContain(WORDS)
+  })
+
+  it('withholds the person page: no ease, no recording, one line saying why', () => {
+    const page = text(renderToStaticMarkup(ReportView({ record: change({ purposes: [] }), attemptIndex: 0, moment: 3000, replay: createElement('p', null, 'player') })))
+    expect(page).toContain('did not agree to their words and recording being shown here')
+    expect(page).not.toContain('player')
+    expect(page).not.toContain('Ease')
+    expect(page).not.toContain('Opened at the moment')
+  })
+
+  it('shows a withdrawn person as withdrawn, with no answers, and the report says it cannot be reproduced in full', () => {
+    const withdrawn = { ...change({ reason: 'withdrew' }), quality: { ...record.quality, withdrawn: 1 } }
+    const page = text(renderToStaticMarkup(ReportView({ record: withdrawn, attemptIndex: 0 })))
+    expect(page).toContain('This person withdrew. Their recording and answers were deleted.')
+    expect(page).not.toContain('Ease')
+    expect(text(renderToStaticMarkup(ReportView({ record: withdrawn })))).toContain('cannot be reproduced in full')
+  })
+
+  it('numbers people by participant: one person in two attempts is one person', () => {
+    const same = { ...record, attempts: record.attempts.map((a, i) => (i === 1 ? { ...a, participant: record.attempts[0]!.participant } : a)) }
+    const html = renderToStaticMarkup(ReportView({ record: same }))
+    expect(html).not.toContain('Person 2')
+    expect(html).toContain('/p2')
+  })
+
+  it('does not serve the recording of a person who declined, and the local view gives 404 for an unknown person', async () => {
+    const [first] = await store.listAttempts(runId)
+    await store.updateAttempt(first!.id, { purposes: [] })
+    const server = await serveTrace({ store, port: 0 })
+    try {
+      const body = await (await fetch(`${server.url}/runs/${runId}/report/p1/?at=4000`)).text()
+      expect(body).not.toContain('data-replay=')
+      expect(body).toContain('did not agree')
+      expect((await fetch(`${server.url}/runs/${runId}/report/p9/`)).status).toBe(404)
+    } finally {
+      await server.close()
+      await store.updateAttempt(first!.id, { purposes: first!.purposes })
+    }
+    vi.resetModules()
+    vi.doMock('../src/server/store.ts', () => ({ getStore: async () => store }))
+    process.env.UI_TESTS_SHARE_SECRET = SECRET
+    await store.updateAttempt(first!.id, { purposes: [] })
+    try {
+      const { ReportPage } = await import('../src/server/report-page.tsx')
+      const props = { params: Promise.resolve({ path: [runId, 'p1'] }), searchParams: Promise.resolve({ sig: signPath(`/r/${runId}/p1`, SECRET), at: '4000' }) }
+      const html = renderToStaticMarkup(await ReportPage(props))
+      expect(html).not.toContain('player')
+      expect(text(html)).toContain('did not agree')
+    } finally { await store.updateAttempt(first!.id, { purposes: first!.purposes }) }
+  })
+
+  it('--share --json prints the link as JSON', async () => {
+    let out = ''
+    const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: () => {} }, cwd: data, env: { UI_TESTS_DATA_DIR: data, UI_TESTS_SHARE_SECRET: SECRET } }
+    expect(await main(['report', runId, '--share', '--json'], io)).toBe(0)
+    expect(JSON.parse(out).url).toBe(`http://target.test/r/${runId}?sig=${signPath(`/r/${runId}`, SECRET)}`)
   })
 })

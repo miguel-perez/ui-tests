@@ -1,6 +1,7 @@
 /** @jsxRuntime automatic @jsxImportSource react */
 // Rendered in Node under tsx as well as inside a Next app, so the JSX mode is stated here.
-import type { ReactNode } from 'react'
+import type { CSSProperties, ReactNode } from 'react'
+import { topThree } from '../issues.ts'
 import type { RunRecord } from '../record/schema.ts'
 
 type Attempt = RunRecord['attempts'][number]
@@ -36,6 +37,13 @@ max-width:860px;margin:0 auto;padding:24px 16px 64px;font:16px/1.55 system-ui,sa
 @media (prefers-color-scheme:dark){.uit-report{--uit-ink:#ececec;--uit-dim:#b4b4b4;--uit-line:#3a3a3a;--uit-ground:#161616;--uit-card:#202020;--uit-link:#8ab8f0;--uit-accent:#b4b4b4}}
 `
 
+/**
+ * Whether a person's words and recording may be shown: they agreed to analysis by the author, their source puts no restriction on it, and
+ * they have not withdrawn. The record carries what each person agreed to so that every reader makes this check.
+ */
+export const mayShow = (attempt: Attempt): boolean =>
+  attempt.purposes.includes('analysis by the author') && attempt.restrictions.length === 0 && attempt.reason !== 'withdrew'
+
 const identity = (path: string) => path
 const colour = (value: string | undefined) => (value && /^(#[0-9a-f]{3,8}|[a-z]+)$/i.test(value) ? value : undefined)
 const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`
@@ -64,9 +72,14 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
   const { compiled } = record
   const root = base ?? `/r/${record.handle.run}`
   const accent = colour(compiled.brand.accent)
-  const who = new Map(record.attempts.map((attempt, index) => [attempt.participant, index + 1]))
+  // People are numbered by participant, in the order they first appear; the page of an attempt is `p<n>` by attempt.
+  const people = [...new Set(record.attempts.map((attempt) => attempt.participant))]
+  const who = new Map(people.map((participant, i) => [participant, i + 1]))
   const person = (participant: string) => `Person ${who.get(participant) ?? '?'}`
+  const personOf = (attempt: Attempt) => who.get(attempt.participant) ?? 0
   const index = new Map(record.attempts.map((attempt, i) => [attempt.id, i + 1]))
+  const shownTo = new Map(people.map((participant) => [participant, record.attempts.filter((a) => a.participant === participant).every(mayShow)]))
+  const attemptById = new Map(record.attempts.map((attempt) => [attempt.id, attempt]))
   const attemptLink = (n: number) => link(`${root}/p${n}`)
   // `at` goes after the signature's own parameters, so the signature (of the path alone) is unaffected by it.
   const momentLink = (attemptId: string, at: number) => {
@@ -83,29 +96,32 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
     </header>
   )
   const footer = compiled.brand.poweredBy ? <p className="uit-dim">Powered by ui-tests</p> : null
-  const style = accent ? ({ '--uit-accent': accent } as React.CSSProperties) : undefined
+  const style = accent ? ({ '--uit-accent': accent } as CSSProperties) : undefined
 
   if (attemptIndex !== undefined) {
     const attempt = record.attempts[attemptIndex]!
-    const n = attemptIndex + 1
     const goal = compiled.goals[attempt.goalIndex]
     const ease = attempt.answers[`goal${attempt.goalIndex}.ease`]
+    const withheld = !mayShow(attempt)
     return (
       <main className="uit-report" style={style}>
         <style dangerouslySetInnerHTML={{ __html: reportCss }} />
         {header}
         <p><a href={link(root)}>Back to the report</a></p>
-        <h2>Person {n}{goal ? ` · ${goal.name}` : ''}</h2>
+        <h2>Person {personOf(attempt)}{goal ? ` · ${goal.name}` : ''}</h2>
+        {attempt.reason === 'withdrew' ? <p>This person withdrew. Their recording and answers were deleted.</p> : (<>
         <dl>
           <dt>Ending</dt><dd>{ending(attempt)}</dd>
           {attempt.timings.onGoalMs !== undefined && <><dt>Time on the task</dt><dd>{seconds(attempt.timings.onGoalMs)}</dd></>}
-          {typeof ease === 'number' && <><dt>Ease</dt><dd>{ease} of 7</dd></>}
+          {typeof ease === 'number' && !withheld && <><dt>Ease</dt><dd>{ease} of 7</dd></>}
           <dt>First look</dt><dd>{FIRST_LOOK[attempt.firstLook]}</dd>
           <dt>Pages visited</dt><dd>{attempt.path.length ? attempt.path.join(' → ') : 'none recorded'}</dd>
           {attempt.rehearsal && <><dt>Kind</dt><dd>rehearsal; not counted</dd></>}
         </dl>
-        {moment !== undefined && <p role="status">Opened at the moment {clock(moment)} into the recording.</p>}
-        {replay ?? <p className="uit-dim">No recording was kept for this person.</p>}
+        {withheld && <p>This person did not agree to their words and recording being shown here, so they are not.</p>}
+        {!withheld && moment !== undefined && <p role="status">Opened at the moment {clock(moment)} into the recording.</p>}
+        {!withheld && (replay ?? <p className="uit-dim">No recording was kept for this person.</p>)}
+        </>)}
         {footer}
       </main>
     )
@@ -124,6 +140,9 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
     ...(impression.firstClickOnPath.onPath > 0 ? [`${impression.firstClickOnPath.onPath} of ${impression.firstClickOnPath.of} first clicks were on the expected route.`] : []),
     ...record.issues.filter((issue) => issue.recovered.length > 0).map((issue) => `${plural(issue.recovered.length, 'person', 'people')} still reached the outcome after: ${issue.title}`),
   ]
+  const top = new Set(compiled.goals.flatMap((goal) => topThree(record.issues, goal.index)))
+  const listed = record.issues.filter((issue) => top.has(issue))
+  const hidden = record.issues.length - listed.length
   const seen = record.attempts.map((attempt, i) => ({ attempt, n: i + 1 })).filter(({ attempt }) => attempt.status !== 'created')
 
   return (
@@ -176,45 +195,52 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
       </section>
 
       <section aria-labelledby="uit-issues">
-        <h2 id="uit-issues">{record.issues.length === 0 ? 'Problems' : `Problems, most serious first`}</h2>
-        {record.issues.length === 0 ? <p>No problem was seen in the people counted so far.</p> : (
-          <ol className="uit-list">
-            {record.issues.map((issue: Issue, i) => (
+        <h2 id="uit-issues">{record.issues.length === 0 ? 'Problems' : 'Problems, most serious first'}</h2>
+        {record.issues.length > 0 && (
+          <p className="uit-dim">
+            The three most serious problems for each task are named{hidden > 0 ? `; ${plural(hidden, 'more is', 'more are')} in the record` : ''}.
+          </p>
+        )}
+        {record.issues.length === 0 && <p>No problem was seen in the people counted so far.</p>}
+        <ol className="uit-list">
+          {listed.map((issue: Issue, i) => {
+            const words = issue.words.filter((w) => shownTo.get(w.participant) !== false)
+            return (
               <li key={issue.id} className="uit-card">
                 <h3>{i + 1}. {issue.title}</h3>
                 <dl>
                   <dt>Where</dt><dd>{issue.where.page}{issue.where.element ? `, ${issue.where.element}` : ''}{issue.where.step !== undefined ? `, step ${issue.where.step + 1}` : ''}</dd>
                   <dt>Who</dt><dd>{issue.count}: {issue.participants.map(person).join(', ')} ({issue.impact})</dd>
-                  {issue.words.length > 0 && <><dt>Their words</dt><dd>{issue.words.map((w) => <blockquote key={w.participant}>“{w.text}” <span className="uit-dim">{person(w.participant)}</span></blockquote>)}</dd></>}
+                  {words.length > 0 && <><dt>Their words</dt><dd>{words.map((w) => <blockquote key={w.participant}>“{w.text}” <span className="uit-dim">{person(w.participant)}</span></blockquote>)}</dd></>}
                   {issue.moments.length > 0 && (
                     <><dt>Moments</dt><dd>{issue.moments.map((m, k) => {
-                      const href = momentLink(m.attempt, m.at)
-                      const n = index.get(m.attempt)
-                      return href ? <a key={k} className="uit-chip" href={href}>Play moment {k + 1}, Person {n}</a> : null
+                      const owner = attemptById.get(m.attempt)
+                      const href = owner && mayShow(owner) ? momentLink(m.attempt, m.at) : undefined
+                      return href && owner ? <a key={k} className="uit-chip" href={href}>Play moment {k + 1}, {person(owner.participant)}</a> : null
                     })}</dd></>
                   )}
                   <dt>Suggested change</dt><dd>{issue.suggestedChange}</dd>
                 </dl>
               </li>
-            ))}
-          </ol>
-        )}
+            )
+          })}
+          <li className="uit-card" aria-labelledby="uit-worked">
+            <h3 id="uit-worked">What worked</h3>
+            {worked.length === 0 ? <p>Nothing to report yet.</p> : <ul>{worked.map((line, i) => <li key={i}>{line}</li>)}</ul>}
+          </li>
+        </ol>
       </section>
 
       <section aria-labelledby="uit-people">
         <h2 id="uit-people">People</h2>
+        {record.quality.withdrawn > 0 && <p>{plural(record.quality.withdrawn, 'person')} withdrew and their recordings were deleted, so this report cannot be reproduced in full.</p>}
         {seen.length === 0 ? <p>Nobody has started yet.</p> : (
           <ul className="uit-list">
             {seen.map(({ attempt, n }) => (
-              <li key={attempt.id}><a href={attemptLink(n)}>Person {n}</a> <span className="uit-dim">· {compiled.goals[attempt.goalIndex]?.name ?? 'task'} · {ending(attempt)}</span></li>
+              <li key={attempt.id}><a href={attemptLink(n)}>Person {personOf(attempt)}</a> <span className="uit-dim">· {compiled.goals[attempt.goalIndex]?.name ?? 'task'} · {ending(attempt)}</span></li>
             ))}
           </ul>
         )}
-      </section>
-
-      <section aria-labelledby="uit-worked">
-        <h2 id="uit-worked">What worked</h2>
-        {worked.length === 0 ? <p>Nothing to report yet.</p> : <ul>{worked.map((line, i) => <li key={i}>{line}</li>)}</ul>}
       </section>
       {footer}
     </main>
