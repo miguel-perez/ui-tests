@@ -2,6 +2,7 @@ import { dev } from './dev.ts'
 import { host } from './host.ts'
 import { init } from './init.ts'
 import { lintCommand } from './lint.ts'
+import { recruit } from './recruit.ts'
 import { status } from './status.ts'
 import { trace } from './trace.ts'
 import { verify } from './verify.ts'
@@ -14,6 +15,8 @@ export type CliDeps = {
   /** Ends a command that otherwise runs until Ctrl-C. */
   signal?: AbortSignal
   pollMs?: number
+  /** The clock `recruit --wait` reads for the deadline. */
+  now?: () => Date
   fetch?: typeof fetch
 }
 export type Io = { stdout: { write(text: string): unknown }; stderr: { write(text: string): unknown }; cwd: string; env: Record<string, string | undefined>; deps?: CliDeps }
@@ -34,7 +37,7 @@ export const commands: Record<string, Command> = {
   status,
   trace,
   host,
-  recruit: notShipped('recruit'),
+  recruit,
   check: notShipped('check'),
   estimate: notShipped('estimate'),
   mcp: notShipped('mcp'),
@@ -45,6 +48,7 @@ export const usage = () => `Usage: ui-tests <command> [options]
 Commands:
   (none)            rehearse a study on yourself: open the player, verify, show the trace
   verify <run>      run the hooks against the stored snapshots
+  recruit           make a run and print the invite links (--wait for the result)
   status <run>      show the four states of a run
   trace <run>       serve the trace of a run on this machine
   init              write ui-tests.config.ts, an example study and the Vitest exclude
@@ -64,7 +68,7 @@ const defaultIo = (): Io => ({ stdout: process.stdout, stderr: process.stderr, c
 
 /** The flags each command reads a value for (`--actor agent` or `--actor=agent`); every other flag is a boolean. */
 export const valueFlags: Record<string, string[]> = {
-  '': ['actor', 'port', 'project', 'study', 'task'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key'], check: ['actor', 'key'], estimate: ['actor'],
+  '': ['actor', 'port', 'project', 'study', 'task'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study'], check: ['actor', 'key'], estimate: ['actor'],
 }
 
 /** Splits `--flag`, `--flag=value` and, for flags the command declares, `--flag value`. */
