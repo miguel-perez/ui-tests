@@ -72,7 +72,7 @@ export function createHandler(options: ServerOptions): (request: Request) => Pro
       if (!run) return notFound()
       const { player: script } = await getBundles()
       // The title is the product the person is testing; nothing on the page names who serves it.
-      const html = playerShell({ runId: id, brand: run.compiled.brand, title: run.compiled.product, script: `/ui-tests/assets/${script}` })
+      const html = playerShell({ runId: id, brand: run.compiled.brand, script: `/ui-tests/assets/${script}` })
       return asPage(new Response(html, { headers: { 'Content-Type': 'text/html; charset=utf-8' } }))
     }
     if (path.startsWith('/r/')) {

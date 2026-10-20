@@ -30,13 +30,15 @@ export type ReportDocumentInput = {
  */
 export function reportDocument(input: ReportDocumentInput): string | undefined {
   const { record, person, at, base, link } = input
+  const fontUrl = record.compiled.brand.font?.url
   const page = (body: ReactNode, script: boolean) => `<!doctype html>${renderToString(
     createElement('html', { lang: 'en' },
       createElement('head', null,
         createElement('meta', { charSet: 'utf-8' }),
         createElement('meta', { name: 'viewport', content: 'width=device-width, initial-scale=1' }),
         createElement('meta', { name: 'robots', content: 'noindex, nofollow' }),
-        createElement('title', null, `Report · ${record.compiled.name}`)),
+        createElement('title', null, `Report · ${record.compiled.name}`),
+        fontUrl && createElement('link', { rel: 'stylesheet', href: fontUrl })),
       createElement('body', { style: { margin: 0 } }, body, script ? createElement('script', { type: 'module', src: input.replayScript }) : null)),
   )}`
   if (person === undefined) return page(createElement(ReportView, { record, link, ...(base !== undefined && { base }) }), false)

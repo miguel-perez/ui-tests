@@ -4,7 +4,7 @@ import { answerKey } from './flow.ts'
 import { VoiceAnswer } from './voice.tsx'
 import type { Screen } from './flow.ts'
 import {
-  AGREE, AGREEMENT_ENDS, CARD_FOOTER, CARD_TITLE, CONFIDENCE_ENDS, CONSENT_TITLE, CONTINUE, EASE_ENDS, POWERED_BY, RECORDING, SCREEN_PROMPT, SCREENER_TITLE,
+  AGREE, AGREEMENT_ENDS, CARD_FOOTER, CARD_TITLE, CONFIDENCE_ENDS, CONSENT_TITLE, CONTINUE, EASE_ENDS, RECORDING, SCREEN_PROMPT, SCREENER_TITLE,
   PRACTICE_CONFIRM, PRACTICE_DONE, PRACTICE_DONE_NOTE, PRACTICE_INTRO, PRACTICE_NOT_YET, PRACTICE_STUCK, PRACTICE_STUCK_NOTE, PRACTICE_TITLE, PRACTICE_YES,
   FIRST_CLICK_BODY, FIRST_CLICK_TITLE, OPEN_PAGE, START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, WITHDRAW, WITHDRAWN_BODY, WITHDRAWN_TITLE, contact, duration,
 } from './copy.ts'
@@ -36,10 +36,12 @@ export type ScreenProps = {
   error?: string
 }
 
-/** Colours come from the host through these variables, with neutral fallbacks; the author's accent is applied inline. */
+/** The author's brand sets --pl-accent, --pl-bg, --pl-ink and --pl-font; without them the host's variables, then neutral fallbacks. */
 const css = `
-.pl{--pl-bg:var(--background,#fff);--pl-fg:var(--foreground,#16181d);--pl-dim:color-mix(in srgb,var(--pl-fg) 68%,var(--pl-bg));--pl-hair:color-mix(in srgb,var(--pl-fg) 18%,var(--pl-bg));
-  box-sizing:border-box;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px;background:var(--pl-bg);color:var(--pl-fg);font:16px/1.5 var(--font-sans,system-ui,sans-serif)}
+.pl{--pl-surface:var(--pl-bg,var(--background,#fff));--pl-fg:var(--pl-ink,var(--foreground,#16181d));--pl-dim:color-mix(in srgb,var(--pl-fg) 68%,var(--pl-surface));--pl-hair:color-mix(in srgb,var(--pl-fg) 18%,var(--pl-surface));
+  box-sizing:border-box;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:32px 16px;background:var(--pl-surface);color:var(--pl-fg);font:16px/1.5 var(--pl-font,var(--font-sans,system-ui,sans-serif))}
+.pl-brand{width:100%;max-width:34rem;display:flex;align-items:center;gap:10px;margin-bottom:24px;font-weight:600}
+.pl-brand img{display:block;max-height:32px;max-width:160px;width:auto;height:auto}
 .pl *{box-sizing:border-box}
 .pl-card{width:100%;max-width:34rem;display:flex;flex-direction:column;gap:16px}
 .pl h1{font-size:1.5rem;line-height:1.25;margin:0;font-weight:600}
@@ -52,7 +54,7 @@ const css = `
 .pl-ends{display:flex;justify-content:space-between;gap:16px;font-size:.875rem;color:var(--pl-dim)}
 .pl-choices{display:flex;flex-direction:column;gap:8px}
 .pl textarea{width:100%;min-height:7rem;padding:10px 12px;font:inherit;color:inherit;background:transparent;border:1px solid var(--pl-hair);border-radius:8px}
-.pl button{align-self:flex-start;min-height:44px;padding:0 20px;font:inherit;font-weight:600;color:var(--pl-bg);background:var(--pl-accent,var(--pl-fg));border:0;border-radius:8px;cursor:pointer}
+.pl button{align-self:flex-start;min-height:44px;padding:0 20px;font:inherit;font-weight:600;color:var(--pl-surface);background:var(--pl-accent,var(--pl-fg));border:0;border-radius:8px;cursor:pointer}
 .pl button:disabled{opacity:.5;cursor:default}
 .pl :focus-visible{outline:2px solid var(--pl-accent,var(--pl-fg));outline-offset:2px}
 .pl button.pl-withdraw{margin-top:16px;min-height:44px;color:var(--pl-fg);background:transparent;border:1px solid var(--pl-hair)}
@@ -63,23 +65,26 @@ const css = `
 .pl button.pl-ghost{color:var(--pl-fg);background:transparent;border:1px solid var(--pl-hair)}
 .pl-voice{display:flex;flex-direction:column;gap:8px}
 .pl-row{display:flex;flex-wrap:wrap;gap:8px}
-.pl-foot{margin-top:auto;padding-top:24px;color:var(--pl-dim);font-size:.8125rem}
 `
 
 /** Ids and names from question text or ids: no spaces or punctuation, so they can be referenced. */
 const slug = (id: string) => id.replace(/[^A-Za-z0-9_-]+/g, '-')
 
 function Frame({ view, children, error, onWithdraw }: { view: ParticipantView; children: ReactNode; error?: string; onWithdraw?: () => void }) {
-  const style = view.brand.accent ? ({ '--pl-accent': view.brand.accent } as CSSProperties) : undefined
+  const { brand } = view
+  const style = Object.fromEntries([['--pl-accent', brand.accent], ['--pl-bg', brand.background], ['--pl-ink', brand.text], ['--pl-font', brand.font?.family]].filter(([, value]) => value)) as CSSProperties
   return (
     <main className="pl" style={style}>
       <style>{css}</style>
+      <header className="pl-brand">
+        {brand.logo && <img src={brand.logo} alt={brand.name} />}
+        <span>{brand.name}</span>
+      </header>
       <div className="pl-card">
         {children}
         {error && <p role="alert" className="pl-error">{error}</p>}
         {onWithdraw && <button type="button" className="pl-withdraw" onClick={onWithdraw}>{WITHDRAW}</button>}
       </div>
-      {view.brand.poweredBy && <p className="pl-foot">{POWERED_BY}</p>}
     </main>
   )
 }
@@ -190,7 +195,7 @@ export function PlayerScreen(props: ScreenProps) {
             {view.consent.text.map((line) => <li key={line}>{line}</li>)}
             {!view.consent.text.includes(view.consent.payout) && <li>{view.consent.payout}</li>}
           </ul>
-          <p className="pl-dim">{contact(view.author || `the team behind ${view.product}`)}</p>
+          <p className="pl-dim">{contact(view.brand.name)}</p>
           {next(AGREE)}
         </>
       )

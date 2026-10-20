@@ -85,7 +85,7 @@ describe('view', () => {
     expect(text).not.toContain('/docs/getting-started')
     for (const key of ['"path"', '"expected"', '"purpose"', '"hookText"', '"hooksBundle"', '"derivations"', '"label"']) expect(text).not.toContain(key)
     const view = JSON.parse(text)
-    expect(view).toMatchObject({ run: run.run, status: 'created', hasVerification: true, record: 'events', rehearsal: false, brand: { poweredBy: false } })
+    expect(view).toMatchObject({ run: run.run, status: 'created', hasVerification: true, record: 'events', rehearsal: false, brand: { name: run.compiled.brand.name } })
     expect(view.goal).toMatchObject({ name: 'Reach docs', start: '/', steps: [], timeoutSeconds: run.compiled.goals[0]!.timeout.seconds })
     expect(view.consent).toMatchObject({ purposes: run.compiled.consent.purposes, payout: run.compiled.consent.payout })
     expect(view).not.toHaveProperty('answer')

@@ -14,7 +14,6 @@ export const USEFUL_ENDS = { low: 'Not at all useful', high: 'Very useful' } as 
 export const AGREEMENT_ENDS = { low: 'Strongly disagree', high: 'Strongly agree' } as const
 export const CONFIDENCE_ENDS = { low: 'Not at all confident', high: 'Completely confident' } as const
 export const TEXT_LABEL = 'Your answer'
-export const POWERED_BY = 'Powered by ui-tests'
 
 /** "about 5 minutes" for the consent screen. */
 export const duration = (minutes: number) => `This takes about ${minutes} ${minutes === 1 ? 'minute' : 'minutes'}.`

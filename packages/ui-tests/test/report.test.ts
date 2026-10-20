@@ -155,14 +155,12 @@ describe('the report', () => {
     expect(text(renderToStaticMarkup(ReportView({ record: noAnswer })))).not.toContain('Never asked of')
   })
 
-  it('is white-labelled: the author, the host accent, and no ui-tests name unless poweredBy is on', () => {
+  it('is white-labelled: the author, the brand accent, and no ui-tests name', () => {
     const html = render()
     expect(text(html)).toContain('By Acme Labs')
     expect(html).toContain('--uit-accent:#0a7d4f')
     expect(html.toLowerCase()).not.toContain('ui-tests')
     expect(render({ attemptIndex: 0 }).toLowerCase()).not.toContain('ui-tests')
-    const branded = { ...record, compiled: { ...record.compiled, brand: { ...record.compiled.brand, poweredBy: true } } }
-    expect(text(renderToStaticMarkup(ReportView({ record: branded })))).toContain('Powered by ui-tests')
   })
 
   it('shows nothing the record keeps back: no hooks, expected answer, identity, target or recording references', () => {

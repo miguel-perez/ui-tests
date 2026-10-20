@@ -27,8 +27,9 @@ export type ReportViewProps = {
 
 export const reportCss = `
 .uit-report{--uit-ink:#1a1a1a;--uit-dim:#4a4a4a;--uit-line:#d6d6d6;--uit-ground:#ffffff;--uit-card:#f6f6f6;--uit-link:#0a4fa3;--uit-accent:#4a4a4a;
-max-width:860px;margin:0 auto;padding:24px 16px 64px;font:16px/1.55 system-ui,sans-serif;color:var(--uit-ink);background:var(--uit-ground)}
+max-width:860px;margin:0 auto;padding:24px 16px 64px;font:16px/1.55 var(--uit-font,system-ui,sans-serif);color:var(--uit-ink);background:var(--uit-ground)}
 .uit-report h1{font-size:26px;line-height:1.25;margin:0 0 4px}.uit-report h2{font-size:19px;margin:32px 0 8px}.uit-report h3{font-size:16px;margin:0 0 4px}
+.uit-report .uit-brand{display:flex;align-items:center;gap:10px;margin:0 0 16px;font-weight:600}.uit-report .uit-brand img{display:block;max-height:32px;max-width:160px;width:auto;height:auto}
 .uit-report a{color:var(--uit-link);text-decoration:underline}.uit-report .uit-dim{color:var(--uit-dim)}
 .uit-report .uit-result{font-size:18px;border-left:4px solid var(--uit-accent);padding-left:12px;margin:16px 0}
 .uit-report ol.uit-list,.uit-report ul.uit-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
@@ -48,7 +49,6 @@ export const mayShow = (attempt: Attempt): boolean =>
   canRead(attempt, 'recordings') && attempt.reason !== 'withdrew'
 
 const identity = (path: string) => path
-const colour = (value: string | undefined) => (value && /^(#[0-9a-f]{3,8}|[a-z]+)$/i.test(value) ? value : undefined)
 const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`
 const seconds = (ms: number) => (ms >= 60_000 ? `${Math.floor(ms / 60_000)} min ${Math.round((ms % 60_000) / 1000)} s` : `${(ms / 1000).toFixed(1)} s`)
 const clock = (ms: number) => `${Math.floor(ms / 60_000)}:${String(Math.floor(ms / 1000) % 60).padStart(2, '0')}`
@@ -70,11 +70,11 @@ const FIRST_LOOK: Record<Attempt['firstLook'], string> = {
   pending: 'not reached yet',
 }
 
-/** The shared report of a run, or with `attemptIndex` the page of one person. White-labelled: it carries the author's name and the host's accent, and no ui-tests name unless the study turned it on. */
+/** The shared report of a run, or with `attemptIndex` the page of one person. White-labelled: it carries the author's name, logo, colours and font, and no mark of ours. */
 export function ReportView({ record, attemptIndex, base, link = identity, replay, clip, moment }: ReportViewProps) {
   const { compiled } = record
   const root = base ?? `/r/${record.handle.run}`
-  const accent = colour(compiled.brand.accent)
+  const { brand } = compiled
   // People are numbered by participant, in the order they first appear; the page of an attempt is `p<n>` by attempt.
   const people = [...new Set(record.attempts.map((attempt) => attempt.participant))]
   const who = new Map(people.map((participant, i) => [participant, i + 1]))
@@ -94,14 +94,23 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
 
   const header = (
     <header>
+      <p className="uit-brand">
+        {brand.logo && <img src={brand.logo} alt={brand.name} />}
+        <span>{brand.name}</span>
+      </p>
       <h1>{compiled.name}</h1>
       <p className="uit-dim">
         {compiled.author ? `By ${compiled.author} · ` : ''}{compiled.product} · {record.actor === 'agent' ? 'capability test, not usability' : plural(compiled.sample.n, 'person', 'people')}
       </p>
     </header>
   )
-  const footer = compiled.brand.poweredBy ? <p className="uit-dim">Powered by ui-tests</p> : null
-  const style = accent ? ({ '--uit-accent': accent } as CSSProperties) : undefined
+  // The brand's colours and font replace the report's neutral ones, in the dark scheme too, since the author chose them.
+  // The report's other greys follow from the ink and the ground so that they stay readable on either.
+  const own = brand.background || brand.text
+  const style = Object.fromEntries([
+    ['--uit-accent', brand.accent], ['--uit-ground', brand.background], ['--uit-ink', brand.text], ['--uit-font', brand.font?.family],
+    ...(own ? [['--uit-dim', 'color-mix(in srgb, var(--uit-ink) 72%, var(--uit-ground))'], ['--uit-line', 'color-mix(in srgb, var(--uit-ink) 20%, var(--uit-ground))'], ['--uit-card', 'color-mix(in srgb, var(--uit-ink) 5%, var(--uit-ground))']] : []),
+  ].filter(([, value]) => value)) as CSSProperties
 
   if (attemptIndex !== undefined) {
     const attempt = record.attempts[attemptIndex]!
@@ -128,7 +137,6 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
         {!withheld && clip}
         {!withheld && (replay ?? <p className="uit-dim">No recording was kept for this person.</p>)}
         </>)}
-        {footer}
       </main>
     )
   }
@@ -250,7 +258,6 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
           </ul>
         )}
       </section>
-      {footer}
     </main>
   )
 }

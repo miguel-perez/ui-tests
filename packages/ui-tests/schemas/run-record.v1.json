@@ -562,15 +562,39 @@
         "brand": {
           "type": "object",
           "properties": {
+            "name": {
+              "type": "string"
+            },
+            "logo": {
+              "type": "string"
+            },
             "accent": {
               "type": "string"
             },
-            "poweredBy": {
-              "type": "boolean"
+            "background": {
+              "type": "string"
+            },
+            "text": {
+              "type": "string"
+            },
+            "font": {
+              "type": "object",
+              "properties": {
+                "family": {
+                  "type": "string"
+                },
+                "url": {
+                  "type": "string"
+                }
+              },
+              "required": [
+                "family"
+              ],
+              "additionalProperties": false
             }
           },
           "required": [
-            "poweredBy"
+            "name"
           ],
           "additionalProperties": false
         },

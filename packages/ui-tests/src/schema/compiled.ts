@@ -119,6 +119,17 @@ const usersSchema = z.object({
   age: z.union([z.string(), z.object({ min: z.number().optional(), max: z.number().optional() })]).optional(),
 })
 
+/** What participants see in place of our name: stored with the run so the server and the bar render it without the author's files. */
+export const compiledBrandSchema = z.object({
+  name: z.string(),
+  logo: z.string().optional(),
+  accent: z.string().optional(),
+  background: z.string().optional(),
+  text: z.string().optional(),
+  font: z.object({ family: z.string(), url: z.string().optional() }).optional(),
+})
+export type CompiledBrand = z.infer<typeof compiledBrandSchema>
+
 export const compiledStudySchema = z.object({
   schema: z.literal(compiledSchemaUrl),
   id: z.string(),
@@ -139,7 +150,7 @@ export const compiledStudySchema = z.object({
   screener: z.array(screenerQuestionSchema),
   /** Whether link participants see the practice screen before the first look. */
   practice: z.boolean(),
-  brand: z.object({ accent: z.string().optional(), poweredBy: z.boolean() }),
+  brand: compiledBrandSchema,
   goals: z.array(compiledGoalSchema),
   questions: z.array(compiledQuestionSchema),
   consent: compiledConsentSchema,

@@ -1,5 +1,5 @@
 import { fillScenario, scenarioTemplate } from '../derive/scenario.ts'
-import type { CompiledQuestion } from '../schema/compiled.ts'
+import type { CompiledBrand, CompiledQuestion } from '../schema/compiled.ts'
 import { FIRST_LOOK_SHOT } from '../runner/screenshot.ts'
 import type { AttemptRow, AttemptStatus, RunRow } from '../store/types.ts'
 import { placeOf } from '../runner/sequence.ts'
@@ -10,7 +10,7 @@ export type ParticipantView = {
   attempt: string
   author: string
   product: string
-  brand: { accent?: string; poweredBy: boolean }
+  brand: CompiledBrand
   consent: { text: string[]; purposes: string[]; payout: string }
   screener: { id: string; text: string; options: string[]; multi: boolean; open?: boolean }[]
   practice: boolean
@@ -120,7 +120,7 @@ export type BarView = {
   status: AttemptStatus
   goal: { name: string; scenario: string; steps: string[]; timeoutSeconds: number }
   record: 'events' | 'video'
-  brand: ParticipantView['brand']
+  brand: CompiledBrand
   /** The bar is there to take the first click on the author's own site: the question was answered and the click is pending. */
   firstClick: boolean
   rehearsal: boolean

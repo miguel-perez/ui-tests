@@ -57,7 +57,8 @@ export type UiTestsConfig = {
   agents?: AgentConfig
   product?: string
   author?: string
-  brand?: { accent?: string; poweredBy?: boolean }
+  /** What participants see instead of ours: the name, logo, colours and font of the author. The name defaults to `author`, then `product`. */
+  brand?: { name?: string; logo?: string; accent?: string; background?: string; text?: string; font?: { family: string; url?: string } }
   webhook?: { url: string; secret?: string }
   consent?: { workflows?: boolean }
 }

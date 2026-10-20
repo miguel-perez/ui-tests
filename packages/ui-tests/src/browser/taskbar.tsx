@@ -43,6 +43,7 @@ const css = `
 .uit-card { padding: 14px 16px; max-width: 420px; display: grid; gap: 6px; }
 .uit-card p { margin: 0; }
 .uit-dim { color: var(--uit-dim); }
+.uit-logo { display: block; height: 22px; width: auto; max-width: 96px; margin-left: 4px; flex: none; }
 .uit-bar button { font: inherit; color: inherit; cursor: pointer; border: 0; background: transparent; border-radius: 10px; min-height: 36px; padding: 0 12px; box-shadow: inset 0 0 0 1px var(--uit-hair); white-space: nowrap; }
 .uit-bar button:disabled { opacity: .55; cursor: default; }
 .uit-bar button:focus-visible { outline: 2px solid var(--uit-ink); outline-offset: 2px; }
@@ -157,6 +158,7 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
           </>
         ) : (
           <>
+            {view.brand.logo && <img className="uit-logo" src={view.brand.logo} alt={view.brand.name} />}
             <button type="button" className="uit-summary" aria-expanded={reading} onClick={() => setReading((open) => !open)}>{view.goal.name}</button>
             {step && <span className="uit-step">Step {step.index + 1} of {step.count}: {step.name}</span>}
             {screen && screen.state !== 'asking' && (
@@ -173,20 +175,19 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
             {offerMoreTime && <button type="button" className="uit-plain" disabled={busy} onClick={() => { backToDone.current = true; onMoreTime() }}>More time</button>}
           </>
         )}
-        {view.brand.poweredBy && <span className="uit-dim">Powered by ui-tests</span>}
       </div>
     </div>
   )
 }
 
 /** The bar while the first click is taken: one line, no Done and no way out of the task, since the task has not begun. */
-export function FirstClickBar({ theme, poweredBy, markRoot = false }: { theme: ChromeTheme; poweredBy: boolean; markRoot?: boolean }) {
+export function FirstClickBar({ theme, brand, markRoot = false }: { theme: ChromeTheme; brand: BarView['brand']; markRoot?: boolean }) {
   return (
     <div {...(markRoot && { [ROOT_ATTRIBUTE]: '' })} className="uit-bar" role="region" aria-label={FIRST_CLICK_PROMPT} style={chromeVars(theme)}>
       <style>{css}</style>
       <div className="uit-pill">
+        {brand.logo && <img className="uit-logo" src={brand.logo} alt={brand.name} />}
         <span className="uit-question">{FIRST_CLICK_PROMPT}</span>
-        {poweredBy && <span className="uit-dim">Powered by ui-tests</span>}
       </div>
     </div>
   )

@@ -10,7 +10,7 @@ import type { ScreenRecording } from './screen-recorder.ts'
 import { uploadChunk } from './video-upload.ts'
 import { FirstClickBar, Taskbar } from './taskbar.tsx'
 import type { EndReason, ScreenBar } from './taskbar.tsx'
-import { chromeTheme, readHost } from './theme.ts'
+import { brandedHost, chromeTheme, readHost } from './theme.ts'
 
 /**
  * How the bar reaches the collector and the player. The app's page holds an attempt key (`keyClient`); the transitional Next.js mount
@@ -263,8 +263,8 @@ export function Bar({ client, markRoot = false }: { client: BarClient; markRoot?
   }
 
   const shown = active ?? looking
-  const theme = useMemo(() => (shown ? chromeTheme(readHost(document, shown.brand.accent)) : undefined), [shown])
-  if (looking && theme) return <FirstClickBar theme={theme} poweredBy={looking.brand.poweredBy} markRoot={markRoot} />
+  const theme = useMemo(() => (shown ? chromeTheme(brandedHost(readHost(document), shown.brand)) : undefined), [shown])
+  if (looking && theme) return <FirstClickBar theme={theme} brand={looking.brand} markRoot={markRoot} />
   if (!active || !theme) return null
   const steps = active.goal.steps
   const step = steps.length ? { index: Math.min(stepIndex, steps.length - 1), count: steps.length, name: steps[Math.min(stepIndex, steps.length - 1)]! } : undefined

@@ -100,12 +100,12 @@ describe('the Weekboard screener', () => {
   })
 
   it('reaches the view from the compiled study: brand and practice, and nothing for a rehearsal', async () => {
-    const { compiled } = compileSource(exampleFile, { ...config, brand: { accent: '#0a7', poweredBy: true } })
-    expect(compiled.brand).toEqual({ accent: '#0a7', poweredBy: true })
+    const { compiled } = compileSource(exampleFile, { ...config, brand: { accent: '#0a7' } })
+    expect(compiled.brand).toEqual({ name: 'Weekboard', accent: '#0a7' })
     const store = new SqliteStore(':memory:')
     const { run } = await store.createRun(newRun('b', { compiled }))
     const { attempt } = await store.createAttempt({ runId: run.run, participant: 'p', goalIndex: 0, rehearsal: false })
-    expect(participantView(run, attempt)).toMatchObject({ brand: { accent: '#0a7', poweredBy: true }, practice: true })
+    expect(participantView(run, attempt)).toMatchObject({ brand: { name: 'Weekboard', accent: '#0a7' }, practice: true })
     const rehearsal = await store.createRun(newRun('r', { compiled, rehearsal: true }))
     const own = await store.createAttempt({ runId: rehearsal.run.run, participant: 'p', goalIndex: 0, rehearsal: true })
     expect(participantView(rehearsal.run, own.attempt)).toMatchObject({ screener: [], practice: false })

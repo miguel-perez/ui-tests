@@ -4,6 +4,8 @@
  * No Node imports: this module ships to the browser.
  */
 
+import type { CompiledBrand } from '../schema/compiled.ts'
+
 type Rgb = [number, number, number]
 
 /** Reads `#rgb`, `#rrggbb` or a computed `rgb()` / `rgba()` colour; anything else, or a transparent one, is `undefined`. */
@@ -71,6 +73,17 @@ export function chromeTheme({ hostInk, hostBackground, accent, font }: ChromeInp
 /** The theme as inline custom properties for the bar's root. */
 export function chromeVars(theme: ChromeTheme): Record<string, string> {
   return Object.fromEntries(Object.entries(theme).map(([name, value]) => [`--uit-${name.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}`, value]))
+}
+
+/** The host as the author's brand adjusts it: a colour, an accent or a font the brand sets replaces the host's; what it leaves out is still read from the page. */
+export function brandedHost(host: ChromeInput, brand: Pick<CompiledBrand, 'accent' | 'background' | 'text' | 'font'>): ChromeInput {
+  return {
+    ...host,
+    ...(brand.text && { hostInk: brand.text }),
+    ...(brand.background && { hostBackground: brand.background }),
+    ...(brand.accent && { accent: brand.accent }),
+    ...(brand.font && { font: brand.font.family }),
+  }
 }
 
 /** Reads the host page: its text and background colours, its font, and an accent from `--ui-tests-accent` when the host defines one. */
