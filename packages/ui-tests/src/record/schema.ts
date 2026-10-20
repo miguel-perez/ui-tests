@@ -84,6 +84,20 @@ const issue = z.object({
   source: z.literal('found from traces'),
 })
 
+/** One agent trial as the record carries it (PRD 04): its state, time and cost, what stopped it in one line, and the attempt that holds its trace. */
+export const trialSchema = z.object({
+  goalIndex: z.number(),
+  index: z.number(),
+  attempt: z.string(),
+  state: z.enum(['verified', 'stopped', 'unknown']),
+  claimedDone: z.boolean(),
+  wallMs: z.number(),
+  tokens: z.number(),
+  calls: z.number(),
+  stoppedBy: z.string().optional(),
+  infrastructure: z.string().optional(),
+})
+
 const money = z.object({ estimate: z.number(), reserved: z.number(), paid: z.number(), truedUp: z.number(), currency: z.string() })
 const funnel = z.object({ invited: z.number(), screened: z.number(), started: z.number(), finished: z.number(), paid: z.number() })
 export const clauseSchema = z.object({ clause: z.string(), title: z.string(), shows: z.string() })
@@ -133,6 +147,11 @@ export const runRecordSchema = z
     incentive: z.object({ amount: z.object({ minor: z.number(), currency: z.string() }).optional(), attempts: z.record(z.string(), z.object({ minor: z.number(), currency: z.string() })) }).optional(),
     recruitment: z.record(z.string(), funnel),
     sentence: z.string(),
+    /** Agent records only: each trial of each task. A human record has none. */
+    trials: z.array(trialSchema).optional(),
+    /** Agent records only: every task's trials all verified (pass^k), and each task had at least one verified (pass@k). */
+    passK: z.boolean().optional(),
+    passAtK: z.boolean().optional(),
     evidence: z.array(clauseSchema),
     evidenceStatement: z.string(),
   })

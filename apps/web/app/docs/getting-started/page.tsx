@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { SiteShell } from '../../../components/site-shell'
 import { CopyControl } from '../../../components/artefacts/copy-control'
 import { Prose } from '../../../components/site/code'
+import { agent } from '../../../lib/copy'
 import { gettingStarted } from '../../../lib/getting-started'
 
 export const metadata: Metadata = { title: `${gettingStarted.title} · ui-tests` }
@@ -52,5 +53,6 @@ export default function GettingStarted() {
       <ol>{accessibility.manual.map(text => <li key={text}><Prose text={text} /></li>)}</ol>
       <p><Prose text={accessibility.then} /></p>
     </section>
+    <p><a href="/docs/agents/">{agent.heading}</a></p>
   </main></SiteShell>
 }

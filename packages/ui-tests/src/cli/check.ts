@@ -1,6 +1,6 @@
 import { readFile } from 'node:fs/promises'
 import { loadConfig } from '../config.ts'
-import { owedDeliveries, patchRun, pendingSummary, reportLinks } from '../github/check.ts'
+import { checkName, owedDeliveries, patchRun, pendingSummary, reportLinks } from '../github/check.ts'
 import type { GitHubClient, GitHubLink } from '../github/types.ts'
 import { openStore } from '../store/open.ts'
 import type { RunRow } from '../store/types.ts'
@@ -71,7 +71,7 @@ async function checkPullRequest(args: Parameters<Command>[0], io: Io): Promise<n
 
   const store = await openStore(io.env)
   try {
-    const name = handle.actor === 'agent' ? 'ui-tests (agent)' : 'ui-tests'
+    const name = checkName(handle.actor)
     // Claim the run's check before making it: the claim is stored against the run's revision, so of two pushes racing, one wins.
     const claim: GitHubLink = { ...subject, checkId: null, name }
     let run: RunRow | undefined

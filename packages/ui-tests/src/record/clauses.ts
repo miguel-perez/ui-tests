@@ -4,6 +4,10 @@ import type { Clause, RunRecord } from './schema.ts'
 export const EVIDENCE_STATEMENT =
   'This record is evidence for a claim the author makes about the clauses below; it is not a certificate, and it does not show more than it lists.'
 
+/** What an agent record says about itself: it shows a capability, and none of the clauses that need people. */
+export const AGENT_EVIDENCE_STATEMENT =
+  'This record is a capability test of an agent. It is not usability evidence, and it lists none of the ISO 9241-210 clauses that are about users.'
+
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
 /**
@@ -11,6 +15,8 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
  * monitoring) is on the hosted track only and is not listed. Every line is read from the record itself.
  */
 export function clauseEvidence(record: Omit<RunRecord, 'evidence' | 'evidenceStatement'>): Clause[] {
+  // An agent record is gated out: those clauses are about people, and an agent run is not one.
+  if (record.actor === 'agent') return []
   const { compiled, attempts, measures, fit, issues, revisions, handle } = record
   // Only people who began: unopened invite slots, retired slots and rehearsals are not people who took part.
   const real = attempts.filter(a => !a.rehearsal && a.timings.startedAt !== undefined && !a.flags.includes('retired'))

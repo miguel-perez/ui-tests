@@ -59,7 +59,7 @@ function Attempt({ item, index, run }: { item: TraceAttempt; index: number; run:
   const diff = verification?.diff
   const excluded = attempt.flags.includes('excluded')
   return (
-    <section>
+    <section id={attempt.id}>
       <h3>Attempt {index + 1}{attempt.rehearsal ? ' (rehearsal)' : ''}: {attempt.reason ?? attempt.status}{excluded ? ' (excluded: not counted, still paid)' : ''}</h3>
       {item.screener && (
         <p>

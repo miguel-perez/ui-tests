@@ -2193,6 +2193,66 @@
     "sentence": {
       "type": "string"
     },
+    "trials": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "goalIndex": {
+            "type": "number"
+          },
+          "index": {
+            "type": "number"
+          },
+          "attempt": {
+            "type": "string"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "verified",
+              "stopped",
+              "unknown"
+            ]
+          },
+          "claimedDone": {
+            "type": "boolean"
+          },
+          "wallMs": {
+            "type": "number"
+          },
+          "tokens": {
+            "type": "number"
+          },
+          "calls": {
+            "type": "number"
+          },
+          "stoppedBy": {
+            "type": "string"
+          },
+          "infrastructure": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "goalIndex",
+          "index",
+          "attempt",
+          "state",
+          "claimedDone",
+          "wallMs",
+          "tokens",
+          "calls"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "passK": {
+      "type": "boolean"
+    },
+    "passAtK": {
+      "type": "boolean"
+    },
     "evidence": {
       "type": "array",
       "items": {

@@ -672,3 +672,16 @@ for (const width of [1440, 375]) test(`the hero's Get started opens the getting-
   expect(offences(await page.locator('main').innerText(), shown)).toEqual([])
   await expect(page.locator('pre').first()).toHaveCSS('font-family', /Fira[_ ]Code/)
 })
+
+test('getting started links to the agents page, which introduces agent runs as a capability test and is accessible', async ({ page }) => {
+  await page.goto('/docs/getting-started/')
+  await page.getByRole('link', { name: agent.heading }).click()
+  await page.waitForURL('**/docs/agents/')
+  await page.evaluate(() => document.fonts.ready)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(agent.heading)
+  await expect(page.locator('main')).toContainText('capability test, not a usability one')
+  await expect(page.locator('main')).toContainText('An agent passing says nothing about people.')
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  await page.goto('/')
+  expect(await page.locator('main').innerText()).not.toContain('ui-tests (agent)')
+})

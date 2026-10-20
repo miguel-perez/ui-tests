@@ -1,5 +1,6 @@
 import type { AuthoredStudy } from '../authoring.ts'
 import type { AttemptRow, RunRow, RunStore } from '../store/types.ts'
+import { isAgentTrial } from '../agents/result.ts'
 import { runSetup } from './setup.ts'
 
 export const BYPASS_HEADER = 'x-vercel-protection-bypass'
@@ -49,5 +50,5 @@ export async function reissueInvites(input: { store: RunStore; run: RunRow; link
   return links
 }
 
-/** A slot that counts toward the run's planned invites: not a rehearsal, and not one `reissueInvites` retired. */
-export const isSlot = (a: AttemptRow) => !a.rehearsal && !a.flags.includes(RETIRED)
+/** A slot that counts toward the run's planned invites: not a rehearsal, not one `reissueInvites` retired, and never an agent's trial attempt. */
+export const isSlot = (a: AttemptRow) => !a.rehearsal && !a.flags.includes(RETIRED) && !isAgentTrial(a.participant)

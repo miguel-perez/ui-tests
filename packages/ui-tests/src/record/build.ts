@@ -6,7 +6,8 @@ import { FIRST_LOOK_SHOT, FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
 import { countedInResult, handleOf, resultComplete } from '../runner/progress.ts'
 import type { AttemptRow, HookResult, RunStore, Verification } from '../store/types.ts'
 import { buildTrace, type TraceAttempt } from '../trace/build.ts'
-import { clauseEvidence, EVIDENCE_STATEMENT } from './clauses.ts'
+import { agentResult, TRIAL_ANSWER, type TrialState } from '../agents/result.ts'
+import { AGENT_EVIDENCE_STATEMENT, clauseEvidence, EVIDENCE_STATEMENT } from './clauses.ts'
 import { RUN_RECORD_SCHEMA_ID, runRecordSchema, type RunRecord } from './schema.ts'
 
 const FIT_OUT_OF = 7
@@ -20,7 +21,7 @@ const numbers = (values: unknown[]) => values.filter((v): v is number => typeof 
 function exportedAnswers(answers: Record<string, unknown>): Record<string, unknown> {
   const kept: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(answers)) {
-    if (key === 'screener' || key === FIRST_LOOK_SHOT || key.endsWith('.voice')) continue
+    if (key === 'screener' || key === FIRST_LOOK_SHOT || key.endsWith('.voice') || key === TRIAL_ANSWER) continue
     kept[key] = value
   }
   return kept
@@ -41,6 +42,28 @@ function firstLookOf(on: boolean, attempt: AttemptRow, item: TraceAttempt): RunR
   if (typeof attempt.answers[FIRST_LOOK_SKIPPED] === 'string') return 'never asked'
   if (item.impression) return 'asked'
   return on ? 'pending' : 'off'
+}
+
+type StoredTrial = { index: number; state: TrialState; claimedDone: boolean; stoppedBy?: string; infrastructure?: string; cost: { tokens: number; calls: number; wallMs: number } }
+
+/** An agent run's trials, read from the summaries the loop stored on their attempts, and what they say under each task's reliability. */
+function agentPart(trace: Awaited<ReturnType<typeof buildTrace>>) {
+  const trials: NonNullable<RunRecord['trials']> = trace.attempts.flatMap(({ attempt }) => {
+    const t = attempt.answers[TRIAL_ANSWER] as StoredTrial | undefined
+    return t ? [{ goalIndex: attempt.goalIndex, index: t.index, attempt: attempt.id, state: t.state, claimedDone: t.claimedDone, wallMs: t.cost.wallMs, tokens: t.cost.tokens, calls: t.cost.calls, ...(t.stoppedBy && { stoppedBy: t.stoppedBy }), ...(t.infrastructure && { infrastructure: t.infrastructure }) }] : []
+  }).sort((a, b) => a.goalIndex - b.goalIndex || a.index - b.index)
+  const tasks = trace.compiled.goals.map(goal => {
+    const mine = trials.filter(t => t.goalIndex === goal.index)
+    const reliability = goal.agent?.reliability ?? 'all'
+    return { goal, reliability, mine, ...agentResult(mine, reliability) }
+  }).filter(t => t.mine.length > 0)
+  const line = tasks.map(t => `${t.goal.name}: ${t.reliability === 'all' ? 'pass^k' : 'pass@k'} ${t.result}, ${t.mine.filter(x => x.state === 'verified').length} of ${t.mine.length} trials verified`).join('; ')
+  return {
+    trials,
+    passK: tasks.length > 0 && tasks.every(t => t.passK),
+    passAtK: tasks.length > 0 && tasks.every(t => t.passAtK),
+    sentence: `${line || 'No trials yet'}. A capability test, not usability.`,
+  }
 }
 
 /** Everything a consumer needs about one run, read from the store: nothing here comes from the participant's browser. */
@@ -162,7 +185,8 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
         ? `${matched} of ${screened.length} screened ${screened.length === 1 ? 'person matched' : 'people matched'} the stated users; mean fit to the purpose ${mean(fitTotals)} of ${FIT_OUT_OF}.`
         : 'No one answered the screener.',
     },
-    issues,
+    // A trace of an agent says nothing about usability: no problem is clustered from it.
+    issues: run.actor === 'agent' ? [] : issues,
     money: { estimate: 0, reserved: 0, paid: 0, truedUp: 0, currency: options.currency ?? 'USD' },
     quality: {
       attempts: trace.attempts.length,
@@ -182,9 +206,10 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
     studyEdits: [],
     recruitment: { link: funnelOf(real) },
     sentence: trace.sentence,
+    ...(run.actor === 'agent' && agentPart(trace)),
   }
   const revised = applyRevisions(partial as Omit<RunRecord, 'evidence' | 'evidenceStatement'>, revisions)
-  const record = { ...revised, evidence: clauseEvidence(revised), evidenceStatement: EVIDENCE_STATEMENT }
+  const record = { ...revised, evidence: clauseEvidence(revised), evidenceStatement: run.actor === 'agent' ? AGENT_EVIDENCE_STATEMENT : EVIDENCE_STATEMENT }
   // Parsing drops anything the schema does not name, so a field added upstream cannot leak into the record.
   return runRecordSchema.parse(record)
 }

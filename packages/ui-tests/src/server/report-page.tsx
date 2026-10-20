@@ -41,6 +41,8 @@ export async function ReportPage({ params, searchParams }: { params: Params; sea
   const store = await getStore()
   if (!(await store.getRun(run))) notFound()
   const record = await buildRecord(store, run)
+  // An agent run has its own report at its own address; it never appears inside the human report.
+  if (record.actor === 'agent') notFound()
   const link = (path: string) => signedUrl(path, secret)
   if (person === undefined) return <ReportView record={record} link={link} />
 

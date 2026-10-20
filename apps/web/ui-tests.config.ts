@@ -7,4 +7,7 @@ export default defineConfig({
   author: 'ui-tests',
   // A pull request is tested when it carries this label.
   ci: { on: ['label:ui-test'] },
+  // The agent study (ui-tests/cli-first-run.ui.test.ts) runs on this model with `npx ui-tests --actor agent`; the json reporter writes its report.
+  reporters: ['default', 'json'],
+  agents: { model: { provider: 'anthropic', name: 'claude-opus-5-5' } },
 })

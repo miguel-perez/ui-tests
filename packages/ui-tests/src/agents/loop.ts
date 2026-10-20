@@ -5,6 +5,7 @@ import type { CompiledGoal } from '../schema/compiled.ts'
 import type { AttemptRow, RunRow, RunStore, Verification } from '../store/types.ts'
 import { verifyAttempt } from '../verify.ts'
 import type { AgentConfig } from './config.ts'
+import { agentParticipant, TRIAL_ANSWER } from './result.ts'
 import type { AgentMessage, AgentModel, AgentStep, Harness, ToolSpec } from './model.ts'
 
 /** One agent trial of a task, as PRD 04 reads it. */
@@ -35,8 +36,8 @@ export type Trial = {
 }
 
 export const DEFAULT_TRIALS = 5
-/** Where a stored trial attempt keeps its summary (the trial without its transcript) and its transcript's blob id. */
-export const TRIAL_ANSWER = 'agent.trial'
+/** Where a stored trial attempt keeps its summary (the trial without its transcript, `TRIAL_ANSWER`) and its transcript's blob id. */
+export { TRIAL_ANSWER }
 export const TRANSCRIPT_ANSWER = 'agent.transcript'
 /** Budgets that apply when the config sets none: enough for a task, small enough that a stuck agent ends. */
 export const DEFAULT_BUDGETS = { calls: 30, seconds: 600 }
@@ -223,7 +224,7 @@ export async function runTrials(input: RunTrialsInput): Promise<Trial[]> {
       if (input.signal?.aborted) break
       await harness.reset()
       const setupValues = await runSetup(study, baseURL)
-      const { attempt, token } = await store.createAttempt({ runId: run.run, participant: `agent:${goal.index}:${index}`, goalIndex: goal.index, rehearsal: run.rehearsal, setupValues })
+      const { attempt, token } = await store.createAttempt({ runId: run.run, participant: agentParticipant(goal.index, index), goalIndex: goal.index, rehearsal: run.rehearsal, setupValues })
       const startedAt = new Date().toISOString()
       if (harness.begin) {
         // Through the player: the attempt starts consented, and the player's own Start task makes it active.
@@ -235,8 +236,9 @@ export async function runTrials(input: RunTrialsInput): Promise<Trial[]> {
       if (end.snapshot) await store.putSnapshot(attempt.id, 'end', end.snapshot)
       // Through the player the collector may already have ended the attempt (Done, I couldn't do this, or the time limit): that end stands.
       const ended = harness.begin ? await store.getAttempt(attempt.id) : undefined
-      const endedBy = ended?.reason
-      const verification = await verifyAttempt({ run, attempt: { ...attempt, status: 'active', startedAt, ...(endedBy && { reason: endedBy }) }, task, store, request, ...(end.workspace && { workspace: end.workspace }) })
+      // The reason the attempt ended is read into verification on every harness: a trial that gave up reads incorrect (stopped), as on the web.
+      const endedBy = ended?.reason ?? (ran.claimedDone ? 'done' : 'gave up')
+      const verification = await verifyAttempt({ run, attempt: { ...attempt, status: 'active', startedAt, reason: endedBy }, task, store, request, ...(end.workspace && { workspace: end.workspace }) })
       const outage = ran.infrastructure && verification.status !== 'correct'
       const state = verification.status === 'correct' ? 'verified' : outage || verification.status === 'unknown' ? 'unknown' : 'stopped'
       const trial: Trial = {

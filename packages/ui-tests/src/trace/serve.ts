@@ -9,6 +9,7 @@ import type { LintFinding } from '../lint.ts'
 import type { IncomingMessage } from 'node:http'
 import type { RunRow, RunStore } from '../store/types.ts'
 import { buildRecord } from '../record/build.ts'
+import { AgentReport } from '../agents/report.tsx'
 import { mayShow, ReportView } from '../report/view.tsx'
 import type { ResultHook } from '../runner/progress.ts'
 import { buildTrace } from './build.ts'
@@ -149,11 +150,23 @@ export async function serveTrace(options: { store: RunStore; port?: number; host
       if (req.method !== 'GET' && req.method !== 'HEAD') return send(405, 'text/plain', 'Method not allowed')
       if (path === '/replay.js') return send(200, 'text/javascript', await replayBundle())
       if (path === '/') return send(200, 'text/html', html(createElement(RunList, { runs: await store.listRuns() })))
+      const agentRun = /^\/agent-runs\/([^/]+?)\/?$/.exec(path)
+      if (agentRun) {
+        let id: string
+        try { id = decodeURIComponent(agentRun[1]!) } catch { return send(404, 'text/plain', 'Not found') }
+        const row = await store.getRun(id)
+        if (!row || row.actor !== 'agent') return send(404, 'text/plain', 'Not found')
+        const record = await buildRecord(store, id)
+        return send(200, 'text/html', html(createElement('html', { lang: 'en' }, createElement('head', null, createElement('meta', { charSet: 'utf-8' }), createElement('meta', { name: 'viewport', content: 'width=device-width, initial-scale=1' }), createElement('title', null, `Agent report · ${record.compiled.name}`)), createElement('body', null, createElement(AgentReport, { record })))))
+      }
       const shown = /^\/runs\/([^/]+)\/report(?:\/p([1-9]\d{0,5}))?\/?$/.exec(path)
       if (shown) {
         let id: string
         try { id = decodeURIComponent(shown[1]!) } catch { return send(404, 'text/plain', 'Not found') }
-        if (!(await store.getRun(id))) return send(404, 'text/plain', 'Not found')
+        const reported = await store.getRun(id)
+        if (!reported) return send(404, 'text/plain', 'Not found')
+        // An agent run is never reported inside a human report: its report has its own address.
+        if (reported.actor === 'agent') { res.writeHead(308, { location: `/agent-runs/${encodeURIComponent(id)}/` }); return res.end() }
         if (!path.endsWith('/')) {
           res.writeHead(308, { location: `${path}/` })
           return res.end()

@@ -34,6 +34,8 @@ async function settle(store: RunStore, runId: string, now: Date): Promise<RunRow
   for (let tries = 0; tries < 5; tries++) {
     const run = await store.getRun(runId)
     if (!run) throw new Error(`No such run: ${runId}`)
+    // An agent run's result is read from its trials by `agentResult` (pass^k), never from people's counting rules.
+    if (run.actor === 'agent') return run
     // Invite slots are made up front as `created`; only an attempt that has consented and moved on means people are collecting.
     const all = await store.listAttempts(runId)
     const live = all.filter(a => a.reason !== 'withdrew' && a.status !== 'created' && a.status !== 'consented')

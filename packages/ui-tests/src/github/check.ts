@@ -7,6 +7,11 @@ import type { UiTestsConfig } from '../types.ts'
 import { sendWebhook, type WebhookOptions } from '../notify/webhook.ts'
 import type { Delivered, GitHubClient, GitHubLink } from './types.ts'
 
+/** A human run's check is `ui-tests`; an agent run posts its own, and the two are never merged into one (PRD 04). */
+export const CHECK_NAMES = { human: 'ui-tests', agent: 'ui-tests (agent)' } as const
+export const checkName = (actor: 'human' | 'agent') => CHECK_NAMES[actor]
+export const AGENT_NEVER_FAILS = 'This check is informational and never fails your build. It is a capability test, not usability: an agent passing says nothing about people.'
+
 export const COMMENT_MARKER = '<!-- ui-tests -->'
 export const NEVER_FAILS = 'This check never fails your build. It reports problems, or that none were seen this time.'
 export const FAILS_ON_PROBLEMS = 'This check fails your build when it finds problems. It reports problems, or that none were seen this time.'
@@ -39,6 +44,20 @@ export function figuresOf(record: RunRecord) {
 }
 
 export const titleOf = (record: RunRecord) => checkTitle(figuresOf(record))
+
+/** The title of an agent run's check: trials, not people. */
+export function agentTitle(record: RunRecord): string {
+  const trials = record.trials ?? []
+  const verified = trials.filter(t => t.state === 'verified').length
+  if (record.handle.result === 'inconclusive') return `Inconclusive · ${trials.filter(t => t.state === 'unknown').length} of ${trials.length} trials could not be read`
+  return `${record.handle.result === 'none-found' ? 'Capability test passed' : 'Capability test failed'} · ${verified} of ${trials.length} trials verified`
+}
+
+/** The page of an agent run's check: its sentence, what the check promises, and one line per trial. */
+export function agentCheckPage(record: RunRecord): string {
+  const rows = (record.trials ?? []).map(t => `| ${record.compiled.goals[t.goalIndex]?.name ?? 'task'} | ${t.index} | ${t.state} | ${(t.wallMs / 1000).toFixed(1)} s | ${t.stoppedBy ?? ''} |`)
+  return [record.sentence, '', AGENT_NEVER_FAILS, '', '| Task | Trial | State | Time | What stopped it |', '| --- | --- | --- | --- | --- |', ...rows].join('\n')
+}
 
 const impactOrder = { blocked: 0, slowed: 1, confused: 2 } as const
 const peopleOf = (issue: RunRecord['issues'][number]) => issue.participants.length
@@ -144,7 +163,8 @@ export function owedDeliveries(run: RunRow, config: UiTestsConfig): { check: boo
   const done = (run.delivered ?? {}) as Delivered
   return {
     check: Boolean(link?.checkId) && done.check !== run.result,
-    comment: Boolean(link?.checkId) && config.check?.comment !== false && done.comment !== outcomeOf(run.result),
+    // An agent run has no sticky comment: its check is its own and says nothing a person would act on.
+    comment: run.actor !== 'agent' && Boolean(link?.checkId) && config.check?.comment !== false && done.comment !== outcomeOf(run.result),
     webhook: Boolean(config.webhook?.url) && done.webhook !== run.result,
   }
 }
@@ -183,8 +203,10 @@ export async function deliverResult(input: DeliverInput): Promise<string[]> {
   }
   if (wantCheck) await attempt('check', async () => {
     await github!.updateCheck(link!.checkId!, {
-      owner: link!.owner, repo: link!.repo, status: 'completed', conclusion: checkConclusion(result, config.check?.block_on),
-      title: titleOf(record), summary: record.sentence, text: checkPage(record, options), ...(options.links && { detailsUrl: options.links.report }),
+      owner: link!.owner, repo: link!.repo, status: 'completed',
+      ...(run.actor === 'agent'
+        ? { conclusion: 'neutral' as const, title: agentTitle(record), summary: record.sentence, text: agentCheckPage(record) }
+        : { conclusion: checkConclusion(result, config.check?.block_on), title: titleOf(record), summary: record.sentence, text: checkPage(record, options), ...(options.links && { detailsUrl: options.links.report }) }),
     })
     return { check: result }
   })
