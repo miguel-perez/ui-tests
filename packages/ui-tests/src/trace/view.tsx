@@ -2,6 +2,7 @@
 // Rendered in Node under tsx, which takes the JSX mode from the tsconfig of the folder it runs in (a Next app's says `preserve`).
 import type { Trace, TraceAttempt } from './build.ts'
 import type { RunRow } from '../store/types.ts'
+import type { TunnelRecord } from '../tunnel/types.ts'
 
 const css = `
 body{font:15px/1.5 system-ui,sans-serif;margin:0;padding:24px 16px;color:#1a1a1a;background:#fff}
@@ -90,6 +91,16 @@ export function TraceView({ trace }: { trace: Trace }) {
       <p><strong>{actorLabel(run)}</strong> · run <code>{run.run}</code> · {run.result}</p>
       <p>{trace.sentence}</p>
       <p>{trace.sampleSentence}</p>
+
+      {Array.isArray(run.tunnels) && run.tunnels.length > 0 && (
+        <>
+          <h2>Tunnels</h2>
+          <table>
+            <thead><tr><th>URL</th><th>Opened</th><th>Closed</th></tr></thead>
+            <tbody>{(run.tunnels as TunnelRecord[]).map((t, i) => <tr key={i}><td><code>{t.url}</code></td><td>{t.openedAt}</td><td>{t.closedAt ?? 'still open, or closed when the command was killed'}</td></tr>)}</tbody>
+          </table>
+        </>
+      )}
 
       <h2>Compiled from your study</h2>
       <table>

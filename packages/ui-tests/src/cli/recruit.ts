@@ -1,13 +1,14 @@
 import { loadConfig } from '../config.ts'
 import { formatFindings, lint, planLines } from '../lint.ts'
 import { StudyLoadError } from '../load.ts'
-import { createInvites } from '../runner/invites.ts'
+import { createInvites, isSlot, reissueInvites } from '../runner/invites.ts'
 import { createRun } from '../runner/create-run.ts'
 import { gitCommit, idempotencyKey } from '../runner/key.ts'
 import { handleOf, refreshRun } from '../runner/progress.ts'
 import { checkReachable } from '../runner/setup.ts'
 import { openStore } from '../store/open.ts'
 import type { RunHandle, RunStore } from '../store/types.ts'
+import { chooseTunnel, openRunTunnel } from '../tunnel/session.ts'
 import type { UiTestsConfig } from '../types.ts'
 import { verifyRun } from '../verify.ts'
 import { loadStudies, withProduct } from './lint.ts'
@@ -26,17 +27,22 @@ const pause = (ms: number, signal?: AbortSignal) => new Promise<void>(resolve =>
 })
 
 /** Polls the run, verifying and refreshing it, until it has a result. Exits with the result's code, or 3 when stopped first. */
-async function waitForResult(store: RunStore, runId: string, io: Io): Promise<{ handle: RunHandle; code: number }> {
+async function waitForResult(store: RunStore, runId: string, io: Io, signal?: AbortSignal): Promise<{ handle: RunHandle; code: number }> {
   const deps = io.deps ?? {}
   const now = deps.now ?? (() => new Date())
   for (;;) {
     await verifyRun(store, runId)
     const run = await refreshRun(store, runId, now())
     if (run.result !== 'pending') return { handle: handleOf(run), code: exitCodeFor(run.result) }
-    if (deps.signal?.aborted) return { handle: handleOf(run), code: 3 }
+    if (signal?.aborted) return { handle: handleOf(run), code: 3 }
     io.stderr.write(`waiting: ${run.states.collection}, result pending\n`)
-    await pause(deps.pollMs ?? DEFAULT_POLL_MS, deps.signal)
+    await pause(deps.pollMs ?? DEFAULT_POLL_MS, signal)
   }
+}
+
+/** Holds until the deadline passes on `now`'s clock or `signal` aborts, whichever is first. */
+async function holdUntil(deadline: string, now: () => Date, pollMs: number, signal: AbortSignal) {
+  while (!signal.aborted && now().getTime() < Date.parse(deadline)) await pause(Math.min(pollMs, Math.max(1, Date.parse(deadline) - now().getTime())), signal)
 }
 
 /**
@@ -92,24 +98,55 @@ export const recruit: Command = async (args, io) => {
       ...(hours !== undefined && { deadlineHours: Number(hours) }),
       reachability: { url: target, reachable: true, checkedAt: new Date().toISOString() },
     })
-    // Invite slots are made up to n, so a run whose setup failed part-way is repaired by running the same command again.
-    const made = (await store.listAttempts(run.run)).filter(a => !a.rehearsal).length
-    const missing = Math.max(0, run.compiled.sample.n - made)
-    let invites: string[] | undefined
-    if (missing) invites = await createInvites({ store, run, study: chosen.study, count: missing, firstSlot: made + 1, target, ...(bypass && { bypass }) })
-    if (!created) io.stderr.write(`Run ${run.run} already exists for key ${key}; ${missing ? `made ${missing} missing invite${missing === 1 ? '' : 's'}` : 'no new invites'}.\n`)
-
-    let handle = handleOf(run)
-    let code = 0
-    if (args.flags.has('wait')) {
-      if (json) io.stderr.write(`Run ${run.run}\n${(invites ?? []).join('\n')}\n`)
-      else io.stdout.write(`Run ${run.run}\n${(invites ?? []).map(l => `${l}\n`).join('')}`)
-      ;({ handle, code } = await waitForResult(store, run.run, io))
+    // A tunnel is run-scoped: it is opened for this run, recorded on it, and closed at the deadline or when this command ends.
+    const now = deps.now ?? (() => new Date())
+    const stop = new AbortController()
+    const onSignal = () => stop.abort()
+    deps.signal?.addEventListener('abort', onSignal, { once: true })
+    if (deps.signal?.aborted) stop.abort()
+    let tunnel: Awaited<ReturnType<typeof openRunTunnel>> | undefined
+    const onExit = () => { void tunnel?.close() }
+    if (args.flags.has('tunnel')) {
+      try { tunnel = await openRunTunnel({ store, runId: run.run, tunnel: chooseTunnel(io.env, deps.tunnel), localUrl: target, now }) } catch (error) {
+        io.stderr.write(`tunnel: ${error instanceof Error ? error.message : String(error)}\n`)
+        return 2
+      }
+      for (const event of ['SIGINT', 'SIGTERM', 'exit'] as const) process.once(event, event === 'exit' ? onExit : onSignal)
     }
-    if (json) io.stdout.write(`${JSON.stringify(invites ? { ...handle, invites } : handle, null, 2)}\n`)
-    else if (!args.flags.has('wait')) {
-      io.stdout.write([`Run ${run.run}`, `key: ${key}`, `result: ${handle.result}`, `deadline: ${handle.deadline}`, ...(invites ? ['', 'Invite links:', ...invites] : []), '', `Check on it with: ui-tests status ${run.run}`, ''].join('\n'))
-    } else io.stdout.write(`result: ${handle.result}\n`)
-    return code
+    try {
+      const linkBase = tunnel?.url ?? target
+      // A resumed run reopens its tunnel at a new address, so slots nobody opened get new links under it.
+      const reissued = tunnel ? await reissueInvites({ store, run, linkBase, ...(bypass && { bypass }) }) : []
+      // Invite slots are made up to n, so a run whose setup failed part-way is repaired by running the same command again.
+      const made = (await store.listAttempts(run.run)).filter(isSlot).length
+      const missing = Math.max(0, run.compiled.sample.n - made)
+      let invites: string[] | undefined
+      if (missing) invites = await createInvites({ store, run, study: chosen.study, count: missing, firstSlot: made + 1, target, linkBase, ...(bypass && { bypass }) })
+      if (reissued.length) invites = [...reissued, ...(invites ?? [])]
+      if (!created) io.stderr.write(`Run ${run.run} already exists for key ${key}; ${missing ? `made ${missing} missing invite${missing === 1 ? '' : 's'}` : 'no new invites'}${reissued.length ? `; ${reissued.length} link${reissued.length === 1 ? '' : 's'} reissued under the new tunnel` : ''}.\n`)
+      const tunnelLine = tunnel ? `Tunnel: ${tunnel.url} (open until ${run.deadline} or until this command ends)\n` : ''
+
+      let handle = handleOf(run)
+      let code = 0
+      if (args.flags.has('wait')) {
+        if (json) io.stderr.write(`Run ${run.run}\n${tunnelLine}${(invites ?? []).join('\n')}\n`)
+        else io.stdout.write(`Run ${run.run}\n${tunnelLine}${(invites ?? []).map(l => `${l}\n`).join('')}`)
+        ;({ handle, code } = await waitForResult(store, run.run, io, stop.signal))
+      }
+      if (json) io.stdout.write(`${JSON.stringify({ ...handle, ...(invites && { invites }), ...(tunnel && { tunnel: tunnel.url }) }, null, 2)}\n`)
+      else if (!args.flags.has('wait')) {
+        io.stdout.write([`Run ${run.run}`, `key: ${key}`, `result: ${handle.result}`, `deadline: ${handle.deadline}`, ...(invites ? ['', 'Invite links:', ...invites] : []), ...(tunnel ? ['', tunnelLine.trimEnd()] : []), '', `Check on it with: ui-tests status ${run.run}`, ''].join('\n'))
+      } else io.stdout.write(`result: ${handle.result}\n`)
+      if (tunnel && !args.flags.has('wait')) {
+        io.stderr.write('The tunnel stays open for the participants. Press Ctrl-C to close it.\n')
+        await holdUntil(run.deadline, now, deps.pollMs ?? DEFAULT_POLL_MS, stop.signal)
+      }
+      return code
+    } finally {
+      deps.signal?.removeEventListener('abort', onSignal)
+      for (const event of ['SIGINT', 'SIGTERM'] as const) process.removeListener(event, onSignal)
+      process.removeListener('exit', onExit)
+      await tunnel?.close()
+    }
   } finally { await store.close() }
 }

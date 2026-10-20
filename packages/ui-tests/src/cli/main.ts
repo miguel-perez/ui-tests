@@ -1,3 +1,4 @@
+import type { Tunnel } from '../tunnel/types.ts'
 import { dev } from './dev.ts'
 import { host } from './host.ts'
 import { init } from './init.ts'
@@ -18,6 +19,8 @@ export type CliDeps = {
   /** The clock `recruit --wait` reads for the deadline. */
   now?: () => Date
   fetch?: typeof fetch
+  /** What `recruit --tunnel` opens; the default is cloudflared, or the fake when `UI_TESTS_TUNNEL=fake`. */
+  tunnel?: Tunnel
 }
 export type Io = { stdout: { write(text: string): unknown }; stderr: { write(text: string): unknown }; cwd: string; env: Record<string, string | undefined>; deps?: CliDeps }
 export type Args = { positionals: string[]; flags: Map<string, string | true> }
@@ -48,7 +51,7 @@ export const usage = () => `Usage: ui-tests <command> [options]
 Commands:
   (none)            rehearse a study on yourself: open the player, verify, show the trace
   verify <run>      run the hooks against the stored snapshots
-  recruit           make a run and print the invite links (--wait for the result)
+  recruit           make a run and print the invite links (--wait for the result, --tunnel to serve a local build)
   status <run>      show the four states of a run
   trace <run>       serve the trace of a run on this machine
   init              write ui-tests.config.ts, an example study and the Vitest exclude
