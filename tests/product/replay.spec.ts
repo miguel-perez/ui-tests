@@ -15,6 +15,7 @@ const fixture = join(import.meta.dirname, 'fixtures', 'mount.ui.test.ts')
 const RRWEB_MARK = 'rr-block'
 const SECRET = 'hunter2-typed-by-the-participant'
 const CARD = '4111111111111111'
+const RICH = 'typed-into-a-rich-text-editor'
 
 /** Script bodies the page fetches, so a chunk can be recognised by what it holds and not by its hashed name. */
 function watchScripts(page: Page) {
@@ -52,13 +53,15 @@ test('during an attempt rrweb loads, typed values never reach the store, and the
   await page.evaluate(() => {
     const form = document.createElement('div')
     form.id = 'probe'
-    form.innerHTML = '<input id="name" type="text" value="prefilled-name"><input id="pw" type="password"><input id="cc" autocomplete="cc-number"><textarea id="note"></textarea><div id="inert" style="padding:20px">Nothing happens here</div>'
+    form.innerHTML = '<input id="name" type="text" value="prefilled-name"><input id="pw" type="password"><input id="cc" autocomplete="cc-number"><textarea id="note"></textarea><div id="rich" contenteditable="true"><p>prefilled-rich</p></div><div id="inert" style="padding:20px">Nothing happens here</div>'
     document.body.prepend(form)
   })
   await page.locator('#name').fill(SECRET)
   await page.locator('#pw').fill(SECRET)
   await page.locator('#cc').fill(CARD)
   await page.locator('#note').fill(SECRET)
+  await page.locator('#rich').focus()
+  await page.keyboard.type(RICH)
   // Late enough that the moment starts after the recording does, so seeking to it is not seeking to the start.
   await page.waitForTimeout(4000)
   await page.locator('#inert').click()
@@ -82,7 +85,7 @@ test('during an attempt rrweb loads, typed values never reach the store, and the
     // The recording starts from a whole page, and holds nothing that was typed.
     expect(replay.some((e) => (e.data as { type: number }).type === 2)).toBe(true)
     const text = JSON.stringify(replay)
-    for (const secret of [SECRET, CARD, 'prefilled-name']) expect(text).not.toContain(secret)
+    for (const secret of [SECRET, CARD, 'prefilled-name', RICH, 'prefilled-rich']) expect(text).not.toContain(secret)
     // The bar's own content is not in it either (its stylesheet is; its text and buttons are not).
     expect(text).not.toContain('Read the landing page')
 
