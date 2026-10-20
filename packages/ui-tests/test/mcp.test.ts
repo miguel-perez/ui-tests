@@ -139,6 +139,35 @@ describe('the MCP server', () => {
     expect(traced.attempts.map((a: { attempt: string }) => a.attempt)).toHaveLength(1)
   })
 
+  it('keeps every word of an author-only attempt out of report and trace: first look, comment, voice, screener and typed answer; codes and scales stay', async () => {
+    const { call } = await connect()
+    const { run } = (await call('run', { actor: 'human', key: 'mcp-key-6' })).json()
+    const store = await openStore({ UI_TESTS_DATA_DIR: data })
+    cleanup.push(() => store.close())
+    const { attempt } = await store.createAttempt({ runId: run, participant: 'closed', goalIndex: 0, rehearsal: false })
+    await store.updateAttempt(attempt.id, {
+      status: 'finished', reason: 'done', purposes: ['analysis by the author'], startedAt: new Date(0).toISOString(), endedAt: new Date(5000).toISOString(),
+      answers: {
+        screener: { 'screener.today': 'secret-screener' },
+        screenerResult: { matches: true, outside: [], fit: { total: 5 } },
+        impression: { text: 'secret-first-look', code: 'did not name it', codedBy: 'rule', firstClick: null, firstClickReason: 'off the target' },
+        'goal0.ease': 3, 'goal0.difficulty': 'secret-voice-transcript', 'goal0.difficulty.voice': 'blob-1',
+        'Which plan was shown?': 'secret-typed-answer', useful: 4, easy: 5, uxliteVersion: 'v1', anything: 'secret-comment', moreTime: true,
+      },
+      verification: { status: 'incorrect', reason: 'The answer differs from the expected one', diff: { expected: 'Team', actual: 'secret-typed-answer' }, steps: [], answer: { status: 'incorrect', reason: 'The answer differs from the expected one', diff: { expected: 'Team', actual: 'secret-typed-answer' } } },
+    })
+    const report = (await call('report', { run })).json()
+    const traced = (await call('trace', { run })).json()
+    for (const text of [JSON.stringify(report), JSON.stringify(traced)]) expect(text).not.toMatch(/secret-/)
+    const closed = report.attempts.find((a: { participant: string }) => a.participant === 'closed')
+    expect(closed.answers).toEqual({
+      screenerResult: { matches: true, outside: [], fit: { total: 5 } },
+      impression: { code: 'did not name it', codedBy: 'rule', firstClick: null, firstClickReason: 'off the target' },
+      'goal0.ease': 3, useful: 4, easy: 5, uxliteVersion: 'v1', moreTime: true,
+    })
+    expect(closed.verification).toMatchObject({ status: 'incorrect', answer: { status: 'incorrect' } })
+  })
+
   it('drops the words and moments of closed attempts from the issues', () => {
     const attempt = (id: string, participant: string, purposes: string[]) => ({ id, participant, purposes, restrictions: [], answers: {} })
     const record = {
