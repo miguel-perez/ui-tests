@@ -15,6 +15,8 @@ export type Buffer = {
 export const BATCH_EVENTS = 100
 /** ... and at most this many bytes of JSON, which keeps the request under the collector's 2,100,000. */
 export const BATCH_BYTES = 2_000_000
+/** Replay batches (rrweb) are counted on their own: at most this many bytes, under the collector's 5,000,000 for them. */
+export const REPLAY_BATCH_BYTES = 4_000_000
 
 const STORE = 'events'
 const encoder = new TextEncoder()
@@ -35,7 +37,12 @@ const done = (tx: IDBTransaction) => new Promise<void>((resolve, reject) => {
  * `flush`. Without IndexedDB (a private window, blocked site data) it keeps them in memory instead.
  * `post` answers true once the server has dealt with the batch for good (accepted, or refused in a way a retry cannot mend).
  */
-export function createBuffer(post: (batch: RecordedEvent[]) => Promise<boolean>, db: IDBFactory | undefined = globalThis.indexedDB, name = 'ui-tests-events'): Buffer {
+export function createBuffer(
+  post: (batch: RecordedEvent[]) => Promise<boolean>,
+  db: IDBFactory | undefined = globalThis.indexedDB,
+  name = 'ui-tests-events',
+  limits: { events: number; bytes: number } = { events: BATCH_EVENTS, bytes: BATCH_BYTES },
+): Buffer {
   let memory: { key: number; event: RecordedEvent }[] = []
   let counter = 0
   let opened: Promise<IDBDatabase | undefined> | undefined
@@ -109,7 +116,7 @@ export function createBuffer(post: (batch: RecordedEvent[]) => Promise<boolean>,
           let bytes = 0
           for (const entry of kept) {
             const n = size(entry.event)
-            if (batch.length >= BATCH_EVENTS || (batch.length > 0 && bytes + n > BATCH_BYTES)) break
+            if (batch.length >= limits.events || (batch.length > 0 && bytes + n > limits.bytes)) break
             batch.push(entry)
             bytes += n
           }

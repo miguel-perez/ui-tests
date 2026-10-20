@@ -63,6 +63,25 @@ describe('trace', () => {
     expect(html).toContain(trace.sampleSentence)
   })
 
+  it('keeps the replay out of the events, lists the reel around each signal, and carries both to the page', async () => {
+    const run = await rehearsal()
+    const [attempt] = await store.listAttempts(run.run)
+    await store.appendEvents(attempt!.id, [
+      { type: 'rrweb', at: 0, url: 'http://t.test/', seq: 10, data: { type: 2, timestamp: 0 } },
+      { type: 'rrweb', at: 3000, url: 'http://t.test/', seq: 11, data: { type: 3, timestamp: 3000 } },
+    ])
+    const trace = await buildTrace(store, run.run)
+    const item = trace.attempts[0]!
+    expect(item.events.some(e => e.type === 'rrweb')).toBe(false)
+    expect(item.replay).toHaveLength(2)
+    expect(item.reel.length).toBeGreaterThan(0)
+    expect(item.reel[0]).toMatchObject({ signal: { kind: 'dead-click' } })
+    const html = renderToString(createElement(TraceView, { trace }))
+    expect(html).toContain('data-replay')
+    expect(html).toContain('/replay.js')
+    expect(html).not.toContain('<td>rrweb</td>')
+  })
+
   it('serves the run list, the trace page and the same Trace as JSON, on loopback only', async () => {
     const run = await rehearsal()
     const server = await serveTrace({ store, port: 0 })

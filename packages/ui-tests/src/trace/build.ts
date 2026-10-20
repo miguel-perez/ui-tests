@@ -2,6 +2,7 @@ import type { ScreenerResult } from '../derive/screener.ts'
 import { fillScenario } from '../derive/scenario.ts'
 import { sampleSentence, sentence } from '../derive/sentence.ts'
 import { FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
+import { highlightReel, type ReelMoment } from './reel.ts'
 import type { LintFinding } from '../lint.ts'
 import type { CompiledStudy } from '../schema/compiled.ts'
 import { attemptSignals, type Signal } from '../signals.ts'
@@ -18,7 +19,12 @@ export type ImpressionResult = {
 
 export type TraceAttempt = {
   attempt: AttemptRow
+  /** What the person did, without the replay's own events. */
   events: RecordedEvent[]
+  /** The recording of the page (rrweb events), in the order they happened. Absent when none was kept. */
+  replay?: RecordedEvent[]
+  /** The parts of the recording worth watching: a window around each signal, with the words said inside it. */
+  reel: ReelMoment[]
   /** The pages the participant went through, in order. */
   path: string[]
   /** The path the author expected, when the task has one. */
@@ -82,14 +88,18 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
   for (const attempt of rows) {
     const goal = compiled.goals[attempt.goalIndex]
     // In the order they happened: an event sent on its own as a page unloads can reach the store before ones kept for a later flush.
-    const events = (await store.listEvents(attempt.id)).sort((x, y) => x.at - y.at)
+    const everything = (await store.listEvents(attempt.id)).sort((x, y) => x.at - y.at)
+    const events = everything.filter((event) => event.type !== 'rrweb')
+    const replay = everything.filter((event) => event.type === 'rrweb')
     const verification = attempt.verification
     const end = await store.getSnapshot(attempt.id, 'end')
     const started = attempt.startedAt ? Date.parse(attempt.startedAt) : undefined
     const ended = attempt.endedAt ? Date.parse(attempt.endedAt) : undefined
+    const signals = goal ? attemptSignals({ attempt, events, goal, ...(verification && { verification }) }) : []
     attempts.push({
       attempt,
       events,
+      ...(replay.length > 0 && { replay }),
       path: visited(events),
       ...(goal?.path && { happyPath: goal.path }),
       ...(end && { snapshotUrl: end.url }),
@@ -97,7 +107,8 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
       ...(screenerOf(attempt) && { screener: screenerOf(attempt)! }),
       ...(impressionOf(attempt) && { impression: impressionOf(attempt)! }),
       ...(typeof attempt.answers[FIRST_LOOK_SKIPPED] === 'string' && { firstLookSkipped: attempt.answers[FIRST_LOOK_SKIPPED] as string }),
-      signals: goal ? attemptSignals({ attempt, events, goal, ...(verification && { verification }) }) : [],
+      signals,
+      reel: highlightReel({ events: everything, signals, words: [] }),
       timings: { ...(started !== undefined && ended !== undefined && { onGoalMs: ended - started }) },
     })
   }

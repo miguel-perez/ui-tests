@@ -1,4 +1,6 @@
 import { createServer } from 'node:http'
+import { fileURLToPath } from 'node:url'
+import { build } from 'esbuild'
 import type { AddressInfo } from 'node:net'
 import { createElement } from 'react'
 import { renderToString } from 'react-dom/server'
@@ -8,6 +10,24 @@ import { buildTrace } from './build.ts'
 import { RunList, TraceView } from './view.tsx'
 
 const loopback = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
+/** The browser side of the trace: rrweb-player and the Replay component, bundled once on first request. */
+let clientBundle: Promise<string> | undefined
+function replayBundle(): Promise<string> {
+  clientBundle ??= build({
+    stdin: {
+      contents: `import css from 'rrweb-player/dist/style.css'\nimport { mountReplays } from './replay.tsx'\nmountReplays(document, css)`,
+      resolveDir: fileURLToPath(new URL('.', import.meta.url)),
+      loader: 'tsx',
+    },
+    bundle: true, write: false, format: 'iife', platform: 'browser', target: 'es2022', minify: true, jsx: 'automatic',
+    loader: { '.css': 'text' },
+    define: { 'process.env.NODE_ENV': '"production"' },
+    logLevel: 'silent',
+  }).then((result) => result.outputFiles[0]!.text)
+  clientBundle.catch(() => { clientBundle = undefined })
+  return clientBundle
+}
+
 const html = (node: Parameters<typeof renderToString>[0]) => `<!doctype html>${renderToString(node)}`
 
 /**
@@ -28,6 +48,7 @@ export async function serveTrace(options: { store: RunStore; port?: number; host
       if (!loopback.has(hostName)) return send(403, 'text/plain', 'Forbidden')
       if (req.method !== 'GET' && req.method !== 'HEAD') return send(405, 'text/plain', 'Method not allowed')
       const path = new URL(req.url ?? '/', 'http://localhost').pathname
+      if (path === '/replay.js') return send(200, 'text/javascript', await replayBundle())
       if (path === '/') return send(200, 'text/html', html(createElement(RunList, { runs: await store.listRuns() })))
       const match = /^\/runs\/([^/]+?)(\.json|\/)?$/.exec(path)
       if (!match) return send(404, 'text/plain', 'Not found')

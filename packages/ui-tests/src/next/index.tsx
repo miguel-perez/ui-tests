@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type { ParticipantView } from '../server/view.ts'
 import type { RecordedEvent } from '../store/types.ts'
-import { createBuffer } from './buffer.ts'
+import { REPLAY_BATCH_BYTES, createBuffer } from './buffer.ts'
 import type { Buffer } from './buffer.ts'
 import { ROOT_ATTRIBUTE, createRecorder, fitSnapshot, serializeSnapshot, shortSelector } from './recorder.ts'
+import { startReplay } from './replay-recorder.ts'
 import { FirstClickBar, Taskbar } from './taskbar.tsx'
 import type { EndReason } from './taskbar.tsx'
 import { chromeTheme, readHost } from './theme.ts'
@@ -36,6 +37,7 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
   const [moreTimeUsed, setMoreTimeUsed] = useState(false)
   const [stepIndex, setStepIndex] = useState(0)
   const buffer = useRef<Buffer | undefined>(undefined)
+  const replayBuffer = useRef<Buffer | undefined>(undefined)
 
   // The marker cookie is readable on purpose: it only says that a run is on. The token itself is HttpOnly.
   useEffect(() => {
@@ -100,22 +102,37 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
       }
     }, undefined, `ui-tests-events:${attempt}`)
     buffer.current = kept
+    // The replay (rrweb) goes in batches of its own, counted in bytes: the first event is the whole page.
+    const keptReplay = createBuffer(async (events: RecordedEvent[]) => {
+      try {
+        const response = await post({ action: 'replay', events })
+        return response.ok || (response.status >= 400 && response.status < 500)
+      } catch {
+        return false
+      }
+    }, undefined, `ui-tests-replay:${attempt}`, { events: 100, bytes: REPLAY_BATCH_BYTES })
+    replayBuffer.current = keptReplay
     let timer: ReturnType<typeof setTimeout> | undefined
-    const flushSoon = () => { clearTimeout(timer); timer = setTimeout(() => void kept.flush(), FLUSH_AFTER_MS) }
+    const flushSoon = () => { clearTimeout(timer); timer = setTimeout(() => { void kept.flush(); void keptReplay.flush() }, FLUSH_AFTER_MS) }
     // Every event is numbered here, above anything the buffer has given out on an earlier page: a copy sent on its own and the kept
     // copy carry the same number, and the collector stores it once. Until IndexedDB has an event it is held here as well.
     const base = Date.now() * 1000
     let count = 0
     const held = new Map<number, RecordedEvent>()
-    const keep = (events: RecordedEvent[]): RecordedEvent[] => {
+    const keep = (events: RecordedEvent[], into: Buffer = kept): RecordedEvent[] => {
       const numbered = events.map((event) => ({ ...event, seq: base + count++ }))
       for (const event of numbered) held.set(event.seq, event)
-      void kept.push(numbered).then(() => { for (const event of numbered) held.delete(event.seq) }, () => {}).then(flushSoon)
+      void into.push(numbered).then(() => { for (const event of numbered) held.delete(event.seq) }, () => {}).then(flushSoon)
       return numbered
     }
-    const sendNow = (events: RecordedEvent[]) => { if (events.length) void post({ action: 'events', events: events.slice(0, 100) }).catch(() => {}) }
+    const sendNow = (events: RecordedEvent[]) => {
+      const plain = events.filter((event) => event.type !== 'rrweb')
+      if (plain.length) void post({ action: 'events', events: plain.slice(0, 100) }).catch(() => {})
+    }
     const recorder = createRecorder((events) => void keep(events), { now: Date.now, mutationWindowMs: 300, pauseMs: 5000 })
     const detach = recorder.attach(document)
+    // The replay starts with the attempt; rrweb is fetched here and nowhere before.
+    const stopReplay = startReplay(document, (events) => void keep(events, keptReplay))
     // The page this document opened on, once per load (React's strict mode runs this effect twice). A full navigation starts a new
     // recorder, which sees no change of address of its own; the visit also goes out at once, so leaving fast does not lose it.
     const href = location.href.slice(0, 2000)
@@ -123,7 +140,7 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
       visitRecorded = `${attempt} ${href}`
       sendNow(keep([{ type: 'url', at: Date.now(), url: href }]))
     }
-    const replay = () => void kept.flush()
+    const replay = () => { void kept.flush(); void keptReplay.flush() }
     // Leaving: what IndexedDB does not have yet (a click that navigates away) goes out on a keepalive request, then the rest.
     const leave = () => { sendNow([...held.values()]); replay() }
     // What was left from a lost connection or a reload replays now; what still cannot be sent stays kept for the next visit.
@@ -132,6 +149,7 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
     window.addEventListener('pagehide', leave)
     return () => {
       detach()
+      stopReplay()
       clearTimeout(timer)
       window.removeEventListener('online', replay)
       window.removeEventListener('pagehide', leave)
@@ -156,6 +174,7 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
     setBusy(true)
     try {
       await buffer.current?.flush()
+      await replayBuffer.current?.flush()
       const snapshot = fitSnapshot(serializeSnapshot(document))
       // Done on the last step is that step's Done too: its check reads the same snapshot as the outcome.
       const steps = active.goal.steps.length
@@ -164,6 +183,7 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
       // A second end (another tab, or Done racing the time limit) is refused with 409; the first one stands, so go on either way.
       if (response.ok || response.status === 409) {
         await buffer.current?.destroy()
+        await replayBuffer.current?.destroy()
         window.location.assign(`/ui-tests/${active.run}/?after=1`)
         return
       }

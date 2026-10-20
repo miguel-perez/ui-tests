@@ -3,6 +3,7 @@
 import type { Trace, TraceAttempt } from './build.ts'
 import type { RunRow } from '../store/types.ts'
 import type { TunnelRecord } from '../tunnel/types.ts'
+import { momentLabel } from './reel.ts'
 
 const css = `
 body{font:15px/1.5 system-ui,sans-serif;margin:0;padding:24px 16px;color:#1a1a1a;background:#fff}
@@ -32,6 +33,7 @@ function Shell({ title, actor, children }: { title: string; actor: string; child
           <p><a href="/">ui-tests</a> · <span className="label">{actor}</span></p>
           {children}
         </main>
+        <script src="/replay.js" defer />
       </body>
     </html>
   )
@@ -61,6 +63,16 @@ function Attempt({ item, index }: { item: TraceAttempt; index: number }) {
             <tr><th>Actual</th><td><pre>{json(diff.actual)}</pre></td></tr>
           </tbody>
         </table>
+      )}
+      {item.replay && (
+        <>
+          <h4>Replay</h4>
+          <div data-replay={attempt.id}>
+            {/* The player is added in the browser; the events are carried as data, with `<` escaped so they cannot close the tag. */}
+            <script type="application/json" dangerouslySetInnerHTML={{ __html: JSON.stringify({ events: item.replay.map((e) => e.data), moments: item.reel.map((m) => ({ start: m.start, end: m.end, label: momentLabel(m) })) }).replace(/</g, '\\u003c') }} />
+            <noscript>The replay needs JavaScript.</noscript>
+          </div>
+        </>
       )}
       <h4>Events</h4>
       {events.length === 0 ? <p>No events recorded.</p> : (
@@ -120,6 +132,7 @@ export function TraceView({ trace }: { trace: Trace }) {
 
       <h2>Attempts</h2>
       {trace.attempts.length === 0 ? <p>No attempts recorded.</p> : trace.attempts.map((item, i) => <Attempt key={item.attempt.id} item={item} index={i} />)}
+      {trace.attempts.some((item) => item.replay) && <script src="/replay.js" defer />}
 
       {trace.lint.length > 0 && (
         <>

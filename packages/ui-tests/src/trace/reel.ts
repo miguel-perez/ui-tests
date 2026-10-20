@@ -1,0 +1,33 @@
+import type { Signal } from '../signals.ts'
+import type { RecordedEvent } from '../store/types.ts'
+
+export type ReelMoment = { start: number; end: number; signal: Signal; words: string[] }
+
+/** How much of the recording is kept either side of a signal. */
+export const REEL_PAD_MS = 3000
+
+/**
+ * The parts of a recording worth watching: a window around each signal, windows that touch merged into one, and the words the
+ * person said inside a window attached to it. Windows stay inside the recorded span. A merged window keeps its earliest signal.
+ */
+export function highlightReel(input: { events: RecordedEvent[]; signals: Signal[]; words: { at: number; text: string }[]; padMs?: number }): ReelMoment[] {
+  const pad = input.padMs ?? REEL_PAD_MS
+  const times = input.events.map((event) => event.at)
+  const first = times.length ? Math.min(...times) : -Infinity
+  const last = times.length ? Math.max(...times) : Infinity
+  const windows: ReelMoment[] = []
+  for (const signal of [...input.signals].sort((a, b) => a.at - b.at)) {
+    const start = Math.max(first, signal.at - pad)
+    const end = Math.min(last, signal.at + pad)
+    const previous = windows.at(-1)
+    if (previous && start <= previous.end) previous.end = Math.max(previous.end, end)
+    else windows.push({ start, end, signal, words: [] })
+  }
+  for (const window of windows) {
+    window.words = input.words.filter((word) => word.at >= window.start && word.at <= window.end).sort((a, b) => a.at - b.at).map((word) => word.text)
+  }
+  return windows
+}
+
+/** What a moment is called where it is listed: the signal's detail, with the words said during it. */
+export const momentLabel = (moment: ReelMoment) => (moment.words.length ? `${moment.signal.detail} ("${moment.words.join(' ')}")` : moment.signal.detail)

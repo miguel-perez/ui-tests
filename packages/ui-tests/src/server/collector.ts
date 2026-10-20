@@ -26,6 +26,8 @@ export type CollectorOptions = {
 /** Most bytes a body may carry. `end` holds a snapshot of up to 2,000,000 characters, which JSON-escaping can nearly double. */
 const END_BYTES = 5_000_000
 const BODY_BYTES = 2_100_000
+/** A batch of replay events (rrweb) has its own limit: its first event is a full snapshot of the page, which can pass the events limit. */
+const REPLAY_BYTES = 5_000_000
 const MAX_EVENTS = 100
 const MAX_SNAPSHOT_CHARS = 2_000_000
 /** About 1.4 MB of audio once decoded: a minute or two of speech. */
@@ -44,11 +46,14 @@ const event = z.object({
   data: z.unknown().optional(),
   seq: z.number().int().nonnegative().optional(),
 })
+const replayEvent = event.extend({ type: z.literal('rrweb') })
 const scale = z.number().int().min(1).max(7)
 const message = z.discriminatedUnion('action', [
   z.object({ action: z.literal('consent') }),
   z.object({ action: z.literal('begin') }),
-  z.object({ action: z.literal('events'), events: z.array(event).max(MAX_EVENTS) }),
+  z.object({ action: z.literal('events'), events: z.array(event.refine((e) => e.type !== 'rrweb', 'Replay events go in a replay batch')).max(MAX_EVENTS) }),
+  /** The event replay (rrweb): batches of their own, never mixed with the events above. */
+  z.object({ action: z.literal('replay'), events: z.array(replayEvent).max(MAX_EVENTS) }),
   z.object({ action: z.literal('step'), index: z.number().int().nonnegative(), snapshot: snapshot.optional() }),
   z.object({ action: z.literal('end'), reason: z.enum(['done', 'gave up', 'timeout']), snapshot }),
   z.object({
@@ -173,7 +178,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     let raw: unknown
     try { raw = JSON.parse(text) } catch { return refuse(400, 'Body is not JSON') }
     const action = (raw as { action?: unknown } | null)?.action
-    if (action !== 'end' && Buffer.byteLength(text) > BODY_BYTES) return refuse(413, 'Request too large')
+    if (action !== 'end' && Buffer.byteLength(text) > (action === 'replay' ? REPLAY_BYTES : BODY_BYTES)) return refuse(413, 'Request too large')
     const parsed = message.safeParse(raw)
     if (!parsed.success) return refuse(400, parsed.error.message)
 
@@ -236,6 +241,11 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         return moved ? reload() : conflict('Consent is required before beginning')
       }
       case 'events': {
+        if ((await store.getAttempt(attempt.id))?.status !== 'active') return conflict('Attempt is not active')
+        await store.appendEvents(attempt.id, body.events as RecordedEvent[])
+        return reload()
+      }
+      case 'replay': {
         if ((await store.getAttempt(attempt.id))?.status !== 'active') return conflict('Attempt is not active')
         await store.appendEvents(attempt.id, body.events as RecordedEvent[])
         return reload()

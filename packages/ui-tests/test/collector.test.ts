@@ -484,3 +484,41 @@ describe('fix round 1', () => {
     expect(ok.headers.getSetCookie().every((c) => c.endsWith('; Secure'))).toBe(true)
   })
 })
+
+describe('event replay', () => {
+  const frame = (at: number, data: unknown = { type: 3, timestamp: at }) => ({ type: 'rrweb', at, url: '/', seq: at, data })
+
+  it('stores replay events sent as a replay batch, once each, and keeps them out of the plain events', async () => {
+    const { attempt, token } = await active()
+    const batch = { action: 'replay', events: [frame(1), frame(2)] }
+    expect((await post(token, batch)).status).toBe(200)
+    expect((await post(token, batch)).status).toBe(200)
+    expect((await store.listEvents(attempt.id)).map((e) => e.type)).toEqual(['rrweb', 'rrweb'])
+    expect((await post(token, { action: 'events', events: [frame(3)] })).status).toBe(400)
+    expect((await post(token, { action: 'replay', events: [{ type: 'click', at: 1, url: '/' }] })).status).toBe(400)
+  })
+
+  it('takes a replay batch past the 2,100,000 bytes of an events body, up to its own 5,000,000, and answers 413 beyond', async () => {
+    const { attempt, token } = await active()
+    const full = frame(5, { type: 2, timestamp: 5, node: 'x'.repeat(3_000_000) })
+    expect((await post(token, { action: 'replay', events: [full] })).status).toBe(200)
+    expect(await store.listEvents(attempt.id)).toHaveLength(1)
+    expect((await post(token, { action: 'replay', events: [frame(6, { node: 'x'.repeat(5_100_000) })] })).status).toBe(413)
+    // The 100-event batch limit holds for replay batches too.
+    expect((await post(token, { action: 'replay', events: Array.from({ length: 101 }, (_, i) => frame(100 + i)) })).status).toBe(400)
+  })
+
+  it('refuses a replay batch when the attempt is not active', async () => {
+    const made = await start()
+    expect((await post(made.token, { action: 'replay', events: [frame(1)] })).status).toBe(409)
+  })
+
+  it('deletes the replay on withdrawal, and refuses more afterwards', async () => {
+    const { attempt, token } = await active()
+    await post(token, { action: 'replay', events: [frame(1), frame(2)] })
+    expect(await store.listEvents(attempt.id)).toHaveLength(2)
+    expect((await post(token, { action: 'withdraw' })).status).toBe(200)
+    expect(await store.listEvents(attempt.id)).toEqual([])
+    expect((await post(token, { action: 'replay', events: [frame(3)] })).status).toBe(409)
+  })
+})
