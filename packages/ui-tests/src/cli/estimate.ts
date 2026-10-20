@@ -23,9 +23,10 @@ export const estimate: Command = async (args, io) => {
   const actorFlag = args.flags.get('actor')
   if (actorFlag !== undefined && actorFlag !== 'human' && actorFlag !== 'agent') { io.stderr.write('--actor must be human or agent\n'); return 2 }
   const actor = actorFlag ?? config.actor ?? 'human'
-  const candidates = loaded.filter(l => (typeof wanted !== 'string' || l.compiled.name === wanted) && l.compiled.actors.includes(actor))
-  if (typeof wanted === 'string' && !candidates.length) { io.stderr.write(`No study named "${wanted}"\n`); return 2 }
-  if (!candidates.length) { io.stderr.write('No study found\n'); return 2 }
+  const named = loaded.filter(l => typeof wanted !== 'string' || l.compiled.name === wanted)
+  if (typeof wanted === 'string' && !named.length) { io.stderr.write(`No study named "${wanted}"\n`); return 2 }
+  const candidates = named.filter(l => l.compiled.actors.includes(actor))
+  if (!candidates.length) { io.stderr.write(`No study admits the ${actor} actor${typeof wanted === 'string' ? `: "${wanted}"` : ''}\n`); return 2 }
   if (candidates.length > 1) { io.stderr.write(`${candidates.length} studies; pass --study <name>:\n${candidates.map(l => `  ${l.compiled.name}`).join('\n')}\n`); return 2 }
   const { compiled } = candidates[0]
   const result = { n: compiled.sample.n, minutes: minutesOf(compiled.goals.reduce((sum, g) => sum + g.timeout.seconds, 0)) }

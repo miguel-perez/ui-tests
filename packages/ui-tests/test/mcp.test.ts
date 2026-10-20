@@ -6,7 +6,7 @@ import { join } from 'node:path'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { main, type Io } from '../src/cli/main.ts'
 import { readableRecord } from '../src/consumers.ts'
 import { createMcpServer } from '../src/mcp/server.ts'
@@ -114,26 +114,29 @@ describe('the MCP server', () => {
     expect((await call('status', { run: 'r_missing' })).isError).toBe(true)
   })
 
-  it('leaves out the words and recordings of people who did not agree to the use', async () => {
+  it('is a workflow consumer: words come only from people who agreed to share with a workflow, and the withheld are counted', async () => {
     const { call } = await connect()
     const { run } = (await call('run', { actor: 'human', key: 'mcp-key-4' })).json()
     const store = await openStore({ UI_TESTS_DATA_DIR: data })
     cleanup.push(() => store.close())
-    const consent = ['analysis by the author', 'model-assisted analysis of the trace', 'sharing the record with an automated workflow']
     const make = async (participant: string, purposes: string[]) => {
       const { attempt } = await store.createAttempt({ runId: run, participant, goalIndex: 0, rehearsal: false })
       await store.updateAttempt(attempt.id, { status: 'finished', reason: 'done', purposes, startedAt: new Date(0).toISOString(), endedAt: new Date(5000).toISOString(), answers: { 'goal0.ease': 2, 'goal0.difficulty': `words of ${participant}` } })
     }
     await make('author-only', ['analysis by the author'])
-    await make('everything', consent)
-    const wordsOf = async (use: string) => {
-      const record = (await call('report', { run, use })).json() as RunRecord
-      return record.attempts.filter(a => a.status === 'finished').map(a => [a.participant, a.answers])
-    }
-    expect(await wordsOf('words')).toEqual([['author-only', { 'goal0.ease': 2 }], ['everything', { 'goal0.ease': 2, 'goal0.difficulty': 'words of everything' }]])
-    expect(await wordsOf('recordings')).toEqual([['author-only', { 'goal0.ease': 2, 'goal0.difficulty': 'words of author-only' }], ['everything', { 'goal0.ease': 2, 'goal0.difficulty': 'words of everything' }]])
-    expect(await wordsOf('workflow')).toEqual([['author-only', { 'goal0.ease': 2 }], ['everything', { 'goal0.ease': 2, 'goal0.difficulty': 'words of everything' }]])
-    expect((await call('report', { run, use: 'anything' })).isError).toBe(true)
+    await make('everything', ['analysis by the author', 'model-assisted analysis of the trace', 'sharing the record with an automated workflow'])
+    const wordsOf = (record: RunRecord) => record.attempts.filter(a => a.status === 'finished').map(a => [a.participant, a.answers])
+    const expected = [['author-only', { 'goal0.ease': 2 }], ['everything', { 'goal0.ease': 2, 'goal0.difficulty': 'words of everything' }]]
+    const report = (await call('report', { run })).json()
+    expect(wordsOf(report)).toEqual(expected)
+    expect(report.withheld).toBe(1)
+    // A `use` argument cannot widen the gate.
+    expect(wordsOf((await call('report', { run, use: 'recordings' })).json())).toEqual(expected)
+    const traced = (await call('trace', { run })).json()
+    expect(traced.withheld).toBe(1)
+    expect(wordsOf(traced.record)).toEqual(expected)
+    expect(JSON.stringify(traced)).not.toContain('words of author-only')
+    expect(traced.attempts.map((a: { attempt: string }) => a.attempt)).toHaveLength(1)
   })
 
   it('drops the words and moments of closed attempts from the issues', () => {
@@ -148,17 +151,13 @@ describe('the MCP server', () => {
     expect(readableRecord(record, 'workflow').issues[0]).toMatchObject({ words: [], moments: [] })
   })
 
-  it('serves the trace on the loopback address only and stops with the server', async () => {
-    const { call, client } = await connect()
+  it('returns the trace as data and starts no server', async () => {
+    const { call } = await connect()
     const { run } = (await call('run', { actor: 'human', key: 'mcp-key-5' })).json()
-    const traced = await call('trace', { run })
-    const { url } = traced.json()
-    expect(new URL(url).hostname).toBe('127.0.0.1')
-    expect((await call('trace', { run })).json().url).toBe(url)
-    expect((await fetch(url)).status).toBe(200)
+    const traced = (await call('trace', { run })).json()
+    expect(traced).toMatchObject({ run, record: { handle: { run } }, withheld: 0, attempts: [] })
+    expect(JSON.stringify(traced)).not.toMatch(/http:\/\/(127|localhost)[^"]*\/runs\//)
     expect((await call('trace', { run: 'r_missing' })).isError).toBe(true)
-    await client.close()
-    await expect(fetch(url)).rejects.toThrow()
   })
 
   it('serves over stdio from the ui-tests mcp command', async () => {
@@ -170,5 +169,21 @@ describe('the MCP server', () => {
     expect(tools).toHaveLength(7)
     const estimate = await client.callTool({ name: 'estimate', arguments: {} }) as { content: { text: string }[] }
     expect(JSON.parse(estimate.content[0]!.text)).toEqual({ n: 5, minutes: 3 })
+  }, 30_000)
+
+  it('exits by itself when the client closes stdin after a trace call', async () => {
+    const { spawn } = await import('node:child_process')
+    const child = spawn('node', [join(import.meta.dirname, '../bin/ui-tests.mjs'), 'mcp'], { cwd: work, env: { PATH: process.env.PATH ?? '', UI_TESTS_DATA_DIR: data }, stdio: ['pipe', 'pipe', 'pipe'] })
+    cleanup.push(() => { child.kill() })
+    let out = ''
+    child.stdout.on('data', d => (out += d))
+    const send = (message: object) => child.stdin.write(`${JSON.stringify(message)}\n`)
+    send({ jsonrpc: '2.0', id: 1, method: 'initialize', params: { protocolVersion: '2025-03-26', capabilities: {}, clientInfo: { name: 'test', version: '0' } } })
+    send({ jsonrpc: '2.0', method: 'notifications/initialized' })
+    send({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'trace', arguments: { run: 'r_missing' } } })
+    await vi.waitFor(() => expect(out).toContain('"id":2'), { timeout: 15_000 })
+    const exited = new Promise<number | null>(resolve => child.on('exit', code => resolve(code)))
+    child.stdin.end()
+    expect(await Promise.race([exited, new Promise(resolve => setTimeout(() => resolve('still running'), 5000))])).toBe(0)
   }, 30_000)
 })

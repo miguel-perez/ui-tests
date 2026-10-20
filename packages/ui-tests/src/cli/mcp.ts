@@ -9,7 +9,8 @@ export const mcp: Command = async (_args, io) => {
   const server = createMcpServer(io)
   await server.connect(new StdioServerTransport())
   await new Promise<void>(resolve => {
-    server.server.onclose = () => resolve()
+    const previous = server.server.onclose
+    server.server.onclose = () => { previous?.(); resolve() }
     process.stdin.once('end', () => resolve())
     io.deps?.signal?.addEventListener('abort', () => resolve(), { once: true })
     if (io.deps?.signal?.aborted) resolve()

@@ -22,6 +22,7 @@ describe('ui-tests estimate', () => {
   })
   it('exits 2 for an unknown study and when there are no studies', async () => {
     expect((await estimate('example', '--study', 'nope')).code).toBe(2)
+    expect((await estimate('example', '--study', 'invite flow', '--actor', 'agent')).err).toContain('No study admits the agent actor')
     expect((await estimate('empty')).err).toContain('no study files found')
   })
 })
