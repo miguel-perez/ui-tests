@@ -15,7 +15,7 @@ const fixture = (name: string) => join(import.meta.dirname, 'fixtures', `${name}
 // A fake microphone, so the voice answer records without a person speaking.
 test.use({ permissions: ['microphone'], launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } })
 
-const BAR = '[data-ui-tests]'
+const BAR = '[data-ui-tests-root]'
 const heading = (page: Page) => page.getByRole('heading', { level: 1 })
 
 /** Zero violations of WCAG 2 A and AA rules on what the page shows now (or inside `include`). */

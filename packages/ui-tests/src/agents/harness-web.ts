@@ -1,5 +1,5 @@
 import { chromium, type Browser, type BrowserContext, type Page } from 'playwright-core'
-import { ROOT_ATTRIBUTE } from '../next/recorder.ts'
+import { ROOT_ATTRIBUTE } from '../browser/recorder.ts'
 import type { Snapshot } from '../store/types.ts'
 import type { Harness, ToolSpec } from './model.ts'
 

@@ -3,7 +3,7 @@ import type { RecordedEvent, Snapshot } from '../store/types.ts'
 export type RecorderOptions = { now(): number; mutationWindowMs: number; pauseMs: number }
 
 /** Marks the bar's own root, which the recorder and the snapshot leave out. */
-export const ROOT_ATTRIBUTE = 'data-ui-tests'
+export const ROOT_ATTRIBUTE = 'data-ui-tests-root'
 
 const SCROLL_EVERY_MS = 500
 const INPUT_EVERY_MS = 1000

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { startScreenRecording, type ChunkInfo } from '../src/next/screen-recorder.ts'
+import { startScreenRecording, type ChunkInfo } from '../src/browser/screen-recorder.ts'
 
 class FakeRecorder {
   static types = ['video/webm']

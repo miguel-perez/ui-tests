@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
-import type { ParticipantView } from '../server/view.ts'
+import type { BarView } from '../server/view.ts'
 import { FIRST_CLICK_PROMPT } from '../player/copy.ts'
 import { ROOT_ATTRIBUTE } from './recorder.ts'
 import { chromeVars } from './theme.ts'
@@ -19,7 +19,8 @@ export type ScreenBar =
 export const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds) % 60).padStart(2, '0')}`
 
 export type TaskbarProps = {
-  view: Pick<ParticipantView, 'goal' | 'brand'>
+  /** No scenario: the player shows it before the task, and the app's page may not know it. */
+  view: { goal: { name: string }; brand: BarView['brand'] }
   theme: ChromeTheme
   /** Shown once the time is nearly spent and the participant has not yet asked for more. */
   offerMoreTime: boolean
@@ -128,7 +129,6 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
       <style>{css}</style>
       {reading && (
         <div className="uit-card">
-          <p>{view.goal.scenario}</p>
           <p className="uit-dim">When you think you&apos;ve finished, press Done. If you get stuck, press I couldn&apos;t do this.</p>
         </div>
       )}

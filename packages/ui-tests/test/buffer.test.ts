@@ -1,7 +1,7 @@
 import { IDBFactory } from 'fake-indexeddb'
 import { describe, expect, it } from 'vitest'
 import type { RecordedEvent } from '../src/store/types.ts'
-import { REPLAY_BATCH_BYTES, createBuffer } from '../src/next/buffer.ts'
+import { REPLAY_BATCH_BYTES, createBuffer } from '../src/browser/buffer.ts'
 
 const events = (n: number, from = 0): RecordedEvent[] => Array.from({ length: n }, (_, i) => ({ type: 'click' as const, at: from + i, url: '/', target: `#b${from + i}` }))
 

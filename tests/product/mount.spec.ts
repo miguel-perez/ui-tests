@@ -5,7 +5,7 @@ import { PRODUCT_URL, createRehearsalRun } from './helpers'
 
 const fixture = join(import.meta.dirname, 'fixtures', 'mount.ui.test.ts')
 const COLLECTOR = `${PRODUCT_URL}/api/ui-tests/`
-const BAR = '[data-ui-tests], [data-ui-tests-bar]'
+const BAR = '[data-ui-tests-root], [data-ui-tests-bar]'
 
 test('the collector refuses a request without a token', async ({ request }) => {
   const response = await request.get(COLLECTOR)

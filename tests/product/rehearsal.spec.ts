@@ -18,7 +18,7 @@ const web = join(root, 'apps', 'web')
 const bin = join(root, 'packages', 'ui-tests', 'bin', 'ui-tests.mjs')
 const fixture = (name: string) => join(import.meta.dirname, 'fixtures', `${name}.ui.test.ts`)
 const REHEARSAL = 'Rehearsal: 0 of 5 planned attempts recorded.'
-const BAR = '[data-ui-tests]'
+const BAR = '[data-ui-tests-root]'
 
 test.use({ reducedMotion: 'reduce' })
 
@@ -364,7 +364,7 @@ test.describe('fixture studies through the same player and bar', () => {
     const colours = await page.evaluate(() => {
       const root = getComputedStyle(document.documentElement)
       const probe = (value: string) => { const el = document.createElement('i'); el.style.color = value; document.body.append(el); const rgb = getComputedStyle(el).color; el.remove(); return rgb }
-      const pill = getComputedStyle(document.querySelector('[data-ui-tests] .uit-pill')!)
+      const pill = getComputedStyle(document.querySelector('[data-ui-tests-root] .uit-pill')!)
       return { ink: probe(root.getPropertyValue('--ink').trim()), canvas: probe(root.getPropertyValue('--canvas').trim()), surface: pill.backgroundColor, text: pill.color }
     })
     // The inverse of the host page: its ink is the bar's surface, its ground the bar's text.

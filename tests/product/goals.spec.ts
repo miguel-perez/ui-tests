@@ -10,7 +10,7 @@ import { PRODUCT_URL, createLinkRun } from './helpers'
  */
 
 const fixture = join(import.meta.dirname, 'fixtures', 'two-goals.ui.test.ts')
-const BAR = '[data-ui-tests]'
+const BAR = '[data-ui-tests-root]'
 const heading = (page: Page) => page.getByRole('heading', { level: 1 })
 const next = (page: Page) => page.getByRole('button', { name: /^(Continue|Submit)$/ })
 
