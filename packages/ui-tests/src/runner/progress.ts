@@ -7,10 +7,24 @@ export function handleOf(run: RunRow): RunHandle {
   return { run: id, key, context, build, actor, states, result, deadline, revision }
 }
 
+/** What the counting rules read of an attempt: an attempt row, or the record's copy of one (`startedAt` from its timings). */
+export type Countable = Pick<AttemptRow, 'rehearsal' | 'status' | 'flags'> & { reason?: AttemptRow['reason'] | null; startedAt?: string | undefined; verification?: unknown }
+
 /** Whether an attempt counts toward n: real, finished, started, verified, and neither withdrawn, disconnected, retired nor excluded by the author. One predicate for the run's states and the run record. */
-export function countsTowardN(a: AttemptRow): boolean {
-  return !a.rehearsal && a.status === 'finished' && a.reason !== 'withdrew' && a.reason !== 'disconnected' && !a.flags.includes('retired') && !a.flags.includes('excluded') && a.startedAt !== undefined && a.verification !== undefined
+export function countsTowardN(a: Countable): boolean {
+  return !a.rehearsal && a.status === 'finished' && a.reason !== 'withdrew' && a.reason !== 'disconnected' && !a.flags.includes('retired') && !a.flags.includes('excluded') && a.startedAt !== undefined && a.verification != null
 }
+
+/** Whether a run's result is complete: n people were counted, so a later withdrawal does not change it (PRD 03). */
+export const resultComplete = (run: { rehearsal?: boolean; states: { collection: string }; result: string }): boolean =>
+  !run.rehearsal && run.states.collection === 'complete' && run.result !== 'pending'
+
+/** A withdrawn person who had been verified keeps their place in n on a completed run: their recordings and words are gone, their verdict is not. */
+export const holdsPlaceInN = (a: Countable): boolean =>
+  a.reason === 'withdrew' && !a.rehearsal && a.startedAt !== undefined && a.verification != null && !a.flags.includes('retired') && !a.flags.includes('excluded')
+
+/** The one rule for who is in n and in the result: who counts toward n, and on a completed run the withdrawn who held their place. */
+export const countedInResult = (a: Countable, complete: boolean): boolean => countsTowardN(a) || (complete && holdsPlaceInN(a))
 
 /**
  * Brings a run's states and result in line with its attempts and the deadline. Only attempts that are not rehearsals, passed the
@@ -27,10 +41,7 @@ async function settle(store: RunStore, runId: string, now: Date): Promise<RunRow
     const pending = finished.some(a => a.reason !== 'disconnected' && !a.verification)
     const counted = finished.filter(countsTowardN)
     // A withdrawal after the result is complete removes recordings and marks the attempt; it does not change n or the result (PRD 03).
-    const wasComplete = !run.rehearsal && run.states.collection === 'complete' && run.result !== 'pending'
-    const heldForN = wasComplete
-      ? all.filter(a => a.reason === 'withdrew' && !a.rehearsal && a.startedAt !== undefined && a.verification !== undefined && !a.flags.includes('retired') && !a.flags.includes('excluded'))
-      : []
+    const heldForN = resultComplete(run) ? all.filter(holdsPlaceInN) : []
     const inN = [...counted, ...heldForN]
     const verification = finished.length && !pending ? 'complete' : 'pending'
     const n = run.compiled.sample.n

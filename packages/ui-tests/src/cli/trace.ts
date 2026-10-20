@@ -4,6 +4,7 @@ import { lint, type LintFinding } from '../lint.ts'
 import { openStore } from '../store/open.ts'
 import type { RunRow } from '../store/types.ts'
 import { serveTrace } from '../trace/serve.ts'
+import { reporterFor } from './outward.ts'
 import { loadStudies, withProduct } from './lint.ts'
 import type { Command, Io } from './main.ts'
 
@@ -41,7 +42,7 @@ export const trace: Command = async (args, io) => {
     if (!(await store.getRun(id))) { io.stderr.write(`No such run: ${id}\n`); return 2 }
     const port = args.flags.get('port')
     const author = await authorOf(io)
-    const server = await serveTrace({ store, lint: await lintFor(io), author, ...(typeof port === 'string' && { port: Number(port) }) })
+    const server = await serveTrace({ store, lint: await lintFor(io), author, onResult: reporterFor(io), ...(typeof port === 'string' && { port: Number(port) }) })
     const url = `${server.url}/runs/${encodeURIComponent(id)}/`
     io.stdout.write(`Trace: ${url}\n`)
     if (!args.flags.has('no-open')) await (io.deps?.openUrl ?? openUrl)(url)

@@ -78,6 +78,21 @@ export function studyEditSnippet(edit: StudyEdit): string[] {
   ]
 }
 
+/** One plain line for a revision, for the viewer and for the record's `note`. */
+export function describeRevision(r: Revision): string {
+  switch (r.kind) {
+    case 'exclude': return `Excluded attempt ${r.attempt}: ${r.reason}; stays paid`
+    case 'incentive': return `Incentive ${r.attempt ? `for attempt ${r.attempt} ` : ''}set to ${r.amount.minor} ${r.amount.currency} (minor units)`
+    case 'issue-edit': return `Edited issue ${r.issue}${r.title ? `: title “${r.title}”` : ''}${r.suggestedChange ? `: suggested change “${r.suggestedChange}”` : ''}`
+    case 'issue-merge': return `Merged ${r.issues.length} issues`
+    case 'issue-split': return `Split issue ${r.issue} into ${r.moments.length}`
+    case 'scenario': return `Task ${r.goalIndex + 1} wording: “${r.text}”`
+    case 'promote-path': return `Task ${r.goalIndex + 1} path promoted: ${r.path.join(' → ')}`
+    case 'code-impression': return `Coded the first look of attempt ${r.attempt} as ${r.code}`
+    case 'undo': return `Undid revision ${r.revision}`
+  }
+}
+
 type Issue = RunRecord['issues'][number]
 const impactRank = { blocked: 0, slowed: 1, confused: 2 } as const
 
@@ -144,10 +159,15 @@ export function applyRevisions<T extends Omit<RunRecord, 'evidence' | 'evidenceS
       default: break
     }
   }
+  // Merging or splitting changes how many people an issue has, so the order is made again: impact, then people, otherwise as it was.
+  issues = issues.map((issue, i) => ({ issue, i })).sort((x, y) => impactRank[x.issue.impact] - impactRank[y.issue.impact] || y.issue.participants.length - x.issue.participants.length || x.i - y.i).map(e => e.issue)
+  const log = numbered(revisions)
   return {
     ...record,
     issues,
-    revisions: numbered(revisions),
+    // `revisions` keeps the shape v1 first published (when, who, a note); `revisionLog` is the full numbered detail.
+    revisions: log.map(({ number, undone, revision }) => ({ at: revision.at, author: revision.by, note: `${number}. ${describeRevision(revision)}${undone ? ' (undone)' : ''}` })),
+    revisionLog: log,
     exclusions: exclusionsOf(revisions).map(e => ({ ...e, staysPaid: true as const })),
     studyEdits: pendingStudyEdits(revisions),
     ...(incentive && { incentive }),

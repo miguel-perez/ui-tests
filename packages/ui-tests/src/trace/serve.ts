@@ -10,6 +10,7 @@ import type { IncomingMessage } from 'node:http'
 import type { RunRow, RunStore } from '../store/types.ts'
 import { buildRecord } from '../record/build.ts'
 import { mayShow, ReportView } from '../report/view.tsx'
+import type { ResultHook } from '../runner/progress.ts'
 import { buildTrace } from './build.ts'
 import { recordRevision, RevisionRefused, type RevisionRequest } from './revise.ts'
 import { momentLabel } from './reel.ts'
@@ -111,7 +112,7 @@ async function authorReport(store: RunStore, id: string, person: number | undefi
  * Serves the trace on this machine only: `/` lists runs, `/runs/<run>/` shows one, `/runs/<run>.json` is the same
  * data. It binds to the loopback address, because the trace is for the author's own session (PRD 06).
  */
-export async function serveTrace(options: { store: RunStore; port?: number; host?: string; lint?: LintFinding[] | ((run: RunRow) => LintFinding[]); author?: string; now?: () => Date }): Promise<{ url: string; close(): Promise<void> }> {
+export async function serveTrace(options: { store: RunStore; port?: number; host?: string; lint?: LintFinding[] | ((run: RunRow) => LintFinding[]); author?: string; now?: () => Date; onResult?: ResultHook }): Promise<{ url: string; close(): Promise<void> }> {
   const host = options.host ?? '127.0.0.1'
   if (!loopback.has(host)) throw new Error(`The trace is served on this machine only; refusing to bind ${host}`)
   const { store } = options
@@ -137,9 +138,9 @@ export async function serveTrace(options: { store: RunStore; port?: number; host
         if (!form) return send(413, 'text/plain', 'Too large')
         try {
           const ids = (await store.listAttempts(id)).map(a => a.id)
-          await recordRevision(store, id, requestFrom(form, ids), { by: author, ...(options.now && { now: options.now }) })
+          await recordRevision(store, id, requestFrom(form, ids), { by: author, ...(options.now && { now: options.now }), ...(options.onResult && { onResult: options.onResult }) })
         } catch (error) {
-          if (error instanceof RevisionRefused) return send(422, 'text/plain', error.message)
+          if (error instanceof RevisionRefused) return send(400, 'text/plain', error.message)
           throw error
         }
         res.writeHead(303, { location: `/runs/${encodeURIComponent(id)}/#revisions` })

@@ -1,5 +1,6 @@
 import type { TextModel } from './model.ts'
 import type { Signal } from './signals.ts'
+import { holdsPlaceInN } from './runner/progress.ts'
 import type { AttemptRow } from './store/types.ts'
 
 export type Impact = 'blocked' | 'slowed' | 'confused'
@@ -60,6 +61,9 @@ const pageOf = (url: string | undefined) => {
 const newer = (x: AttemptRow, y: AttemptRow) => (x.startedAt ?? '') > (y.startedAt ?? '') || ((x.startedAt ?? '') === (y.startedAt ?? '') && x.id > y.id)
 const normalised = (page: string) => page.replace(/(.)\/$/, '$1')
 const ignored = (a: AttemptRow) => a.rehearsal || a.flags.includes('retired') || a.flags.includes('excluded') || a.reason === 'withdrew' || a.reason === 'disconnected'
+/** On a completed run a withdrawn, verified person still counts: only their verdict is kept, so a wrong outcome is the one thing known of them. */
+const held = (a: AttemptRow, complete: boolean | undefined) => complete === true && holdsPlaceInN(a)
+const WITHDRAWN_MISS: Signal = { kind: 'false-done', at: 0, detail: 'The outcome was not reached; the person withdrew, so only the verdict is kept' }
 
 type Cluster = { goalIndex: number; page: string; element?: string; step?: number; hits: Map<string, { attempt: AttemptRow; signals: { attempt: string; signal: Signal }[] }>; kinds: Set<Signal['kind']> }
 
@@ -67,10 +71,12 @@ type Cluster = { goalIndex: number; page: string; element?: string; step?: numbe
  * Group signals from different people into issues keyed on goal, page and element. Counts come from the traces only; rehearsal, withdrawn,
  * disconnected and retired attempts are left out. Ranked by impact, then by how many people hit it.
  */
-export function clusterIssues(input: { n: number; attempts: { attempt: AttemptRow; signals: Signal[] }[] }): Issue[] {
+export function clusterIssues(input: { n: number; complete?: boolean; attempts: { attempt: AttemptRow; signals: Signal[] }[] }): Issue[] {
   const clusters = new Map<string, Cluster>()
-  for (const { attempt, signals } of input.attempts) {
-    if (ignored(attempt)) continue
+  for (const { attempt, signals: seen } of input.attempts) {
+    const withdrawn = held(attempt, input.complete)
+    if (ignored(attempt) && !withdrawn) continue
+    const signals = withdrawn ? (attempt.verification?.status === 'incorrect' ? [WITHDRAWN_MISS] : []) : seen
     for (const signal of signals) {
       const page = pageOf(signal.url)
       const key = JSON.stringify([attempt.goalIndex, normalised(page), signal.target ?? signal.step ?? null])
@@ -91,10 +97,10 @@ export function clusterIssues(input: { n: number; attempts: { attempt: AttemptRo
     const access = new Set<string>()
     const moments: Issue['moments'] = []
     for (const [participant, { attempt, signals }] of hits) {
-      const said = attempt.answers[`goal${attempt.goalIndex}.difficulty`]
+      const said = attempt.reason === 'withdrew' ? undefined : attempt.answers[`goal${attempt.goalIndex}.difficulty`]
       if (typeof said === 'string' && said.trim()) words.push({ participant, text: said.trim() })
-      for (const value of Object.values(attempt.environment ?? {})) if (value && value !== 'None') access.add(value)
-      for (const { attempt: id, signal } of signals) moments.push({ attempt: id, at: signal.at })
+      if (attempt.reason !== 'withdrew') for (const value of Object.values(attempt.environment ?? {})) if (value && value !== 'None') access.add(value)
+      if (attempt.reason !== 'withdrew') for (const { attempt: id, signal } of signals) moments.push({ attempt: id, at: signal.at })
     }
     moments.sort((x, y) => x.at - y.at)
     const where = cluster.element ? `${cluster.element} on ${cluster.page}` : cluster.step !== undefined ? `step ${cluster.step + 1} on ${cluster.page}` : cluster.page

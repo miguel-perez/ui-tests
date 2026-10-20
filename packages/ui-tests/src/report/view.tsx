@@ -234,7 +234,7 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
       <section aria-labelledby="uit-people">
         <h2 id="uit-people">People</h2>
         {record.exclusions.length > 0 && <p>{plural(record.exclusions.length, 'person', 'people')} excluded by the author as not the audience. They are not counted, and they were still paid.</p>}
-        {record.revisions.some(r => !r.undone) && <p className="uit-dim">The author has revised this report {plural(record.revisions.length, 'time')}; the original attempts are unchanged. Revision {record.handle.revision}.</p>}
+        {record.revisionLog.some(r => !r.undone) && <p className="uit-dim">The author has revised this report {plural(record.revisionLog.length, 'time')}; the original attempts are unchanged. Revision {record.handle.revision}.</p>}
         {record.quality.withdrawn > 0 && <p>{plural(record.quality.withdrawn, 'person')} withdrew and their recordings were deleted, so this report cannot be reproduced in full.</p>}
         {seen.length === 0 ? <p>Nobody has started yet.</p> : (
           <ul className="uit-list">

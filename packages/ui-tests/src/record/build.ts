@@ -3,7 +3,7 @@ import { clusterIssues, retitleWithModel } from '../issues.ts'
 import { medians, uxLite } from '../measures.ts'
 import type { TextModel } from '../model.ts'
 import { FIRST_LOOK_SHOT, FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
-import { countsTowardN, handleOf } from '../runner/progress.ts'
+import { countedInResult, handleOf, resultComplete } from '../runner/progress.ts'
 import type { AttemptRow, HookResult, RunStore, Verification } from '../store/types.ts'
 import { buildTrace, type TraceAttempt } from '../trace/build.ts'
 import { clauseEvidence, EVIDENCE_STATEMENT } from './clauses.ts'
@@ -48,8 +48,9 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
   const trace = await buildTrace(store, runId)
   const { run, compiled } = trace
   const n = compiled.sample.n
+  const complete = resultComplete(run)
   const revisions = await store.listRevisions(runId)
-  const issues = await retitleWithModel(clusterIssues({ n, attempts: trace.attempts.map(({ attempt, signals }) => ({ attempt, signals })) }), options.model)
+  const issues = await retitleWithModel(clusterIssues({ n, complete, attempts: trace.attempts.map(({ attempt, signals }) => ({ attempt, signals })) }), options.model)
 
   const attempts: RunRecord['attempts'] = trace.attempts.map(item => {
     const { attempt } = item
@@ -69,7 +70,8 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
       timings: { ...(attempt.startedAt && { startedAt: attempt.startedAt }), ...(attempt.endedAt && { endedAt: attempt.endedAt }), ...item.timings },
       path: item.path,
       firstLook: firstLookOf(compiled.impression.on, attempt, item),
-      answers: exportedAnswers(attempt.answers),
+      // A withdrawn person's words are not exported; what is kept of them is the verdict.
+      answers: attempt.reason === 'withdrew' ? {} : exportedAnswers(attempt.answers),
       environment: attempt.environment ?? {},
       flags: attempt.flags,
       rehearsal: attempt.rehearsal,
@@ -78,7 +80,7 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
 
   const byGoal: RunRecord['measures']['byGoal'] = {}
   for (const goal of compiled.goals) {
-    const mine = trace.attempts.filter(t => t.attempt.goalIndex === goal.index && countsTowardN(t.attempt))
+    const mine = trace.attempts.filter(t => t.attempt.goalIndex === goal.index && countedInResult(t.attempt, complete))
     const timed = mine.map(t => ({ ...(t.timings.onGoalMs !== undefined && { durationMs: t.timings.onGoalMs }), verified: t.attempt.verification?.status === 'correct' }))
     const { allMs, verifiedMs } = medians(timed)
     byGoal[String(goal.index)] = {
@@ -164,7 +166,7 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
     money: { estimate: 0, reserved: 0, paid: 0, truedUp: 0, currency: options.currency ?? 'USD' },
     quality: {
       attempts: trace.attempts.length,
-      counted: trace.attempts.filter(t => countsTowardN(t.attempt)).length,
+      counted: trace.attempts.filter(t => countedInResult(t.attempt, complete)).length,
       rehearsal: trace.attempts.filter(t => t.attempt.rehearsal).length,
       withdrawn: trace.attempts.filter(t => t.attempt.reason === 'withdrew').length,
       disconnected: trace.attempts.filter(t => t.attempt.reason === 'disconnected').length,
@@ -175,6 +177,7 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
       flags: [...new Set(trace.attempts.flatMap(t => t.attempt.flags))].sort(),
     },
     revisions: [],
+    revisionLog: [],
     exclusions: [],
     studyEdits: [],
     recruitment: { link: funnelOf(real) },

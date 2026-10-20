@@ -122,8 +122,10 @@ export const runRecordSchema = z
       attempts: z.number(), counted: z.number(), rehearsal: z.number(), withdrawn: z.number(), disconnected: z.number(), retired: z.number(),
       awaitingVerification: z.number(), truncatedReplays: z.number(), instrumentationProblem: z.boolean(), flags: z.array(z.string()),
     }),
-    /** Every revision the author made, numbered from one, with who and when; `undone` ones are kept. `handle.revision` goes up with each. */
-    revisions: z.array(numberedRevisionSchema),
+    /** Every revision the author made, with when, who and a line saying what; undone ones are kept and marked. */
+    revisions: z.array(z.object({ at: z.string(), author: z.string().optional(), note: z.string().optional(), data: z.unknown().optional() })),
+    /** The same revisions in full, numbered from one; `undone` ones are kept. `handle.revision` goes up with each. */
+    revisionLog: z.array(numberedRevisionSchema),
     /** People the author excluded as not the audience: out of n and the counts, still in `attempts`, and still paid. */
     exclusions: z.array(z.object({ attempt: z.string(), reason: z.string(), by: z.string(), at: z.string(), revision: z.number(), staysPaid: z.literal(true) })),
     /** Scenario wording and promoted paths still to paste into the study file. */

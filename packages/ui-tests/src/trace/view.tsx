@@ -4,7 +4,7 @@ import type { Trace, TraceAttempt } from './build.ts'
 import type { RunRow } from '../store/types.ts'
 import type { TunnelRecord } from '../tunnel/types.ts'
 import type { RunRecord } from '../record/schema.ts'
-import { pendingStudyEdits, studyEditSnippet } from '../revisions.ts'
+import { describeRevision, pendingStudyEdits, studyEditSnippet } from '../revisions.ts'
 import { momentLabel } from './reel.ts'
 
 const css = `
@@ -20,19 +20,6 @@ code,pre{font:13px ui-monospace,monospace}pre{background:#f5f5f5;padding:8px;ove
 
 const seconds = (ms?: number) => (ms === undefined ? 'not recorded' : `${(ms / 1000).toFixed(1)} s`)
 const json = (value: unknown) => JSON.stringify(value, null, 2)
-function describe(r: Trace['revisions'][number]['revision']): string {
-  switch (r.kind) {
-    case 'exclude': return `Excluded attempt ${r.attempt}: ${r.reason}; stays paid`
-    case 'incentive': return `Incentive ${r.attempt ? `for attempt ${r.attempt} ` : ''}set to ${r.amount.minor} ${r.amount.currency} (minor units)`
-    case 'issue-edit': return `Edited issue ${r.issue}${r.title ? `: title “${r.title}”` : ''}${r.suggestedChange ? `: suggested change “${r.suggestedChange}”` : ''}`
-    case 'issue-merge': return `Merged ${r.issues.length} issues`
-    case 'issue-split': return `Split issue ${r.issue} into ${r.moments.length}`
-    case 'scenario': return `Task ${r.goalIndex + 1} wording: “${r.text}”`
-    case 'promote-path': return `Task ${r.goalIndex + 1} path promoted: ${r.path.join(' → ')}`
-    case 'code-impression': return `Coded the first look of attempt ${r.attempt} as ${r.code}`
-    case 'undo': return `Undid revision ${r.revision}`
-  }
-}
 const actorLabel = (run: RunRow) => `${run.rehearsal ? 'Rehearsal' : 'Study'} · ${run.actor}`
 
 function Shell({ title, actor, children }: { title: string; actor: string; children: React.ReactNode }) {
@@ -99,7 +86,7 @@ function Attempt({ item, index, run }: { item: TraceAttempt; index: number; run:
           <input name="reason" defaultValue="not my audience" aria-label="Reason" required />
         </Revise>
       )}
-      {item.path.length > 0 && !attempt.rehearsal && (
+      {item.path.length > 0 && !attempt.rehearsal && !excluded && verification?.status === 'correct' && (
         <Revise run={run} kind="promote-path" label="Promote this path to the task's path">
           <input type="hidden" name="goalIndex" value={attempt.goalIndex} />
           <input type="hidden" name="path" value={item.path.join('\n')} />
@@ -154,7 +141,7 @@ function Attempt({ item, index, run }: { item: TraceAttempt; index: number; run:
 /** The author's trace of one run. Served only on the author's machine; never mounted in their app. */
 export function TraceView({ trace, issues = [], exclusions = [], author }: { trace: Trace; issues?: RunRecord['issues']; exclusions?: RunRecord['exclusions']; author?: string }) {
   const { run, compiled } = trace
-  const pending = pendingStudyEdits(trace.revisions.filter(r => !r.undone).map(r => r.revision))
+  const pending = pendingStudyEdits(trace.revisions.map(r => r.revision))
   return (
     <Shell title={`Trace · ${compiled.name}`} actor={actorLabel(run)}>
       <h1>{compiled.name}</h1>
@@ -231,7 +218,7 @@ export function TraceView({ trace, issues = [], exclusions = [], author }: { tra
             {trace.revisions.map(({ number, undone, revision }) => (
               <tr key={number}>
                 <td>{number}</td>
-                <td>{undone ? <s>{describe(revision)}</s> : describe(revision)}{undone ? ' (undone)' : ''}</td>
+                <td>{undone ? <s>{describeRevision(revision)}</s> : describeRevision(revision)}{undone ? ' (undone)' : ''}</td>
                 <td>{revision.by}</td>
                 <td>{revision.at}</td>
                 <td>{!undone && revision.kind !== 'undo' && (

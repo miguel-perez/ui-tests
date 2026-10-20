@@ -7,6 +7,8 @@ import { compileStudy } from '../src/compile.ts'
 import { bundleStudyFile, loadBundle } from '../src/load.ts'
 import { buildRecord } from '../src/record/build.ts'
 import { runRecordSchema } from '../src/record/schema.ts'
+import { figuresOf, owedDeliveries, titleOf } from '../src/github/check.ts'
+import { checkTitle } from '../src/github/check.ts'
 import { ReportView } from '../src/report/view.tsx'
 import { pendingStudyEdits, studyEditSnippet, numbered, type Revision } from '../src/revisions.ts'
 import { createRun } from '../src/runner/create-run.ts'
@@ -29,6 +31,7 @@ const closers: (() => Promise<void>)[] = []
 const ana = { by: 'ana', now: () => new Date('2026-10-19T12:00:00.000Z') }
 /** Server-rendered text with React's text-node separators removed. */
 const text = (node: Parameters<typeof renderToString>[0]) => renderToString(node).replace(/<!-- -->/g, '')
+const withdraw = async (token: string) => createCollector({ store: async () => store })(new Request('http://app.test/api/ui-tests', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: 'withdraw' }) }))
 const revise = (r: RevisionRequest) => recordRevision(store, runId, r, ana)
 
 beforeAll(async () => {
@@ -38,8 +41,8 @@ beforeAll(async () => {
 afterEach(async () => { await Promise.all(closers.splice(0).map(close => close())) })
 
 /** One finished, verified person on task 0 who hit `targets` (dead clicks) on the way. */
-async function person(s: SqliteStore, id: string, n: number, verdict: 'correct' | 'incorrect', targets: string[] = [], extra: { screens?: boolean; impression?: string } = {}) {
-  const { attempt, token } = await s.createAttempt({ runId: id, participant: `p_${n}`, goalIndex: 0, rehearsal: false })
+async function person(s: SqliteStore, id: string, n: number, verdict: 'correct' | 'incorrect', targets: string[] = [], extra: { goal?: number; impression?: string } = {}) {
+  const { attempt, token } = await s.createAttempt({ runId: id, participant: `p_${n}`, goalIndex: extra.goal ?? 0, rehearsal: false })
   await s.updateAttempt(attempt.id, {
     status: 'finished', reason: 'done', purposes: compiled.consent.purposes, startedAt: new Date(0).toISOString(), endedAt: new Date(20_000).toISOString(),
     verification: { status: verdict, steps: [], ...(verdict === 'incorrect' && { diff: { expected: 'a', actual: 'b' } }) },
@@ -84,7 +87,7 @@ describe('exclusion', () => {
     expect(after.exclusions).toEqual([{ attempt: people[2]!.attempt.id, reason: 'not my audience', by: 'ana', at: '2026-10-19T12:00:00.000Z', revision: 1, staysPaid: true }])
     expect(after.money).toEqual(before.money)
     expect(after.handle.revision).toBeGreaterThan(revisionBefore)
-    expect(after.revisions).toEqual([{ number: 1, undone: false, revision: { kind: 'exclude', attempt: people[2]!.attempt.id, reason: 'not my audience', at: '2026-10-19T12:00:00.000Z', by: 'ana' } }])
+    expect(after.revisionLog).toEqual([{ number: 1, undone: false, revision: { kind: 'exclude', attempt: people[2]!.attempt.id, reason: 'not my audience', at: '2026-10-19T12:00:00.000Z', by: 'ana' } }])
     expect(runRecordSchema.safeParse(after).success).toBe(true)
     const report = text(createElement(ReportView, { record: after }))
     expect(report).toContain('1 person excluded by the author as not the audience')
@@ -120,7 +123,7 @@ describe('reversible and attributable', () => {
     await revise({ kind: 'exclude', attempt: attempt.id, reason: 'not my audience' })
     await revise({ kind: 'undo', revision: 2 })
     const record = await buildRecord(store, runId)
-    expect(record.revisions.map(r => [r.number, r.undone, r.revision.by, r.revision.kind])).toEqual([[1, false, 'ana', 'scenario'], [2, true, 'ana', 'exclude'], [3, false, 'ana', 'undo']])
+    expect(record.revisionLog.map(r => [r.number, r.undone, r.revision.by, r.revision.kind])).toEqual([[1, false, 'ana', 'scenario'], [2, true, 'ana', 'exclude'], [3, false, 'ana', 'undo']])
     expect(record.exclusions).toEqual([])
     await expect(revise({ kind: 'undo', revision: 2 })).rejects.toThrow(/already undone/)
     await expect(revise({ kind: 'undo', revision: 3 })).rejects.toThrow(/cannot be undone/)
@@ -259,7 +262,7 @@ describe('re-run on a new build', () => {
     await person(store, second.run.run, 1, 'correct')
     await recordRevision(store, second.run.run, { kind: 'exclude', attempt: (await store.listAttempts(second.run.run))[0]!.id, reason: 'not my audience' }, ana)
     expect(JSON.stringify(await buildRecord(store, first.run.run))).toBe(recordBefore)
-    expect((await buildRecord(store, second.run.run)).revisions).toHaveLength(1)
+    expect((await buildRecord(store, second.run.run)).revisionLog).toHaveLength(1)
   })
 })
 
@@ -312,14 +315,119 @@ describe('the local viewer', () => {
     expect(await store.listRevisions(runId)).toEqual([])
   })
 
-  it('answers a refused revision with 422 and its reason, and writes nothing', async () => {
+  it('answers a refused revision with 400 and its reason, and writes nothing', async () => {
     const server = await serveTrace({ store, port: 0 })
     closers.push(server.close)
     const refused = await post(`${server.url}/runs/${runId}/revisions`, 'kind=exclude&attempt=a_nobody&reason=x', { origin: server.url })
-    expect(refused.status).toBe(422)
+    expect(refused.status).toBe(400)
     expect(refused.text).toContain('No such attempt')
-    expect((await post(`${server.url}/runs/${runId}/revisions`, 'kind=mystery', { origin: server.url })).status).toBe(422)
+    expect((await post(`${server.url}/runs/${runId}/revisions`, 'kind=mystery', { origin: server.url })).status).toBe(400)
     expect((await post(`${server.url}/runs/${runId}/revisions`, `kind=scenario&goalIndex=0&text=${'x'.repeat(70_000)}`, { origin: server.url })).status).toBe(413)
     expect(await store.listRevisions(runId)).toEqual([])
+  })
+})
+
+describe('fix round 1', () => {
+  it('keeps a withdrawn, verified person in n everywhere on a completed run: result, check title, counts', async () => {
+    const made = []
+    for (let i = 1; i <= compiled.sample.n; i++) made.push(await person(store, runId, i, 'correct'))
+    await refreshRun(store, runId)
+    expect((await withdraw(made[0]!.token)).status).toBe(200)
+    await refreshRun(store, runId)
+    const record = await buildRecord(store, runId)
+    expect(record.handle.result).toBe('none-found')
+    expect(record.quality).toMatchObject({ counted: 5, withdrawn: 1 })
+    expect(record.measures.byGoal['0']!.effectiveness).toMatchObject({ reached: 5, n: 5 })
+    expect(figuresOf(record)).toMatchObject({ n: 5, reached: 5, attempted: 5 })
+    expect(titleOf(record)).toBe(checkTitle({ n: 5, reached: 5, attempted: 5, problems: 0, result: 'none-found' }))
+    expect(titleOf(record)).toContain('5 of 5 reached the goal')
+  })
+
+  it('still lists the issue a withdrawn person caused on a problems-found result, without their words', async () => {
+    const made = [await person(store, runId, 1, 'incorrect')]
+    for (let i = 2; i <= compiled.sample.n; i++) made.push(await person(store, runId, i, 'correct'))
+    await store.updateAttempt(made[0]!.attempt.id, { answers: { 'goal0.difficulty': 'I could not find it', screenerResult: { matches: true, outside: [], fit: { recency: 1, solving: 1, importance: 1, total: 3 } } } })
+    await refreshRun(store, runId)
+    expect((await store.getRun(runId))!.result).toBe('problems-found')
+    await withdraw(made[0]!.token)
+    await refreshRun(store, runId)
+    const record = await buildRecord(store, runId)
+    expect(record.handle.result).toBe('problems-found')
+    expect(record.issues).toHaveLength(1)
+    expect(record.issues[0]).toMatchObject({ participants: ['p_1'], words: [], moments: [], count: '1 of 5' })
+    expect(figuresOf(record)).toMatchObject({ problems: 1, attempted: 5, reached: 4 })
+    expect(JSON.stringify(record)).not.toContain('I could not find it')
+  })
+
+  it('keeps a live scenario edit in the paste block when an earlier revision is undone', async () => {
+    const { attempt } = await person(store, runId, 1, 'correct')
+    await revise({ kind: 'exclude', attempt: attempt.id, reason: 'not my audience' })
+    await revise({ kind: 'scenario', goalIndex: 0, text: 'Keep this wording' })
+    await revise({ kind: 'undo', revision: 1 })
+    const html = text(createElement(TraceView, { trace: await buildTrace(store, runId) }))
+    expect(html).toContain('Paste into your study file')
+    expect(html).toContain('scenario: &#x27;Keep this wording&#x27;,')
+  })
+
+  it('excludes a person, not an attempt: all their attempts leave the counts and they are counted once', async () => {
+    const a = await person(store, runId, 1, 'correct', ['a#pricing'])
+    const b = await person(store, runId, 1, 'correct', ['a#pricing'], { goal: 1 })
+    await person(store, runId, 2, 'correct', ['a#pricing'])
+    await revise({ kind: 'exclude', attempt: a.attempt.id, reason: 'not my audience' })
+    expect((await store.getAttempt(b.attempt.id))!.flags).toEqual(['excluded'])
+    await expect(revise({ kind: 'exclude', attempt: b.attempt.id, reason: 'again' })).rejects.toThrow(/already excluded/)
+    const record = await buildRecord(store, runId)
+    expect(record.exclusions).toHaveLength(1)
+    expect(record.measures.byGoal['1']!.effectiveness.n).toBe(0)
+    expect(record.quality.counted).toBe(1)
+    expect(text(createElement(ReportView, { record }))).toContain('1 person excluded')
+    await revise({ kind: 'undo', revision: 1 })
+    expect((await store.getAttempt(b.attempt.id))!.flags).toEqual([])
+  })
+
+  it('offers promote-path only on a person who reached the outcome', async () => {
+    await person(store, runId, 1, 'correct', ['a#x'])
+    await person(store, runId, 2, 'incorrect', ['a#x'])
+    const html = text(createElement(TraceView, { trace: await buildTrace(store, runId) }))
+    expect(html.match(/value="promote-path"/g)).toHaveLength(1)
+  })
+
+  it('tells the outside again when an exclusion or undo changes a delivered result', async () => {
+    const made = [await person(store, runId, 1, 'incorrect')]
+    for (let i = 2; i <= compiled.sample.n + 1; i++) made.push(await person(store, runId, i, 'correct'))
+    expect((await refreshRun(store, runId)).result).toBe('problems-found')
+    await store.updateRun(runId, { github: { owner: 'o', repo: 'r', pr: 1, checkId: 7 }, delivered: { check: 'problems-found', comment: 'problems', webhook: 'problems-found' } }, (await store.getRun(runId))!.revision)
+    const seen: { result: string; checkOwed: boolean }[] = []
+    const onResult = async (run: Parameters<typeof owedDeliveries>[0]) => { seen.push({ result: run.result, checkOwed: owedDeliveries(run, {}).check }) }
+    await recordRevision(store, runId, { kind: 'exclude', attempt: made[0]!.attempt.id, reason: 'not my audience' }, { ...ana, onResult })
+    expect(seen).toEqual([{ result: 'none-found', checkOwed: true }])
+    await recordRevision(store, runId, { kind: 'undo', revision: 1 }, { ...ana, onResult })
+    expect(seen.at(-1)).toEqual({ result: 'problems-found', checkOwed: false })
+  })
+
+  it('stores a revision, its marks and the run number together or not at all', async () => {
+    const { attempt } = await person(store, runId, 1, 'correct')
+    const before = (await store.getRun(runId))!.revision
+    const real = store.transaction.bind(store)
+    store.transaction = (fn => real(tx => { tx.updateRun = async () => false; return fn(tx) })) as typeof store.transaction
+    await expect(revise({ kind: 'exclude', attempt: attempt.id, reason: 'x' })).rejects.toThrow(/Nothing was stored|nothing was stored/)
+    store.transaction = real
+    expect(await store.listRevisions(runId)).toEqual([])
+    expect((await store.getAttempt(attempt.id))!.flags).toEqual([])
+    expect((await store.getRun(runId))!.revision).toBe(before)
+  })
+
+  it('puts a merged issue back in rank order', async () => {
+    await person(store, runId, 1, 'correct', ['a#z'])
+    await person(store, runId, 2, 'correct', ['a#z'])
+    await person(store, runId, 3, 'correct', ['a#x'])
+    await person(store, runId, 4, 'correct', ['a#x', 'a#y'])
+    await person(store, runId, 5, 'correct', ['a#y'])
+    const issues = (await buildRecord(store, runId)).issues
+    const ids = issues.filter(i => i.where.element !== 'a#z').map(i => i.id)
+    await revise({ kind: 'issue-merge', issues: ids })
+    const merged = (await buildRecord(store, runId)).issues
+    expect(merged[0]!.participants).toHaveLength(3)
+    expect(merged[1]!.where.element).toBe('a#z')
   })
 })
