@@ -5,6 +5,7 @@ import type { TextModel } from '../model.ts'
 import { FIRST_LOOK_SHOT, FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
 import { countedInResult, handleOf, resultComplete } from '../runner/progress.ts'
 import type { AttemptRow, HookResult, RunStore, Verification } from '../store/types.ts'
+import { VIDEO_KEY } from '../video.ts'
 import { buildTrace, type TraceAttempt } from '../trace/build.ts'
 import { agentResult, DEFAULT_TRIALS, TRANSCRIPT_ANSWER, TRIAL_ANSWER, type TrialState } from '../agents/result.ts'
 import { AGENT_EVIDENCE_STATEMENT, clauseEvidence, EVIDENCE_STATEMENT } from './clauses.ts'
@@ -21,7 +22,7 @@ const numbers = (values: unknown[]) => values.filter((v): v is number => typeof 
 function exportedAnswers(answers: Record<string, unknown>): Record<string, unknown> {
   const kept: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(answers)) {
-    if (key === 'screener' || key === FIRST_LOOK_SHOT || key.endsWith('.voice') || key === TRIAL_ANSWER || key === TRANSCRIPT_ANSWER) continue
+    if (key === 'screener' || key === FIRST_LOOK_SHOT || key.endsWith('.voice') || key === TRIAL_ANSWER || key === TRANSCRIPT_ANSWER || key === VIDEO_KEY) continue
     kept[key] = value
   }
   return kept

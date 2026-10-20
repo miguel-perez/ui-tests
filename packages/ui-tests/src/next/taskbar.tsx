@@ -11,6 +11,13 @@ export type EndReason = 'done' | 'gave up'
 /** The step on now, when the task has steps: one at a time, each with its own Done. */
 export type CurrentStep = { index: number; count: number; name: string }
 
+/** The screen video on the bar: the question before it begins, then the red dot, the time and a pause while it runs. */
+export type ScreenBar =
+  | { state: 'asking'; onShare(): void; onDecline(): void }
+  | { state: 'on' | 'paused'; seconds: number; onPause(): void; onResume(): void }
+
+export const clock = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds) % 60).padStart(2, '0')}`
+
 export type TaskbarProps = {
   view: Pick<ParticipantView, 'goal' | 'brand'>
   theme: ChromeTheme
@@ -22,6 +29,8 @@ export type TaskbarProps = {
   onEnd(reason: EndReason): void
   onStep?(index: number): void
   onMoreTime(): void
+  /** Present only when the study records the screen and the person has not said no. */
+  screen?: ScreenBar
 }
 
 const css = `
@@ -40,6 +49,9 @@ const css = `
 .uit-bar .uit-summary { box-shadow: none; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
 .uit-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .uit-handle { width: 20px; align-self: stretch; cursor: grab; touch-action: none; display: grid; place-items: center; color: var(--uit-dim); user-select: none; }
+.uit-dot { width: 10px; height: 10px; border-radius: 50%; background: #d92d20; flex: none; }
+.uit-dot[data-paused] { background: transparent; box-shadow: inset 0 0 0 2px var(--uit-dim); }
+.uit-rec { display: inline-flex; align-items: center; gap: 6px; padding: 0 6px; font-variant-numeric: tabular-nums; }
 .uit-question, .uit-step { padding: 0 8px; font-weight: 500; }
 @media (max-width: 600px) { .uit-handle { display: none; } .uit-bar { left: 8px; right: 8px; transform: none; } .uit-pill { width: 100%; } }
 @media (pointer: coarse) { .uit-bar button { min-height: 44px; } }
@@ -57,7 +69,7 @@ export function isTyping(active: Element | null, root: Element | null): boolean 
 }
 
 /** The one floating pill: the task, Done, and I couldn't do this. Draggable; steps aside while the participant types in the page. */
-export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep, onMoreTime }: TaskbarProps) {
+export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep, onMoreTime, screen }: TaskbarProps) {
   const [confirming, setConfirming] = useState(false)
   const lastStep = !step || step.index === step.count - 1
   const [reading, setReading] = useState(false)
@@ -120,6 +132,16 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
           <p className="uit-dim">When you think you&apos;ve finished, press Done. If you get stuck, press I couldn&apos;t do this.</p>
         </div>
       )}
+      {screen?.state === 'asking' && (
+        <div className="uit-card" role="group" aria-label="Share your screen">
+          <p>The team would like to see your screen while you do this task. Your browser will ask you first, and you choose what to share. There is no sound.</p>
+          <p className="uit-dim">If you would rather not, press No thanks. You can still take part.</p>
+          <p>
+            <button type="button" className="uit-primary" onClick={screen.onShare}>Share my screen</button>{' '}
+            <button type="button" onClick={screen.onDecline}>No thanks</button>
+          </p>
+        </div>
+      )}
       <div className="uit-pill">
         <div className="uit-handle" aria-hidden="true" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>⋮⋮</div>
         {/* Always present, so a change of text is announced: the question when it opens, and that more time can be asked for. */}
@@ -135,6 +157,15 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
           <>
             <button type="button" className="uit-summary" aria-expanded={reading} onClick={() => setReading((open) => !open)}>{view.goal.name}</button>
             {step && <span className="uit-step">Step {step.index + 1} of {step.count}: {step.name}</span>}
+            {screen && screen.state !== 'asking' && (
+              <>
+                <span className="uit-rec" role="status" aria-label={`${screen.state === 'paused' ? 'Screen recording paused' : 'Recording your screen'}, ${clock(screen.seconds)}`}>
+                  <span className="uit-dot" aria-hidden="true" {...(screen.state === 'paused' && { 'data-paused': '' })} />
+                  <span aria-hidden="true">{clock(screen.seconds)}</span>
+                </span>
+                <button type="button" onClick={screen.state === 'paused' ? screen.onResume : screen.onPause}>{screen.state === 'paused' ? 'Resume recording' : 'Pause recording'}</button>
+              </>
+            )}
             <button ref={done} type="button" className="uit-primary" disabled={busy} onClick={() => setConfirming(true)}>Done</button>
             <button type="button" disabled={busy} onClick={() => onEnd('gave up')}>I couldn&apos;t do this</button>
             {offerMoreTime && <button type="button" className="uit-plain" disabled={busy} onClick={() => { backToDone.current = true; onMoreTime() }}>More time</button>}

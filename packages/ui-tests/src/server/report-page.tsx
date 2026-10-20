@@ -5,6 +5,8 @@ import { mayShow, ReportView } from '../report/view.tsx'
 import { buildRecord } from '../record/build.ts'
 import { buildTrace } from '../trace/build.ts'
 import { momentLabel } from '../trace/reel.ts'
+import { clipAt } from '../video.ts'
+import { sharedVideoUrl } from './video.ts'
 import { getStore } from './store.ts'
 
 type Params = Promise<{ path: string[] }>
@@ -59,5 +61,9 @@ export async function ReportPage({ params, searchParams }: { params: Params; sea
       {...(Number.isFinite(at) && { startAt: at })}
     />
   )
-  return <ReportView record={record} attemptIndex={person - 1} link={link} replay={replay} {...(Number.isFinite(at) && begun !== undefined && { moment: Math.max(0, at - begun) })} />
+  const where = item?.video && Number.isFinite(at) ? clipAt(item.video, at) : undefined
+  const clip = item?.video && mayShow(attempt) && (
+    <video controls preload="none" data-clip="" src={`${sharedVideoUrl(run, person, secret)}&s=${where?.segment ?? item.video[0]!.startedAt}${where ? `#t=${where.seconds}` : ''}`} />
+  )
+  return <ReportView record={record} attemptIndex={person - 1} link={link} replay={replay} {...(clip && { clip })} {...(Number.isFinite(at) && begun !== undefined && { moment: Math.max(0, at - begun) })} />
 }

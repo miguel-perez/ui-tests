@@ -19,6 +19,8 @@ export type ReportViewProps = {
   link?: (path: string) => string
   /** The recording of the person's attempt, on their page. */
   replay?: ReactNode
+  /** The screen video of the person's attempt, on their page. */
+  clip?: ReactNode
   /** The moment of the recording the page was opened at, in the recording's clock. */
   moment?: number
 }
@@ -69,7 +71,7 @@ const FIRST_LOOK: Record<Attempt['firstLook'], string> = {
 }
 
 /** The shared report of a run, or with `attemptIndex` the page of one person. White-labelled: it carries the author's name and the host's accent, and no ui-tests name unless the study turned it on. */
-export function ReportView({ record, attemptIndex, base, link = identity, replay, moment }: ReportViewProps) {
+export function ReportView({ record, attemptIndex, base, link = identity, replay, clip, moment }: ReportViewProps) {
   const { compiled } = record
   const root = base ?? `/r/${record.handle.run}`
   const accent = colour(compiled.brand.accent)
@@ -121,6 +123,7 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
         </dl>
         {withheld && <p>This person did not agree to their words and recording being shown here, so they are not.</p>}
         {!withheld && moment !== undefined && <p role="status">Opened at the moment {clock(moment)} into the recording.</p>}
+        {!withheld && clip}
         {!withheld && (replay ?? <p className="uit-dim">No recording was kept for this person.</p>)}
         </>)}
         {footer}

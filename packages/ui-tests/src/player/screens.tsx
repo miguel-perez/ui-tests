@@ -4,7 +4,7 @@ import { answerKey } from './flow.ts'
 import { VoiceAnswer } from './voice.tsx'
 import type { Screen } from './flow.ts'
 import {
-  AGREE, AGREEMENT_ENDS, CARD_FOOTER, CARD_TITLE, CONFIDENCE_ENDS, CONSENT_TITLE, CONTINUE, EASE_ENDS, POWERED_BY, RECORDING, SCREENER_TITLE,
+  AGREE, AGREEMENT_ENDS, CARD_FOOTER, CARD_TITLE, CONFIDENCE_ENDS, CONSENT_TITLE, CONTINUE, EASE_ENDS, POWERED_BY, RECORDING, SCREEN_PROMPT, SCREENER_TITLE,
   PRACTICE_CONFIRM, PRACTICE_DONE, PRACTICE_DONE_NOTE, PRACTICE_INTRO, PRACTICE_NOT_YET, PRACTICE_STUCK, PRACTICE_STUCK_NOTE, PRACTICE_TITLE, PRACTICE_YES,
   FIRST_CLICK_BODY, FIRST_CLICK_TITLE, OPEN_PAGE, START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, WITHDRAW, WITHDRAWN_BODY, WITHDRAWN_TITLE, contact, duration,
 } from './copy.ts'
@@ -225,6 +225,7 @@ export function PlayerScreen(props: ScreenProps) {
           <h1>{CARD_TITLE}</h1>
           <p>{view.goal.scenario}</p>
           <p className="pl-dim">{CARD_FOOTER}</p>
+          {view.record === 'video' && <p className="pl-dim">{SCREEN_PROMPT}</p>}
           <button type="button" disabled={busy} onClick={onStart}>{START_TASK}</button>
         </>
       )

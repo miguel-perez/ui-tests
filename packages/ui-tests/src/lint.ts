@@ -1,6 +1,7 @@
 import type { AuthoredStudy } from './authoring.ts'
 import type { CompiledStudy } from './schema/compiled.ts'
 import type { UiTestsConfig } from './types.ts'
+import { recordingMultiplier } from './derive/incentive.ts'
 import { rules, type Severity } from './lint-rules.ts'
 
 export type LintFinding = { rule: string; severity: Severity; message: string; reason: string; source: string; fix?: string; file: string; line: number }
@@ -27,7 +28,7 @@ const minutesOf = (seconds: number) => `${Math.round(seconds / 6) / 10} min`
 /** What a run would do, one line each, shown before anything is sent to people. */
 export function planLines(compiled: CompiledStudy): string[] {
   const recording = compiled.record === 'video'
-    ? "Recording: event replay (what people do on the page) and screen video (record: 'video'; the browser asks first; incentive 1.5×)"
+    ? `Recording: event replay (what people do on the page) and screen video (record: 'video'; the browser asks first; incentive ${recordingMultiplier('video')}×)`
     : 'Recording: event replay (what people do on the page)'
   return [
     `Study: ${compiled.name}`,

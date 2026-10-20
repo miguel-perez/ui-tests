@@ -1,5 +1,6 @@
 import { refreshRun, type ResultHook } from '../runner/progress.ts'
 import { openStore } from '../store/open.ts'
+import { applyRetention } from '../store/retention.ts'
 import type { RunStore } from '../store/types.ts'
 import { verifyRun } from '../verify.ts'
 import type { Command } from './main.ts'
@@ -19,6 +20,8 @@ export const verify: Command = async (args, io) => {
     if (!(await store.getRun(id))) { io.stderr.write(`No such run: ${id}\n`); return 2 }
     const { verified, disconnected } = await verifyRun(store, id)
     await settleRun(store, id, reporterFor(io))
+    // Verification has read the snapshots; what is past retention goes now.
+    await applyRetention(store, io.deps?.now?.() ?? new Date())
     const verdicts = (await store.listAttempts(id)).map(attempt => ({
       id: attempt.id,
       verdict: attempt.reason === 'disconnected' || attempt.reason === 'withdrew' ? attempt.reason : attempt.verification?.status ?? 'not verified',

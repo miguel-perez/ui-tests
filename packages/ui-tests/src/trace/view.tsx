@@ -5,6 +5,7 @@ import type { RunRow } from '../store/types.ts'
 import type { TunnelRecord } from '../tunnel/types.ts'
 import type { RunRecord } from '../record/schema.ts'
 import { describeRevision, pendingStudyEdits, studyEditSnippet } from '../revisions.ts'
+import { clipOf } from '../video.ts'
 import { momentLabel } from './reel.ts'
 
 const css = `
@@ -51,6 +52,27 @@ function Revise({ run, kind, children, label }: { run: string; kind: string; chi
       {children}
       <button type="submit">{label}</button>
     </form>
+  )
+}
+
+/** The screen video: a clip for each moment of the reel, and the whole recording. */
+function Clips({ item, index, run }: { item: TraceAttempt; index: number; run: string }) {
+  const video = item.video!
+  const source = (segment: number) => `/runs/${encodeURIComponent(run)}/video/${index + 1}?s=${segment}`
+  return (
+    <>
+      <h4>Screen video</h4>
+      {item.reel.map((moment, i) => {
+        const clip = clipOf(video, moment.start, moment.end)
+        return clip && (
+          <figure key={i}>
+            <video controls preload="none" data-clip={i + 1} src={`${source(clip.segment)}#t=${clip.from},${clip.to}`} />
+            <figcaption>{momentLabel(moment)}</figcaption>
+          </figure>
+        )
+      })}
+      {video.map((segment) => <p key={segment.startedAt}><video controls preload="none" data-video={segment.startedAt} src={source(segment.startedAt)} /></p>)}
+    </>
   )
 }
 
@@ -112,6 +134,7 @@ function Attempt({ item, index, run }: { item: TraceAttempt; index: number; run:
           </div>
         </>
       )}
+      {item.video && <Clips item={item} index={index} run={run} />}
       <h4>Events</h4>
       {events.length === 0 ? <p>No events recorded.</p> : (
         <table>

@@ -8,6 +8,7 @@ import { fitScore } from '../derive/fit.ts'
 import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
 import { UXLITE_VERSION } from '../measures.ts'
 import { nullTranscriber, type Transcriber } from '../transcriber.ts'
+import { VIDEO_CHUNK_BYTES, VIDEO_DECLINED, VIDEO_KEY, videoChunks } from '../video.ts'
 import { MORE_TIME, effectiveTimeout, isOwnSite, participantView, type ParticipantView } from './view.ts'
 import type { CompiledGoal } from '../schema/compiled.ts'
 
@@ -28,6 +29,10 @@ const END_BYTES = 5_000_000
 const BODY_BYTES = 2_100_000
 /** A batch of replay events (rrweb) has its own limit: its first event is a full snapshot of the page, which can pass the events limit. */
 const REPLAY_BYTES = 5_000_000
+/** A video chunk (base64 in JSON) has its own limit: up to 5 MB of video once decoded. */
+const VIDEO_CHARS = Math.ceil((VIDEO_CHUNK_BYTES * 4) / 3) + 4
+const VIDEO_BYTES = VIDEO_CHARS + 1000
+const MAX_BODY_BYTES = Math.max(END_BYTES, VIDEO_BYTES)
 const MAX_EVENTS = 100
 /** The answers key that notes the replay stopped early. */
 export const REPLAY_TRUNCATED = 'replay-truncated'
@@ -72,6 +77,10 @@ const message = z.discriminatedUnion('action', [
     comment: z.string().max(10_000).optional(),
   }),
   z.object({ action: z.literal('more-time') }),
+  /** A chunk of the screen video, base64: `segment` is when that recording began, `seq` its place in it. */
+  z.object({ action: z.literal('video'), segment: z.number().int().nonnegative(), seq: z.number().int().nonnegative(), contentType: z.string().regex(/^video\/[a-z0-9.+-]+/i).max(100), data: z.string().max(VIDEO_CHARS) }),
+  /** The participant said no to sharing their screen. */
+  z.object({ action: z.literal('video-declined') }),
   /** An open question answered by voice: the audio (base64), and the words when the browser already has them. */
   z.object({ action: z.literal('voice'), question: z.string().max(100), audio: z.string().max(MAX_VOICE_CHARS), contentType: z.string().regex(/^audio\/[a-z0-9.+-]+/i).max(100), transcript: z.string().max(10_000).optional(), typed: z.string().max(10_000).optional() }),
   z.object({ action: z.literal('withdraw') }),
@@ -159,7 +168,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     const get = request.method === 'GET'
     if (!get && request.method !== 'POST') return refuse(405, 'Method not allowed')
     const length = Number(request.headers.get('content-length') ?? 0)
-    if (length > END_BYTES) return refuse(413, 'Request too large')
+    if (length > MAX_BODY_BYTES) return refuse(413, 'Request too large')
 
     const store = await options.store()
     const bearer = /^Bearer (.+)$/.exec(request.headers.get('authorization') ?? '')?.[1]
@@ -175,12 +184,12 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     // Cookies ride along on cross-site requests, so a write they authorise must come from this origin. Bearer writes (CLI, tests) are not ambient.
     if (resolved.via === 'cookie' && request.headers.get('origin') !== publicOrigin(request, url)) return refuse(403, 'Invalid origin')
 
-    const text = await readBody(request, END_BYTES)
+    const text = await readBody(request, MAX_BODY_BYTES)
     if (text === undefined) return refuse(413, 'Request too large')
     let raw: unknown
     try { raw = JSON.parse(text) } catch { return refuse(400, 'Body is not JSON') }
     const action = (raw as { action?: unknown } | null)?.action
-    if (action !== 'end' && Buffer.byteLength(text) > (action === 'replay' ? REPLAY_BYTES : BODY_BYTES)) return refuse(413, 'Request too large')
+    if (Buffer.byteLength(text) > (action === 'video' ? VIDEO_BYTES : action === 'end' ? END_BYTES : action === 'replay' ? REPLAY_BYTES : BODY_BYTES)) return refuse(413, 'Request too large')
     const parsed = message.safeParse(raw)
     if (!parsed.success) return refuse(400, parsed.error.message)
 
@@ -256,6 +265,35 @@ export function createCollector(options: CollectorOptions): (request: Request) =
           if (current?.status === 'active') await store.updateAttempt(attempt.id, { answers: { ...current.answers, [REPLAY_TRUNCATED]: true } }, 'active')
         }
         return reload()
+      }
+      case 'video': {
+        if (run.compiled.record !== 'video') return conflict('This study does not record the screen')
+        const bytes = new Uint8Array(Buffer.from(body.data, 'base64'))
+        if (!bytes.length) return refuse(400, 'No video')
+        if (bytes.length > VIDEO_CHUNK_BYTES) return refuse(413, 'Request too large')
+        const result = await store.transaction(async (tx) => {
+          const current = await tx.getAttempt(attempt.id)
+          // A chunk may arrive just after the end, from the last flush; never after the person withdrew.
+          if (!current || current.reason === 'withdrew' || (current.status !== 'active' && current.status !== 'questions')) return 'Attempt is not recording'
+          const chunks = videoChunks(current.answers)
+          // A chunk sent again (a retry after a lost reply) is stored once.
+          if (chunks.some((c) => c.segment === body.segment && c.seq === body.seq)) return undefined
+          const blob = await tx.putBlob(attempt.id, 'video', bytes, body.contentType)
+          await tx.updateAttempt(attempt.id, { answers: { ...current.answers, [VIDEO_KEY]: { chunks: [...chunks, { segment: body.segment, seq: body.seq, blob }] } } })
+          return undefined
+        })
+        return result ? conflict(result) : reload()
+      }
+      case 'video-declined': {
+        if (run.compiled.record !== 'video') return conflict('This study does not record the screen')
+        // Saying no costs nothing: the attempt goes on with the event replay, and is only marked.
+        const result = await store.transaction(async (tx) => {
+          const current = await tx.getAttempt(attempt.id)
+          if (!current || current.status === 'finished') return 'Attempt is not under way'
+          if (!current.flags.includes(VIDEO_DECLINED)) await tx.updateAttempt(attempt.id, { flags: [...current.flags, VIDEO_DECLINED] })
+          return undefined
+        })
+        return result ? conflict(result) : reload()
       }
       case 'step': {
         if ((await store.getAttempt(attempt.id))?.status !== 'active') return conflict('Attempt is not active')
@@ -385,6 +423,10 @@ export function createCollector(options: CollectorOptions): (request: Request) =
             if (!moved) return 'The attempt moved on; try again'
           }
           await tx.deleteBlobs(attempt.id)
+          if (current.answers[VIDEO_KEY] !== undefined) {
+            const { [VIDEO_KEY]: _video, ...rest } = current.answers
+            await tx.updateAttempt(attempt.id, { answers: rest })
+          }
           await tx.deleteEvents(attempt.id)
           await tx.deleteSnapshots(attempt.id)
           return undefined

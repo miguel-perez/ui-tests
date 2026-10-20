@@ -7,6 +7,8 @@ export { nullTranscriber, type Transcriber } from '../transcriber.ts'
 export { participantView, type ParticipantView } from './view.ts'
 export { PlayerPage } from './player-page.tsx'
 export { ReportPage, reportMetadata } from './report-page.tsx'
+/** The video of a person in a shared report: mount at `app/rv/[...path]/route.server.ts`. */
+export { reportVideo as GET_REPORT_VIDEO } from './video.ts'
 
 /**
  * Spoken answers are kept as audio. To also get text, set `UI_TESTS_TRANSCRIBER` to a module (a package name or an absolute path)

@@ -12,6 +12,8 @@ import { buildRecord } from '../record/build.ts'
 import { AgentReport } from '../agents/report.tsx'
 import { mayShow, ReportView } from '../report/view.tsx'
 import type { ResultHook } from '../runner/progress.ts'
+import { assembleVideo, videoResponse } from '../report/video.ts'
+import { clipAt } from '../video.ts'
 import { buildTrace } from './build.ts'
 import { recordRevision, RevisionRefused, type RevisionRequest } from './revise.ts'
 import { momentLabel } from './reel.ts'
@@ -106,7 +108,9 @@ async function authorReport(store: RunStore, id: string, person: number | undefi
   const begun = item?.replay?.length ? (item.replay[0]!.data as { timestamp?: number }).timestamp : undefined
   const replay = item?.replay && mayShow(attempt) && createElement('div', { 'data-replay': attempt.id },
     createElement('script', { type: 'application/json', dangerouslySetInnerHTML: { __html: JSON.stringify({ events: item.replay.map((e) => e.data), moments: item.reel.map((m) => ({ start: m.start, end: m.end, label: momentLabel(m) })), ...(startAt !== undefined && { startAt }) }).replace(/</g, '\\u003c') } }))
-  return document(`Report · ${record.compiled.name}`, createElement(ReportView, { record, base, attemptIndex: person - 1, link, replay: replay || undefined, ...(startAt !== undefined && begun !== undefined && { moment: Math.max(0, startAt - begun) }) }), Boolean(replay))
+  const where = item?.video && startAt !== undefined ? clipAt(item.video, startAt) : undefined
+  const clip = item?.video && mayShow(attempt) && createElement('video', { controls: true, preload: 'none', 'data-clip': '', src: `/runs/${encodeURIComponent(id)}/video/${person}?s=${where?.segment ?? item.video[0]!.startedAt}${where ? `#t=${where.seconds}` : ''}` })
+  return document(`Report · ${record.compiled.name}`, createElement(ReportView, { record, base, attemptIndex: person - 1, link, replay: replay || undefined, ...(clip && { clip }), ...(startAt !== undefined && begun !== undefined && { moment: Math.max(0, startAt - begun) }) }), Boolean(replay))
 }
 
 /**
@@ -158,6 +162,18 @@ export async function serveTrace(options: { store: RunStore; port?: number; host
         if (!row || row.actor !== 'agent') return send(404, 'text/plain', 'Not found')
         const record = await buildRecord(store, id)
         return send(200, 'text/html', html(createElement('html', { lang: 'en' }, createElement('head', null, createElement('meta', { charSet: 'utf-8' }), createElement('meta', { name: 'viewport', content: 'width=device-width, initial-scale=1' }), createElement('title', null, `Agent report · ${record.compiled.name}`)), createElement('body', null, createElement(AgentReport, { record })))))
+      }
+      const clip = /^\/runs\/([^/]+)\/video\/([1-9]\d{0,5})$/.exec(path)
+      if (clip) {
+        let id: string
+        try { id = decodeURIComponent(clip[1]!) } catch { return send(404, 'text/plain', 'Not found') }
+        const attempt = (await store.listAttempts(id))[Number(clip[2]) - 1]
+        const asked = new URL(req.url ?? '/', 'http://localhost').searchParams.get('s')
+        const video = attempt && (await assembleVideo(store, attempt, asked === null ? undefined : Number(asked)))
+        if (!video) return send(404, 'text/plain', 'Not found')
+        const answer = videoResponse(video, typeof req.headers.range === 'string' ? req.headers.range : null)
+        res.writeHead(answer.status, Object.fromEntries(answer.headers))
+        return res.end(req.method === 'HEAD' ? undefined : Buffer.from(await answer.arrayBuffer()))
       }
       const shown = /^\/runs\/([^/]+)\/report(?:\/p([1-9]\d{0,5}))?\/?$/.exec(path)
       if (shown) {

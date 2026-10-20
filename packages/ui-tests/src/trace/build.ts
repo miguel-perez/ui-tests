@@ -2,6 +2,7 @@ import type { ScreenerResult } from '../derive/screener.ts'
 import { fillScenario } from '../derive/scenario.ts'
 import { sampleSentence, sentence } from '../derive/sentence.ts'
 import { FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
+import { videoSegments, type VideoSegments } from '../video.ts'
 import { highlightReel, type ReelMoment } from './reel.ts'
 import type { LintFinding } from '../lint.ts'
 import type { CompiledStudy } from '../schema/compiled.ts'
@@ -26,6 +27,8 @@ export type TraceAttempt = {
   replay?: RecordedEvent[]
   /** The parts of the recording worth watching: a window around each signal, with the words said inside it. */
   reel: ReelMoment[]
+  /** The screen video, one entry for each time the person shared their screen. Absent when none was kept. */
+  video?: VideoSegments
   /** The replay stopped early because a page was too large to record. */
   replayTruncated?: boolean
   /** The pages the participant went through, in order. */
@@ -112,6 +115,7 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
       attempt,
       events,
       ...(replay.length > 0 && { replay }),
+      ...(videoSegments(attempt.answers).length > 0 && { video: videoSegments(attempt.answers) }),
       ...(attempt.answers['replay-truncated'] === true && { replayTruncated: true }),
       path: visited(events),
       ...(goal?.path && { happyPath: goal.path }),

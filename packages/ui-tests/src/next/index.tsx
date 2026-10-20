@@ -8,8 +8,10 @@ import { REPLAY_BATCH_BYTES, createBuffer } from './buffer.ts'
 import type { Buffer } from './buffer.ts'
 import { ROOT_ATTRIBUTE, createRecorder, fitSnapshot, serializeSnapshot, shortSelector } from './recorder.ts'
 import { startReplay } from './replay-recorder.ts'
+import { startScreenRecording } from './screen-recorder.ts'
+import type { ScreenRecording } from './screen-recorder.ts'
 import { FirstClickBar, Taskbar } from './taskbar.tsx'
-import type { EndReason } from './taskbar.tsx'
+import type { EndReason, ScreenBar } from './taskbar.tsx'
 import { chromeTheme, readHost } from './theme.ts'
 
 export type UiTestsProps = {
@@ -39,6 +41,10 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
   const [stepIndex, setStepIndex] = useState(0)
   const buffer = useRef<Buffer | undefined>(undefined)
   const replayBuffer = useRef<Buffer | undefined>(undefined)
+  const screenRecording = useRef<ScreenRecording | undefined>(undefined)
+  // The screen video: asked once the attempt is on; what the person chose on this device is kept, so a no stays a no on the next page.
+  const [screenState, setScreenState] = useState<'asking' | 'on' | 'paused' | 'declined' | undefined>(undefined)
+  const [screenSeconds, setScreenSeconds] = useState(0)
 
   // The marker cookie is readable on purpose: it only says that a run is on. The token itself is HttpOnly.
   useEffect(() => {
@@ -52,9 +58,9 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
   }, [endpoint])
 
   const post = useMemo(
-    () => async (body: unknown): Promise<Response> => {
+    () => async (body: unknown, options: { keepalive?: boolean } = {}): Promise<Response> => {
       const text = JSON.stringify(body)
-      return fetch(endpoint, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: text, keepalive: bytes(text) < KEEPALIVE_BYTES })
+      return fetch(endpoint, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: text, keepalive: options.keepalive !== false && bytes(text) < KEEPALIVE_BYTES })
     },
     [endpoint],
   )
@@ -157,6 +163,45 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
     }
   }, [attempt, post])
 
+  const wantsVideo = active?.record === 'video'
+  useEffect(() => {
+    if (!attempt || !wantsVideo) return
+    setScreenState(readVideoChoice(attempt) === 'declined' ? 'declined' : 'asking')
+  }, [attempt, wantsVideo])
+  useEffect(() => {
+    if (screenState !== 'on') return
+    const tick = setInterval(() => setScreenSeconds((seconds) => seconds + 1), 1000)
+    return () => clearInterval(tick)
+  }, [screenState])
+  // Leaving the page ends the share (a full page load does), whatever the bar shows.
+  useEffect(() => () => { void screenRecording.current?.stop() }, [])
+
+  async function shareScreen() {
+    if (!attempt) return
+    const segment = Date.now()
+    const result = await startScreenRecording(async (chunk, seq) => {
+      const data = await toBase64(chunk)
+      // A chunk is retried a few times on a failed connection; a refusal (4xx) is final.
+      for (let tries = 0; tries < 4; tries++) {
+        try {
+          const response = await post({ action: 'video', segment, seq, contentType: chunk.type || 'video/webm', data }, { keepalive: false })
+          if (response.ok || (response.status >= 400 && response.status < 500)) return
+        } catch { /* try again */ }
+        await new Promise((resolve) => setTimeout(resolve, 500 * (tries + 1)))
+      }
+    }, { onEnded: () => { screenRecording.current = undefined; setScreenState('declined') } })
+    if (result === 'declined') { void declineScreen(); return }
+    screenRecording.current = result
+    setScreenSeconds(0)
+    setScreenState('on')
+  }
+
+  async function declineScreen() {
+    if (attempt) writeVideoChoice(attempt, 'declined')
+    setScreenState('declined')
+    try { await post({ action: 'video-declined' }) } catch { /* the flag is only a note; the attempt goes on */ }
+  }
+
   // The time limit ends the attempt silently; the participant may ask for more once.
   const deadline = useRef<{ attempt: string; start: number } | undefined>(undefined)
   if (active && deadline.current?.attempt !== active.attempt) deadline.current = { attempt: active.attempt, start: startedAt(active.attempt) }
@@ -174,6 +219,9 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
     if (!active || busy) return
     setBusy(true)
     try {
+      // The last chunk of the video goes out first, then the events.
+      await Promise.race([screenRecording.current?.stop(), new Promise((resolve) => setTimeout(resolve, REPLAY_WAIT_MS))])
+      screenRecording.current = undefined
       await buffer.current?.flush()
       // The replay may be megabytes: Done waits for it a few seconds, not for ever.
       await Promise.race([replayBuffer.current?.flush(), new Promise((resolve) => setTimeout(resolve, REPLAY_WAIT_MS))])
@@ -232,10 +280,30 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
   if (!active || !theme) return null
   const steps = active.goal.steps
   const step = steps.length ? { index: Math.min(stepIndex, steps.length - 1), count: steps.length, name: steps[Math.min(stepIndex, steps.length - 1)]! } : undefined
+  const screen: ScreenBar | undefined =
+    screenState === 'asking' ? { state: 'asking', onShare: () => void shareScreen(), onDecline: () => void declineScreen() }
+    : screenState === 'on' || screenState === 'paused' ? { state: screenState, seconds: screenSeconds, onPause: () => { screenRecording.current?.pause(); setScreenState('paused') }, onResume: () => { screenRecording.current?.resume(); setScreenState('on') } }
+    : undefined
   return createPortal(
-    <Taskbar view={active} theme={theme} busy={busy} step={step} offerMoreTime={lateWarning && !moreTimeUsed} onEnd={(reason) => void finish(reason)} onStep={(index) => void finishStep(index)} onMoreTime={() => void moreTime()} />,
+    <Taskbar view={active} theme={theme} busy={busy} step={step} {...(screen && { screen })} offerMoreTime={lateWarning && !moreTimeUsed} onEnd={(reason) => void finish(reason)} onStep={(index) => void finishStep(index)} onMoreTime={() => void moreTime()} />,
     document.body,
   )
+}
+
+/** What the person chose about sharing their screen on this device. */
+function readVideoChoice(attempt: string): string | null {
+  try { return sessionStorage.getItem(`ui-tests-video:${attempt}`) } catch { return null }
+}
+function writeVideoChoice(attempt: string, choice: string) {
+  try { sessionStorage.setItem(`ui-tests-video:${attempt}`, choice) } catch { /* asked again on the next page */ }
+}
+
+/** A chunk of video as base64, for the JSON the collector takes. */
+async function toBase64(chunk: Blob): Promise<string> {
+  const bytes = new Uint8Array(await chunk.arrayBuffer())
+  let text = ''
+  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(text)
 }
 
 /** The step this attempt is on, as this device last saw it. */

@@ -22,6 +22,8 @@ export const RECORDING = {
   events: 'What you do on the page is recorded: clicks, scrolling and typing. Your screen is not filmed.',
   video: 'What you do on the page is recorded, and so is your screen, as a video.',
 } as const
+/** Said on the task card of a study that records the screen: the browser asks when the task opens, and no is fine. */
+export const SCREEN_PROMPT = 'When the task opens, your browser will ask whether to share your screen. You choose what to share, and if you say no you can still take part.'
 export const contact = (who: string) => `Questions about this study? Ask ${who}.`
 export const WITHDRAW = 'Stop and delete my recording'
 export const WITHDRAWN_TITLE = 'Your recording is deleted'
