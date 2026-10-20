@@ -1,5 +1,7 @@
 import { existsSync } from 'node:fs'
 import path from 'node:path'
+import { neonClient, pgliteClient } from './drivers.ts'
+import { PostgresStore } from './postgres.ts'
 import { SqliteStore } from './sqlite.ts'
 import type { RunStore } from './types.ts'
 
@@ -11,8 +13,16 @@ export function dataDirectory(env: NodeJS.ProcessEnv = process.env): string {
   return path.join(root, '.ui-tests')
 }
 
-/** Opens the store the environment names: SQLite at `<data directory>/dev.sqlite` when `UI_TESTS_DATABASE_URL` is unset. */
+/** Opens the store the environment names: `UI_TESTS_DATABASE_URL` is `postgres://…` (Neon), `pglite:memory` or `pglite:<dir>` (PGlite); unset, SQLite at `<data directory>/dev.sqlite`. */
 export async function openStore(env: NodeJS.ProcessEnv = process.env): Promise<RunStore> {
-  if (env.UI_TESTS_DATABASE_URL) throw new Error(`UI_TESTS_DATABASE_URL is set but the Postgres adapter is not available yet`)
+  const url = env.UI_TESTS_DATABASE_URL
+  if (url) {
+    if (url.startsWith('pglite:')) {
+      const dir = url.slice('pglite:'.length)
+      return new PostgresStore(await pgliteClient(dir === 'memory' ? undefined : dir))
+    }
+    if (/^postgres(ql)?:\/\//.test(url)) return new PostgresStore(neonClient(url))
+    throw new Error('UI_TESTS_DATABASE_URL must be postgres://…, pglite:memory or pglite:<dir>')
+  }
   return new SqliteStore(path.join(dataDirectory(env), 'dev.sqlite'))
 }

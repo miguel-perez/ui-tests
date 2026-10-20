@@ -94,7 +94,7 @@ describe('ids and opening', () => {
     expect(newToken()).not.toBe(newToken())
   })
 
-  it('opens SQLite at dev.sqlite in the data directory, and refuses a database URL until Postgres ships', async () => {
+  it('opens SQLite at dev.sqlite in the data directory, ', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'ui-tests-open-'))
     dirs.push(dir)
     const env = { UI_TESTS_DATA_DIR: dir }
@@ -105,6 +105,5 @@ describe('ids and opening', () => {
     const again = await openStore(env)
     expect((await again.getRun(run.run))?.key).toBe('k1')
     await again.close()
-    await expect(openStore({ UI_TESTS_DATABASE_URL: 'postgres://x' })).rejects.toThrow(/Postgres/)
   })
 })
