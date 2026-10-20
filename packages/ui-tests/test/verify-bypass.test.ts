@@ -168,8 +168,10 @@ describe('outcome hooks against a protected preview', () => {
       await new Promise<void>(r => near.listen(0, '127.0.0.1', r))
       const nearBase = `http://127.0.0.1:${(near.address() as AddressInfo).port}`
       const context = withBypass(await request.newContext({ baseURL: nearBase }), nearBase, SECRET)
+      await expect(context.get('/', { maxRedirects: 1 })).rejects.toThrow('Max redirect count exceeded')
       await expect(context.get('/', { maxRedirects: 2 })).rejects.toThrow('Max redirect count exceeded')
       expect((await context.get('/', { maxRedirects: 3 })).status()).toBe(200)
+      expect((await context.get('/', { maxRedirects: 0 })).status()).toBe(302)
       await context.dispose()
     })
   })

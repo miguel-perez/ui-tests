@@ -152,7 +152,9 @@ export function withBypass(context: APIRequestContext, baseURL: string, secret: 
           const own = sameOrigin(address)
           const response = await (hop === 0 ? value : target.fetch).call(target, input, own ? { ...current, headers: { ...current.headers, [BYPASS_HEADER]: secret }, maxRedirects: 0 } : { ...current, maxRedirects: Math.max(0, limit - hop) }) as APIResponse
           const location = response.headers().location
-          if (!location || ![301, 302, 303, 307, 308].includes(response.status()) || !own || limit === 0) return response
+          if (!location || ![301, 302, 303, 307, 308].includes(response.status()) || limit === 0) return response
+          // A hop elsewhere made with the budget spent answers its redirect instead of following it: as fetch would, that is the error.
+          if (!own) { if (hop < limit) return response; await response.dispose(); throw new Error('Max redirect count exceeded') }
           if (hop >= limit) { await response.dispose(); throw new Error('Max redirect count exceeded') }
           await response.dispose()
           const next = new URL(location, new URL(address, baseURL))
