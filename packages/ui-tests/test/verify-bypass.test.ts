@@ -84,4 +84,73 @@ describe('outcome hooks against a protected preview', () => {
     expect(seen.map(h => h['x-vercel-protection-bypass'])).toEqual([SECRET, SECRET])
     await context.dispose()
   })
+
+  describe('follows redirects by the rules of fetch', () => {
+    interface Seen { method?: string; url?: string; body: string; headers: IncomingHttpHeaders }
+    async function hops(): Promise<{ base: string; seen: Seen[]; other: Seen[]; otherBase: string }> {
+      const seen: Seen[] = []
+      const other: Seen[] = []
+      const record = (list: Seen[]) => (req: import('node:http').IncomingMessage, res: import('node:http').ServerResponse, then: () => void) => {
+        const chunks: Buffer[] = []
+        req.on('data', c => chunks.push(c as Buffer))
+        req.on('end', () => { list.push({ method: req.method, url: req.url, body: Buffer.concat(chunks).toString(), headers: req.headers }); then() })
+        void res
+      }
+      const elsewhere = createServer((req, res) => record(other)(req, res, () => void res.writeHead(200).end('ok')))
+      servers.push(elsewhere)
+      await new Promise<void>(r => elsewhere.listen(0, '127.0.0.1', r))
+      const otherBase = `http://127.0.0.1:${(elsewhere.address() as AddressInfo).port}`
+      const main = createServer((req, res) => record(seen)(req, res, () => {
+        const url = req.url ?? ''
+        const status = Number(/^\/r(\d+)/.exec(url)?.[1] ?? 0)
+        if (url.includes('/out')) return void res.writeHead(status, { Location: `${otherBase}/ping` }).end()
+        if (url.endsWith('/chain')) return void res.writeHead(302, { Location: '/chain2' }).end()
+        if (url.endsWith('/chain2')) return void res.writeHead(302, { Location: '/done' }).end()
+        res.writeHead(status || 200, status ? { Location: '/done' } : {}).end('ok')
+      }))
+      servers.push(main)
+      await new Promise<void>(r => main.listen(0, '127.0.0.1', r))
+      return { base: `http://127.0.0.1:${(main.address() as AddressInfo).port}`, seen, other, otherBase }
+    }
+    const open = async (base: string) => withBypass(await request.newContext({ baseURL: base }), base, SECRET)
+
+    it('turns a POST into a GET without its body after 302, and keeps both after 307', async () => {
+      const { base, seen } = await hops()
+      const context = await open(base)
+      await context.post('/r302', { data: 'payload' })
+      expect(seen.map(h => [h.method, h.body])).toEqual([['POST', 'payload'], ['GET', '']])
+      seen.length = 0
+      await context.post('/r307', { data: 'payload' })
+      expect(seen.map(h => [h.method, h.body])).toEqual([['POST', 'payload'], ['POST', 'payload']])
+      seen.length = 0
+      await context.put('/r302', { data: 'payload' })
+      expect(seen.map(h => h.method)).toEqual(['PUT', 'PUT'])
+      seen.length = 0
+      await context.put('/r303', { data: 'payload' })
+      expect(seen.map(h => h.method)).toEqual(['PUT', 'GET'])
+      await context.dispose()
+    })
+
+    it('drops Authorization, Cookie and params when it leaves the origin, and sends no bypass header there', async () => {
+      const { base, other } = await hops()
+      const context = await open(base)
+      await context.get('/r302/out', { headers: { Authorization: 'Bearer x', Cookie: 'a=b', 'X-Keep': '1' }, params: { q: '1' } })
+      expect(other).toHaveLength(1)
+      expect(other[0]!.url).toBe('/ping')
+      expect(other[0]!.headers.authorization).toBeUndefined()
+      expect(other[0]!.headers.cookie).toBeUndefined()
+      expect(other[0]!.headers['x-keep']).toBe('1')
+      expect(other[0]!.headers['x-vercel-protection-bypass']).toBeUndefined()
+      await context.dispose()
+    })
+
+    it('respects maxRedirects: 0 as the caller\'s response, and a limit as an error', async () => {
+      const { base } = await hops()
+      const context = await open(base)
+      expect((await context.get('/chain', { maxRedirects: 0 })).status()).toBe(302)
+      await expect(context.get('/chain', { maxRedirects: 1 })).rejects.toThrow('Max redirect count exceeded')
+      expect((await context.get('/chain', { maxRedirects: 2 })).status()).toBe(200)
+      await context.dispose()
+    })
+  })
 })

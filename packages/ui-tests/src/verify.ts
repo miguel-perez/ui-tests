@@ -117,7 +117,7 @@ const defaultRequest = async (baseURL: string, bypass?: string): Promise<APIRequ
   return bypass ? withBypass(context, baseURL, bypass) : context
 }
 
-type RequestOptions = { headers?: Record<string, string>; maxRedirects?: number; method?: string; data?: unknown; form?: unknown; multipart?: unknown }
+type RequestOptions = { headers?: Record<string, string>; params?: unknown; maxRedirects?: number; method?: string; data?: unknown; form?: unknown; multipart?: unknown }
 
 const REQUEST_METHODS = new Set(['fetch', 'get', 'post', 'put', 'patch', 'delete', 'head'])
 
@@ -138,25 +138,43 @@ export function withBypass(context: APIRequestContext, baseURL: string, secret: 
       if (typeof property !== 'string' || !REQUEST_METHODS.has(property)) return value.bind(target)
       return async (url: unknown, options: RequestOptions = {}) => {
         if (!sameOrigin(url)) return value.call(target, url, options)
-        // The header goes only with `maxRedirects: 0`: each redirect is followed here, and the header goes again only when the
-        // Location is still the target's own origin. A hop elsewhere is made without it.
-        let address = typeof url === 'string' ? url : (url as { url: () => string }).url()
-        let call = value as (...args: unknown[]) => Promise<APIResponse>
+        // The header goes only with `maxRedirects: 0`: each redirect is followed here by Playwright's rules, and the header goes
+        // again only when the Location is still the target's own origin. A hop elsewhere is made without it, and without the
+        // credentials of the origin it left.
+        const request = typeof url === 'string' ? undefined : (url as { url: () => string; method?: () => string; headers?: () => Record<string, string>; postDataBuffer?: () => Buffer | null })
+        const limit = options.maxRedirects ?? 20
+        let address = request ? request.url() : url as string
+        let method = property === 'fetch' ? (options.method ?? request?.method?.() ?? 'GET').toUpperCase() : property.toUpperCase()
+        let input: unknown = url
         let current: RequestOptions = options
         for (let hop = 0; ; hop++) {
           const own = sameOrigin(address)
-          const response = await call.call(target, address, own ? { ...current, headers: { ...current.headers, [BYPASS_HEADER]: secret }, maxRedirects: 0 } : current)
+          const response = await (hop === 0 ? value : target.fetch).call(target, input, own ? { ...current, headers: { ...current.headers, [BYPASS_HEADER]: secret }, maxRedirects: 0 } : current) as APIResponse
           const location = response.headers().location
-          if (!location || ![301, 302, 303, 307, 308].includes(response.status()) || !own || (current.maxRedirects ?? 20) === 0) return response
-          if (hop >= 20) throw new Error('Too many redirects')
+          if (!location || ![301, 302, 303, 307, 308].includes(response.status()) || !own || limit === 0) return response
+          if (hop >= limit) { await response.dispose(); throw new Error('Max redirect count exceeded') }
           await response.dispose()
-          address = new URL(location, new URL(address, baseURL)).href
-          const keep = response.status() === 307 || response.status() === 308
-          if (!keep) {
-            const { data: _data, form: _form, multipart: _multipart, ...rest } = current
-            current = { ...rest, method: 'GET' }
-            call = target.fetch.bind(target) as typeof call
+          const next = new URL(location, new URL(address, baseURL))
+          const { params: _params, ...rest } = current
+          current = rest
+          // A body is dropped and the method becomes GET for a POST after 301/302 and for anything but GET/HEAD after 303;
+          // 307 and 308 keep the method and body. A Request input's own method, headers and body travel on from its first hop.
+          const status = response.status()
+          if (hop === 0 && request) {
+            current = { ...current, headers: { ...request.headers?.(), ...current.headers }, ...(current.data === undefined && request.postDataBuffer?.() ? { data: request.postDataBuffer!() } : {}) }
           }
+          if ((status === 303 && method !== 'GET' && method !== 'HEAD') || ((status === 301 || status === 302) && method === 'POST')) {
+            const { data: _data, form: _form, multipart: _multipart, ...bodyless } = current
+            current = bodyless
+            method = 'GET'
+          }
+          current = { ...current, method }
+          if (next.origin !== origin) {
+            const { authorization: _a, cookie: _c, ...kept } = Object.fromEntries(Object.entries(current.headers ?? {}).map(([k, v]) => [k.toLowerCase(), v]))
+            current = { ...current, headers: kept }
+          }
+          address = next.href
+          input = address
         }
       }
     },
