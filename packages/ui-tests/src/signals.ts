@@ -24,7 +24,7 @@ export function attemptSignals(input: { attempt: AttemptRow; events: RecordedEve
   const endedAt = attempt.endedAt ? Date.parse(attempt.endedAt) : events.at(-1)?.at ?? 0
   const endUrl = events.at(-1)?.url ?? goal.path?.[0]
   let step: number | undefined
-  let endStep: number | undefined
+  const endStep = events.reduce<number | undefined>((current, e) => e.step ?? current, undefined)
   if (attempt.reason === 'gave up' || attempt.reason === 'timeout') {
     signals.push({ kind: attempt.reason === 'gave up' ? 'gave-up' : 'timeout', at: endedAt, step: endStep, url: endUrl, detail: attempt.reason === 'gave up' ? 'The participant said they could not do this' : 'The time limit ran out' })
   }
@@ -34,7 +34,6 @@ export function attemptSignals(input: { attempt: AttemptRow; events: RecordedEve
   for (const event of events) {
     if (event.type === 'step' && event.step !== undefined) step = event.step
     const here = event.step ?? step
-    endStep = here
     const before = signals.length
     if (event.type === 'click') {
       if (event.changed === false) signals.push({ kind: 'dead-click', at: event.at, url: event.url, target: event.target, detail: `Nothing changed within 300 ms after clicking ${event.target ?? 'an element'}` })

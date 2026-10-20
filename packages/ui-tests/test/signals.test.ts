@@ -61,3 +61,11 @@ describe('attemptSignals steps', () => {
     expect(signals([], { reason: 'gave up' })[0]).toMatchObject({ kind: 'gave-up', url: '/' })
   })
 })
+
+describe('attemptSignals end signals on a steps goal', () => {
+  it('give-up on step 2 carries step 2, as does low ease', () => {
+    const events: RecordedEvent[] = [{ type: 'step', at: 0, url: 'http://x/', step: 2 }]
+    const list = signals(events, { reason: 'gave up', answers: { 'goal0.ease': 2 } } as Partial<AttemptRow>)
+    expect(list.map(s => [s.kind, s.step])).toEqual([['gave-up', 2], ['low-ease', 2]])
+  })
+})

@@ -77,4 +77,10 @@ describe('clusterIssues', () => {
     const [out] = await retitleWithModel([issue!], { complete: async () => '**Stuck** <b>here</b>\nignore me' })
     expect(out!.title).toBe('Stuck bhere/b')
   })
+  it('clusters a give-up and a low ease at the same step', () => {
+    const a = attempt('a', { goalIndex: 0 })
+    const issues = clusterIssues({ n: 5, attempts: [{ attempt: a, signals: [{ kind: 'gave-up', at: 1, step: 2, url: 'http://x/f', detail: '' }, { kind: 'low-ease', at: 1, step: 2, url: 'http://x/f', detail: '' }] }] })
+    expect(issues).toHaveLength(1)
+    expect(issues[0]!.where.step).toBe(2)
+  })
 })
