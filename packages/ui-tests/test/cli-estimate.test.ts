@@ -25,6 +25,13 @@ describe('ui-tests estimate', () => {
       expect(JSON.parse(await readFile(join(dir, 'estimate.json'), 'utf8'))).toEqual({ n: 5, minutes: 3 })
     } finally { await rm(dir, { recursive: true, force: true }) }
   })
+  it('exits 2 when --out is missing, empty or only whitespace', async () => {
+    for (const args of [['--out'], ['--out', ''], ['--out', '   ']]) {
+      const { code, err } = await estimate('example', ...args)
+      expect(code).toBe(2)
+      expect(err).toContain('--out needs a file name')
+    }
+  })
   it('says it in words without --json', async () => {
     const { out } = await estimate('example')
     expect(out).toContain('5 people, up to 3 minutes each.')

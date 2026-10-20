@@ -1,4 +1,4 @@
-import { request as playwrightRequest, type APIRequestContext } from 'playwright-core'
+import { request as playwrightRequest, type APIRequestContext, type APIResponse } from 'playwright-core'
 import type { AuthoredTask } from './authoring.ts'
 import { AssertionFailure } from './expect.ts'
 import { loadBundle } from './load.ts'
@@ -117,6 +117,8 @@ const defaultRequest = async (baseURL: string, bypass?: string): Promise<APIRequ
   return bypass ? withBypass(context, baseURL, bypass) : context
 }
 
+type RequestOptions = { headers?: Record<string, string>; maxRedirects?: number; method?: string; data?: unknown; form?: unknown; multipart?: unknown }
+
 const REQUEST_METHODS = new Set(['fetch', 'get', 'post', 'put', 'patch', 'delete', 'head'])
 
 /**
@@ -134,8 +136,29 @@ export function withBypass(context: APIRequestContext, baseURL: string, secret: 
       const value = Reflect.get(target, property, receiver) as unknown
       if (typeof value !== 'function') return value
       if (typeof property !== 'string' || !REQUEST_METHODS.has(property)) return value.bind(target)
-      return (url: unknown, options: { headers?: Record<string, string> } = {}) =>
-        value.call(target, url, sameOrigin(url) ? { ...options, headers: { ...options.headers, [BYPASS_HEADER]: secret } } : options)
+      return async (url: unknown, options: RequestOptions = {}) => {
+        if (!sameOrigin(url)) return value.call(target, url, options)
+        // The header goes only with `maxRedirects: 0`: each redirect is followed here, and the header goes again only when the
+        // Location is still the target's own origin. A hop elsewhere is made without it.
+        let address = typeof url === 'string' ? url : (url as { url: () => string }).url()
+        let call = value as (...args: unknown[]) => Promise<APIResponse>
+        let current: RequestOptions = options
+        for (let hop = 0; ; hop++) {
+          const own = sameOrigin(address)
+          const response = await call.call(target, address, own ? { ...current, headers: { ...current.headers, [BYPASS_HEADER]: secret }, maxRedirects: 0 } : current)
+          const location = response.headers().location
+          if (!location || ![301, 302, 303, 307, 308].includes(response.status()) || !own || (current.maxRedirects ?? 20) === 0) return response
+          if (hop >= 20) throw new Error('Too many redirects')
+          await response.dispose()
+          address = new URL(location, new URL(address, baseURL)).href
+          const keep = response.status() === 307 || response.status() === 308
+          if (!keep) {
+            const { data: _data, form: _form, multipart: _multipart, ...rest } = current
+            current = { ...rest, method: 'GET' }
+            call = target.fetch.bind(target) as typeof call
+          }
+        }
+      }
     },
   })
 }

@@ -10,7 +10,8 @@ const minutesOf = (seconds: number) => Math.round(seconds / 6) / 10
 /** `ui-tests estimate`: how many people (n) and how many minutes each, before anything is spent; `--out <file>` also writes the JSON to a file. Cost per source comes with the sources (R3). */
 export const estimate: Command = async (args, io) => {
   const json = args.flags.has('json')
-  if (args.flags.get('out') === true) { io.stderr.write('--out needs a file name\n'); return 2 }
+  const outFlag = args.flags.get('out')
+  if (outFlag === true || (typeof outFlag === 'string' && !outFlag.trim())) { io.stderr.write('--out needs a file name\n'); return 2 }
   let loaded: Awaited<ReturnType<typeof loadStudies>>
   let config: UiTestsConfig
   try {

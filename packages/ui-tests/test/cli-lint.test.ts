@@ -30,6 +30,11 @@ describe('ui-tests lint', () => {
       expect((await lintIn('throws', `--out=${broken}`)).code).toBe(2)
       expect(JSON.parse(await readFile(broken, 'utf8')).error.message).toContain('boom at the top level')
       expect((await lintIn('example', '--out')).code).toBe(2)
+      for (const blank of ['', '   ']) {
+        const blanked = await lintIn('example', '--out', blank)
+        expect(blanked.code).toBe(2)
+        expect(blanked.err).toContain('--out needs a file name')
+      }
     } finally { await rm(dir, { recursive: true, force: true }) }
   })
   it('passes the example and prints the plan lines, including the video recording line', async () => {

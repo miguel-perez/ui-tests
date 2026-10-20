@@ -6,7 +6,7 @@ import { createParticipant } from '../src/runner/invites.ts'
 import { GOAL_ORDER, goalOrderFor } from '../src/runner/sequence.ts'
 import { createCollector } from '../src/server/collector.ts'
 import { SqliteStore } from '../src/store/sqlite.ts'
-import type { RunRow } from '../src/store/types.ts'
+import type { RunRow, RunStore } from '../src/store/types.ts'
 import type { CompiledStudy } from '../src/schema/compiled.ts'
 import { newRun } from './store-conformance.ts'
 
@@ -47,6 +47,23 @@ describe('goal order', () => {
 })
 
 describe('a link participant attempts every goal', () => {
+  it('stores the attempt and its goal order together: a failed second write leaves no one-goal slot', async () => {
+    const run = await runOf(compiled)
+    const failing = new Proxy(store, {
+      get(target, property, receiver) {
+        if (property !== 'transaction') return Reflect.get(target, property, receiver)
+        return <T>(fn: (tx: RunStore) => Promise<T>) => target.transaction(tx => fn(new Proxy(tx, {
+          get(inner, name, innerReceiver) {
+            if (name === 'updateAttempt') return () => Promise.reject(new Error('second write failed'))
+            const value = Reflect.get(inner, name, innerReceiver) as unknown
+            return typeof value === 'function' ? value.bind(inner) : value
+          },
+        })))
+      },
+    })
+    await expect(createParticipant(failing, { run, participant: 'invite-9' })).rejects.toThrow('second write failed')
+    expect((await store.listAttempts(run.run)).filter(a => a.participant === 'invite-9')).toEqual([])
+  })
   it('moves on to the next goal after the first goal\'s questions, asks the study questions once after the last, and keeps one token', async () => {
     const run = await runOf(compiled)
     const { attempt: first, token } = await createParticipant(store, { run, participant: 'invite-1', setupValues: { start: '/', code: 'abc' } })

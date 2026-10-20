@@ -5,7 +5,8 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { compileStudy } from '../src/compile.ts'
 import { bundleStudyFile, loadBundle } from '../src/load.ts'
 import { SqliteStore } from '../src/store/sqlite.ts'
-import { verifyRun } from '../src/verify.ts'
+import { request } from 'playwright-core'
+import { verifyRun, withBypass } from '../src/verify.ts'
 import { newRun } from './store-conformance.ts'
 
 const file = join(import.meta.dirname, 'fixtures', 'bypass.ui.test.ts')
@@ -59,5 +60,28 @@ describe('outcome hooks against a protected preview', () => {
   it('without the secret, the protected target answers its login page and the outcome fails', async () => {
     const { result } = await verdict()
     expect(result?.status).toBe('incorrect')
+  })
+
+  it('never follows a redirect to another origin with it, and follows a same-origin redirect with it', async () => {
+    const elsewhere = await serve(false)
+    // A target that redirects to its own /next and to the other origin.
+    const seen: IncomingHttpHeaders[] = []
+    const redirecting = createServer((req, res) => {
+      seen.push(req.headers)
+      if (req.url === '/away') return void res.writeHead(302, { Location: `${elsewhere.url}/ping` }).end()
+      if (req.url === '/home') return void res.writeHead(302, { Location: '/next' }).end()
+      res.writeHead(200).end('ok')
+    })
+    servers.push(redirecting)
+    await new Promise<void>(r => redirecting.listen(0, '127.0.0.1', r))
+    const base = `http://127.0.0.1:${(redirecting.address() as AddressInfo).port}`
+    const context = withBypass(await request.newContext({ baseURL: base }), base, SECRET)
+    expect((await context.get('/away')).status()).toBe(200)
+    expect(elsewhere.seen).toHaveLength(1)
+    expect(elsewhere.seen[0]!['x-vercel-protection-bypass']).toBeUndefined()
+    seen.length = 0
+    expect((await context.get('/home')).status()).toBe(200)
+    expect(seen.map(h => h['x-vercel-protection-bypass'])).toEqual([SECRET, SECRET])
+    await context.dispose()
   })
 })

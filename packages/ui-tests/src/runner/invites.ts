@@ -18,9 +18,13 @@ export function inviteLink(target: string, run: string, token: string, bypass?: 
  */
 export async function createParticipant(store: RunStore, input: { run: RunRow; participant: string; setupValues?: Record<string, unknown>; rehearsal?: boolean }): Promise<{ attempt: AttemptRow; token: string }> {
   const order = goalOrderFor(input.run.compiled, `${input.run.run}:${input.participant}`)
-  const made = await store.createAttempt({ runId: input.run.run, participant: input.participant, goalIndex: order[0] ?? 0, rehearsal: input.rehearsal ?? false, setupValues: input.setupValues ?? {} })
-  const answers = { ...made.attempt.answers, [GOAL_ORDER]: order }
-  await store.updateAttempt(made.attempt.id, { answers }, 'created')
+  // One transaction, so a failed second write cannot leave a slot that has only its first goal.
+  const { made, answers } = await store.transaction(async tx => {
+    const made = await tx.createAttempt({ runId: input.run.run, participant: input.participant, goalIndex: order[0] ?? 0, rehearsal: input.rehearsal ?? false, setupValues: input.setupValues ?? {} })
+    const answers = { ...made.attempt.answers, [GOAL_ORDER]: order }
+    await tx.updateAttempt(made.attempt.id, { answers }, 'created')
+    return { made, answers }
+  })
   return { attempt: { ...made.attempt, answers }, token: made.token }
 }
 

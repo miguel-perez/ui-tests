@@ -45,7 +45,8 @@ export async function writeOut(args: Parameters<Command>[0], io: Parameters<Comm
 /** Prints each finding with its file:line, rule, reason and source; exits 1 on an error, 2 when a study cannot load. `--out <file>` also writes the JSON to a file. */
 export const lintCommand: Command = async (args, io) => {
   const json = args.flags.has('json')
-  if (args.flags.get('out') === true) { io.stderr.write('--out needs a file name\n'); return 2 }
+  const outFlag = args.flags.get('out')
+  if (outFlag === true || (typeof outFlag === 'string' && !outFlag.trim())) { io.stderr.write('--out needs a file name\n'); return 2 }
   const show = (file: string) => relative(io.cwd, file) || file
   let config: UiTestsConfig
   let loaded: Awaited<ReturnType<typeof loadStudies>>
