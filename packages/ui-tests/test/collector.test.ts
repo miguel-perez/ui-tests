@@ -51,6 +51,18 @@ async function active(goalIndex = 0) {
   return made
 }
 
+describe('deadline', () => {
+  it('refuses consent and begin after the run deadline, and lets an attempt already under way carry on', async () => {
+    const late = await start()
+    const under = await active()
+    clock = Date.parse(run.deadline) + 1
+    expect((await post(late.token, { action: 'consent' })).status).toBe(409)
+    expect((await post(under.token, { action: 'events', events: [] })).status).toBe(200)
+    const fresh = await start()
+    expect((await post(fresh.token, { action: 'begin' })).status).toBe(409)
+  })
+})
+
 describe('view', () => {
   it('answers 401 without a token and with a token that is not this run\'s', async () => {
     const { token } = await start()

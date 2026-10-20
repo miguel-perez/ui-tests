@@ -155,6 +155,8 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     const reload = async (extra?: Headers) => respond(run, (await store.getAttempt(attempt.id)) ?? attempt, extra)
     const conflict = (text: string) => refuse(409, text)
 
+    // After the run's deadline nobody new starts: consent and begin are refused. Attempts already under way finish.
+    if ((body.action === 'consent' || body.action === 'begin') && now() >= Date.parse(run.deadline)) return conflict('This study has closed')
     switch (body.action) {
       case 'consent': {
         if (attempt.status === 'created') {

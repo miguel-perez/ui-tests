@@ -26,24 +26,28 @@ export async function createInvites(input: { store: RunStore; run: RunRow; study
   return links
 }
 
+/** The flag on an attempt that `reissueInvites` replaced: its token is revoked and it is not a slot. It is not a participant's reason to stop. */
+export const RETIRED = 'retired'
+
 /** A slot nobody has opened: made as an invite and not yet consented to. */
-const unclaimed = (a: AttemptRow) => !a.rehearsal && a.status === 'created' && a.reason === undefined
+const unclaimed = (a: AttemptRow) => !a.rehearsal && a.status === 'created' && !a.flags.includes(RETIRED)
 
 /**
  * Gives every unclaimed slot of a run a link under `linkBase`. A token is stored only as a hash, so a slot's old link cannot be
- * rebuilt for a new address: each slot gets a new attempt with the same participant, goal and setup values, and the old one is retired
- * (`withdrew`, never opened) so it neither counts as a slot nor lets its old link in. Returns the links in slot order.
+ * rebuilt for a new address: each slot is retired (flagged and its token revoked, so the old link opens nothing) and replaced by a new
+ * attempt with the same participant, goal and setup values. A slot someone opened in the meantime is left alone. Returns the links in slot order.
  */
 export async function reissueInvites(input: { store: RunStore; run: RunRow; linkBase: string; bypass?: string }): Promise<string[]> {
   const { store, run, linkBase, bypass } = input
   const links: string[] = []
   for (const slot of (await store.listAttempts(run.run)).filter(unclaimed)) {
+    if (!(await store.updateAttempt(slot.id, { flags: [...slot.flags, RETIRED] }, 'created'))) continue
+    await store.revokeTokens(slot.id)
     const { token } = await store.createAttempt({ runId: run.run, participant: slot.participant, goalIndex: slot.goalIndex, rehearsal: false, setupValues: slot.setupValues })
-    await store.updateAttempt(slot.id, { reason: 'withdrew' }, 'created')
     links.push(inviteLink(linkBase, run.run, token, bypass))
   }
   return links
 }
 
 /** A slot that counts toward the run's planned invites: not a rehearsal, and not one `reissueInvites` retired. */
-export const isSlot = (a: AttemptRow) => !a.rehearsal && !(a.status === 'created' && a.reason === 'withdrew')
+export const isSlot = (a: AttemptRow) => !a.rehearsal && !a.flags.includes(RETIRED)

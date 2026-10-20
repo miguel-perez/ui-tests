@@ -65,6 +65,16 @@ export function describeStore(name: string, open: () => Promise<RunStore>) {
       expect(await store.authorize('')).toBeUndefined()
     })
 
+    it('revokes an attempt\'s tokens without touching the others', async () => {
+      const { run } = await store.createRun(newRun('k1'))
+      const a = await store.createAttempt({ runId: run.run, participant: 'p_1', goalIndex: 0, rehearsal: false })
+      const b = await store.createAttempt({ runId: run.run, participant: 'p_2', goalIndex: 0, rehearsal: false })
+      await store.revokeTokens(a.attempt.id)
+      expect(await store.authorize(a.token)).toBeUndefined()
+      expect((await store.authorize(b.token))?.attempt.id).toBe(b.attempt.id)
+      expect(await store.getAttempt(a.attempt.id)).toBeDefined()
+    })
+
     it('updates attempts, honouring the expected status', async () => {
       const { run } = await store.createRun(newRun('k1'))
       const { attempt } = await store.createAttempt({ runId: run.run, participant: 'p_1', goalIndex: 0, rehearsal: true })

@@ -7,8 +7,8 @@ import { gitCommit, idempotencyKey } from '../runner/key.ts'
 import { handleOf, refreshRun } from '../runner/progress.ts'
 import { checkReachable } from '../runner/setup.ts'
 import { openStore } from '../store/open.ts'
-import type { RunHandle, RunStore } from '../store/types.ts'
-import { chooseTunnel, openRunTunnel } from '../tunnel/session.ts'
+import type { RunHandle, RunRow, RunStore } from '../store/types.ts'
+import { chooseTunnel, openReachableTunnel, recordTunnel } from '../tunnel/session.ts'
 import type { UiTestsConfig } from '../types.ts'
 import { verifyRun } from '../verify.ts'
 import { loadStudies, withProduct } from './lint.ts'
@@ -93,27 +93,36 @@ export const recruit: Command = async (args, io) => {
     // A key that already has a run is read back without touching the target, so it still works while the target is down.
     const existing = (await store.listRuns()).find(r => r.key === key)
     if (!existing && !(await checkReachable(target, deps.fetch))) { io.stderr.write(`target not reachable: ${target}\n`); return 2 }
-    const { run, created } = await createRun({
-      store, compiled: chosen.compiled, hooksBundle: chosen.code, target, actor, rehearsal: false, key, commit,
-      ...(hours !== undefined && { deadlineHours: Number(hours) }),
-      reachability: { url: target, reachable: true, checkedAt: new Date().toISOString() },
-    })
-    // A tunnel is run-scoped: it is opened for this run, recorded on it, and closed at the deadline or when this command ends.
     const now = deps.now ?? (() => new Date())
     const stop = new AbortController()
     const onSignal = () => stop.abort()
-    deps.signal?.addEventListener('abort', onSignal, { once: true })
-    if (deps.signal?.aborted) stop.abort()
-    let tunnel: Awaited<ReturnType<typeof openRunTunnel>> | undefined
-    const onExit = () => { void tunnel?.close() }
-    if (args.flags.has('tunnel')) {
-      try { tunnel = await openRunTunnel({ store, runId: run.run, tunnel: chooseTunnel(io.env, deps.tunnel), localUrl: target, now }) } catch (error) {
+    let opened: Awaited<ReturnType<typeof openReachableTunnel>> | undefined
+    let tunnel: typeof opened
+    const onExit = () => { void (tunnel ?? opened)?.close() }
+    let tunneling = args.flags.has('tunnel')
+    if (tunneling && existing && Date.parse(existing.deadline) <= now().getTime()) {
+      io.stderr.write(`Run ${existing.run} is past its deadline; no tunnel opened and no links reissued.\n`)
+      tunneling = false
+    }
+    // A tunnel is run-scoped: it is opened (and must answer) before any run exists, recorded on the run, and closed at the deadline or when this command ends.
+    if (tunneling) {
+      try { opened = await openReachableTunnel({ tunnel: chooseTunnel(io.env, deps.tunnel), localUrl: target, ...(deps.fetch && { fetch: deps.fetch }), retryMs: deps.pollMs ?? 500 }) } catch (error) {
         io.stderr.write(`tunnel: ${error instanceof Error ? error.message : String(error)}\n`)
         return 2
       }
       for (const event of ['SIGINT', 'SIGTERM', 'exit'] as const) process.once(event, event === 'exit' ? onExit : onSignal)
     }
+    deps.signal?.addEventListener('abort', onSignal, { once: true })
+    if (deps.signal?.aborted) stop.abort()
+    let created = false
+    let run!: RunRow
     try {
+      ;({ run, created } = await createRun({
+        store, compiled: chosen.compiled, hooksBundle: chosen.code, target, actor, rehearsal: false, key, commit,
+        ...(hours !== undefined && { deadlineHours: Number(hours) }),
+        reachability: { url: target, reachable: true, checkedAt: new Date().toISOString() },
+      }))
+      if (opened) tunnel = await recordTunnel({ store, runId: run.run, opened, now })
       const linkBase = tunnel?.url ?? target
       // A resumed run reopens its tunnel at a new address, so slots nobody opened get new links under it.
       const reissued = tunnel ? await reissueInvites({ store, run, linkBase, ...(bypass && { bypass }) }) : []
@@ -146,7 +155,7 @@ export const recruit: Command = async (args, io) => {
       deps.signal?.removeEventListener('abort', onSignal)
       for (const event of ['SIGINT', 'SIGTERM'] as const) process.removeListener(event, onSignal)
       process.removeListener('exit', onExit)
-      await tunnel?.close()
+      await (tunnel ?? opened)?.close()
     }
   } finally { await store.close() }
 }

@@ -1,3 +1,4 @@
+import { checkReachable } from '../runner/setup.ts'
 import type { RunStore } from '../store/types.ts'
 import { cloudflaredTunnel } from './cloudflared.ts'
 import { fakeTunnel } from './fake.ts'
@@ -17,15 +18,29 @@ async function updateTunnels(store: RunStore, runId: string, change: (tunnels: T
   throw new Error(`Run ${runId} kept changing; try again`)
 }
 
-/**
- * Opens the tunnel to `localUrl` for a run and appends it to the run's `tunnels`. The returned `close` ends it and stamps `closedAt`;
- * calling it twice does the second time nothing.
- */
-export async function openRunTunnel(input: { store: RunStore; runId: string; tunnel: Tunnel; localUrl: string; now: () => Date }): Promise<{ url: string; close(): Promise<void> }> {
-  const { store, runId, tunnel, localUrl, now } = input
+type Opened = { url: string; close(): Promise<void> }
+
+/** Opens the tunnel and waits until its address answers, so a tunnel that started but serves nothing fails before a run exists. */
+export async function openReachableTunnel(input: { tunnel: Tunnel; localUrl: string; fetch?: typeof fetch; retryMs?: number; tries?: number }): Promise<Opened> {
+  const { tunnel, localUrl, retryMs = 500, tries = 20 } = input
   const opened = await tunnel.open(localUrl)
+  try {
+    for (let i = 0; i < tries; i++) {
+      if (await checkReachable(opened.url, input.fetch)) return opened
+      await new Promise(resolve => setTimeout(resolve, retryMs))
+    }
+    throw new Error(`${opened.url} did not answer`)
+  } catch (error) { await opened.close(); throw error }
+}
+
+/**
+ * Appends an opened tunnel to the run's `tunnels`. The returned `close` ends it and stamps `closedAt`; calling it twice does the
+ * second time nothing.
+ */
+export async function recordTunnel(input: { store: RunStore; runId: string; opened: Opened; now: () => Date }): Promise<Opened> {
+  const { store, runId, opened, now } = input
   const openedAt = now().toISOString()
-  try { await updateTunnels(store, runId, list => [...list, { url: opened.url, openedAt }]) } catch (error) { await opened.close(); throw error }
+  await updateTunnels(store, runId, list => [...list, { url: opened.url, openedAt }])
   let closing: Promise<void> | undefined
   return {
     url: opened.url,

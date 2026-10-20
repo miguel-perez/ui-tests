@@ -166,6 +166,10 @@ export class SqliteStore implements RunStore {
     })
   }
 
+  revokeTokens(attemptId: string) {
+    return this.op(() => { this.run('DELETE FROM tokens WHERE attempt_id = ?', attemptId) })
+  }
+
   authorize(token: string) {
     return this.op(() => {
       const hash = hashToken(token)

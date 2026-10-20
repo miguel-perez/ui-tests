@@ -11,6 +11,7 @@ import { createCollector } from '../src/server/collector.ts'
 import { openStore } from '../src/store/open.ts'
 import type { RunStore } from '../src/store/types.ts'
 import { cloudflaredTunnel, parseTunnelUrl } from '../src/tunnel/cloudflared.ts'
+import { isSlot } from '../src/runner/invites.ts'
 import { fakeTunnel } from '../src/tunnel/fake.ts'
 import type { TunnelRecord } from '../src/tunnel/types.ts'
 
@@ -139,9 +140,15 @@ describe('recruit --tunnel with the fake tunnel', () => {
     expect(b.invites).toHaveLength(5)
     for (const link of b.invites) expect(link.startsWith(b.tunnel)).toBe(true)
     expect(await text(b.invites[0])).toBe('study: 200')
-    // The old slots are retired and the live ones are the same five participants.
-    const live = (await (await store()).listAttempts(a.run)).filter(x => !(x.status === 'created' && x.reason === 'withdrew'))
+    // The old slots are retired: their tokens open nothing, even through the new tunnel, and they are not slots.
+    const oldToken = new URL(a.invites[0]).searchParams.get('t')!
+    expect((await fetch(`${b.tunnel}/api/ui-tests/`, { headers: { Authorization: `Bearer ${oldToken}` } })).status).toBe(401)
+    expect(await text(a.invites[0].replace(a.tunnel, b.tunnel))).toBe('no study')
+    const all = await (await store()).listAttempts(a.run)
+    expect(all).toHaveLength(10)
+    const live = all.filter(isSlot)
     expect(live.map(x => x.participant)).toEqual(slots)
+    expect(all.filter(x => !isSlot(x)).every(x => x.reason === undefined && x.flags.includes('retired'))).toBe(true)
     second.stop()
     await second.done
   })
@@ -165,6 +172,40 @@ describe('recruit --tunnel with the fake tunnel', () => {
     })
     expect(code).toBe(2)
     expect(err).toContain('tunnel: cloudflared is not installed')
+    expect((await (await store()).listRuns()).find(r => r.key === 'k-fail')).toBeUndefined()
+  })
+
+  it('exits 2 before any run exists when the tunnel opens but does not answer, and closes it', async () => {
+    let err = ''
+    let closed = false
+    const code = await main(['recruit', '--tunnel', '--json', '--key', 'k-dead'], {
+      stdout: { write: () => true }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data },
+      deps: { pollMs: 1, tunnel: { open: async () => ({ url: 'http://127.0.0.1:1', close: async () => { closed = true } }) } },
+    })
+    expect(code).toBe(2)
+    expect(err).toContain('did not answer')
+    expect(closed).toBe(true)
+    expect((await (await store()).listRuns()).find(r => r.key === 'k-dead')).toBeUndefined()
+  })
+
+  it('opens no tunnel and reissues nothing when the run is past its deadline', async () => {
+    let clock = Date.now()
+    const first = start(['--key', 'k-late'], { now: () => new Date(clock) })
+    const a = await first.ready()
+    first.stop()
+    await first.done
+    clock += 49 * hour
+    let err = ''
+    let out = ''
+    const code = await main(['recruit', '--tunnel', '--json', '--key', 'k-late'], {
+      stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, UI_TESTS_TUNNEL: 'fake' },
+      deps: { pollMs: 1, now: () => new Date(clock) },
+    })
+    expect(code).toBe(0)
+    expect(err).toContain('past its deadline')
+    expect(JSON.parse(out).tunnel).toBeUndefined()
+    expect(await tunnelsOf(a.run)).toHaveLength(1)
+    expect((await (await store()).listAttempts(a.run)).filter(x => !isSlot(x))).toHaveLength(0)
   })
 })
 
@@ -216,6 +257,19 @@ describe('cloudflaredTunnel', () => {
     const opening = cloudflaredTunnel('cloudflared', () => proc as never).open('http://localhost:3000')
     proc.emit('error', Object.assign(new Error('spawn cloudflared ENOENT'), { code: 'ENOENT' }))
     await expect(opening).rejects.toThrow(/cloudflared is not installed/)
+  })
+
+  it('does not take cloudflared\'s own API host for a tunnel when the start fails', async () => {
+    const failed = `2026-10-19T10:00:01Z INF Requesting new quick Tunnel on trycloudflare.com...
+2026-10-19T10:00:02Z ERR failed to request quick Tunnel: Post "https://api.trycloudflare.com/tunnel": dial tcp: lookup api.trycloudflare.com: no such host
+`
+    expect(parseTunnelUrl(failed)).toBeUndefined()
+    const proc = child()
+    const opening = cloudflaredTunnel('cloudflared', () => proc as never).open('http://localhost:3000')
+    proc.stderr.write(failed)
+    proc.emit('exit', 1)
+    await expect(opening).rejects.toThrow(/exited with code 1/)
+    expect(proc.killed).toBe(true)
   })
 
   it('fails and kills the process when it exits before printing a URL', async () => {

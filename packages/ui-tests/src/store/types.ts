@@ -109,6 +109,8 @@ export interface RunStore {
   updateRun(id: string, patch: Partial<RunRow>, expectedRevision: number): Promise<boolean>
   /** Creates the attempt and a token, returned once; only its hash is stored. */
   createAttempt(input: NewAttempt): Promise<{ attempt: AttemptRow; token: string }>
+  /** Revokes every token of the attempt, so `authorize` no longer finds them. */
+  revokeTokens(attemptId: string): Promise<void>
   authorize(token: string): Promise<{ run: RunRow; attempt: AttemptRow } | undefined>
   getAttempt(id: string): Promise<AttemptRow | undefined>
   /** The run's attempts in creation order (ties broken by insertion order). */

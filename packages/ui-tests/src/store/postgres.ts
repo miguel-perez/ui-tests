@@ -138,6 +138,10 @@ export class PostgresStore implements RunStore {
     })
   }
 
+  revokeTokens(attemptId: string) {
+    return this.op(async (db) => { await db.query('DELETE FROM tokens WHERE attempt_id = $1', [attemptId]) })
+  }
+
   authorize(token: string) {
     return this.op(async (db) => {
       // Only the sha256 of a token is stored and looked up through the primary-key index; the presented token is never

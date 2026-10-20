@@ -1,7 +1,8 @@
 import { spawn, type ChildProcess } from 'node:child_process'
 import type { Tunnel } from './types.ts'
 
-const QUICK_TUNNEL_URL = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/
+// `api.trycloudflare.com` is cloudflared's own endpoint, named in its failure messages; it is never a tunnel.
+const QUICK_TUNNEL_URL = /https:\/\/(?!api\.)[a-z0-9-]+\.trycloudflare\.com(?![\w./-])/
 
 /** The quick-tunnel URL in cloudflared's output, or undefined when it has not printed one yet. */
 export const parseTunnelUrl = (output: string): string | undefined => QUICK_TUNNEL_URL.exec(output)?.[0]
