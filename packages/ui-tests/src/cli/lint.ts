@@ -23,7 +23,7 @@ export async function loadStudies(cwd: string, files: string[], config: UiTestsC
     const { code } = await bundleStudyFile(file)
     const studies = await loadBundle(code, file, cwd)
     const sourceText = await readFile(file, 'utf8')
-    for (const study of studies) loaded.push({ file, study, sourceText, compiled: compileStudy(study, config) })
+    for (const study of studies) loaded.push({ file, study, sourceText, code, compiled: compileStudy(study, config) })
   }
   return loaded
 }

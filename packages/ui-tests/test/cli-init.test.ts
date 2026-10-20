@@ -93,12 +93,9 @@ describe('ui-tests init', () => {
 })
 
 describe('ui-tests arguments', () => {
-  it('exits 2 with usage for an unknown command or none', async () => {
+  it('exits 2 with usage for an unknown command', async () => {
     expect(await run('frobnicate')).toBe(2)
     expect(err).toContain('Unknown command: frobnicate')
-    expect(err).toContain('Usage: ui-tests <command>')
-    err = ''
-    expect(await run()).toBe(2)
     expect(err).toContain('Usage: ui-tests <command>')
     expect(out).toBe('')
   })

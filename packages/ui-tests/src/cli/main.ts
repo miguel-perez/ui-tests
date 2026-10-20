@@ -1,8 +1,22 @@
+import { dev } from './dev.ts'
 import { host } from './host.ts'
 import { init } from './init.ts'
 import { lintCommand } from './lint.ts'
+import { status } from './status.ts'
+import { trace } from './trace.ts'
+import { verify } from './verify.ts'
 
-export type Io = { stdout: { write(text: string): unknown }; stderr: { write(text: string): unknown }; cwd: string; env: Record<string, string | undefined> }
+/** Things a command reaches outside the process for, replaced in tests: opening a browser, taking a screenshot, stopping, polling. */
+export type CliDeps = {
+  openUrl?: (url: string) => void | Promise<void>
+  /** Takes a screenshot of a page; the default drives Chromium, tests pass a stub. */
+  screenshot?: (url: string) => Promise<Uint8Array | undefined>
+  /** Ends a command that otherwise runs until Ctrl-C. */
+  signal?: AbortSignal
+  pollMs?: number
+  fetch?: typeof fetch
+}
+export type Io = { stdout: { write(text: string): unknown }; stderr: { write(text: string): unknown }; cwd: string; env: Record<string, string | undefined>; deps?: CliDeps }
 export type Args = { positionals: string[]; flags: Map<string, string | true> }
 export type Command = (args: Args, io: Io) => Promise<number>
 
@@ -11,10 +25,14 @@ const notShipped = (name: string): Command => async (_args, io) => {
   return 2
 }
 
-/** Commands by name; later tasks replace the placeholders and add `''` (dev mode), `verify`, `status`, `trace`, `report`. */
+/** Commands by name; `''` is dev mode (no command given). Later tasks replace the placeholders and add `report`. */
 export const commands: Record<string, Command> = {
   init,
   lint: lintCommand,
+  '': dev,
+  verify,
+  status,
+  trace,
   host,
   recruit: notShipped('recruit'),
   check: notShipped('check'),
@@ -25,6 +43,10 @@ export const commands: Record<string, Command> = {
 export const usage = () => `Usage: ui-tests <command> [options]
 
 Commands:
+  (none)            rehearse a study on yourself: open the player, verify, show the trace
+  verify <run>      run the hooks against the stored snapshots
+  status <run>      show the four states of a run
+  trace <run>       serve the trace of a run on this machine
   init              write ui-tests.config.ts, an example study and the Vitest exclude
   lint [files...]   check studies against the rules and show what a run would do
   host              deploy the collector, the player and the store to your own account
@@ -42,7 +64,7 @@ const defaultIo = (): Io => ({ stdout: process.stdout, stderr: process.stderr, c
 
 /** The flags each command reads a value for (`--actor agent` or `--actor=agent`); every other flag is a boolean. */
 export const valueFlags: Record<string, string[]> = {
-  '': ['actor', 'port', 'project'], host: ['panel'], recruit: ['actor', 'key'], check: ['actor', 'key'], estimate: ['actor'],
+  '': ['actor', 'port', 'project', 'study', 'task'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key'], check: ['actor', 'key'], estimate: ['actor'],
 }
 
 /** Splits `--flag`, `--flag=value` and, for flags the command declares, `--flag value`. */
@@ -67,9 +89,9 @@ export async function main(argv: string[], io: Io = defaultIo()): Promise<number
   const args = parseArgs(argv)
   const [name, ...rest] = args.positionals
   if (args.flags.has('help') || name === 'help') { io.stdout.write(name && name !== 'help' && commandUsage[name] ? commandUsage[name] : usage()); return 0 }
-  const command = name === undefined ? undefined : Object.hasOwn(commands, name) ? commands[name] : undefined
-  if (!command) {
-    io.stderr.write(`${name === undefined ? 'No command given' : `Unknown command: ${name}`}\n\n${usage()}`)
+  const command = Object.hasOwn(commands, name ?? '') ? commands[name ?? ''] : undefined
+  if (!command || (name !== undefined && name === '')) {
+    io.stderr.write(`Unknown command: ${name}\n\n${usage()}`)
     return 2
   }
   try { return await command({ positionals: rest, flags: args.flags }, io) } catch (error) {
