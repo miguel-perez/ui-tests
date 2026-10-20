@@ -13,7 +13,7 @@
   },
   "description": "ui-tests: the landing page and the product documents.",
   "engines": {
-    "node": ">=22.13"
+    "node": ">=26"
   },
   "scripts": {
     "dev": "npm run dev --workspace @ui-tests/web",

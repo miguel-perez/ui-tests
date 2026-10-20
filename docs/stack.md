@@ -9,7 +9,7 @@ Specified so no slice ships as raw HTML.
 | Web | Next.js App Router, TypeScript, Tailwind, shadcn/ui | One stack for the marketing site, the participant player, the review UI and the hosted UI |
 | Hosting | Vercel; the `ui-tests` domain is already there | Preview deployments are the test target; participants reach them through a protection-bypass token |
 | Repo | npm workspaces: `apps/web`, and `packages/ui-tests` once there is a package to build; the factory validates with `npm run validate` | One package for CLI, SDK and player; a split needs a second author to ask for it |
-| Runner | Node 22 CLI | Compiles contexts, creates runs, executes outcomes against stored snapshots, reports |
+| Runner | Node 26 CLI | Compiles contexts, creates runs, executes outcomes against stored snapshots, reports |
 | Store | SQLite file in dev; Postgres (Neon) on Vercel | The run record lives here, independent of any deployment; the interface requires transactional reservation |
 | Our tests | Vitest and Playwright, `@axe-core/playwright` | Vitest is also the DX we copy; Vitest excludes `*.ui.test.ts` |
 | Event replay | rrweb, lazy-loaded | The highlight reel without screen recording |
