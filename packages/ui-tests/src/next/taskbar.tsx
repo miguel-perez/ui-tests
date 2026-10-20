@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import type { ParticipantView } from '../server/view.ts'
+import { FIRST_CLICK_PROMPT } from '../player/copy.ts'
 import { ROOT_ATTRIBUTE } from './recorder.ts'
 import { chromeVars } from './theme.ts'
 import type { ChromeTheme } from './theme.ts'
@@ -130,6 +131,19 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
           </>
         )}
         {view.brand.poweredBy && <span className="uit-dim">Powered by ui-tests</span>}
+      </div>
+    </div>
+  )
+}
+
+/** The bar while the first click is taken: one line, no Done and no way out of the task, since the task has not begun. */
+export function FirstClickBar({ theme, poweredBy }: { theme: ChromeTheme; poweredBy: boolean }) {
+  return (
+    <div {...{ [ROOT_ATTRIBUTE]: '' }} className="uit-bar" role="region" aria-label={FIRST_CLICK_PROMPT} style={chromeVars(theme)}>
+      <style>{css}</style>
+      <div className="uit-pill">
+        <span className="uit-question">{FIRST_CLICK_PROMPT}</span>
+        {poweredBy && <span className="uit-dim">Powered by ui-tests</span>}
       </div>
     </div>
   )

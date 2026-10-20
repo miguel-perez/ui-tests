@@ -1,11 +1,11 @@
-import { useState, type CSSProperties, type MouseEvent, type ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import type { ParticipantView } from '../server/view.ts'
 import { answerKey } from './flow.ts'
 import type { Screen } from './flow.ts'
 import {
   AGREE, AGREEMENT_ENDS, CARD_FOOTER, CARD_TITLE, CONFIDENCE_ENDS, CONSENT_TITLE, CONTINUE, EASE_ENDS, POWERED_BY, RECORDING, SCREENER_TITLE,
   PRACTICE_CONFIRM, PRACTICE_DONE, PRACTICE_DONE_NOTE, PRACTICE_INTRO, PRACTICE_NOT_YET, PRACTICE_STUCK, PRACTICE_STUCK_NOTE, PRACTICE_TITLE, PRACTICE_YES,
-  FIRST_CLICK_LABEL, FIRST_CLICK_TITLE, START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, WITHDRAW, WITHDRAWN_BODY, WITHDRAWN_TITLE, contact, duration,
+  FIRST_CLICK_BODY, FIRST_CLICK_TITLE, OPEN_PAGE, START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, WITHDRAW, WITHDRAWN_BODY, WITHDRAWN_TITLE, contact, duration,
 } from './copy.ts'
 
 /** Where the collector serves the attempt's first-look picture; the cookie says whose it is. */
@@ -27,8 +27,8 @@ export type ScreenProps = {
   onFlashLoaded?: () => void
   /** The flashed picture could not be loaded. */
   onFlashFailed?: () => void
-  /** The first click on the picture; the player sends it and moves on. */
-  onFirstClick?: (click: { x: number; y: number; target: string }) => void
+  /** Opens the first goal's start page for the first click, when the page did not open by itself. */
+  onOpenPage?: () => void
   busy?: boolean
   error?: string
 }
@@ -56,7 +56,6 @@ const css = `
 .pl-error{color:#b3261e}
 .pl-fix{font-size:3rem;text-align:center;margin:auto}
 .pl-shot{display:block;width:100%;height:auto;border:1px solid var(--pl-hair);border-radius:8px}
-.pl-shot-hit{padding:0;border:0;background:none;cursor:crosshair;width:100%}
 .pl-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px;border:1px solid var(--pl-hair);border-radius:999px}
 .pl button.pl-ghost{color:var(--pl-fg);background:transparent;border:1px solid var(--pl-hair)}
 .pl-foot{margin-top:auto;padding-top:24px;color:var(--pl-dim);font-size:.8125rem}
@@ -210,18 +209,8 @@ export function PlayerScreen(props: ScreenProps) {
       if (!imp) { body = null; break }
       if (screen.phase === 'fixation') body = <><h1 style={{ position: 'absolute', left: -9999 }}>Get ready</h1><p className="pl-fix" aria-hidden="true">+</p></>
       else if (screen.phase === 'flash') body = <><h1 style={{ position: 'absolute', left: -9999 }}>Look at this page</h1><img className="pl-shot" alt="" src={FIRST_LOOK_SRC(view.run)} onLoad={props.onFlashLoaded} onError={props.onFlashFailed} /></>
-      else if (screen.phase === 'click') {
-        // A pointer click lands where it lands; a keyboard activation has no position, so it counts as the middle of the picture.
-        const click = (event: MouseEvent<HTMLButtonElement>) => {
-          const box = event.currentTarget.getBoundingClientRect()
-          const keyboard = event.detail === 0
-          const x = keyboard ? 0.5 : (event.clientX - box.left) / box.width
-          const y = keyboard ? 0.5 : (event.clientY - box.top) / box.height
-          const round = (n: number) => Math.round(Math.min(1, Math.max(0, n)) * 1000) / 1000
-          props.onFirstClick?.({ x: round(x), y: round(y), target: `${Math.round(round(x) * 100)}% across, ${Math.round(round(y) * 100)}% down` })
-        }
-        body = <><h1>{FIRST_CLICK_TITLE}</h1><button type="button" className="pl-shot-hit" aria-label={FIRST_CLICK_LABEL} disabled={busy} onClick={click}><img className="pl-shot" alt="" src={FIRST_LOOK_SRC(view.run)} /></button></>
-      } else body = <><Open id="impression" question={imp.question} value={given('impression')} onAnswer={onAnswer} />{next(CONTINUE)}</>
+      else if (screen.phase === 'click') body = <><h1>{FIRST_CLICK_TITLE}</h1><p>{FIRST_CLICK_BODY}</p><button type="button" disabled={busy} onClick={props.onOpenPage}>{OPEN_PAGE}</button></>
+      else body = <><Open id="impression" question={imp.question} value={given('impression')} onAnswer={onAnswer} />{next(CONTINUE)}</>
       break
     }
     case 'card':

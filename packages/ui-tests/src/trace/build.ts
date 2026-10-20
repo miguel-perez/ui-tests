@@ -1,6 +1,7 @@
 import type { ScreenerResult } from '../derive/screener.ts'
 import { fillScenario } from '../derive/scenario.ts'
 import { sampleSentence, sentence } from '../derive/sentence.ts'
+import { FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
 import type { LintFinding } from '../lint.ts'
 import type { CompiledStudy } from '../schema/compiled.ts'
 import { attemptSignals, type Signal } from '../signals.ts'
@@ -10,7 +11,9 @@ export type ImpressionResult = {
   text: string
   code: 'named the purpose' | 'did not name it' | 'no answer'
   codedBy: 'rule' | 'model'
-  firstClick?: { x: number; y: number; target: string; onPath?: boolean }
+  /** The first real click: the element, the address it led to, whether that is on the task's path (null: the task has no path), and when. Null when no click was asked, with the reason beside it. */
+  firstClick?: { target: string; url: string; onPath: boolean | null; at: number } | null
+  firstClickReason?: string
 }
 
 export type TraceAttempt = {
@@ -28,6 +31,8 @@ export type TraceAttempt = {
   screener?: ScreenerResult
   /** What the person said the page was for, how that was coded, and where they first clicked. Absent when the first look was off or unanswered. */
   impression?: ImpressionResult
+  /** Why the first look was not asked of this person (its picture could not be taken). Absent when it was asked, or is off. */
+  firstLookSkipped?: string
   timings: { onGoalMs?: number }
 }
 
@@ -91,6 +96,7 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
       ...(verification && { verification }),
       ...(screenerOf(attempt) && { screener: screenerOf(attempt)! }),
       ...(impressionOf(attempt) && { impression: impressionOf(attempt)! }),
+      ...(typeof attempt.answers[FIRST_LOOK_SKIPPED] === 'string' && { firstLookSkipped: attempt.answers[FIRST_LOOK_SKIPPED] as string }),
       signals: goal ? attemptSignals({ attempt, events, goal, ...(verification && { verification }) }) : [],
       timings: { ...(started !== undefined && ended !== undefined && { onGoalMs: ended - started }) },
     })

@@ -6,7 +6,7 @@ import type { TextModel } from '../model.ts'
 import { FIRST_LOOK_SHOT } from '../runner/screenshot.ts'
 import { fitScore } from '../derive/fit.ts'
 import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
-import { MORE_TIME, effectiveTimeout, participantView } from './view.ts'
+import { MORE_TIME, effectiveTimeout, isOwnSite, participantView } from './view.ts'
 
 export type CollectorOptions = {
   store: () => Promise<RunStore>
@@ -48,8 +48,8 @@ const message = z.discriminatedUnion('action', [
     action: z.literal('answers'),
     screener: z.record(z.string(), z.union([z.string().max(500), z.array(z.string().max(500)).max(50)])).optional(),
     impression: z.string().max(5000).optional(),
-    /** Where on the first-look picture the person clicked, as fractions of its width and height. */
-    firstClick: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1), target: z.string().max(300) }).optional(),
+    /** The first real click on the author's own page: the element (a selector, never its text), the address it led to, and when. */
+    firstClick: z.object({ target: z.string().max(300), url: z.string().max(2000), at: z.number() }).optional(),
     ease: scale.optional(),
     difficulty: z.string().max(5000).optional(),
     confidence: scale.optional(),
@@ -72,6 +72,21 @@ function environmentOf(given: Record<string, unknown>): Record<string, string> |
   const text = (id: string) => { const v = given[id]; return Array.isArray(v) ? v.join(', ') : typeof v === 'string' ? v : undefined }
   const entries = (['browser', 'device', 'assistive'] as const).flatMap((key) => { const v = text(`screener.${key}`); return v ? [[key, v] as const] : [] })
   return entries.length ? Object.fromEntries(entries) : undefined
+}
+
+const pathnameOf = (url: string, base = 'http://placeholder') => { try { return new URL(url, base).pathname.replace(/(.)\/$/, '$1') } catch { return undefined } }
+
+/**
+ * Whether the address a first click led to is on the task's path; null when the task has no path to be on. A click that stays on the
+ * start page of a path that goes elsewhere has not moved toward it.
+ */
+function onGoalPath(url: string, path: string[] | undefined, start: string): boolean | null {
+  if (!path) return null
+  const there = pathnameOf(url)
+  if (there === undefined) return false
+  const wanted = path.map((p) => pathnameOf(p))
+  if (path.length > 1 && there === pathnameOf(start)) return false
+  return wanted.includes(there)
 }
 
 const first = (value: string | null) => value?.split(',')[0]?.trim() || undefined
@@ -256,11 +271,22 @@ export function createCollector(options: CollectorOptions): (request: Request) =
             const report = screenReport(given.screener as Record<string, unknown>, run.compiled.screener)
             given.screenerResult = { matches: report.result === 'accept', outside: report.outside, fit: fitScore(given.screener as Record<string, unknown>) }
           }
-          if (body.impression !== undefined && coded) given.impression = { text: body.impression, code: coded.code, codedBy: coded.codedBy }
+          // The first look is answered once and clicked once: a repeat of either (a retry after a lost reply) changes nothing, so nothing already stored is dropped.
+          const said = current.answers.impression as Record<string, unknown> | undefined
+          if (body.impression !== undefined && coded && typeof said?.text !== 'string') {
+            const page = run.compiled.impression.page ?? goal.start
+            given.impression = {
+              text: body.impression, code: coded.code, codedBy: coded.codedBy,
+              // Only the first click needs the author's own site; a first look on any other public page ends with the question.
+              ...(!isOwnSite(page, run.target) && { firstClick: null, firstClickReason: 'the first-look page is not on the target, so no recorder was there to take a click' }),
+            }
+          }
           if (body.firstClick) {
-            const said = current.answers.impression as Record<string, unknown> | undefined
-            if (!said || typeof said.text !== 'string') return { status: 409, text: 'Answer the question before clicking' }
-            given.impression = { ...said, ...(given.impression as object | undefined), firstClick: body.firstClick }
+            if (typeof said?.text !== 'string') return { status: 409, text: 'Answer the question before clicking' }
+            if (said.firstClick === undefined) {
+              const start = typeof attempt.setupValues.start === 'string' ? attempt.setupValues.start : goal.start
+              given.impression = { ...said, firstClick: { ...body.firstClick, onPath: onGoalPath(body.firstClick.url, goal.path, start) } }
+            }
           }
           if (body.ease !== undefined) given[`${prefix}.ease`] = body.ease
           if (body.difficulty !== undefined) given[`${prefix}.difficulty`] = body.difficulty

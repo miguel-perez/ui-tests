@@ -52,6 +52,8 @@ export function entryScreen(view: ParticipantView): Screen {
     case 'created':
       return view.screener.length ? { kind: 'screener', index: 0 } : { kind: 'consent' }
     case 'consented':
+      // Back from the page, or reloaded on the way there: the click is what is left of the first look.
+      if (view.impression?.asked && view.impression.click) return { kind: 'impression', phase: 'click' }
       return beforeCard(view)
     case 'active':
       return { kind: 'card' }
@@ -76,9 +78,11 @@ export function nextScreen(view: ParticipantView, current: Screen, answers: Reco
     case 'practice':
       return afterPractice(view)
     case 'impression': {
-      const order = ['fixation', 'flash', 'question', 'click'] as const
-      const at = order.indexOf(current.phase)
-      return at + 1 < order.length ? { kind: 'impression', phase: order[at + 1]! } : { kind: 'card' }
+      // After the question the click is on the author's own page, which the SDK there takes; a first look on any other page ends with the question.
+      if (current.phase === 'fixation') return { kind: 'impression', phase: 'flash' }
+      if (current.phase === 'flash') return { kind: 'impression', phase: 'question' }
+      if (current.phase === 'question' && view.impression?.click) return { kind: 'impression', phase: 'click' }
+      return { kind: 'card' }
     }
     case 'card':
     case 'step':
@@ -106,9 +110,6 @@ export function nextScreen(view: ParticipantView, current: Screen, answers: Reco
   }
 }
 
-/** The answers key under which the first click on the picture is held until it is sent. */
-export const FIRST_CLICK = 'impression.click'
-
 /** The answers key for the task's own question; a stable, space-free id for the control. */
 export const answerKey = (view: ParticipantView) => `goal${view.goal.index}.answer`
 
@@ -123,7 +124,7 @@ export function messageFor(view: ParticipantView, screen: Screen, answers: Recor
       return { action: 'answers', screener: Object.fromEntries(view.screener.slice(0, screen.index + 1).map((q) => [q.id, answers[q.id]]).filter(([, v]) => v !== undefined && v !== '')) }
     case 'impression':
       if (screen.phase === 'question') return { action: 'answers', impression: String(answers.impression ?? '') }
-      return screen.phase === 'click' && answers[FIRST_CLICK] ? { action: 'answers', firstClick: answers[FIRST_CLICK] } : undefined
+      return undefined
     case 'answer':
       return view.answer ? { action: 'answers', answer: String(answers[answerKey(view)]) } : undefined
     case 'ease':

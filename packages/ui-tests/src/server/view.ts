@@ -16,7 +16,13 @@ export type ParticipantView = {
   /** About how long the whole study takes; the consent screen says so. */
   minutes: number
   /** Present only when the first look is on and a picture of the page was taken: the picture is served by the collector, never fetched from the page itself. */
-  impression?: { page: string; flashMs: number; question: string }
+  impression?: {
+    page: string; flashMs: number; question: string
+    /** The open question was answered; what remains is the click. */
+    asked: boolean
+    /** The first click happens on the author's own site: the player opens the start page and the SDK takes the click. */
+    click: boolean
+  }
   goal: {
     index: number
     name: string
@@ -33,8 +39,16 @@ export type ParticipantView = {
   rehearsal: boolean
 }
 
+/** Whether `page` is on the target's own site, so the SDK can be there to take a first click; any other public URL is only flashed. */
+export function isOwnSite(page: string, target: string): boolean {
+  try { return new URL(page, target).origin === new URL(target).origin } catch { return false }
+}
+
 /** The key in `attempt.answers` under which the participant asked for more time; the time limit grows by half, once. */
 export const MORE_TIME = 'moreTime'
+
+/** The first look is over once its first click, or the reason there was none, is stored. */
+const firstLookDone = (attempt: AttemptRow) => (attempt.answers.impression as { firstClick?: unknown } | undefined)?.firstClick !== undefined
 
 /** The limit in seconds after any extra time was granted. */
 export function effectiveTimeout(base: number, attempt: AttemptRow): number {
@@ -67,7 +81,9 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
     screener: rehearsal ? [] : study.screener.map((q) => ({ id: q.id, text: q.text, options: q.options.map((o) => o.label), multi: q.multi, ...(q.open && { open: true }) })),
     practice: study.practice && !rehearsal,
     minutes: Math.max(1, study.goals.reduce((sum, g) => sum + (g.minutes ?? Math.ceil(g.timeout.seconds / 60)), 0)),
-    ...(impression.on && attempt.answers[FIRST_LOOK_SHOT] !== undefined && { impression: { page: impression.page ?? goal.start, flashMs: impression.flashMs, question: impression.question } }),
+    ...(impression.on && attempt.answers[FIRST_LOOK_SHOT] !== undefined && !firstLookDone(attempt) && {
+      impression: { page: impression.page ?? goal.start, flashMs: impression.flashMs, question: impression.question, asked: typeof (attempt.answers.impression as { text?: unknown } | undefined)?.text === 'string', click: isOwnSite(impression.page ?? goal.start, run.target) },
+    }),
     goal: {
       index: goal.index,
       name: goal.name,

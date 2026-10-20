@@ -16,7 +16,7 @@ describe('nextScreen', () => {
   })
 
   it('orders a link run screener, consent, practice, first look, card', () => {
-    const v = view({ screener: [{ id: 's1', text: 'a', options: ['x'], multi: false }, { id: 's2', text: 'b', options: ['y'], multi: false }], practice: true, impression: { page: '/', flashMs: 500, question: 'What was that page for?' } })
+    const v = view({ screener: [{ id: 's1', text: 'a', options: ['x'], multi: false }, { id: 's2', text: 'b', options: ['y'], multi: false }], practice: true, impression: { page: '/', flashMs: 500, question: 'What was that page for?', asked: false, click: true } })
     const path: Screen[] = [entryScreen(v)]
     while (path.at(-1)!.kind !== 'card') path.push(nextScreen(v, path.at(-1)!, {}))
     expect(path).toEqual([

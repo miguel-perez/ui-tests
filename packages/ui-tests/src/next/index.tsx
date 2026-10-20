@@ -6,8 +6,8 @@ import type { ParticipantView } from '../server/view.ts'
 import type { RecordedEvent } from '../store/types.ts'
 import { createBuffer } from './buffer.ts'
 import type { Buffer } from './buffer.ts'
-import { createRecorder, fitSnapshot, serializeSnapshot } from './recorder.ts'
-import { Taskbar } from './taskbar.tsx'
+import { ROOT_ATTRIBUTE, createRecorder, fitSnapshot, serializeSnapshot, shortSelector } from './recorder.ts'
+import { FirstClickBar, Taskbar } from './taskbar.tsx'
 import type { EndReason } from './taskbar.tsx'
 import { chromeTheme, readHost } from './theme.ts'
 
@@ -60,6 +60,32 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
   const attempt = active?.attempt
   // Which step is on survives a full navigation for this attempt; the collector keeps each step's snapshot.
   useEffect(() => { if (attempt) setStepIndex(readStep(attempt)) }, [attempt])
+
+  // The first click of the first look: the one real click on this page before the task begins. It is recorded, not performed, and the
+  // person goes back to the player for the card.
+  const looking = view?.status === 'consented' && view.impression?.asked && view.impression.click ? view : undefined
+  const lookingRun = looking?.run
+  useEffect(() => {
+    if (!lookingRun) return
+    let sent = false
+    const onClick = (event: MouseEvent) => {
+      const element = event.target instanceof Element ? event.target : undefined
+      if (!element || element.closest(`[${ROOT_ATTRIBUTE}]`) || sent) return
+      event.preventDefault()
+      event.stopPropagation()
+      sent = true
+      const anchor = element.closest('a[href]') as HTMLAnchorElement | null
+      const url = (anchor?.href ?? location.href).slice(0, 2000)
+      void post({ action: 'answers', firstClick: { target: shortSelector(element), url, at: Date.now() } })
+        .then((response) => {
+          if (response.ok || response.status === 409) window.location.assign(`/ui-tests/${lookingRun}/?after=first-look`)
+          else sent = false
+        })
+        .catch(() => { sent = false })
+    }
+    document.addEventListener('click', onClick, true)
+    return () => document.removeEventListener('click', onClick, true)
+  }, [lookingRun, post])
 
   // Recording: events go to the buffer, the buffer to the collector.
   useEffect(() => {
@@ -178,7 +204,9 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
     setBusy(false)
   }
 
-  const theme = useMemo(() => (active ? chromeTheme(readHost(document, active.brand.accent)) : undefined), [active])
+  const shown = active ?? looking
+  const theme = useMemo(() => (shown ? chromeTheme(readHost(document, shown.brand.accent)) : undefined), [shown])
+  if (looking && theme) return createPortal(<FirstClickBar theme={theme} poweredBy={looking.brand.poweredBy} />, document.body)
   if (!active || !theme) return null
   const steps = active.goal.steps
   const step = steps.length ? { index: Math.min(stepIndex, steps.length - 1), count: steps.length, name: steps[Math.min(stepIndex, steps.length - 1)]! } : undefined

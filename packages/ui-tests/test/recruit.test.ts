@@ -1,4 +1,3 @@
-import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { createServer, type IncomingHttpHeaders, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -9,6 +8,7 @@ import { SqliteStore } from '../src/store/sqlite.ts'
 import { main, type CliDeps, type Io } from '../src/cli/main.ts'
 import { idempotencyKey } from '../src/runner/key.ts'
 import { refreshRun } from '../src/runner/progress.ts'
+import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { openStore } from '../src/store/open.ts'
 import type { HookResult, RunRow, RunStore } from '../src/store/types.ts'
 

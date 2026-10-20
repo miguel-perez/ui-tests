@@ -94,7 +94,8 @@ async function throughConsent(page: Page, player: string) {
   if (await firstLook.isVisible()) {
     await page.getByRole('textbox').fill('To start testing what I built')
     await page.getByRole('button', { name: 'Continue' }).click()
-    await page.getByRole('button', { name: /Click where you would start/ }).click()
+    await page.waitForURL(`${PRODUCT_URL}/`)
+    await page.getByRole('link', { name: 'Get started' }).first().click()
   }
   await expect(card).toBeVisible()
 }
@@ -206,8 +207,8 @@ test.describe('the landing study, rehearsed with the CLI', () => {
     await expect(page.getByRole('heading', { name: 'What was that page for?' })).toBeVisible()
     await press('textbox', undefined, 'Space')
     await press('button', 'Continue', 'Enter')
-    await expect(page.getByRole('heading', { name: 'Where would you click first?' })).toBeVisible()
-    await press('button', 'The page you just saw. Click where you would start.', 'Enter')
+    await page.waitForURL(`${PRODUCT_URL}/`)
+    await press('link', 'Get started', 'Enter')
     await expect(page.getByRole('heading', { name: 'Your task' })).toBeVisible()
     await axe()
     await press('button', 'Start task', 'Enter')

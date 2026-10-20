@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { ParticipantView } from '../server/view.ts'
-import { FIRST_CLICK, entryScreen, messageFor, nextScreen } from './flow.ts'
+import { entryScreen, messageFor, nextScreen } from './flow.ts'
 import type { Screen } from './flow.ts'
 import { PlayerScreen } from './screens.tsx'
 
@@ -37,7 +37,13 @@ export function Player({ runId }: { runId: string }) {
     let alive = true
     request()
       .then((response) => (response.ok ? (response.json() as Promise<ParticipantView>) : Promise.reject(new Error(String(response.status)))))
-      .then((next) => { if (alive) { setView(next); setScreen(entryScreen(next)) } })
+      .then((next) => {
+        if (!alive) return
+        setView(next)
+        // Back from the first click on the author's own page: the first look is over, so the card follows rather than the practice screen.
+        const back = new URLSearchParams(window.location.search).get('after') === 'first-look'
+        setScreen(back && next.status === 'consented' ? { kind: 'card' } : entryScreen(next))
+      })
       .catch(() => { if (alive) setError('This link is not valid any more.') })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -55,11 +61,15 @@ export function Player({ runId }: { runId: string }) {
   useEffect(() => {
     if (!view || screen?.kind !== 'impression' || screen.phase !== 'flash') return
     // A first look with no picture to show is dropped whole: the card comes next, with no question and no click. Leaving the phase cancels this.
-    const limit = setTimeout(() => setScreen({ kind: 'card' }), FLASH_LOAD_LIMIT_MS)
+    const limit = setTimeout(() => { clearTimeout(flash.current); setScreen({ kind: 'card' }) }, FLASH_LOAD_LIMIT_MS)
     return () => clearTimeout(limit)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, view])
   useEffect(() => () => clearTimeout(flash.current), [])
+  // The first click is taken on the author's own page by the SDK there; this page sends the person to it.
+  useEffect(() => {
+    if (view && screen?.kind === 'impression' && screen.phase === 'click') window.location.assign(view.goal.start)
+  }, [screen, view])
 
   async function send(body: Record<string, unknown>): Promise<ParticipantView> {
     const response = await request({ method: 'POST', body: JSON.stringify(body) })
@@ -67,12 +77,12 @@ export function Player({ runId }: { runId: string }) {
     return (await response.json()) as ParticipantView
   }
 
-  async function advance(current: Screen, extra: Record<string, unknown> = {}) {
+  async function advance(current: Screen) {
     if (!view || busy) return
     setBusy(true)
     setError(undefined)
     try {
-      const message = messageFor(view, current, { ...answers, ...extra })
+      const message = messageFor(view, current, answers)
       const updated = message ? await send(message) : undefined
       if (updated) setView(updated)
       if (current.kind === 'consent') {
@@ -132,17 +142,14 @@ export function Player({ runId }: { runId: string }) {
         performance.mark('first-look:flash-start')
         flash.current = setTimeout(() => {
           performance.mark('first-look:flash-end')
-          setScreen((s) => (s ? nextScreen(view, s, answers) : s))
+          setScreen((s) => (s?.kind === 'impression' && s.phase === 'flash' ? nextScreen(view, s, answers) : s))
         }, view.impression?.flashMs ?? 500)
       }}
       onFlashFailed={() => {
         clearTimeout(flash.current)
         setScreen({ kind: 'card' })
       }}
-      onFirstClick={(click) => {
-        setAnswers((a) => ({ ...a, [FIRST_CLICK]: click }))
-        void advance(screen, { [FIRST_CLICK]: click })
-      }}
+      onOpenPage={() => window.location.assign(view.goal.start)}
       busy={busy}
       error={error}
     />
