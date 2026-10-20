@@ -11,6 +11,7 @@ import { lintCommand } from './lint.ts'
 import { mcp } from './mcp.ts'
 import { recruit } from './recruit.ts'
 import { report } from './report.ts'
+import { serve } from './serve.ts'
 import { status } from './status.ts'
 import { trace } from './trace.ts'
 import { verify } from './verify.ts'
@@ -55,6 +56,7 @@ export const commands: Record<string, Command> = {
   check,
   estimate,
   mcp,
+  serve,
 }
 
 export const usage = () => `Usage: ui-tests <command> [options]
@@ -74,6 +76,8 @@ Commands:
   mcp               serve lint, estimate, run, status, verify, report and trace as MCP tools over stdio
   lint [files...]   check studies against the rules and show what a run would do (--out <file> also writes the JSON)
   host              deploy the collector, the player and the store to your own account
+  serve             serve the collector, the player, the report and the tag's script while a study is open
+                    (--port <n>, --bind <addr>; UI_TESTS_PUBLIC_URL is the address people reach it at)
 
 Options:
   --json            write JSON to stdout; diagnostics go to stderr
@@ -88,7 +92,7 @@ const defaultIo = (): Io => ({ stdout: process.stdout, stderr: process.stderr, c
 
 /** The flags each command reads a value for (`--actor agent` or `--actor=agent`); every other flag is a boolean. */
 export const valueFlags: Record<string, string[]> = {
-  '': ['actor', 'port', 'project', 'study', 'task', 'key', 'commit'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit', 'host'], check: ['actor', 'key', 'study'], estimate: ['actor', 'study', 'out'], lint: ['out'],
+  '': ['actor', 'port', 'project', 'study', 'task', 'key', 'commit'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit', 'host'], check: ['actor', 'key', 'study'], estimate: ['actor', 'study', 'out'], lint: ['out'], serve: ['port', 'bind'],
 }
 
 /** Splits `--flag`, `--flag=value` and, for flags the command declares, `--flag value`. */

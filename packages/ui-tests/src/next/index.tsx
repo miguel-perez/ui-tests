@@ -40,7 +40,16 @@ function cookieClient(endpoint: string): BarClient {
 export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
   const [active, setActive] = useState(false)
   // The marker cookie is readable on purpose: it only says that a run is on. The token itself is HttpOnly.
-  useEffect(() => { setActive(ACTIVE.test(document.cookie)) }, [])
+  useEffect(() => {
+    setActive(ACTIVE.test(document.cookie))
+    // The player hands off with a code in the fragment for the tag; here the cookie is the credential, so the code only leaves the address.
+    const { hash, href } = window.location
+    const handoff = /(^#|&)ui-tests=[^&]*/.exec(hash)
+    if (handoff) {
+      const rest = hash.replace(handoff[0], handoff[1] === '#' ? '#' : '').replace('#&', '#')
+      window.history.replaceState(window.history.state, '', href.split('#')[0] + (rest === '#' ? '' : rest))
+    }
+  }, [])
   const client = useMemo(() => cookieClient(endpoint), [endpoint])
   return active ? createPortal(<Bar client={client} markRoot />, document.body) : null
 }

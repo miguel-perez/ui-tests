@@ -4,9 +4,12 @@ import type { RunStore } from '../store/types.ts'
 
 let store: Promise<RunStore> | undefined
 
-/** The one store this server process reads and writes, opened on first use. A failed open is not kept: the next request tries again. */
-export function getStore(): Promise<RunStore> {
-  return (store ??= openStore()
+/**
+ * The one store this server process reads and writes, opened on first use from `env` (the process's own by default). A failed open is
+ * not kept: the next request tries again.
+ */
+export function getStore(env: NodeJS.ProcessEnv = process.env): Promise<RunStore> {
+  return (store ??= openStore(env)
     // What is past retention goes when the store opens; a failure is told and does not keep the server from serving.
     .then((opened) => {
       // In the background: the first request does not wait for a sweep over every run.

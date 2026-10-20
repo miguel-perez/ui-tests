@@ -1,28 +1,19 @@
-import { nullTranscriber, type Transcriber } from '../transcriber.ts'
+import { moduleTranscriber } from '../transcriber.ts'
 import { createCollector } from './collector.ts'
 import { getStore } from './store.ts'
+import { reportVideo } from './video.ts'
 
 export { createCollector, type CollectorOptions } from './collector.ts'
 export { nullTranscriber, type Transcriber } from '../transcriber.ts'
 export { participantView, type ParticipantView } from './view.ts'
 export { PlayerPage } from './player-page.tsx'
 export { ReportPage, reportMetadata } from './report-page.tsx'
-/** The video of a person in a shared report: mount at `app/rv/[...path]/route.server.ts`. */
-export { reportVideo as GET_REPORT_VIDEO } from './video.ts'
 
 /**
  * Spoken answers are kept as audio. To also get text, set `UI_TESTS_TRANSCRIBER` to a module (a package name or an absolute path)
  * whose default export is a `Transcriber` (`{ transcribe(audio: Uint8Array): Promise<string | undefined> }`); it is loaded on first use.
  */
-let transcriber: Promise<Transcriber> | undefined
-const configured: Transcriber = {
-  async transcribe(audio) {
-    const module = process.env.UI_TESTS_TRANSCRIBER
-    if (!module) return nullTranscriber.transcribe(audio)
-    transcriber ??= import(/* webpackIgnore: true */ module).then((m: { default: Transcriber }) => m.default)
-    return (await transcriber).transcribe(audio)
-  },
-}
+const configured = moduleTranscriber(() => process.env.UI_TESTS_TRANSCRIBER)
 
 const handler = createCollector({
   store: getStore,
@@ -34,3 +25,7 @@ const handler = createCollector({
 export const GET = (request: Request) => handler(request)
 export const POST = (request: Request) => handler(request)
 export { canRead, combine, optimisable } from '../consumers.ts'
+
+/** The video of a person in a shared report: mount at `app/rv/[...path]/route.server.ts`. */
+export const GET_REPORT_VIDEO = async (request: Request) =>
+  reportVideo(request, { store: await getStore(), ...(process.env.UI_TESTS_SHARE_SECRET && { shareSecret: process.env.UI_TESTS_SHARE_SECRET }) })

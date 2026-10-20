@@ -1,0 +1,16 @@
+# Only the manifests and packages/ui-tests are copied; keep everything else, and anything local, out of the build context.
+**/node_modules
+**/.ui-tests
+**/.env
+**/.env.*
+.git
+.archon
+.superpowers
+.next
+apps/web/.next
+factory
+design
+docs
+test-results
+playwright-report
+packages/ui-tests/test
