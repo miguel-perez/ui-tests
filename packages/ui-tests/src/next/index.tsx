@@ -22,6 +22,7 @@ let visitRecorded: string | undefined
 
 const ACTIVE = /(?:^|;\s*)ui-tests-active=1(?:;|$)/
 const FLUSH_AFTER_MS = 1000
+const REPLAY_WAIT_MS = 3000
 /** Fetches with a keepalive body only while it fits the browsers' 64 KB budget for it. */
 const KEEPALIVE_BYTES = 60_000
 const bytes = (text: string) => new TextEncoder().encode(text).length
@@ -132,7 +133,7 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
     const recorder = createRecorder((events) => void keep(events), { now: Date.now, mutationWindowMs: 300, pauseMs: 5000 })
     const detach = recorder.attach(document)
     // The replay starts with the attempt; rrweb is fetched here and nowhere before.
-    const stopReplay = startReplay(document, (events) => void keep(events, keptReplay))
+    const stopReplay = startReplay(document, (events) => void keep(events, keptReplay), { onTruncated: () => void post({ action: 'replay', events: [], truncated: true }).catch(() => {}) })
     // The page this document opened on, once per load (React's strict mode runs this effect twice). A full navigation starts a new
     // recorder, which sees no change of address of its own; the visit also goes out at once, so leaving fast does not lose it.
     const href = location.href.slice(0, 2000)
@@ -174,7 +175,8 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
     setBusy(true)
     try {
       await buffer.current?.flush()
-      await replayBuffer.current?.flush()
+      // The replay may be megabytes: Done waits for it a few seconds, not for ever.
+      await Promise.race([replayBuffer.current?.flush(), new Promise((resolve) => setTimeout(resolve, REPLAY_WAIT_MS))])
       const snapshot = fitSnapshot(serializeSnapshot(document))
       // Done on the last step is that step's Done too: its check reads the same snapshot as the outcome.
       const steps = active.goal.steps.length

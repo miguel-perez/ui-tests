@@ -7,7 +7,7 @@ import { bundleStudyFile, loadBundle } from '../src/load.ts'
 import { SqliteStore } from '../src/store/sqlite.ts'
 import { buildTrace } from '../src/trace/build.ts'
 import { serveTrace } from '../src/trace/serve.ts'
-import { TraceView } from '../src/trace/view.tsx'
+import { RunList, TraceView } from '../src/trace/view.tsx'
 import { newRun } from './store-conformance.ts'
 
 const file = join(import.meta.dirname, 'fixtures', 'verify.ui.test.ts')
@@ -80,6 +80,11 @@ describe('trace', () => {
     expect(html).toContain('data-replay')
     expect(html).toContain('/replay.js')
     expect(html).not.toContain('<td>rrweb</td>')
+    expect(html.match(/<script src="\/replay\.js"/g)).toHaveLength(1)
+    expect(html).not.toContain('The replay stops early')
+    await store.updateAttempt(attempt!.id, { answers: { 'replay-truncated': true } })
+    expect(renderToString(createElement(TraceView, { trace: await buildTrace(store, run.run) }))).toContain('The replay stops early')
+    expect(renderToString(createElement(RunList, { runs: await store.listRuns() }))).not.toContain('replay.js')
   })
 
   it('serves the run list, the trace page and the same Trace as JSON, on loopback only', async () => {

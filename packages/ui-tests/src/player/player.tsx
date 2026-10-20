@@ -122,7 +122,10 @@ export function Player({ runId }: { runId: string }) {
     setBusy(true)
     setError(undefined)
     try {
-      setView(await send({ action: 'withdraw' }))
+      const done = await send({ action: 'withdraw' })
+      // What this device kept for the attempt (events and replay not yet sent) goes too.
+      for (const name of ['ui-tests-events', 'ui-tests-replay']) { try { indexedDB.deleteDatabase(`${name}:${done.attempt}`) } catch { /* no IndexedDB */ } }
+      setView(done)
       setScreen({ kind: 'withdrawn' })
     } catch {
       setError('That did not go through. Check your connection and try again.')

@@ -8,6 +8,8 @@ export type ReplayOptions = {
   load?: () => Promise<{ record: RrwebRecord }>
   /** An event whose JSON is longer than this (in bytes) cannot be sent; recording stops rather than send a replay with a hole in it. */
   maxEventBytes?: number
+  /** Called once, when recording stopped because an event was too large to send. */
+  onTruncated?: () => void
 }
 
 /** The bar, password fields and payment fields are blocked outright: rrweb records a placeholder, not their content. */
@@ -39,7 +41,7 @@ export function startReplay(doc: Document, sink: (events: RecordedEvent[]) => vo
         emit(event: { timestamp: number }) {
           if (stopped) return
           const text = JSON.stringify(event)
-          if (text.length > maxBytes / 3 && encoder.encode(text).length > maxBytes) { stop(); return }
+          if (text.length > maxBytes / 3 && encoder.encode(text).length > maxBytes) { stop(); options.onTruncated?.(); return }
           sink([{ type: 'rrweb', at: event.timestamp, url: (doc.defaultView?.location?.href ?? doc.URL ?? '').slice(0, 2000), data: event }])
         },
         maskAllInputs: true,

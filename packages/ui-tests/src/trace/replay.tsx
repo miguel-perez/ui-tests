@@ -107,6 +107,8 @@ export function Replay({ events, moments, css }: ReplayProps) {
 /** In the trace page: replaces each `[data-replay]` placeholder with a player for the events and moments its JSON holds. */
 export function mountReplays(root: ParentNode, css?: string) {
   for (const holder of root.querySelectorAll<HTMLElement>('[data-replay]')) {
+    if (holder.dataset.mounted) continue
+    holder.dataset.mounted = 'true'
     const json = holder.querySelector('script[type="application/json"]')?.textContent
     if (!json) continue
     const props = JSON.parse(json) as ReplayProps

@@ -25,6 +25,8 @@ export type TraceAttempt = {
   replay?: RecordedEvent[]
   /** The parts of the recording worth watching: a window around each signal, with the words said inside it. */
   reel: ReelMoment[]
+  /** The replay stopped early because a page was too large to record. */
+  replayTruncated?: boolean
   /** The pages the participant went through, in order. */
   path: string[]
   /** The path the author expected, when the task has one. */
@@ -100,6 +102,7 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
       attempt,
       events,
       ...(replay.length > 0 && { replay }),
+      ...(attempt.answers['replay-truncated'] === true && { replayTruncated: true }),
       path: visited(events),
       ...(goal?.path && { happyPath: goal.path }),
       ...(end && { snapshotUrl: end.url }),

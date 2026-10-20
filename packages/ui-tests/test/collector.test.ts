@@ -508,6 +508,12 @@ describe('event replay', () => {
     expect((await post(token, { action: 'replay', events: Array.from({ length: 101 }, (_, i) => frame(100 + i)) })).status).toBe(400)
   })
 
+  it('notes on the attempt that the replay stopped early, and the trace says so', async () => {
+    const { attempt, token } = await active()
+    expect((await post(token, { action: 'replay', events: [], truncated: true })).status).toBe(200)
+    expect((await store.getAttempt(attempt.id))?.answers['replay-truncated']).toBe(true)
+  })
+
   it('refuses a replay batch when the attempt is not active', async () => {
     const made = await start()
     expect((await post(made.token, { action: 'replay', events: [frame(1)] })).status).toBe(409)

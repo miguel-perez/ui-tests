@@ -33,7 +33,6 @@ function Shell({ title, actor, children }: { title: string; actor: string; child
           <p><a href="/">ui-tests</a> · <span className="label">{actor}</span></p>
           {children}
         </main>
-        <script src="/replay.js" defer />
       </body>
     </html>
   )
@@ -64,6 +63,7 @@ function Attempt({ item, index }: { item: TraceAttempt; index: number }) {
           </tbody>
         </table>
       )}
+      {item.replayTruncated && <p>The replay stops early: a page was too large to record.</p>}
       {item.replay && (
         <>
           <h4>Replay</h4>

@@ -46,13 +46,15 @@ describe('startReplay', () => {
   it('stops for good at an event too large to send, rather than send a replay with a hole', async () => {
     const f = fake()
     const got: RecordedEvent[] = []
-    startReplay(doc(), (events) => got.push(...events), { load: f.load, maxEventBytes: 100 })
+    let truncated = 0
+    startReplay(doc(), (events) => got.push(...events), { load: f.load, maxEventBytes: 100, onTruncated: () => truncated++ })
     await tick()
     f.emit({ timestamp: 1 })
     f.emit({ timestamp: 2, big: 'x'.repeat(200) } as { timestamp: number })
     f.emit({ timestamp: 3 })
     expect(got.map((e) => e.at)).toEqual([1])
     expect(f.stopped()).toBe(true)
+    expect(truncated).toBe(1)
   })
 
   it('survives rrweb failing to load', async () => {

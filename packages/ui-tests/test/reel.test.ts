@@ -28,6 +28,11 @@ describe('highlightReel', () => {
     expect(highlightReel({ events, signals: [signal(20_000), signal(22_000)], words: [], padMs: 500 })).toHaveLength(2)
   })
 
+  it('takes the span of 200,000 events without a spread', () => {
+    const many: RecordedEvent[] = Array.from({ length: 200_000 }, (_, i) => ({ type: 'rrweb', at: i, url: '/' }))
+    expect(highlightReel({ events: many, signals: [signal(100_000)], words: [] })).toMatchObject([{ start: 97_000, end: 103_000 }])
+  })
+
   it('is empty without signals', () => {
     expect(highlightReel({ events, signals: [], words: [{ at: 1, text: 'a' }] })).toEqual([])
   })

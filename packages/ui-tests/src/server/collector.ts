@@ -29,6 +29,8 @@ const BODY_BYTES = 2_100_000
 /** A batch of replay events (rrweb) has its own limit: its first event is a full snapshot of the page, which can pass the events limit. */
 const REPLAY_BYTES = 5_000_000
 const MAX_EVENTS = 100
+/** The answers key that notes the replay stopped early. */
+export const REPLAY_TRUNCATED = 'replay-truncated'
 const MAX_SNAPSHOT_CHARS = 2_000_000
 /** About 1.4 MB of audio once decoded: a minute or two of speech. */
 const MAX_VOICE_CHARS = 1_900_000
@@ -53,7 +55,7 @@ const message = z.discriminatedUnion('action', [
   z.object({ action: z.literal('begin') }),
   z.object({ action: z.literal('events'), events: z.array(event.refine((e) => e.type !== 'rrweb', 'Replay events go in a replay batch')).max(MAX_EVENTS) }),
   /** The event replay (rrweb): batches of their own, never mixed with the events above. */
-  z.object({ action: z.literal('replay'), events: z.array(replayEvent).max(MAX_EVENTS) }),
+  z.object({ action: z.literal('replay'), events: z.array(replayEvent).max(MAX_EVENTS), truncated: z.boolean().optional() }),
   z.object({ action: z.literal('step'), index: z.number().int().nonnegative(), snapshot: snapshot.optional() }),
   z.object({ action: z.literal('end'), reason: z.enum(['done', 'gave up', 'timeout']), snapshot }),
   z.object({
@@ -248,6 +250,11 @@ export function createCollector(options: CollectorOptions): (request: Request) =
       case 'replay': {
         if ((await store.getAttempt(attempt.id))?.status !== 'active') return conflict('Attempt is not active')
         await store.appendEvents(attempt.id, body.events as RecordedEvent[])
+        // A page too large to record stops the replay; the trace says so rather than show a recording that ends for no reason.
+        if (body.truncated) {
+          const current = await store.getAttempt(attempt.id)
+          if (current?.status === 'active') await store.updateAttempt(attempt.id, { answers: { ...current.answers, [REPLAY_TRUNCATED]: true } }, 'active')
+        }
         return reload()
       }
       case 'step': {

@@ -12,9 +12,14 @@ export const REEL_PAD_MS = 3000
  */
 export function highlightReel(input: { events: RecordedEvent[]; signals: Signal[]; words: { at: number; text: string }[]; padMs?: number }): ReelMoment[] {
   const pad = input.padMs ?? REEL_PAD_MS
-  const times = input.events.map((event) => event.at)
-  const first = times.length ? Math.min(...times) : -Infinity
-  const last = times.length ? Math.max(...times) : Infinity
+  // A loop, not Math.min(...times): an attempt can hold more events than a call can take as arguments.
+  let first = Infinity
+  let last = -Infinity
+  for (const event of input.events) {
+    if (event.at < first) first = event.at
+    if (event.at > last) last = event.at
+  }
+  if (!input.events.length) { first = -Infinity; last = Infinity }
   const windows: ReelMoment[] = []
   for (const signal of [...input.signals].sort((a, b) => a.at - b.at)) {
     const start = Math.max(first, signal.at - pad)

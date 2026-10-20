@@ -34,6 +34,7 @@ test('the landing loads no rrweb without the run cookie', async ({ page }) => {
 })
 
 test('during an attempt rrweb loads, typed values never reach the store, and the trace plays the reel and seeks to each moment', async ({ page }) => {
+  test.setTimeout(120_000)
   const { runId, playerUrl } = await createRehearsalRun(fixture)
   const rrwebScripts = watchScripts(page)
   await page.goto(playerUrl)
@@ -60,6 +61,9 @@ test('during an attempt rrweb loads, typed values never reach the store, and the
   await page.locator('#note').fill(SECRET)
   // Late enough that the moment starts after the recording does, so seeking to it is not seeking to the start.
   await page.waitForTimeout(4000)
+  await page.locator('#inert').click()
+  // A second dead click, far enough on that its window does not merge with the first: the reel has two moments.
+  await page.waitForTimeout(8000)
   await page.locator('#inert').click()
   await page.waitForTimeout(800)
 
@@ -103,8 +107,14 @@ test('during an attempt rrweb loads, typed values never reach the store, and the
     }
 
     // The reel plays from its first moment.
+    // It really plays: moment 1, then the player's clock reaches moment 2's start, then the reel ends.
+    expect(traced.reel).toHaveLength(2)
     await page.getByRole('button', { name: 'Play the highlight reel' }).click()
-    await expect(page.getByRole('status')).toHaveText(/Highlight reel: moment 1 of|End of the highlight reel/)
+    await expect(page.getByRole('status')).toHaveText('Highlight reel: moment 1 of 2', { timeout: 10_000 })
+    await expect(page.getByRole('status')).toHaveText('Highlight reel: moment 2 of 2', { timeout: 20_000 })
+    expect(Number(await player.getAttribute('data-current-ms'))).toBeGreaterThanOrEqual(traced.reel[1]!.start - first - 200)
+    await expect(page.getByRole('status')).toHaveText('End of the highlight reel', { timeout: 20_000 })
+    expect(Number(await player.getAttribute('data-current-ms'))).toBeGreaterThanOrEqual(traced.reel[1]!.end - first - 500)
   } finally {
     await (await trace).close()
     await store.close()
