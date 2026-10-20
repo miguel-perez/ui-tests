@@ -1,4 +1,5 @@
 import { loadConfig } from '../config.ts'
+import { agentRun } from './agent-run.ts'
 import { formatFindings, lint, planLines } from '../lint.ts'
 import { StudyLoadError } from '../load.ts'
 import { createRun } from '../runner/create-run.ts'
@@ -45,7 +46,7 @@ async function waitForAttempt(store: RunStore, runId: string, attemptId: string,
 /**
  * `ui-tests` with no command: rehearse a study on yourself. Prints the plan, creates a rehearsal run (never counted toward n),
  * runs `setup`, opens the player, waits for the attempt, verifies it, prints the outcome, the signals and the sentence,
- * and serves the trace until Ctrl-C.
+ * and serves the trace until Ctrl-C. With `--actor agent` it runs the agent trials instead (`agent-run.ts`).
  */
 export const dev: Command = async (args, io: Io) => {
   const deps = io.deps ?? {}
@@ -54,6 +55,7 @@ export const dev: Command = async (args, io: Io) => {
   if (actorFlag === 'both') { io.stderr.write('--actor both is refused: a run has one actor.\n'); return 2 }
   if (actorFlag !== undefined && actorFlag !== 'human' && actorFlag !== 'agent') { io.stderr.write('--actor must be human or agent\n'); return 2 }
   const actor = actorFlag ?? 'human'
+  if (actor === 'agent') return agentRun(args, io)
 
   let loaded: Awaited<ReturnType<typeof loadStudies>>
   let config: UiTestsConfig

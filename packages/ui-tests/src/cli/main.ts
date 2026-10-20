@@ -61,6 +61,7 @@ export const usage = () => `Usage: ui-tests <command> [options]
 
 Commands:
   (none)            rehearse a study on yourself: open the player, verify, show the trace
+  --actor agent     run the study's tasks as agent trials: a capability test, not usability
   verify <run>      run the hooks against the stored snapshots
   recruit           make a run and print the invite links (--wait for the result, --tunnel to serve a local build)
   status <run>      show the four states of a run
@@ -84,7 +85,7 @@ const defaultIo = (): Io => ({ stdout: process.stdout, stderr: process.stderr, c
 
 /** The flags each command reads a value for (`--actor agent` or `--actor=agent`); every other flag is a boolean. */
 export const valueFlags: Record<string, string[]> = {
-  '': ['actor', 'port', 'project', 'study', 'task'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit'], check: ['actor', 'key', 'study'], estimate: ['actor'],
+  '': ['actor', 'port', 'project', 'study', 'task', 'key', 'commit'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit'], check: ['actor', 'key', 'study'], estimate: ['actor'],
 }
 
 /** Splits `--flag`, `--flag=value` and, for flags the command declares, `--flag value`. */

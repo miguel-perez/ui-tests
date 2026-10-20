@@ -4,7 +4,7 @@ import { AssertionFailure } from './expect.ts'
 import { loadBundle } from './load.ts'
 import { snapshotPage } from './snapshot-page.ts'
 import type { AttemptRow, HookResult, RunRow, RunStore, Verification } from './store/types.ts'
-import type { Hook, HookArgs } from './types.ts'
+import type { Hook, HookArgs, Workspace } from './types.ts'
 
 export type { HookResult, Verification } from './store/types.ts'
 
@@ -34,21 +34,21 @@ function checkAnswer(task: AuthoredTask, attempt: AttemptRow, goalIndex: number)
   return given === task.answer.expected ? { status: 'correct' } : { status: 'incorrect', reason: 'The answer differs from the expected one', diff: { expected: task.answer.expected, actual: given } }
 }
 
-/** Runs the task's outcome, step checks and answer check against the stored evidence and combines them into one verdict. */
-export async function verifyAttempt(input: { run: RunRow; attempt: AttemptRow; task: AuthoredTask; store: RunStore; request: APIRequestContext }): Promise<Verification> {
-  const { attempt, task, store, request } = input
+/** Runs the task's outcome, step checks and answer check against the stored evidence (and an agent trial's workspace) and combines them into one verdict. */
+export async function verifyAttempt(input: { run: RunRow; attempt: AttemptRow; task: AuthoredTask; store: RunStore; request: APIRequestContext; workspace?: Workspace }): Promise<Verification> {
+  const { attempt, task, store, request, workspace } = input
   const setup = attempt.setupValues
   const end = await store.getSnapshot(attempt.id, 'end')
   const steps = await Promise.all(task.steps.map(async (step, index): Promise<HookResult & { name: string }> => {
     if (!step.check) return { name: step.name, status: 'unknown', reason: 'No check authored' }
-    return { name: step.name, ...await runHook(step.check, { request, setup, page: snapshotPage(await store.getSnapshot(attempt.id, `step-${index}`)) }) }
+    return { name: step.name, ...await runHook(step.check, { request, setup, page: snapshotPage(await store.getSnapshot(attempt.id, `step-${index}`)), ...(workspace && { workspace }) }) }
   }))
   const answer = checkAnswer(task, attempt, attempt.goalIndex)
   const [outcome] = task.outcomes as (Hook | undefined)[]
   const terminal = attempt.reason === 'gave up' || attempt.reason === 'timeout'
   let result: HookResult
   if (outcome && terminal) result = { status: 'incorrect', reason: `Terminal reason: ${attempt.reason}` }
-  else if (outcome) result = await runHook(outcome, { request, setup, page: snapshotPage(end) })
+  else if (outcome) result = await runHook(outcome, { request, setup, page: snapshotPage(end), ...(workspace && { workspace }) })
   else if (answer) result = answer
   else if (task.steps.some(step => step.check !== undefined)) result = { status: 'correct' }
   else result = { status: 'unknown', reason: 'Issues only: no outcome' }

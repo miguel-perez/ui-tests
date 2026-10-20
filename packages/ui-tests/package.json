@@ -19,6 +19,7 @@
     "schema": "tsx scripts/write-schema.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
     "@electric-sql/pglite": "0.5.8",
     "@neondatabase/serverless": "1.1.0",
     "esbuild": "0.28.2",

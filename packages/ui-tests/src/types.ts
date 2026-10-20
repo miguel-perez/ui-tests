@@ -6,8 +6,11 @@ export type Users = string | { are: string; did?: string; within?: string; often
 export type Target = { url?: string; cli?: string; mcp?: string; http?: string }
 /** What a hook can read of the stored end state of an attempt. */
 export type SnapshotPage = { url(): string; textContent(selector: string): string | null; query(selector: string): Element | null; state(): unknown }
-/** The files an agent attempt left behind. */
-export type Workspace = { file(glob: string): string | undefined; root: string }
+/**
+ * The files an agent attempt left behind. `file(glob)` is the text of the first matching file; `null` when the workspace
+ * was read and nothing matches (a failed `toExist`), `undefined` when there is no workspace to read (missing evidence).
+ */
+export type Workspace = { file(glob: string): string | null | undefined; root: string }
 /** Runs in the runner once per invite slot; `start` is where the participant lands. */
 export type SetupFn = (args: { request: APIRequestContext }) => Promise<{ start?: string } & Record<string, unknown>>
 /** The arguments an outcome or step check receives. */
