@@ -14,6 +14,7 @@ import type { UiTestsConfig } from '../types.ts'
 import { verifyRun } from '../verify.ts'
 import { loadStudies, withProduct } from './lint.ts'
 import type { Command, Io } from './main.ts'
+import { reporterFor } from './outward.ts'
 
 const DEFAULT_POLL_MS = 30_000
 
@@ -33,7 +34,7 @@ async function waitForResult(store: RunStore, runId: string, io: Io, signal?: Ab
   const now = deps.now ?? (() => new Date())
   for (;;) {
     await verifyRun(store, runId)
-    const run = await refreshRun(store, runId, now())
+    const run = await refreshRun(store, runId, now(), { onResult: reporterFor(io) })
     if (run.result !== 'pending') return { handle: handleOf(run), code: exitCodeFor(run.result) }
     if (signal?.aborted) return { handle: handleOf(run), code: 3 }
     io.stderr.write(`waiting: ${run.states.collection}, result pending\n`)
@@ -84,9 +85,12 @@ export const recruit: Command = async (args, io) => {
   const diagnostics = json ? io.stderr : io.stdout
   diagnostics.write(`${planLines(chosen.compiled).join('\n')}\n${chosen.compiled.consent.payout}\n\n`)
 
-  const commit = await gitCommit(io.cwd)
+  const commitFlag = args.flags.get('commit')
+  const commit = typeof commitFlag === 'string' ? commitFlag : await gitCommit(io.cwd)
   const keyFlag = args.flags.get('key')
-  const key = typeof keyFlag === 'string' ? keyFlag : idempotencyKey({ commit, contextId: chosen.compiled.id, actor })
+  const prFlag = args.flags.get('pr')
+  const pr = typeof prFlag === 'string' && /^[1-9]\d*$/.test(prFlag) ? Number(prFlag) : undefined
+  const key = typeof keyFlag === 'string' ? keyFlag : idempotencyKey({ commit, ...(pr !== undefined && { pr }), contextId: chosen.compiled.id, actor })
   const bypass = io.env.VERCEL_AUTOMATION_BYPASS_SECRET || undefined
 
   const store = await openStore(io.env)

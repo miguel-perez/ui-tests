@@ -33,6 +33,10 @@ export type RunRow = RunHandle & {
   tunnels?: unknown
   /** The reachability check of the target, as JSON; shape is owned by the recruit task. */
   reachability?: unknown
+  /** Where the run's pull request check lives (`GitHubLink`); set by `ui-tests check`. */
+  github?: unknown
+  /** What has been told to the outside for the current result (`Delivered`): check, comment, webhook. */
+  delivered?: unknown
 }
 
 /** What `createRun` takes; the store assigns the id, revision, creation time, and default states, result and deadline (48 hours). */

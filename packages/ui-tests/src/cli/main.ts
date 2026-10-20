@@ -1,5 +1,7 @@
+import type { GitHubClient } from '../github/types.ts'
 import type { Screenshotter } from '../runner/screenshot.ts'
 import type { Tunnel } from '../tunnel/types.ts'
+import { check } from './check.ts'
 import { dev } from './dev.ts'
 import { host } from './host.ts'
 import { init } from './init.ts'
@@ -25,6 +27,10 @@ export type CliDeps = {
   fetch?: typeof fetch
   /** What `recruit --tunnel` opens; the default is cloudflared, or the fake when `UI_TESTS_TUNNEL=fake`. */
   tunnel?: Tunnel
+  /** The GitHub `check` talks to; the default is the REST API with `GITHUB_TOKEN`. */
+  github?: GitHubClient
+  /** The first wait before the webhook is retried; it doubles each time. */
+  webhookBackoffMs?: number
 }
 export type Io = { stdout: { write(text: string): unknown }; stderr: { write(text: string): unknown }; cwd: string; env: Record<string, string | undefined>; deps?: CliDeps }
 export type Args = { positionals: string[]; flags: Map<string, string | true> }
@@ -46,7 +52,7 @@ export const commands: Record<string, Command> = {
   trace,
   host,
   recruit,
-  check: notShipped('check'),
+  check,
   estimate: notShipped('estimate'),
   mcp: notShipped('mcp'),
 }
@@ -58,6 +64,7 @@ Commands:
   verify <run>      run the hooks against the stored snapshots
   recruit           make a run and print the invite links (--wait for the result, --tunnel to serve a local build)
   status <run>      show the four states of a run
+  check             post the pull request check for a preview (--reconcile updates the open ones)
   report <run>      the report in words, the run record (--json), or a signed link to share (--share)
   trace <run>       serve the trace of a run on this machine
   init              write ui-tests.config.ts, an example study and the Vitest exclude
@@ -77,7 +84,7 @@ const defaultIo = (): Io => ({ stdout: process.stdout, stderr: process.stderr, c
 
 /** The flags each command reads a value for (`--actor agent` or `--actor=agent`); every other flag is a boolean. */
 export const valueFlags: Record<string, string[]> = {
-  '': ['actor', 'port', 'project', 'study', 'task'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study'], check: ['actor', 'key'], estimate: ['actor'],
+  '': ['actor', 'port', 'project', 'study', 'task'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit'], check: ['actor', 'key', 'study'], estimate: ['actor'],
 }
 
 /** Splits `--flag`, `--flag=value` and, for flags the command declares, `--flag value`. */

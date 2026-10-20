@@ -5,4 +5,6 @@ export default defineConfig({
   target: { url: process.env.PREVIEW_URL ?? 'http://localhost:3000' },
   product: 'ui-tests',
   author: 'ui-tests',
+  // A pull request is tested when it carries this label.
+  ci: { on: ['label:ui-test'] },
 })

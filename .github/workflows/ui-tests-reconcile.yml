@@ -1,0 +1,52 @@
+name: ui-tests reconcile
+
+# Brings the ui-tests check of every open run up to date: verify, then status, which completes the check once there is a result.
+# Needs the repository secrets UI_TESTS_DATABASE_URL and UI_TESTS_SHARE_SECRET (see docs/github-check.md);
+# without UI_TESTS_DATABASE_URL it skips with a notice.
+on:
+  schedule:
+    - cron: '*/15 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  checks: write
+  pull-requests: write
+
+concurrency:
+  group: ui-tests-reconcile
+  cancel-in-progress: false
+
+jobs:
+  reconcile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      UI_TESTS_DATABASE_URL: ${{ secrets.UI_TESTS_DATABASE_URL }}
+      UI_TESTS_SHARE_SECRET: ${{ secrets.UI_TESTS_SHARE_SECRET }}
+    steps:
+      - name: Skip when not configured
+        id: gate
+        run: |
+          if [ -z "$UI_TESTS_DATABASE_URL" ]; then
+            echo "::notice::ui-tests reconcile skipped: the UI_TESTS_DATABASE_URL secret is not set."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.gate.outputs.run == 'true'
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        if: steps.gate.outputs.run == 'true'
+        with:
+          node-version: '22.22.0'
+      - if: steps.gate.outputs.run == 'true'
+        run: npm ci
+      - name: Verify and update open runs
+        if: steps.gate.outputs.run == 'true'
+        working-directory: apps/web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: npx ui-tests check --reconcile

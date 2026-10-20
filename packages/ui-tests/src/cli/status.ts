@@ -1,6 +1,7 @@
 import { handleOf, refreshRun } from '../runner/progress.ts'
 import { openStore } from '../store/open.ts'
 import type { Command } from './main.ts'
+import { reporterFor } from './outward.ts'
 
 /** `ui-tests status <run>`: the four states and the result; `--json` prints the run handle. */
 export const status: Command = async (args, io) => {
@@ -9,7 +10,7 @@ export const status: Command = async (args, io) => {
   const store = await openStore(io.env)
   try {
     if (!(await store.getRun(id))) { io.stderr.write(`No such run: ${id}\n`); return 2 }
-    const run = await refreshRun(store, id, io.deps?.now?.())
+    const run = await refreshRun(store, id, io.deps?.now?.(), { onResult: reporterFor(io) })
     if (args.flags.has('json')) {
       io.stdout.write(`${JSON.stringify(handleOf(run), null, 2)}\n`)
       return 0
