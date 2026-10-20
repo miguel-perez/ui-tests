@@ -3,6 +3,7 @@ import type { RunStore } from '../store/types.ts'
 import { createCollector } from './collector.ts'
 
 export { createCollector, type CollectorOptions } from './collector.ts'
+export { nullTranscriber, type Transcriber } from '../transcriber.ts'
 export { participantView, type ParticipantView } from './view.ts'
 export { PlayerPage } from './player-page.tsx'
 

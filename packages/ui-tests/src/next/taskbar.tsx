@@ -38,6 +38,7 @@ const css = `
 .uit-bar .uit-primary { background: var(--uit-accent); color: var(--uit-accent-ink); box-shadow: none; font-weight: 500; }
 .uit-bar .uit-plain { box-shadow: none; }
 .uit-bar .uit-summary { box-shadow: none; max-width: 220px; overflow: hidden; text-overflow: ellipsis; }
+.uit-sr { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 .uit-handle { width: 20px; align-self: stretch; cursor: grab; touch-action: none; display: grid; place-items: center; color: var(--uit-dim); user-select: none; }
 .uit-question, .uit-step { padding: 0 8px; font-weight: 500; }
 @media (max-width: 600px) { .uit-handle { display: none; } .uit-bar { left: 8px; right: 8px; transform: none; } .uit-pill { width: 100%; } }
@@ -65,7 +66,7 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
   const root = useRef<HTMLDivElement>(null)
   const yes = useRef<HTMLButtonElement>(null)
   const done = useRef<HTMLButtonElement>(null)
-  /** Set when the question closes and the bar stays: focus goes back to Done once it is enabled again. */
+  /** Set when the question closes or More time is taken and the bar stays: focus goes back to Done once it is enabled again. */
   const backToDone = useRef(false)
   // The pressed button is gone once the question shows or closes; focus moves with it, so a keyboard user is not sent back to the top.
   useEffect(() => {
@@ -115,9 +116,12 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
       )}
       <div className="uit-pill">
         <div className="uit-handle" aria-hidden="true" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>⋮⋮</div>
+        {/* Always present, so a change of text is announced: the question when it opens, and that more time can be asked for. */}
+        <span role="status" aria-live="polite" className={confirming ? 'uit-question' : undefined}>
+          {confirming ? (lastStep ? 'Finished this task?' : 'Finished this step?') : offerMoreTime && <span className="uit-sr">Time is nearly up. You can ask for more time once.</span>}
+        </span>
         {confirming ? (
           <>
-            <span className="uit-question">{lastStep ? 'Finished this task?' : 'Finished this step?'}</span>
             <button ref={yes} type="button" className="uit-primary" disabled={busy} onClick={() => { if (step && !lastStep) { close(); onStep?.(step.index) } else onEnd('done') }}>Yes</button>
             <button type="button" disabled={busy} onClick={close}>Not yet</button>
           </>
@@ -127,7 +131,7 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
             {step && <span className="uit-step">Step {step.index + 1} of {step.count}: {step.name}</span>}
             <button ref={done} type="button" className="uit-primary" disabled={busy} onClick={() => setConfirming(true)}>Done</button>
             <button type="button" disabled={busy} onClick={() => onEnd('gave up')}>I couldn&apos;t do this</button>
-            {offerMoreTime && <button type="button" className="uit-plain" disabled={busy} onClick={onMoreTime}>More time</button>}
+            {offerMoreTime && <button type="button" className="uit-plain" disabled={busy} onClick={() => { backToDone.current = true; onMoreTime() }}>More time</button>}
           </>
         )}
         {view.brand.poweredBy && <span className="uit-dim">Powered by ui-tests</span>}

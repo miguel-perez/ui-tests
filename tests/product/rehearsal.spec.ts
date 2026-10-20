@@ -124,7 +124,8 @@ async function answerAll(page: Page, ease = 6) {
     await expect(heading).toBeVisible()
     const title = await heading.innerText()
     if (title === 'Thank you') return
-    if (await page.getByRole('radio').count()) await page.getByRole('radio', { name: String(title.startsWith('Overall') ? ease : 6), exact: true }).check()
+    // The study's own two items are on five points, the task's on seven.
+    if (await page.getByRole('radio').count()) await page.getByRole('radio', { name: String(title.startsWith('Overall') ? ease : title.startsWith('How confident') ? 6 : 5), exact: true }).check()
     await page.getByRole('button', { name: 'Submit' }).click()
     await expect(heading).not.toHaveText(title)
   }
@@ -369,7 +370,7 @@ test.describe('fixture studies through the same player and bar', () => {
       await unbranded('main')
       const heading = await page.getByRole('heading', { level: 1 }).innerText()
       if (heading === 'Thank you') break
-      if (await page.getByRole('radio').count()) await page.getByRole('radio', { name: '6', exact: true }).check()
+      if (await page.getByRole('radio').count()) await page.getByRole('radio', { name: heading.startsWith('Overall') || heading.startsWith('How confident') ? '6' : '5', exact: true }).check()
       await page.getByRole('button', { name: 'Submit' }).click()
       await expect(page.getByRole('heading', { level: 1 })).not.toHaveText(heading)
     }

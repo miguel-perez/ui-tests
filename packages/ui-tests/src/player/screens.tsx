@@ -1,6 +1,7 @@
 import { useState, type CSSProperties, type ReactNode } from 'react'
 import type { ParticipantView } from '../server/view.ts'
 import { answerKey } from './flow.ts'
+import { VoiceAnswer } from './voice.tsx'
 import type { Screen } from './flow.ts'
 import {
   AGREE, AGREEMENT_ENDS, CARD_FOOTER, CARD_TITLE, CONFIDENCE_ENDS, CONSENT_TITLE, CONTINUE, EASE_ENDS, POWERED_BY, RECORDING, SCREENER_TITLE,
@@ -24,6 +25,8 @@ export type ScreenProps = {
   /** Stops and deletes the recording; offered on every screen after consent. */
   onWithdraw?: () => void
   /** The flashed picture finished loading. */
+  /** A spoken answer to an open question after the task. */
+  onVoice?: (id: string, blob: Blob, transcript?: string) => void
   onFlashLoaded?: () => void
   /** The flashed picture could not be loaded. */
   onFlashFailed?: () => void
@@ -58,6 +61,8 @@ const css = `
 .pl-shot{display:block;width:100%;height:auto;border:1px solid var(--pl-hair);border-radius:8px}
 .pl-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px;border:1px solid var(--pl-hair);border-radius:999px}
 .pl button.pl-ghost{color:var(--pl-fg);background:transparent;border:1px solid var(--pl-hair)}
+.pl-voice{display:flex;flex-direction:column;gap:8px}
+.pl-row{display:flex;flex-wrap:wrap;gap:8px}
 .pl-foot{margin-top:auto;padding-top:24px;color:var(--pl-dim);font-size:.8125rem}
 `
 
@@ -79,20 +84,20 @@ function Frame({ view, children, error, onWithdraw }: { view: ParticipantView; c
   )
 }
 
-function Scale({ id, question, ends, value, onAnswer }: { id: string; question: string; ends: { low: string; high: string }; value: unknown; onAnswer: ScreenProps['onAnswer'] }) {
+function Scale({ id, question, ends, points, value, onAnswer }: { id: string; question: string; ends: { low: string; high: string }; points: number; value: unknown; onAnswer: ScreenProps['onAnswer'] }) {
   const title = `title-${slug(id)}`
   return (
     <>
       <h1 id={title}>{question}</h1>
       <div role="radiogroup" aria-labelledby={title} aria-describedby={`${title}-ends`} className="pl-scale">
-        {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+        {Array.from({ length: points }, (_, i) => i + 1).map((n) => (
           <label key={n}>
             <input type="radio" name={slug(id)} value={n} checked={value === n} onChange={() => onAnswer(id, n)} />
             <span>{n}</span>
           </label>
         ))}
       </div>
-      <div className="pl-ends" id={`${title}-ends`}><span>1, {ends.low}</span><span>7, {ends.high}</span></div>
+      <div className="pl-ends" id={`${title}-ends`}><span>1, {ends.low}</span><span>{points}, {ends.high}</span></div>
     </>
   )
 }
@@ -166,11 +171,11 @@ export function PlayerScreen(props: ScreenProps) {
 
   const scale = (id: string, ends: { low: string; high: string }) => {
     const q = questionOf(view, id)
-    return q ? <><Scale id={id} question={q.text} ends={ends} value={given(id)} onAnswer={onAnswer} />{next(SUBMIT, answered(id))}</> : null
+    return q ? <><Scale id={id} question={q.text} ends={ends} points={q.points ?? 7} value={given(id)} onAnswer={onAnswer} />{next(SUBMIT, answered(id))}</> : null
   }
   const open = (id: string, required: boolean) => {
     const q = questionOf(view, id)
-    return q ? <><Open id={id} question={q.text} value={given(id)} onAnswer={onAnswer} />{next(SUBMIT, !required || answered(id))}</> : null
+    return q ? <><Open id={id} question={q.text} value={given(id)} onAnswer={onAnswer} />{props.onVoice && <VoiceAnswer participant={view.run} disabled={busy} onAnswer={(blob, transcript) => props.onVoice?.(id, blob, transcript)} />}{next(SUBMIT, !required || answered(id))}</> : null
   }
 
   let body: ReactNode

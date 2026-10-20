@@ -279,8 +279,51 @@ describe('answers and withdrawal', () => {
     await post(token, { action: 'end', reason: 'done', snapshot: snap() })
     await post(token, { action: 'answers', ease: 6, confidence: 5 })
     expect((await store.getAttempt(attempt.id))?.status).toBe('questions')
-    expect((await post(token, { action: 'answers', uxlite: { useful: 5, easy: 6 }, comment: 'fine' })).status).toBe(200)
-    expect(await store.getAttempt(attempt.id)).toMatchObject({ status: 'finished', answers: { useful: 5, easy: 6, anything: 'fine', 'goal6.confidence': 5 } })
+    expect((await post(token, { action: 'answers', uxlite: { useful: 5, easy: 4 }, comment: 'fine' })).status).toBe(200)
+    expect(await store.getAttempt(attempt.id)).toMatchObject({ status: 'finished', answers: { useful: 5, easy: 4, anything: 'fine', 'goal6.confidence': 5 } })
+  })
+
+  it('takes the two study items on five points, not seven', async () => {
+    const { token } = await active(6)
+    await post(token, { action: 'end', reason: 'done', snapshot: snap() })
+    await post(token, { action: 'answers', ease: 6, confidence: 5 })
+    expect((await post(token, { action: 'answers', uxlite: { useful: 6 } })).status).toBe(400)
+    expect((await post(token, { action: 'answers', uxlite: { useful: 5 } })).status).toBe(200)
+  })
+
+  it('keeps a spoken answer as a voice blob, with the words when it has them, and finishes when that was the last answer', async () => {
+    const { attempt, token } = await active(6)
+    await post(token, { action: 'end', reason: 'done', snapshot: snap() })
+    await post(token, { action: 'answers', ease: 6, confidence: 5 })
+    await post(token, { action: 'answers', uxlite: { useful: 5, easy: 4 } })
+    const audio = Buffer.from([1, 2, 3, 4]).toString('base64')
+    expect((await post(token, { action: 'voice', question: 'goal6.ease', audio, contentType: 'audio/webm' })).status).toBe(400)
+    expect((await post(token, { action: 'voice', question: 'anything', audio, contentType: 'text/plain' })).status).toBe(400)
+    expect((await post(token, { action: 'voice', question: 'anything', audio: '', contentType: 'audio/webm' })).status).toBe(400)
+    const spoken = await post(token, { action: 'voice', question: 'anything', audio, contentType: 'audio/webm;codecs=opus', transcript: ' fine ' })
+    expect(spoken.status).toBe(200)
+    const stored = await store.getAttempt(attempt.id)
+    expect(stored).toMatchObject({ status: 'finished', answers: { anything: 'fine' } })
+    const blob = await store.getBlob(stored!.answers['anything.voice'] as string)
+    expect(blob).toMatchObject({ contentType: 'audio/webm;codecs=opus' })
+    expect([...blob!.bytes]).toEqual([1, 2, 3, 4])
+  })
+
+  it('asks a transcriber for the words when the browser sent none, and keeps the audio when there are none', async () => {
+    const heard = createCollector({ store: async () => store, now: () => clock, transcriber: { transcribe: async (bytes) => (bytes.length === 4 ? 'it was slow' : undefined) } })
+    const say = (token: string, bytes: number[]) => heard(new Request(endpoint, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: 'voice', question: 'goal0.difficulty', audio: Buffer.from(bytes).toString('base64'), contentType: 'audio/webm' }) }))
+    for (const [bytes, words] of [[[1, 2, 3, 4], 'it was slow'], [[9], '']] as const) {
+      const { attempt, token } = await active(0)
+      await post(token, { action: 'end', reason: 'done', snapshot: snap() })
+      await post(token, { action: 'answers', ease: 2 })
+      expect((await say(token, [...bytes])).status).toBe(200)
+      expect((await store.getAttempt(attempt.id))?.answers['goal0.difficulty']).toBe(words)
+    }
+  })
+
+  it('refuses a spoken answer while the task is still on', async () => {
+    const { token } = await active(0)
+    expect((await post(token, { action: 'voice', question: 'anything', audio: 'AQID', contentType: 'audio/webm' })).status).toBe(409)
   })
 
   it('asks what made it difficult only at 4 or below', async () => {

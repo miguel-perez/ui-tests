@@ -73,7 +73,7 @@ describe('ui-tests dev mode', () => {
     for (const body of [
       { action: 'consent' }, { action: 'begin' },
       { action: 'end', reason: 'done', snapshot: { url: `${targetUrl}/docs/getting-started/`, dom: '<html><body>Docs</body></html>' } },
-      { action: 'answers', ease: 6, uxlite: { useful: 6, easy: 6 }, comment: 'fine' },
+      { action: 'answers', ease: 6, uxlite: { useful: 5, easy: 5 }, comment: 'fine' },
     ]) expect((await call(collector, token, body)).status).toBe(200)
 
     await until(s.out, /Trace: http:\/\/127\.0\.0\.1:\d+\/runs\/r_\w+\//)

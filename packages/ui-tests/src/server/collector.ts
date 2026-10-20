@@ -6,6 +6,7 @@ import type { TextModel } from '../model.ts'
 import { FIRST_LOOK_SHOT } from '../runner/screenshot.ts'
 import { fitScore } from '../derive/fit.ts'
 import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
+import { nullTranscriber, type Transcriber } from '../transcriber.ts'
 import { MORE_TIME, effectiveTimeout, isOwnSite, participantView } from './view.ts'
 
 export type CollectorOptions = {
@@ -16,6 +17,8 @@ export type CollectorOptions = {
   model?: TextModel
   /** The clock in epoch milliseconds; replaced in tests. */
   now?: () => number
+  /** Makes text from a spoken answer when the browser did not; without it the audio is kept as it is. */
+  transcriber?: Transcriber
 }
 
 /** Most bytes a body may carry. `end` holds a snapshot of up to 2,000,000 characters, which JSON-escaping can nearly double. */
@@ -23,6 +26,8 @@ const END_BYTES = 5_000_000
 const BODY_BYTES = 2_100_000
 const MAX_EVENTS = 100
 const MAX_SNAPSHOT_CHARS = 2_000_000
+/** About 1.4 MB of audio once decoded: a minute or two of speech. */
+const MAX_VOICE_CHARS = 1_900_000
 
 const snapshot = z.object({ url: z.string().max(2000), dom: z.string().max(MAX_SNAPSHOT_CHARS), truncated: z.boolean().optional(), state: z.unknown().optional() })
 const at = z.union([z.number(), z.iso.datetime()]).transform((value) => (typeof value === 'number' ? value : Date.parse(value)))
@@ -58,6 +63,8 @@ const message = z.discriminatedUnion('action', [
     comment: z.string().max(10_000).optional(),
   }),
   z.object({ action: z.literal('more-time') }),
+  /** An open question answered by voice: the audio (base64), and the words when the browser already has them. */
+  z.object({ action: z.literal('voice'), question: z.string().max(100), audio: z.string().max(MAX_VOICE_CHARS), contentType: z.string().regex(/^audio\/[a-z0-9.+-]+/i).max(100), transcript: z.string().max(10_000).optional() }),
   z.object({ action: z.literal('withdraw') }),
 ])
 type Message = z.infer<typeof message>
@@ -293,7 +300,9 @@ export function createCollector(options: CollectorOptions): (request: Request) =
           if (body.confidence !== undefined) given[`${prefix}.confidence`] = body.confidence
           if (body.answer !== undefined && goal.answer) given[goal.answer.question] = body.answer
           for (const [id, value] of Object.entries(body.uxlite ?? {})) {
-            if (!run.compiled.questions.some((q) => q.id === id && q.type === 'scale')) return { status: 400, text: `Unknown question ${id}` }
+            const asked = run.compiled.questions.find((q) => q.id === id && q.type === 'scale')
+            if (!asked) return { status: 400, text: `Unknown question ${id}` }
+            if (value > (asked.points ?? 7)) return { status: 400, text: `${id} is answered on ${asked.points ?? 7} points` }
             given[id] = value
           }
           if (body.comment !== undefined) given.anything = body.comment
@@ -313,6 +322,28 @@ export function createCollector(options: CollectorOptions): (request: Request) =
           return ok ? undefined : { status: 409, text: 'The attempt moved on; try again' }
         })
         return result ? refuse(result.status, result.text) : reload()
+      }
+      case 'voice': {
+        // Only the two open questions after the task take a spoken answer; the first look is coded from words alone.
+        const prefix = `goal${goal.index}`
+        const key = body.question === 'anything' ? 'anything' : body.question === `${prefix}.difficulty` ? body.question : undefined
+        if (!key) return refuse(400, `Unknown question ${body.question}`)
+        const bytes = new Uint8Array(Buffer.from(body.audio, 'base64'))
+        if (!bytes.length) return refuse(400, 'No audio')
+        // Transcribed before the transaction opens, so a slow transcriber never holds a connection.
+        const words = (body.transcript?.trim() || (await (options.transcriber ?? nullTranscriber).transcribe(bytes).catch(() => undefined))?.trim()) || undefined
+        const result = await store.transaction(async (tx) => {
+          const current = await tx.getAttempt(attempt.id)
+          if (current?.status !== 'questions') return 'Questions are not open'
+          const view = participantView(run, current)
+          if (!view.questions.some((q) => q.id === key)) return 'This question is not asked'
+          const blob = await tx.putBlob(attempt.id, 'voice', bytes, body.contentType)
+          const answers = { ...current.answers, [key]: words ?? '', [`${key}.voice`]: blob }
+          const complete = view.questions.every((q) => (q.askIf && !(typeof answers[q.askIf.id] === 'number' && (answers[q.askIf.id] as number) <= q.askIf.atOrBelow)) || answers[q.id] !== undefined) && (!goal.answer || answers[goal.answer.question] !== undefined)
+          const ok = await tx.updateAttempt(attempt.id, { answers, ...(complete && { status: 'finished' as const }) }, 'questions')
+          return ok ? undefined : 'The attempt moved on; try again'
+        })
+        return result ? conflict(result) : reload()
       }
       case 'withdraw': {
         // Allowed from any status until withdrawn, even after finishing: the reason becomes `withdrew`, which verification and counting skip.

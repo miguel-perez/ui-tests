@@ -20,13 +20,13 @@ export async function createLinkRun(file: string, options: RunOptions = {}): Pro
 }
 
 /** A link run's options: `shot` is the picture the first look shows, standing in for a screenshot of the start page. */
-export type RunOptions = { shot?: Uint8Array }
+export type RunOptions = { shot?: Uint8Array; /** The name the questions use for the product, as the config's `product` sets it. */ product?: string }
 
 async function createRun(file: string, rehearsal: boolean, options: RunOptions = {}): Promise<{ runId: string; token: string; playerUrl: string }> {
   const { code } = await bundleStudyFile(file)
   const [authored] = await loadBundle(code, file)
   if (!authored) throw new Error(`No study in ${file}`)
-  const compiled = compileStudy(authored, {})
+  const compiled = compileStudy(authored, options.product ? { product: options.product } : {})
   const store = await openStore()
   try {
     const { run } = await store.createRun({

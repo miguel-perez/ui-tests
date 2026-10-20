@@ -49,7 +49,7 @@ async function play(run: RunRow, goalIndex: number, ease: number) {
     if (screen.kind === 'answer') answers[answerKey(view)] = view.answer!.choices[0]
     if (screen.kind === 'ease') answers[`goal${goalIndex}.ease`] = ease
     if (screen.kind === 'confidence') answers[`goal${goalIndex}.confidence`] = 5
-    if (screen.kind === 'uxlite') answers[(['useful', 'easy'] as const)[screen.item]] = 6
+    if (screen.kind === 'uxlite') answers[(['useful', 'easy'] as const)[screen.item]] = 5
     if (['difficulty', 'comment'].includes(screen.kind)) answers[screen.kind === 'comment' ? 'anything' : `goal${goalIndex}.difficulty`] = 'words'
     if (screen.kind === 'card') {
       expect((await send(token, { action: 'begin' })).status).toBe(200)

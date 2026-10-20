@@ -26,6 +26,18 @@ export const gettingStarted = {
     ],
     then: 'For a local try-out without Neon, `UI_TESTS_DATABASE_URL=pglite:memory` runs the same store in memory. The tables are created on first use.',
   },
+  accessibility: {
+    heading: 'Accessibility',
+    text: 'Everything a participant meets works with the keyboard alone: Tab and Shift+Tab to move, Space to choose, Enter to press. Every screen has one heading, one question and labelled controls; the bar announces the question it asks and any offer of more time. The checks run in a real browser with axe on every screen. What they cannot do is listen, so before you publish a study, check it by ear.',
+    manual: [
+      'On a Mac, open Safari and turn VoiceOver on with Command+F5.',
+      'Open a participant link and go from the first screen to the thanks with the keyboard only.',
+      'On each screen, listen for the heading, then the question, then each choice with its place in the group (for example "3 of 5").',
+      'On the task page, press Tab until the bar is read: the task, Done, and I couldn\'t do this. Press Done and listen for "Finished this task?".',
+      'When the bar offers more time, listen for the offer, then press the button once with the keyboard.',
+    ],
+    then: 'Do this by hand. It is not part of the automated checks. Each person also says which browser, device and assistive technology they use, and that is kept with their attempt.',
+  },
   steps: [
     { id: 'install', heading: 'Install', text: install.does, command: install.command },
     { id: 'init', heading: 'Write the config and a study', text: init.does, command: init.command },

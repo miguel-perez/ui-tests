@@ -133,11 +133,11 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
   derive('brand', 'config brand; no ui-tests name unless poweredBy is true', 'config.brand')
 
   const questions: CompiledQuestion[] = [
-    { id: 'useful', text: `Would ${product} be useful to you?`, type: 'scale', points: 7 },
-    { id: 'easy', text: `${product} is easy to use.`, type: 'scale', points: 7 },
+    { id: 'useful', text: `Would ${product} be useful to you?`, type: 'scale', points: 5 },
+    { id: 'easy', text: `${product} is easy to use.`, type: 'scale', points: 5 },
     { id: 'anything', text: `Anything you want to tell ${product}?`, type: 'open' },
   ]
-  derive('questions', 'asked once after all goals, with the product name', 'config.product')
+  derive('questions', 'the two UX-Lite items on five points ((response - 1) x 25, wording uxlite-2024), then the open question, asked once after all goals, with the product name', 'config.product')
   derive('consent', 'retention 90 days; the third purpose only when config consent.workflows is true; the payout line from config participants.link.amount', 'config.consent, config.participants')
   derive('goals[].answer.choices', 'the expected answer among its distractors (authored, else generated), shuffled by the study id and task index', 'task.answer')
 
