@@ -384,6 +384,27 @@ All paths below are under `packages/ui-tests/` unless they start at the reposito
 - [ ] **Step 4: Run** the three tests → PASS; `npm run validate` → PASS (the `site` e2e project renders the new getting-started page; `tests/vocabulary.test.ts` passes).
 - [ ] **Step 5: Commit** `git commit -m "Tell one story everywhere: a script tag and a server you run"`.
 
+### Task 12: The docs describe the product as it is; history lives in git
+
+Owner's rule (20 October 2026, after the plan was approved): documents must not narrate historical decisions, because git holds the history. This overrides the exclusions in Task 11's `one-story.test.ts`.
+
+**Files:**
+- Delete: `docs/plans/`, `docs/issues/`, and every superseded or dated draft under `docs/design/` (for example `landing-content.md`, `landing-content-v2.md`; keep one current file per subject and give it a name without a version, updating every link to it). `docs/superpowers/` is deleted when the branch finishes, not in this task.
+- Modify: every remaining tracked Markdown file outside `factory/` (`docs/**`, `README.md`, `packages/ui-tests/**/*.md`, `design/**/*.md`) and code comments or copy in `apps/web/lib` that narrate history.
+- Modify: `tests/one-story.test.ts` (drop the `docs/plans/`, `docs/superpowers/`, `docs/issues/` exclusions except `docs/superpowers/` until the branch finishes)
+- Create: `tests/present-tense.test.ts`
+
+**What "describes the present" means:** a document states what the product, the page or the research is, not how it got there. Remove: "superseded", "kept for the record", "first draft", "version N" in titles, "since issue #NN", "used to", "no longer", "was a mistake", "we decided", "redrawn on <date>", "round N", change logs, and dates that only mark when something was decided. Keep: research evidence and its sources (`docs/discovery/` stays as evidence, rewritten where it narrates a decision; a decision record such as `hosting-decision.md` has its conclusion folded into the PRD and is deleted), issue links that point at open work (`#59`, `#71`), dates that are data (a study's run date, a source's publication date), and every fact the current docs need.
+
+**Interfaces:**
+- Produces (`present-tense.test.ts`): over tracked `*.md` files outside `factory/` and `docs/superpowers/`, fails listing `file:line` for any match of `/\bsuperseded\b/i`, `/kept for the record/i`, `/\bfirst draft\b/i`, `/\bused to (?:carry|be|say|show)\b/i`, `/\bno longer\b/i`, `/\bsince issue #\d+/i`, `/\bwas a mistake\b/i`, `/^#+ .*\b(?:version|v)\s?\d+\b/im`, `/\bredrawn\b/i`; and fails for any relative Markdown link to a file that does not exist.
+
+- [ ] **Step 1: Write the failing test** `tests/present-tense.test.ts` as above; run `npx vitest run tests/present-tense.test.ts` → FAIL, listing the files.
+- [ ] **Step 2: Delete** the folders and superseded drafts above; fold `docs/discovery/hosting-decision.md`'s conclusion into `docs/prd/05-integration.md` and delete it; fix every link.
+- [ ] **Step 3: Rewrite** each listed file in the present tense, keeping every current fact and every source.
+- [ ] **Step 4: Run** `npx vitest run tests/present-tense.test.ts tests/one-story.test.ts` → PASS; `npm run validate` → PASS.
+- [ ] **Step 5: Commit** `git commit -m "Docs describe the product as it is; the history is in git"`.
+
 ---
 
 ## Self-review
