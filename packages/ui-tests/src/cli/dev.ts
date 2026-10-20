@@ -2,6 +2,7 @@ import { loadConfig } from '../config.ts'
 import { formatFindings, lint, planLines } from '../lint.ts'
 import { StudyLoadError } from '../load.ts'
 import { createRun } from '../runner/create-run.ts'
+import { attachFirstLook, playwrightScreenshotter } from '../runner/screenshot.ts'
 import { checkReachable, runSetup } from '../runner/setup.ts'
 import type { UiTestsConfig } from '../types.ts'
 import { openStore } from '../store/open.ts'
@@ -90,6 +91,8 @@ export const dev: Command = async (args, io: Io) => {
     })
     const setupValues = await runSetup(chosen.study, target)
     const { attempt, token } = await store.createAttempt({ runId: run.run, participant: 'rehearsal', goalIndex, rehearsal: true, setupValues })
+    const shot = await attachFirstLook({ store, run, target, screenshotter: deps.screenshotter ?? playwrightScreenshotter() })
+    if (shot.error) io.stderr.write(`${shot.error}\n`)
     const player = `${target.replace(/\/$/, '')}/ui-tests/${run.run}/?t=${token}`
     if (args.flags.has('no-open')) io.stdout.write(`${JSON.stringify({ player })}\n`)
     else {

@@ -6,6 +6,13 @@ import type { CompiledStudy } from '../schema/compiled.ts'
 import { attemptSignals, type Signal } from '../signals.ts'
 import type { AttemptRow, RecordedEvent, Revision, RunRow, RunStore, Verification } from '../store/types.ts'
 
+export type ImpressionResult = {
+  text: string
+  code: 'named the purpose' | 'did not name it' | 'no answer'
+  codedBy: 'rule' | 'model'
+  firstClick?: { x: number; y: number; target: string; onPath?: boolean }
+}
+
 export type TraceAttempt = {
   attempt: AttemptRow
   events: RecordedEvent[]
@@ -19,6 +26,8 @@ export type TraceAttempt = {
   signals: Signal[]
   /** What the screener made of this person: whether they match the users, which rules they fell outside, and how well they fit the purpose. Absent when none was asked. */
   screener?: ScreenerResult
+  /** What the person said the page was for, how that was coded, and where they first clicked. Absent when the first look was off or unanswered. */
+  impression?: ImpressionResult
   timings: { onGoalMs?: number }
 }
 
@@ -38,6 +47,12 @@ export type Trace = {
 function screenerOf(attempt: AttemptRow): ScreenerResult | undefined {
   const stored = attempt.answers.screenerResult as ScreenerResult | undefined
   return stored && typeof stored.matches === 'boolean' ? stored : undefined
+}
+
+/** The first look's answer as the collector stored it with its code. */
+function impressionOf(attempt: AttemptRow): ImpressionResult | undefined {
+  const stored = attempt.answers.impression as ImpressionResult | undefined
+  return stored && typeof stored === 'object' && typeof stored.code === 'string' ? stored : undefined
 }
 
 const pathOf = (url: string) => new URL(url, 'http://placeholder').pathname.replace(/(.)\/$/, '$1')
@@ -75,6 +90,7 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
       ...(end && { snapshotUrl: end.url }),
       ...(verification && { verification }),
       ...(screenerOf(attempt) && { screener: screenerOf(attempt)! }),
+      ...(impressionOf(attempt) && { impression: impressionOf(attempt)! }),
       signals: goal ? attemptSignals({ attempt, events, goal, ...(verification && { verification }) }) : [],
       timings: { ...(started !== undefined && ended !== undefined && { onGoalMs: ended - started }) },
     })

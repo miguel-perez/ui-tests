@@ -1,5 +1,6 @@
 import { fillScenario, scenarioTemplate } from '../derive/scenario.ts'
 import type { CompiledQuestion } from '../schema/compiled.ts'
+import { FIRST_LOOK_SHOT } from '../runner/screenshot.ts'
 import type { AttemptRow, RunRow } from '../store/types.ts'
 
 /** What the participant's page may know. Built by allowlist in `participantView`; nothing else crosses the boundary. */
@@ -14,6 +15,7 @@ export type ParticipantView = {
   practice: boolean
   /** About how long the whole study takes; the consent screen says so. */
   minutes: number
+  /** Present only when the first look is on and a picture of the page was taken: the picture is served by the collector, never fetched from the page itself. */
   impression?: { page: string; flashMs: number; question: string }
   goal: {
     index: number
@@ -65,7 +67,7 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
     screener: rehearsal ? [] : study.screener.map((q) => ({ id: q.id, text: q.text, options: q.options.map((o) => o.label), multi: q.multi, ...(q.open && { open: true }) })),
     practice: study.practice && !rehearsal,
     minutes: Math.max(1, study.goals.reduce((sum, g) => sum + (g.minutes ?? Math.ceil(g.timeout.seconds / 60)), 0)),
-    ...(impression.on && { impression: { page: impression.page ?? goal.start, flashMs: impression.flashMs, question: impression.question } }),
+    ...(impression.on && attempt.answers[FIRST_LOOK_SHOT] !== undefined && { impression: { page: impression.page ?? goal.start, flashMs: impression.flashMs, question: impression.question } }),
     goal: {
       index: goal.index,
       name: goal.name,

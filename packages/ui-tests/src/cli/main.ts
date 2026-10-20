@@ -1,3 +1,4 @@
+import type { Screenshotter } from '../runner/screenshot.ts'
 import type { Tunnel } from '../tunnel/types.ts'
 import { dev } from './dev.ts'
 import { host } from './host.ts'
@@ -13,6 +14,8 @@ export type CliDeps = {
   openUrl?: (url: string) => void | Promise<void>
   /** Takes a screenshot of a page; the default drives Chromium, tests pass a stub. */
   screenshot?: (url: string) => Promise<Uint8Array | undefined>
+  /** Takes the first-look picture of the start page when a run is made; the default drives Chromium, tests pass a stub. */
+  screenshotter?: Screenshotter
   /** Ends a command that otherwise runs until Ctrl-C. */
   signal?: AbortSignal
   pollMs?: number

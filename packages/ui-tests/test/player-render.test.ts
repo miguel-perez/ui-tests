@@ -106,3 +106,20 @@ describe('withdrawing', () => {
     expect(html).not.toContain(withdraw)
   })
 })
+
+describe('the first look', () => {
+  const v = view({ impression: { page: '/', flashMs: 500, question: 'What was that page for?' } })
+  it('flashes an image served by the collector, not a frame of the page', () => {
+    const html = render(v, { kind: 'impression', phase: 'flash' })
+    expect(html).toContain('<img')
+    expect(html).toContain('/api/ui-tests/?run=r_01&amp;shot=first-look')
+    expect(html).not.toContain('<iframe')
+  })
+  it('asks the question with nothing about the purpose, then offers the picture for one click', () => {
+    expect(render(v, { kind: 'impression', phase: 'question' })).toContain('What was that page for?')
+    const click = render(v, { kind: 'impression', phase: 'click' })
+    expect(click).toContain('Where would you click first?')
+    expect(click).toContain('<button')
+    expect(click).toContain('<img')
+  })
+})

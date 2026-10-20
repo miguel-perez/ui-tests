@@ -1,10 +1,11 @@
 import { loadConfig } from '../config.ts'
 import { formatFindings, lint, planLines } from '../lint.ts'
 import { StudyLoadError } from '../load.ts'
-import { createInvites, isSlot, reissueInvites } from '../runner/invites.ts'
+import { BYPASS_HEADER, createInvites, isSlot, reissueInvites } from '../runner/invites.ts'
 import { createRun } from '../runner/create-run.ts'
 import { gitCommit, idempotencyKey } from '../runner/key.ts'
 import { handleOf, refreshRun } from '../runner/progress.ts'
+import { attachFirstLook, playwrightScreenshotter } from '../runner/screenshot.ts'
 import { checkReachable } from '../runner/setup.ts'
 import { openStore } from '../store/open.ts'
 import type { RunHandle, RunRow, RunStore } from '../store/types.ts'
@@ -132,6 +133,9 @@ export const recruit: Command = async (args, io) => {
       let invites: string[] | undefined
       if (missing) invites = await createInvites({ store, run, study: chosen.study, count: missing, firstSlot: made + 1, target, linkBase, ...(bypass && { bypass }) })
       if (reissued.length) invites = [...reissued, ...(invites ?? [])]
+      // The first look is a picture of the start page, taken once now and shown to every participant of the run.
+      const shot = await attachFirstLook({ store, run, target, screenshotter: deps.screenshotter ?? playwrightScreenshotter(), ...(bypass && { headers: { [BYPASS_HEADER]: bypass } }) })
+      if (shot.error) io.stderr.write(`${shot.error}\n`)
       if (!created) io.stderr.write(`Run ${run.run} already exists for key ${key}; ${missing ? `made ${missing} missing invite${missing === 1 ? '' : 's'}` : 'no new invites'}${reissued.length ? `; ${reissued.length} link${reissued.length === 1 ? '' : 's'} reissued under the new tunnel` : ''}.\n`)
       const tunnelLine = tunnel ? `Tunnel: ${tunnel.url} (open until ${run.deadline} or until this command ends)\n` : ''
 

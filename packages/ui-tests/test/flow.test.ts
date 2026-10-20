@@ -27,6 +27,7 @@ describe('nextScreen', () => {
       { kind: 'impression', phase: 'fixation' },
       { kind: 'impression', phase: 'flash' },
       { kind: 'impression', phase: 'question' },
+      { kind: 'impression', phase: 'click' },
       { kind: 'card' },
     ])
   })

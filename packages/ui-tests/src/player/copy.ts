@@ -36,3 +36,7 @@ export const PRACTICE_YES = 'Yes'
 export const PRACTICE_NOT_YET = 'Not yet'
 export const PRACTICE_DONE_NOTE = 'That is what Done does: it asks once, then moves on to a few questions.'
 export const PRACTICE_STUCK_NOTE = "That is what I couldn't do this does: it ends the task at once, and it is always fine to press it."
+
+/** The first look's last phase: the picture comes back for one click. Says nothing of what the page is for. */
+export const FIRST_CLICK_TITLE = 'Where would you click first?'
+export const FIRST_CLICK_LABEL = 'The page you just saw. Click where you would start.'

@@ -7,6 +7,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { main, type CliDeps, type Io } from '../src/cli/main.ts'
 import { loadConfig } from '../src/config.ts'
 import { loadStudies, withProduct } from '../src/cli/lint.ts'
+import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { createRun } from '../src/runner/create-run.ts'
 import { createCollector } from '../src/server/collector.ts'
 import { openStore } from '../src/store/open.ts'
@@ -40,7 +41,7 @@ function session(cwd = work, deps: CliDeps = {}, env: Record<string, string> = {
   const controller = new AbortController()
   let out = ''
   let err = ''
-  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { signal: controller.signal, pollMs: 20, ...deps } }
+  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { signal: controller.signal, pollMs: 20, screenshotter: stubScreenshotter(new Uint8Array([0])), ...deps } }
   cleanup.push(() => controller.abort())
   return { io, controller, out: () => out, err: () => err }
 }

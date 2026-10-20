@@ -1,3 +1,4 @@
+import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { createServer, type IncomingHttpHeaders, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
@@ -46,7 +47,7 @@ afterEach(async () => { while (cleanup.length) await cleanup.pop()!() })
 function session(env: Record<string, string> = {}, deps: CliDeps = {}, cwd = work) {
   let out = ''
   let err = ''
-  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { pollMs: 1, ...deps } }
+  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { pollMs: 1, screenshotter: stubScreenshotter(new Uint8Array([0])), ...deps } }
   return { io, out: () => out, err: () => err }
 }
 async function recruit(argv: string[], env: Record<string, string> = {}, deps: CliDeps = {}) {
@@ -401,5 +402,25 @@ study('two', { users: 'People who write docs' }, () => { task('Go', () => { outc
     const second = await recruit(['--json', '--key', 'existing-key'], {}, { fetch: (async () => { throw new Error('down') }) as typeof fetch })
     expect(second.code).toBe(0)
     expect(second.json().run).toBe(first.json().run)
+  })
+})
+
+describe('recruit takes the first-look picture', () => {
+  it('captures the first-look page once and gives every invite its picture', async () => {
+    const dir = await mkdtemp(join(fixtures, '.tmp-recruit-look-'))
+    cleanup.push(() => rm(dir, { recursive: true, force: true }))
+    await writeFile(join(dir, 'look.ui.test.ts'), `import { study, task } from 'ui-tests'\nstudy('look', { users: { are: 'People who read docs', did: 'read documentation', within: '3 months' }, purpose: 'find the docs', firstLook: { page: '/landing' } }, () => { task('Read', { path: ['/', '/docs'], minutes: 2 }, () => {}) })\n`)
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' } }\n`)
+    const urls: string[] = []
+    const s = session({}, { screenshotter: stubScreenshotter(new Uint8Array([7]), urls) }, dir)
+    const code = await main(['recruit', '--json'], s.io)
+    expect(s.err()).not.toContain('first look skipped')
+    expect(code).toBe(0)
+    expect(urls).toEqual([`${targetUrl}/landing`])
+    const made = await store()
+    const run = (await made.listRuns()).find(r => r.compiled.name === 'look')
+    const attempts = await made.listAttempts(run!.run)
+    expect(attempts.length).toBe(run!.compiled.sample.n)
+    expect(attempts.every(a => typeof a.answers.firstLookShot === 'string')).toBe(true)
   })
 })

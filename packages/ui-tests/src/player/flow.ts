@@ -76,10 +76,9 @@ export function nextScreen(view: ParticipantView, current: Screen, answers: Reco
     case 'practice':
       return afterPractice(view)
     case 'impression': {
-      // The first click needs a picture of the page to point at; until the first look can show one, the question is the last phase.
-      const order = ['fixation', 'flash', 'question'] as const
-      const at = order.indexOf(current.phase as (typeof order)[number])
-      return at >= 0 && at + 1 < order.length ? { kind: 'impression', phase: order[at + 1]! } : { kind: 'card' }
+      const order = ['fixation', 'flash', 'question', 'click'] as const
+      const at = order.indexOf(current.phase)
+      return at + 1 < order.length ? { kind: 'impression', phase: order[at + 1]! } : { kind: 'card' }
     }
     case 'card':
     case 'step':
@@ -107,6 +106,9 @@ export function nextScreen(view: ParticipantView, current: Screen, answers: Reco
   }
 }
 
+/** The answers key under which the first click on the picture is held until it is sent. */
+export const FIRST_CLICK = 'impression.click'
+
 /** The answers key for the task's own question; a stable, space-free id for the control. */
 export const answerKey = (view: ParticipantView) => `goal${view.goal.index}.answer`
 
@@ -120,7 +122,8 @@ export function messageFor(view: ParticipantView, screen: Screen, answers: Recor
       // Sent after every question, with everything answered so far, so a rejecting answer ends the screener at once.
       return { action: 'answers', screener: Object.fromEntries(view.screener.slice(0, screen.index + 1).map((q) => [q.id, answers[q.id]]).filter(([, v]) => v !== undefined && v !== '')) }
     case 'impression':
-      return screen.phase === 'question' ? { action: 'answers', impression: String(answers.impression ?? '') } : undefined
+      if (screen.phase === 'question') return { action: 'answers', impression: String(answers.impression ?? '') }
+      return screen.phase === 'click' && answers[FIRST_CLICK] ? { action: 'answers', firstClick: answers[FIRST_CLICK] } : undefined
     case 'answer':
       return view.answer ? { action: 'answers', answer: String(answers[answerKey(view)]) } : undefined
     case 'ease':

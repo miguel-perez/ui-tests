@@ -2,12 +2,14 @@
 
 import { useEffect, useRef, useState } from 'react'
 import type { ParticipantView } from '../server/view.ts'
-import { entryScreen, messageFor, nextScreen } from './flow.ts'
+import { FIRST_CLICK, entryScreen, messageFor, nextScreen } from './flow.ts'
 import type { Screen } from './flow.ts'
 import { PlayerScreen } from './screens.tsx'
 
 const ENDPOINT = '/api/ui-tests/'
 const FIXATION_MS = 800
+/** If the picture has not loaded by now the first look is dropped: the stage moves on rather than waiting for ever. */
+const FLASH_LOAD_LIMIT_MS = 5000
 
 /** The participant's own page: consent, the scenario card, and the questions after the task. White-labelled by default. */
 export function Player({ runId }: { runId: string }) {
@@ -41,11 +43,20 @@ export function Player({ runId }: { runId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId])
 
-  // The first look: a fixation mark, then the page for a moment.
+  // The first look: a fixation mark (the picture loads behind it), then the picture for a moment.
   useEffect(() => {
     if (!view || screen?.kind !== 'impression' || screen.phase !== 'fixation') return
+    const preload = new Image()
+    preload.src = `${ENDPOINT}?run=${encodeURIComponent(view.run)}&shot=first-look`
     const timer = setTimeout(() => setScreen((s) => (s ? nextScreen(view, s, answers) : s)), FIXATION_MS)
     return () => clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [screen, view])
+  useEffect(() => {
+    if (!view || screen?.kind !== 'impression' || screen.phase !== 'flash') return
+    // A first look with no picture to show is dropped whole: the card comes next, with no question and no click. Leaving the phase cancels this.
+    const limit = setTimeout(() => setScreen({ kind: 'card' }), FLASH_LOAD_LIMIT_MS)
+    return () => clearTimeout(limit)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, view])
   useEffect(() => () => clearTimeout(flash.current), [])
@@ -56,12 +67,12 @@ export function Player({ runId }: { runId: string }) {
     return (await response.json()) as ParticipantView
   }
 
-  async function advance(current: Screen) {
+  async function advance(current: Screen, extra: Record<string, unknown> = {}) {
     if (!view || busy) return
     setBusy(true)
     setError(undefined)
     try {
-      const message = messageFor(view, current, answers)
+      const message = messageFor(view, current, { ...answers, ...extra })
       const updated = message ? await send(message) : undefined
       if (updated) setView(updated)
       if (current.kind === 'consent') {
@@ -118,7 +129,19 @@ export function Player({ runId }: { runId: string }) {
       onWithdraw={() => void withdraw()}
       onFlashLoaded={() => {
         clearTimeout(flash.current)
-        flash.current = setTimeout(() => setScreen((s) => (s ? nextScreen(view, s, answers) : s)), view.impression?.flashMs ?? 500)
+        performance.mark('first-look:flash-start')
+        flash.current = setTimeout(() => {
+          performance.mark('first-look:flash-end')
+          setScreen((s) => (s ? nextScreen(view, s, answers) : s))
+        }, view.impression?.flashMs ?? 500)
+      }}
+      onFlashFailed={() => {
+        clearTimeout(flash.current)
+        setScreen({ kind: 'card' })
+      }}
+      onFirstClick={(click) => {
+        setAnswers((a) => ({ ...a, [FIRST_CLICK]: click }))
+        void advance(screen, { [FIRST_CLICK]: click })
       }}
       busy={busy}
       error={error}

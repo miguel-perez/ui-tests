@@ -1,6 +1,9 @@
 import { timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
+import { codeImpressionWith } from '../derive/code-impression.ts'
 import { screenReport } from '../derive/screener.ts'
+import type { TextModel } from '../model.ts'
+import { FIRST_LOOK_SHOT } from '../runner/screenshot.ts'
 import { fitScore } from '../derive/fit.ts'
 import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
 import { MORE_TIME, effectiveTimeout, participantView } from './view.ts'
@@ -9,6 +12,8 @@ export type CollectorOptions = {
   store: () => Promise<RunStore>
   /** The secret the CLI sends as a Bearer token to act on an attempt named by `?attempt=`. */
   cliSecret?: string
+  /** Codes the first-look answer when given; without it a content-word rule does. */
+  model?: TextModel
   /** The clock in epoch milliseconds; replaced in tests. */
   now?: () => number
 }
@@ -43,6 +48,8 @@ const message = z.discriminatedUnion('action', [
     action: z.literal('answers'),
     screener: z.record(z.string(), z.union([z.string().max(500), z.array(z.string().max(500)).max(50)])).optional(),
     impression: z.string().max(5000).optional(),
+    /** Where on the first-look picture the person clicked, as fractions of its width and height. */
+    firstClick: z.object({ x: z.number().min(0).max(1), y: z.number().min(0).max(1), target: z.string().max(300) }).optional(),
     ease: scale.optional(),
     difficulty: z.string().max(5000).optional(),
     confidence: scale.optional(),
@@ -122,6 +129,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     const wantedRun = url.searchParams.get('run')
     if (wantedRun && wantedRun !== resolved.run.run) return refuse(401, 'Unauthorized')
 
+    if (get && url.searchParams.get('shot') === 'first-look') return firstLook(store, resolved.attempt)
     if (get) return respond(resolved.run, resolved.attempt)
 
     // Cookies ride along on cross-site requests, so a write they authorise must come from this origin. Bearer writes (CLI, tests) are not ambient.
@@ -153,6 +161,14 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     return found && via && token ? { ...found, via, token } : undefined
   }
 
+  /** The picture of the page for this attempt's first look; only its owner can ask. */
+  async function firstLook(store: RunStore, attempt: AttemptRow): Promise<Response> {
+    const id = attempt.answers[FIRST_LOOK_SHOT]
+    const blob = typeof id === 'string' ? await store.getBlob(id) : undefined
+    if (!blob) return refuse(404, 'No picture')
+    return new Response(Buffer.from(blob.bytes), { headers: { ...headers, 'Content-Type': blob.contentType } })
+  }
+
   async function respond(run: RunRow, attempt: AttemptRow, extra?: Headers): Promise<Response> {
     const response = Response.json(participantView(run, attempt), { headers })
     extra?.forEach((value, key) => response.headers.append(key, value))
@@ -163,6 +179,8 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     const goal = run.compiled.goals[attempt.goalIndex]!
     const reload = async (extra?: Headers) => respond(run, (await store.getAttempt(attempt.id)) ?? attempt, extra)
     const conflict = (text: string) => refuse(409, text)
+    // The first look is coded before the transaction opens, so a model call never holds a connection.
+    const coded = body.action === 'answers' && body.impression !== undefined ? await codeImpressionWith(body.impression, run.compiled.purpose, options.model) : undefined
 
     // After the run's deadline nobody new starts: consent and begin are refused. Attempts already under way finish.
     if ((body.action === 'consent' || body.action === 'begin') && now() >= Date.parse(run.deadline)) return conflict('This study has closed')
@@ -238,7 +256,12 @@ export function createCollector(options: CollectorOptions): (request: Request) =
             const report = screenReport(given.screener as Record<string, unknown>, run.compiled.screener)
             given.screenerResult = { matches: report.result === 'accept', outside: report.outside, fit: fitScore(given.screener as Record<string, unknown>) }
           }
-          if (body.impression !== undefined) given.impression = body.impression
+          if (body.impression !== undefined && coded) given.impression = { text: body.impression, code: coded.code, codedBy: coded.codedBy }
+          if (body.firstClick) {
+            const said = current.answers.impression as Record<string, unknown> | undefined
+            if (!said || typeof said.text !== 'string') return { status: 409, text: 'Answer the question before clicking' }
+            given.impression = { ...said, ...(given.impression as object | undefined), firstClick: body.firstClick }
+          }
           if (body.ease !== undefined) given[`${prefix}.ease`] = body.ease
           if (body.difficulty !== undefined) given[`${prefix}.difficulty`] = body.difficulty
           if (body.confidence !== undefined) given[`${prefix}.confidence`] = body.confidence
