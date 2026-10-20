@@ -94,7 +94,7 @@ describe('ids and opening', () => {
     expect(newToken()).not.toBe(newToken())
   })
 
-  it('opens SQLite at dev.sqlite in the data directory, ', async () => {
+  it('opens SQLite at dev.sqlite in the data directory', async () => {
     const dir = mkdtempSync(path.join(tmpdir(), 'ui-tests-open-'))
     dirs.push(dir)
     const env = { UI_TESTS_DATA_DIR: dir }

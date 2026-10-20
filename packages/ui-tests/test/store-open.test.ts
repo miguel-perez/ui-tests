@@ -1,7 +1,10 @@
 import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
-import { describe, expect, it } from 'vitest'
+import { Pool } from '@neondatabase/serverless'
+import { describe, expect, it, vi } from 'vitest'
+import { pgliteClient } from '../src/store/drivers.ts'
+import type { SqlClient } from '../src/store/sql.ts'
 import { neonClient } from '../src/store/drivers.ts'
 import { openStore } from '../src/store/open.ts'
 import { PostgresStore } from '../src/store/postgres.ts'
@@ -36,10 +39,39 @@ describe('openStore', () => {
     rmSync(dir, { recursive: true, force: true })
   })
 
-  it('builds a Neon store for postgres:// without connecting', async () => {
-    const store = await openStore({ UI_TESTS_DATABASE_URL: 'postgres://user:pass@127.0.0.1:1/db' })
+  it('builds a Neon store for postgres:// without connecting until the first query', async () => {
+    const calls: string[] = []
+    const fake: SqlClient = {
+      query: async (text) => (calls.push(text), { rows: [] }),
+      transaction: async () => {
+        calls.push('transaction')
+        throw new Error('stop')
+      },
+      close: async () => {
+        calls.push('close')
+      },
+    }
+    const urls: string[] = []
+    const store = await openStore(
+      { UI_TESTS_DATABASE_URL: 'postgres://user:pass@127.0.0.1:1/db' },
+      { neonClient: (url) => (urls.push(url), fake), pgliteClient },
+    )
     expect(store).toBeInstanceOf(PostgresStore)
-    const client = neonClient('postgres://user:pass@127.0.0.1:1/db')
+    expect(urls).toEqual(['postgres://user:pass@127.0.0.1:1/db'])
+    expect(calls).toEqual([])
+    await expect(store.listRuns()).rejects.toThrow('stop')
+    expect(calls).toEqual(['transaction'])
+    await store.close()
+  })
+
+  it('real Neon pool is built without connecting, and an idle pool error is logged once, not thrown', async () => {
+    const pool = new Pool({ connectionString: 'postgres://user:pass@127.0.0.1:1/db' })
+    const client = neonClient('postgres://user:pass@127.0.0.1:1/db', pool)
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => pool.emit('error', new Error('terminated'))).not.toThrow()
+    pool.emit('error', new Error('again'))
+    expect(log).toHaveBeenCalledTimes(1)
+    log.mockRestore()
     await client.close()
   })
 

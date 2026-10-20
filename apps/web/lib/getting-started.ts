@@ -16,6 +16,16 @@ export const gettingStarted = {
     commands: ['git clone https://github.com/miguel-perez/ui-tests', 'cd ui-tests', 'npm ci && npm run dev'],
     then: 'Leave that running, and in a second terminal run `npx ui-tests` in `apps/web`.',
   },
+  ci: {
+    heading: 'Running from CI',
+    text: 'Runs and results live in a database, so a record outlives any one preview. Locally that is a file; for CI and previews use Postgres on Neon. These steps need your own accounts, so nothing here is done for you.',
+    steps: [
+      'Create a Neon project and a database, and copy its pooled connection string.',
+      'In Vercel, add `UI_TESTS_DATABASE_URL` with that string, and `UI_TESTS_SERVER=1`, to the Preview environment.',
+      'In GitHub, add the same string as the repository secret `UI_TESTS_DATABASE_URL`, and pass it to the workflow that runs your studies.',
+    ],
+    then: 'For a local try-out without Neon, `UI_TESTS_DATABASE_URL=pglite:memory` runs the same store in memory. The tables are created on first use.',
+  },
   steps: [
     { id: 'install', heading: 'Install', text: install.does, command: install.command },
     { id: 'init', heading: 'Write the config and a study', text: init.does, command: init.command },

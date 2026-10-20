@@ -6,8 +6,8 @@ import type {
 } from './types.ts'
 
 type Row = Record<string, unknown>
-/** State shared by a store and its transaction view: the connection and the queue of open transactions (and migrations). */
-type Shared = { client: SqlClient; gate: Promise<void> }
+/** State shared by a store and its transaction view: the connection and the queue of open transactions . */
+type Shared = { client: SqlClient; gate: Promise<void>; migration?: Promise<void> }
 
 const hashToken = (token: string) => createHash('sha256').update(token).digest('hex')
 const defaultDeadlineMs = 48 * 60 * 60 * 1000
@@ -33,22 +33,31 @@ export class PostgresStore implements RunStore {
   private readonly shared: Shared
   private readonly tx?: SqlClient
 
-  /** Starts applying migrations at once; every call waits for them. A transaction view is built only by `transaction()`. */
+  /** Does not touch the client: migrations run on the first call, so opening a store never connects. A transaction view is built only by `transaction()`. */
   constructor(client: SqlClient, view?: { shared: Shared; tx: SqlClient }) {
     if (view) {
       this.shared = view.shared
       this.tx = view.tx
       return
     }
-    const ready = migrate(client)
-    ready.catch(() => {})
-    this.shared = { client, gate: ready }
+    this.shared = { client, gate: Promise.resolve() }
+  }
+
+  /** Applies migrations once; a failure is not remembered, so the next call retries. */
+  private migrated(): Promise<void> {
+    const shared = this.shared
+    shared.migration ??= migrate(shared.client).catch((error) => {
+      shared.migration = undefined
+      throw error
+    })
+    return shared.migration
   }
 
   /** Runs a body once any open transaction has finished (a transaction's own view runs at once). */
   private async op<T>(body: (db: SqlClient) => Promise<T>): Promise<T> {
     if (this.tx) return body(this.tx)
     await this.shared.gate
+    await this.migrated()
     return body(this.shared.client)
   }
 
@@ -217,6 +226,8 @@ export class PostgresStore implements RunStore {
 
   addRevision(runId: string, revision: Revision) {
     return this.atomic(async (db) => {
+      // Locking the run row serialises numbering, so concurrent calls count distinct positions.
+      await db.query('SELECT id FROM runs WHERE id = $1 FOR UPDATE', [runId])
       await db.query('INSERT INTO revisions (run_id, data) VALUES ($1, $2::jsonb)', [runId, json(revision)])
       return Number((await db.query<{ n: string }>('SELECT COUNT(*) AS n FROM revisions WHERE run_id = $1', [runId])).rows[0]!.n)
     })
@@ -245,6 +256,7 @@ export class PostgresStore implements RunStore {
     this.shared.gate = new Promise<void>((resolve) => (release = resolve))
     try {
       await previous
+      await this.migrated()
       return await this.shared.client.transaction((tx) => fn(new PostgresStore(this.shared.client, { shared: this.shared, tx })))
     } finally {
       release()
@@ -252,7 +264,7 @@ export class PostgresStore implements RunStore {
   }
 
   async close() {
-    await this.shared.gate.catch(() => {})
+    await this.shared.gate
     await this.shared.client.close()
   }
 }

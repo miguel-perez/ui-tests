@@ -26,8 +26,14 @@ export async function pgliteClient(dataDir?: string): Promise<SqlClient> {
 type PGliteQuery = (text: string, params?: unknown[]) => Promise<{ rows: unknown[] }>
 
 /** Neon over its serverless driver. Builds a pool without connecting; the first query opens the connection. */
-export function neonClient(url: string): SqlClient {
-  const pool = new Pool({ connectionString: url })
+export function neonClient(url: string, pool: Pool = new Pool({ connectionString: url })): SqlClient {
+  // Neon drops idle connections when compute suspends; an unhandled pool 'error' would crash the process.
+  let reported = false
+  pool.on('error', (error: Error) => {
+    if (reported) return
+    reported = true
+    console.error(`ui-tests: idle Postgres connection failed (${error.message}); the pool will reconnect`)
+  })
   return {
     query: async <T,>(text: string, params?: unknown[]) => ({ rows: (await pool.query(text, params as unknown[])).rows as T[] }),
     async transaction(fn) {

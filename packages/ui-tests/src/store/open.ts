@@ -14,14 +14,14 @@ export function dataDirectory(env: NodeJS.ProcessEnv = process.env): string {
 }
 
 /** Opens the store the environment names: `UI_TESTS_DATABASE_URL` is `postgres://…` (Neon), `pglite:memory` or `pglite:<dir>` (PGlite); unset, SQLite at `<data directory>/dev.sqlite`. */
-export async function openStore(env: NodeJS.ProcessEnv = process.env): Promise<RunStore> {
+export async function openStore(env: NodeJS.ProcessEnv = process.env, drivers = { neonClient, pgliteClient }): Promise<RunStore> {
   const url = env.UI_TESTS_DATABASE_URL
   if (url) {
     if (url.startsWith('pglite:')) {
       const dir = url.slice('pglite:'.length)
-      return new PostgresStore(await pgliteClient(dir === 'memory' ? undefined : dir))
+      return new PostgresStore(await drivers.pgliteClient(dir === 'memory' ? undefined : dir))
     }
-    if (/^postgres(ql)?:\/\//.test(url)) return new PostgresStore(neonClient(url))
+    if (/^postgres(ql)?:\/\//.test(url)) return new PostgresStore(drivers.neonClient(url))
     throw new Error('UI_TESTS_DATABASE_URL must be postgres://…, pglite:memory or pglite:<dir>')
   }
   return new SqliteStore(path.join(dataDirectory(env), 'dev.sqlite'))
