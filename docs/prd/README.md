@@ -1,6 +1,6 @@
 # ui-tests PRD
 
-**Status, 19 October 2026:** nothing in these documents is built. The repository is the landing page, a static site, and these documents. The R0 walking skeleton (issue #5) built a local runner ahead of any evidence that people want one, and it was removed; the landing page is the false door the [pitch](../pitch.md) describes, and the next evidence comes from it. "Not shipped yet" below means not built.
+**Status, 20 October 2026:** the R0 to R2 slices are built and verified offline: the `ui-tests` package, the landing page, and the player, collector and report in server mode; see the status lines in [`../story-map.md`](../story-map.md) for what is built, what is documented but not executed (npm publish, a Neon database, the Vercel Preview environment, GitHub secrets, a model API key, a named tunnel, the VoiceOver check) and what the release metrics still need. Paying a panel (R3) and `ui-tests host` ([#59](https://github.com/miguel-perez/ui-tests/issues/59)) are not built. "Not shipped yet" below means not built.
 
 Built on [`../pitch.md`](../pitch.md), [`../stack.md`](../stack.md), [`../personas.md`](../personas.md). Each file owns one area. Release order lives in [`../story-map.md`](../story-map.md).
 

@@ -1,0 +1,91 @@
+name: ui-tests check
+
+# Posts the pending ui-tests check on the pull request whose preview just deployed.
+# Two jobs. `gate` holds no secrets and a read-only token: it finds the pull request from the deployment commit, refuses
+# a head that lives in another repository, and applies the ci.on labels. `check` holds the secrets and runs only when the
+# gate passed, on the same-repository commit. Secrets: UI_TESTS_DATABASE_URL, VERCEL_AUTOMATION_BYPASS_SECRET,
+# UI_TESTS_SHARE_SECRET (see docs/github-check.md); without UI_TESTS_DATABASE_URL the check job skips with a notice.
+on:
+  deployment_status:
+
+permissions: {}
+
+concurrency:
+  group: ui-tests-check-${{ github.event.deployment.sha }}
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    if: github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      run: ${{ steps.gate.outputs.run }}
+    steps:
+      - name: Find the pull request and decide
+        id: gate
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.event.deployment.sha }}
+          CONFIG: apps/web/ui-tests.config.ts
+        run: |
+          set -euo pipefail
+          echo "run=false" >> "$GITHUB_OUTPUT"
+          pr=$(gh api "repos/$REPO/commits/$SHA/pulls" --jq "[.[] | select(.state == \"open\" and .head.sha == \"$SHA\")] | first // empty")
+          if [ -z "$pr" ]; then echo "::notice::ui-tests check skipped: no open pull request has $SHA as its head."; exit 0; fi
+          head_repo=$(jq -r '.head.repo.full_name // ""' <<<"$pr")
+          if [ "$head_repo" != "$REPO" ]; then echo "::notice::ui-tests check skipped: the pull request head is not in $REPO."; exit 0; fi
+          # The labels ci.on selects, read from the default branch's config (not from the pull request).
+          wanted=$(gh api "repos/$REPO/contents/$CONFIG" -H "Accept: application/vnd.github.raw+json" | grep -o "label:[A-Za-z0-9_.-]*" | sed 's/^label://' || true)
+          if [ -n "$wanted" ]; then
+            labels=$(jq -r '.labels[].name' <<<"$pr")
+            if ! grep -qxFf <(printf '%s\n' "$wanted") <<<"$labels"; then echo "::notice::ui-tests check skipped: the pull request has none of the ci.on labels."; exit 0; fi
+          fi
+          echo "run=true" >> "$GITHUB_OUTPUT"
+
+  check:
+    needs: gate
+    if: needs.gate.outputs.run == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      checks: write
+      pull-requests: write
+    env:
+      UI_TESTS_DATABASE_URL: ${{ secrets.UI_TESTS_DATABASE_URL }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+      UI_TESTS_SHARE_SECRET: ${{ secrets.UI_TESTS_SHARE_SECRET }}
+    steps:
+      - name: Skip when not configured
+        id: configured
+        run: |
+          if [ -z "$UI_TESTS_DATABASE_URL" ]; then
+            echo "::notice::ui-tests check skipped: the UI_TESTS_DATABASE_URL secret is not set."
+            echo "run=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "run=true" >> "$GITHUB_OUTPUT"
+          fi
+      # This repository at the deployment commit, which the gate showed is the head of a pull request from this repository.
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        if: steps.configured.outputs.run == 'true'
+        with:
+          ref: ${{ github.event.deployment.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        if: steps.configured.outputs.run == 'true'
+        with:
+          node-version: '26.11.0'
+      - if: steps.configured.outputs.run == 'true'
+        run: npm ci
+      - name: Post the check
+        if: steps.configured.outputs.run == 'true'
+        working-directory: apps/web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PREVIEW_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+        run: npx ui-tests check

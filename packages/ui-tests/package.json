@@ -1,0 +1,52 @@
+{
+  "name": "ui-tests",
+  "version": "0.0.0",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "type": "module",
+  "description": "Usability tests as code: studies authored next to your tests, run with real people.",
+  "bin": {
+    "ui-tests": "./bin/ui-tests.mjs"
+  },
+  "exports": {
+    ".": "./src/index.ts",
+    "./next": "./src/next/index.tsx",
+    "./config": "./src/define-config.ts",
+    "./server": "./src/server/index.ts",
+    "./schemas/*": "./schemas/*"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "schema": "tsx scripts/write-schema.ts",
+    "skill": "tsx scripts/write-skill-rules.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.131.0",
+    "@electric-sql/pglite": "0.5.8",
+    "@modelcontextprotocol/sdk": "1.31.0",
+    "@neondatabase/serverless": "1.1.0",
+    "esbuild": "0.28.2",
+    "linkedom": "0.18.13",
+    "playwright-core": "1.64.1",
+    "rrweb": "2.1.7",
+    "rrweb-player": "2.1.7",
+    "tsx": "4.23.15",
+    "zod": "4.6.5"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0"
+  },
+  "files": [
+    "bin",
+    "src",
+    "schemas",
+    "skills",
+    ".claude-plugin"
+  ]
+}

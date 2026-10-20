@@ -1,0 +1,10 @@
+{
+  "name": "ui-tests",
+  "version": "0.0.0",
+  "description": "Write, lint, run and read ui-tests studies: usability tests as code, and capability tests of agent surfaces.",
+  "license": "MIT",
+  "skills": "./skills",
+  "mcpServers": {
+    "ui-tests": { "command": "npx", "args": ["ui-tests", "mcp"] }
+  }
+}

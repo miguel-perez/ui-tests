@@ -8,6 +8,13 @@ import { mixOklab, over, darken } from '../oklab'
 
 /** Every content type's component on the landing page (docs/design/site-schema.md). */
 const artefacts = ['terminal-window', 'what-comes-back', 'compilation', 'sources', 'merge-box', 'check-page', 'worth', 'agents', 'host']
+/**
+ * Cursor Follies (issue #75) swallow a click that lands on a cursor in trouble, and their stages include the compile tabs, the
+ * frames' buttons and the hero's Get started; the scenes are random and run on the wall clock, so on a slow runner a test's click
+ * on one of those can be caught instead. A test that clicks them turns the troupe off the way a visitor can, with reduced motion;
+ * tests/e2e/follies.spec.ts covers the troupe itself.
+ */
+const withoutTroupe = (page: Page) => page.emulateMedia({ reducedMotion: 'reduce' })
 /** Relative luminance of a computed rgb() colour. */
 const luminance = (rgb: string) => { const [r, g, b] = rgb.match(/\d+(\.\d+)?/g)!.slice(0, 3).map(Number).map(v => v / 255).map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return r * .2126 + g * .7152 + b * .0722 }
 /** The distinct colours of the text inside each matched element. */
@@ -137,10 +144,13 @@ for (const width of [1440, 375]) {
         await expect(agents.locator('pre, code, .terminal-window, .code-window, .caption')).toHaveCount(0)
         await expect(agents).not.toContainText(agent.closing)
         expect(await page.locator('main').innerText()).not.toMatch(/ui-tests \(agent\)|instead of a person/)
-        // No guide and no package yet: the hero's one action is the repository.
-        await expect(page.locator('.hero .actions a')).toHaveCount(1)
-        await expect(page.locator('.hero .actions a')).toHaveAttribute('href', 'https://github.com/miguel-perez/ui-tests')
-        await expect(page.locator('a[href^="/docs"], a[href^="/r/"]')).toHaveCount(0)
+        // The hero's two actions: the repository, and the getting-started page, the one link into /docs; no report links.
+        await expect(page.locator('.hero .actions a')).toHaveCount(2)
+        await expect(page.locator('.hero .actions a').first()).toHaveAttribute('href', 'https://github.com/miguel-perez/ui-tests')
+        await expect(page.locator('.hero .actions a').nth(1)).toHaveText(landing.start)
+        await expect(page.locator('a[href^="/docs"]')).toHaveCount(1)
+        await expect(page.locator('a[href^="/docs"]')).toHaveAttribute('href', '/docs/getting-started/')
+        await expect(page.locator('a[href^="/r/"]')).toHaveCount(0)
       }
       if (process.env.CAPTURE_SITE === '1') {
         await page.emulateMedia({ reducedMotion: 'reduce', colorScheme: 'light' })
@@ -292,6 +302,7 @@ for (const width of [1440, 375]) test(`what you write, what they see: the comman
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
   page.on('pageerror', error => errors.push(error.message))
   await page.setViewportSize({ width, height: 1000 })
+  await withoutTroupe(page)
   await page.goto('/')
   await page.evaluate(() => document.fonts.ready)
   const section = page.locator('section.compilation')
@@ -647,4 +658,39 @@ test('the run\'s time never breaks across a line, in the sentence or the arithme
     expect(await times.evaluateAll(nodes => nodes.map(node => node.getClientRects().length)), `at ${width}px`).toEqual([1, 1])
     expect(await times.last().evaluate(node => { const range = document.createRange(); range.setStart(node.firstChild!, 0); range.setEnd(node.nextSibling!, 1); return new Set([...range.getClientRects()].map(rect => Math.round(rect.top))).size }), `the full stop at ${width}px`).toBe(1)
   }
+})
+
+for (const width of [1440, 375]) test(`the hero's Get started opens the getting-started page: the commands, the mount lines and the study, accessible and in the site's fonts at ${width}px`, async ({ page }) => {
+  const { gettingStarted } = await import('../../apps/web/lib/getting-started')
+  await page.setViewportSize({ width, height: 1000 })
+  await withoutTroupe(page)
+  await page.goto('/')
+  await page.locator('.hero .actions').getByRole('link', { name: landing.start }).click()
+  await page.waitForURL('**/docs/getting-started/')
+  await page.evaluate(() => document.fonts.ready)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(gettingStarted.title)
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  const blocks = await page.locator('.docs-code pre').allInnerTexts()
+  for (const step of gettingStarted.steps) {
+    if ('command' in step) expect(blocks).toContain(step.command)
+    if ('lines' in step) expect(blocks).toContain(step.lines.join('\n'))
+    if ('code' in step) expect(blocks).toContain(step.code)
+  }
+  expect(blocks).toContain(gettingStarted.clone.commands.join('\n'))
+  expect(offences(await page.locator('main').innerText(), shown)).toEqual([])
+  await expect(page.locator('pre').first()).toHaveCSS('font-family', /Fira[_ ]Code/)
+})
+
+test('getting started links to the agents page, which introduces agent runs as a capability test and is accessible', async ({ page }) => {
+  await page.goto('/docs/getting-started/')
+  await page.getByRole('link', { name: agent.heading }).click()
+  await page.waitForURL('**/docs/agents/')
+  await page.evaluate(() => document.fonts.ready)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(agent.heading)
+  await expect(page.locator('main')).toContainText('capability test, not a usability one')
+  await expect(page.locator('main')).toContainText('An agent passing says nothing about people.')
+  expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([])
+  await page.goto('/')
+  expect(await page.locator('main').innerText()).not.toContain('ui-tests (agent)')
 })

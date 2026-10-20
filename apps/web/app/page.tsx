@@ -10,7 +10,8 @@ import { Icon } from '../components/icon'
 import { CursorFollies } from '../components/cursor-follies'
 import { promise, intro, landing } from '../lib/copy'
 
-function Actions() { return <div className="actions"><a className="button primary" href={repository}><Icon name="github" />GitHub</a></div> }
+/** The hero's two actions: the repository, and the getting-started page. */
+function Actions() { return <div className="actions"><a className="button primary" href={repository}><Icon name="github" />GitHub</a><a className="button quiet" href="/docs/getting-started/">{landing.start}</a></div> }
 
 /**
  * The landing page: a sequence of typed content per docs/design/site-schema.md, every section on one grid per docs/design/grid-plan.md

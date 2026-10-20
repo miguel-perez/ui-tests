@@ -1,0 +1,188 @@
+import { mkdir, readFile, writeFile } from 'node:fs/promises'
+import { join, resolve } from 'node:path'
+import { anthropicModel } from '../agents/anthropic.ts'
+import { agentFingerprint, type AgentConfig } from '../agents/config.ts'
+import { cliHarness } from '../agents/harness-cli.ts'
+import { httpHarness } from '../agents/harness-http.ts'
+import { mcpHarness } from '../agents/harness-mcp.ts'
+import { webHarness } from '../agents/harness-web.ts'
+import { DEFAULT_TRIALS, runTrials, TRIAL_ANSWER, type Trial } from '../agents/loop.ts'
+import { agentResult, AGENT_HEADING, runResultOf } from '../agents/result.ts'
+import { packLocalPackage, type LocalPackage } from '../agents/pack.ts'
+import type { AgentModel, Harness } from '../agents/model.ts'
+import { scriptedModel, type ScriptedTurn } from '../agents/scripted.ts'
+import { loadConfig } from '../config.ts'
+import { formatFindings, lint } from '../lint.ts'
+import { StudyLoadError } from '../load.ts'
+import { createRun } from '../runner/create-run.ts'
+import { gitCommit, idempotencyKey } from '../runner/key.ts'
+import { handleOf } from '../runner/progress.ts'
+import { checkReachable } from '../runner/setup.ts'
+import type { CompiledGoal } from '../schema/compiled.ts'
+import { openStore } from '../store/open.ts'
+import type { UiTestsConfig } from '../types.ts'
+import { loadStudies, withProduct } from './lint.ts'
+import type { Command, Io } from './main.ts'
+import { reporterFor } from './outward.ts'
+import { interrupt } from './trace.ts'
+
+export { AGENT_HEADING }
+
+/** The model the configured agent runs on: a script file for `scripted`, Claude for `anthropic` (needs ANTHROPIC_API_KEY). */
+async function modelFor(agent: AgentConfig, io: Io): Promise<AgentModel> {
+  if (agent.model.provider === 'anthropic') return anthropicModel(agent.model, io.env.ANTHROPIC_API_KEY ?? '')
+  const file = resolve(io.cwd, agent.model.name)
+  let script: unknown
+  try { script = JSON.parse(await readFile(file, 'utf8')) } catch {
+    throw new Error(`The scripted agent reads its turns from a JSON file named by model.name; cannot read ${agent.model.name}`)
+  }
+  if (!Array.isArray(script)) throw new Error(`The script in ${agent.model.name} is not a list of turns`)
+  return scriptedModel(script as ScriptedTurn[] | ScriptedTurn[][])
+}
+
+/** The harness for a goal's target. The web harness opens the player of the run `runId` on the target's own origin. */
+function harnessFor(goal: CompiledGoal, io: Io, localPackage?: LocalPackage, runId = 'preflight'): Harness | string {
+  const target = goal.agent?.target
+  if (!target) return `The task "${goal.name}" has no agent target`
+  if (target.kind === 'cli') {
+    try { return cliHarness(target.value, { cwd: io.cwd, env: io.env, ...(localPackage && { localPackage }) }) } catch (error) { return error instanceof Error ? error.message : String(error) }
+  }
+  if (target.kind === 'http') return httpHarness(target.value, target.description)
+  if (target.kind === 'mcp') {
+    try { return mcpHarness(target.value, { cwd: io.cwd, env: io.env }) } catch (error) { return error instanceof Error ? error.message : String(error) }
+  }
+  if (target.kind === 'web') {
+    try { return webHarness({ target: target.value, playerUrl: `${new URL(target.value).origin}/ui-tests/${runId}/` }) } catch { return `The web target is not a URL: ${target.value}` }
+  }
+  return `The ${target.kind} harness is not shipped yet`
+}
+
+/** A task's trials under its reliability (`agentResult`); fewer than k trials (an interrupted run) is `pending`: no verdict is read from part of the trials. */
+type Read = Omit<ReturnType<typeof agentResult>, 'result'> & { result: 'pass' | 'fail' | 'inconclusive' | 'pending' }
+const read = (trials: Trial[], reliability: 'all' | 'any', k: number): Read => trials.length < k ? { ...agentResult(trials, reliability), result: 'pending' } : agentResult(trials, reliability)
+
+const seconds = (ms: number) => `${(ms / 1000).toFixed(1)} s`
+function trialLines(trials: Trial[]): string[] {
+  return trials.map(t => `  ${t.index}  ${t.state.padEnd(8)}  ${seconds(t.cost.wallMs).padStart(7)}  ${t.cost.tokens} tokens  ${t.cost.calls} calls${t.claimedDone && t.state === 'stopped' ? '  (said it was done)' : ''}${t.stoppedBy ? `\n     ${t.stoppedBy}` : ''}${t.infrastructure ? `\n     ${t.infrastructure}` : ''}${t.behaviours.map(b => `\n     ${b}`).join('')}`)
+}
+
+/**
+ * `ui-tests --actor agent`: runs the study's tasks as agent trials (five by default) with the configured model and the
+ * harness for each task's target, verifies each trial's end state with the task's hooks, and prints the per-trial table.
+ * The run is idempotent on its key (`${commit}:${contextId}:${fingerprint}:agent`): a repeated key keeps the stored trials
+ * and runs the missing ones up to k; no verdict is read from fewer than k. A cli target gets the local package, packed
+ * once per run. With the `json` reporter the report is written to `.ui-tests/runs/<run>/report.json`.
+ * Exits 0 pass, 1 fail, 3 inconclusive or pending (interrupted), 2 error.
+ */
+export const agentRun: Command = async (args, io) => {
+  const json = args.flags.has('json')
+  const out = json ? io.stderr : io.stdout
+  let config: UiTestsConfig
+  let loaded: Awaited<ReturnType<typeof loadStudies>>
+  try {
+    config = withProduct((await loadConfig(io.cwd)).config)
+    loaded = await loadStudies(io.cwd, [], config)
+  } catch (error) {
+    io.stderr.write(`${error instanceof StudyLoadError ? error.message.replace(error.file, error.file.replace(`${io.cwd}/`, '')) : error instanceof Error ? error.message : String(error)}\n`)
+    return 2
+  }
+  const wanted = args.flags.get('study')
+  const candidates = typeof wanted === 'string' ? loaded.filter(l => l.compiled.name === wanted) : loaded
+  if (typeof wanted === 'string' && !candidates.length) { io.stderr.write(`No study named "${wanted}"\n`); return 2 }
+  const chosen = candidates.find(l => l.compiled.actors.includes('agent'))
+  if (!chosen) { io.stderr.write('No study admits the agent actor\n'); return 2 }
+  const findings = lint({ study: chosen.study, compiled: chosen.compiled, sourceText: chosen.sourceText, config, actor: 'agent' })
+  if (findings.some(f => f.severity === 'error')) { out.write(`${formatFindings(findings)}\n`); return 1 }
+  if (!config.agents) { io.stderr.write('No agent is configured: set agents: { model: { provider, name } } in ui-tests.config.ts\n'); return 2 }
+
+  const taskName = args.flags.get('task')
+  const goals = typeof taskName === 'string' ? chosen.compiled.goals.filter(g => g.name === taskName) : chosen.compiled.goals
+  if (!goals.length) { io.stderr.write(`No task named "${String(taskName)}" in "${chosen.compiled.name}"\n`); return 2 }
+  for (const goal of goals) {
+    const harness = harnessFor(goal, io)
+    if (typeof harness === 'string') { io.stderr.write(`${harness}\n`); return 2 }
+    await harness.dispose()
+    if (goal.agent?.target.kind === 'http' && !(await checkReachable(goal.agent.target.value, io.deps?.fetch))) { io.stderr.write(`target not reachable: ${goal.agent.target.value}\n`); return 2 }
+    if (goal.agent?.target.kind === 'web') {
+      const url = goal.agent.target.value
+      if (!(await checkReachable(url, io.deps?.fetch))) { io.stderr.write(`target not reachable: ${url}\n`); return 2 }
+      // The player and collector are mounted in server mode: the collector answers 401 to a request with no token, a static site 404.
+      const probe = await (io.deps?.fetch ?? fetch)(`${new URL(url).origin}/api/ui-tests/`, { redirect: 'manual', signal: AbortSignal.timeout(5000) }).catch(() => undefined)
+      if (probe?.status !== 401) { io.stderr.write(`target does not serve the ui-tests player: ${url}\n`); return 2 }
+    }
+  }
+  let model: AgentModel
+  try { model = await modelFor(config.agents, io) } catch (error) { io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`); return 2 }
+
+  const commitFlag = args.flags.get('commit')
+  const commit = typeof commitFlag === 'string' ? commitFlag : await gitCommit(io.cwd)
+  const keyFlag = args.flags.get('key')
+  const fingerprint = chosen.compiled.agents?.fingerprint ?? agentFingerprint(config.agents)
+  const key = typeof keyFlag === 'string' ? keyFlag : idempotencyKey({ commit, contextId: chosen.compiled.id, actor: 'agent', fingerprint })
+  // The run's target is the web page the agent uses when a task has one: its player and collector are there.
+  const target = goals.find(g => g.agent?.target.kind === 'web')?.agent?.target.value ?? config.target?.url ?? 'http://localhost:3000'
+
+  const signal = io.deps?.signal ?? interrupt()
+  let localPackage: LocalPackage | undefined
+  if (goals.some(g => g.agent?.target.kind === 'cli')) {
+    try { localPackage = await (io.deps?.packLocal ?? (() => packLocalPackage()))() } catch (error) {
+      io.stderr.write(`Could not pack the local package for the trials: ${error instanceof Error ? error.message : String(error)}\n`)
+      return 2
+    }
+  }
+  const store = await openStore(io.env)
+  try {
+    const { run, created } = await createRun({ store, compiled: chosen.compiled, hooksBundle: chosen.code, target, key, commit, actor: 'agent', rehearsal: false })
+    out.write(`Agent run ${run.run} · ${AGENT_HEADING}\n${chosen.compiled.name} · model ${config.agents.model.provider}/${config.agents.model.name} · agent ${fingerprint}\n`)
+    const stored = (await store.listAttempts(run.run)).filter(a => a.answers[TRIAL_ANSWER] !== undefined)
+    if (!created && stored.length) out.write(`Run ${run.run} already exists for key ${key}; its ${stored.length} stored trial${stored.length === 1 ? ' is' : 's are'} kept. Pass --key to start again.\n`)
+    const results: { goal: CompiledGoal; trials: Trial[]; verdict: Read }[] = []
+    for (const goal of goals) {
+      const reliability = goal.agent?.reliability ?? 'all'
+      const k = goal.agent?.trials ?? DEFAULT_TRIALS
+      const kept: Trial[] = stored.filter(a => a.goalIndex === goal.index).map(a => ({ ...(a.answers[TRIAL_ANSWER] as Omit<Trial, 'transcript'>), transcript: [] })).sort((a, b) => a.index - b.index)
+      const added = kept.length < k && !signal.aborted
+        ? await runTrials({
+          store, run, study: chosen.study, goal, model, harness: harnessFor(goal, io, localPackage, run.run) as Harness, firstIndex: (kept.at(-1)?.index ?? 0) + 1, signal,
+          onTrial: t => out.write(`  trial ${t.index} of ${k}: ${t.state}\n`),
+        })
+        : []
+      const trials = [...kept, ...added]
+      const verdict = read(trials, reliability, k)
+      results.push({ goal, trials, verdict })
+      const verified = trials.filter(t => t.state === 'verified').length
+      out.write(`\nTask "${goal.name}" · ${goal.agent?.target.kind} ${goal.agent?.target.value}\n${trialLines(trials).join('\n')}\n${reliability === 'all' ? 'pass^k' : 'pass@k'}: ${verdict.result} · ${verified} of ${trials.length} verified${trials.length < k ? ` · ${trials.length} of ${k} trials run; run the same command again to finish` : ''}\n`)
+    }
+    // The run's result is read from its trials, never from people's counting rules: set once every task has its k trials.
+    const latest = (await store.getRun(run.run)) ?? run
+    if (results.every(r => r.verdict.result !== 'pending')) {
+      const result = runResultOf(results.map(r => r.verdict.result as 'pass' | 'fail' | 'inconclusive'))
+      if (latest.states.collection !== 'complete' || latest.result !== result) await store.updateRun(run.run, { states: { ...latest.states, collection: 'complete', verification: 'complete' }, result }, latest.revision)
+      // Tell the outside (the run's `ui-tests (agent)` check and the webhook) now that the result is out of pending; safe to repeat.
+      const settled = await store.getRun(run.run)
+      if (settled && settled.result !== 'pending') {
+        try { await reporterFor(io)(settled, store) } catch (error) { io.stderr.write(`${run.run}: ${error instanceof Error ? error.message : String(error)}\n`) }
+      }
+    }
+    const handle = handleOf((await store.getRun(run.run)) ?? run)
+    const report = {
+      ...handle,
+      actor: 'agent' as const,
+      heading: AGENT_HEADING,
+      study: chosen.compiled.name,
+      agent: { fingerprint, config: config.agents },
+      tasks: results.map(({ goal, trials, verdict }) => ({ name: goal.name, target: goal.agent?.target, trials: trials.map(({ transcript: _transcript, ...rest }) => rest), reliability: goal.agent?.reliability ?? 'all', result: verdict.result, passK: verdict.result === 'pending' ? null : verdict.passK, passAtK: verdict.result === 'pending' ? null : verdict.passAtK })),
+    }
+    if (config.reporters?.includes('json')) {
+      const dir = join(io.cwd, '.ui-tests', 'runs', run.run)
+      await mkdir(dir, { recursive: true })
+      await writeFile(join(dir, 'report.json'), `${JSON.stringify(report, null, 2)}\n`)
+      out.write(`\nReport: .ui-tests/runs/${run.run}/report.json\n`)
+    }
+    if (json) io.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
+    return results.some(r => r.verdict.result === 'pending' || r.verdict.result === 'inconclusive') ? 3 : results.some(r => r.verdict.result === 'fail') ? 1 : 0
+  } finally {
+    await store.close()
+    localPackage?.dispose()
+  }
+}

@@ -5,21 +5,22 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "apps/web"
+    "apps/web",
+    "packages/ui-tests"
   ],
   "overrides": {
     "postcss": "^8.5.30"
   },
   "description": "ui-tests: the landing page and the product documents.",
   "engines": {
-    "node": ">=22.13"
+    "node": ">=24"
   },
   "scripts": {
     "dev": "npm run dev --workspace @ui-tests/web",
     "build": "npm run build --workspace @ui-tests/web",
     "test": "vitest run",
     "test:e2e": "playwright install --with-deps chromium && playwright test",
-    "typecheck": "tsc --noEmit && npm run typecheck --workspace @ui-tests/web",
+    "typecheck": "tsc --noEmit && npm run typecheck --workspace @ui-tests/web && npm run typecheck --workspace ui-tests",
     "validate": "node factory/check.mjs && npm --prefix factory run validate && npm run typecheck && npm test && npm run test:e2e",
     "automation:build": "python3 factory/scripts/archon-runtime.py build",
     "automation:verify-sol": "python3 factory/scripts/verify-archon-sol.py",
@@ -38,6 +39,7 @@
     "@types/node": "26.6.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "fake-indexeddb": "6.2.5",
     "lighthouse": "13.5.0",
     "linkedom": "0.18.13",
     "tsx": "4.23.15",

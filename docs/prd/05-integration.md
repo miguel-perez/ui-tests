@@ -19,7 +19,7 @@ Any framework can implement the recorder and collector contract; it is a handful
 
 ## Reachability
 
-Participants have to reach the build. The mode is declared in the config, shown in the trace, and limits what a run can license. The link `ui-tests recruit` prints (runs with people are not shipped yet: [#71](https://github.com/miguel-perez/ui-tests/issues/71)) can point at a branch preview, at the author's laptop through a tunnel, or at the live site: the first three rows.
+Participants have to reach the build. The mode is declared in the config, shown in the trace, and limits what a run can license. The link `ui-tests recruit` prints (runs with your own invite links are built; the visitors source is not: [#71](https://github.com/miguel-perez/ui-tests/issues/71)) can point at a branch preview, at the author's laptop through a tunnel, or at the live site: the first three rows.
 
 | Mode | How participants reach the build | Where the collector and store live | Limit |
 | --- | --- | --- | --- |
@@ -33,7 +33,7 @@ The tunnel URL alone opens nothing: every request through it needs the participa
 
 ### When the laptop closes
 
-A tunnel run comes with `recruit`, which is not shipped yet ([#71](https://github.com/miguel-perez/ui-tests/issues/71)); it lives as long as the machine. If the laptop closes, sleeps or loses its connection, or the process exits, mid-run:
+A tunnel run comes with `recruit --tunnel` ([#71](https://github.com/miguel-perez/ui-tests/issues/71)); it lives as long as the machine. If the laptop closes, sleeps or loses its connection, or the process exits, mid-run:
 
 - The link goes dark: anyone who opens it reaches nothing.
 - Attempts in progress are lost. The person's page can no longer reach the collector. Its retry buffer (IndexedDB, in the person's browser; [`06-nonfunctional.md`](06-nonfunctional.md#performance-and-reliability)) keeps unsent events and replays them if the collector comes back while that page is still open; once the person closes the page, unsent events are discarded with it. What arrived of the attempt is kept as `disconnected`, never `incorrect`, and it does not count toward n. Where the consent promised pay, that person is still owed it.
@@ -74,7 +74,7 @@ Completion is observable three ways: poll `ui-tests status`, a webhook the store
 
 ## GitHub
 
-`npx ui-tests check` posts one check run named `ui-tests` on the commit for a human run (starting the run from CI is not shipped yet: [#69](https://github.com/miguel-perez/ui-tests/issues/69); today `npx ui-tests check <run.json>` publishes the check from a run summary); an agent run posts its own, `ui-tests (agent)`, which never counts with people ([`04-agent-studies.md`](04-agent-studies.md); agent runs are not shipped yet: [#72](https://github.com/miguel-perez/ui-tests/issues/72)). One run per pull request: a push while people are still in starts nothing new, and the check stays on the commit they saw, which its footer names. While pending its summary is the estimate. On completion its conclusion is `neutral` for every outcome, so it never fails the build or blocks a merge, even when a team marks it required: there is no pass to give. The one opt-in is `check: { block_on: 'problems' }` in the config: it is `failure` when a completed run found problems, and only then; an inconclusive run, with fewer attempts completed than it asked for, stays `neutral` with or without `block_on`. Its mark in the merge box is neutral, never red or green, unless `block_on` makes it red; it is never green.
+`npx ui-tests check` posts one check run named `ui-tests` on the commit for a human run (starting the run from CI is built: [#69](https://github.com/miguel-perez/ui-tests/issues/69); `npx ui-tests check <run.json>` still publishes the check from a run summary); an agent run posts its own, `ui-tests (agent)`, which never counts with people ([`04-agent-studies.md`](04-agent-studies.md); agent runs are built: [#72](https://github.com/miguel-perez/ui-tests/issues/72)). One run per pull request: a push while people are still in starts nothing new, and the check stays on the commit they saw, which its footer names. While pending its summary is the estimate. On completion its conclusion is `neutral` for every outcome, so it never fails the build or blocks a merge, even when a team marks it required: there is no pass to give. The one opt-in is `check: { block_on: 'problems' }` in the config: it is `failure` when a completed run found problems, and only then; an inconclusive run, with fewer attempts completed than it asked for, stays `neutral` with or without `block_on`. Its mark in the merge box is neutral, never red or green, unless `block_on` makes it red; it is never green.
 
 Its title, one line in the merge box, is one of three:
 

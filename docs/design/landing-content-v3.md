@@ -466,7 +466,7 @@ Then, for the pull request, put `npx ui-tests check` in the job that deploys you
 ui-tests · 4 problems found · 4 of 5 people reached the goal · Details
 ```
 
-Until it ships, one line under it: check: starting the run from CI is not shipped yet; today it publishes the check from a run summary. See https://github.com/miguel-perez/ui-tests/issues/69.
+Until it ships, one line under it: check: starting the run from CI is not shipped yet; today it publishes the check from a run summary. (Design record, 2026-10: written before #69 shipped; kept as it was.) See https://github.com/miguel-perez/ui-tests/issues/69.
 
 ---
 
