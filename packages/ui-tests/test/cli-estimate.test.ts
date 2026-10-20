@@ -1,3 +1,5 @@
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { main } from '../src/cli/main.ts'
@@ -15,6 +17,13 @@ describe('ui-tests estimate', () => {
     const { code, out } = await estimate('example', '--json')
     expect(code).toBe(0)
     expect(JSON.parse(out)).toEqual({ n: 5, minutes: 3 })
+  })
+  it('writes the JSON to a file with --out', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ui-tests-estimate-out-'))
+    try {
+      expect((await estimate('example', '--out', join(dir, 'estimate.json'))).out).toContain('5 people')
+      expect(JSON.parse(await readFile(join(dir, 'estimate.json'), 'utf8'))).toEqual({ n: 5, minutes: 3 })
+    } finally { await rm(dir, { recursive: true, force: true }) }
   })
   it('says it in words without --json', async () => {
     const { out } = await estimate('example')

@@ -70,9 +70,9 @@ Commands:
   report <run>      the report in words, the run record (--json), or a signed link to share (--share)
   trace <run>       serve the trace of a run on this machine
   init              write ui-tests.config.ts, an example study and the Vitest exclude
-  estimate          how many people and how many minutes each, before anything is spent
+  estimate          how many people and how many minutes each, before anything is spent (--out <file> also writes the JSON)
   mcp               serve lint, estimate, run, status, verify, report and trace as MCP tools over stdio
-  lint [files...]   check studies against the rules and show what a run would do
+  lint [files...]   check studies against the rules and show what a run would do (--out <file> also writes the JSON)
   host              deploy the collector, the player and the store to your own account
 
 Options:
@@ -81,14 +81,14 @@ Options:
 `
 
 const commandUsage: Record<string, string> = {
-  lint: 'Usage: ui-tests lint [files...] [--json]\n\nChecks each study against the rules, prints what a run would do, and exits 1 on an error finding or 2 when a file cannot load.\n',
+  lint: 'Usage: ui-tests lint [files...] [--json] [--out <file>]\n\nChecks each study against the rules, prints what a run would do, and exits 1 on an error finding or 2 when a file cannot load. --out writes the JSON to a file as well.\n',
 }
 
 const defaultIo = (): Io => ({ stdout: process.stdout, stderr: process.stderr, cwd: process.cwd(), env: process.env })
 
 /** The flags each command reads a value for (`--actor agent` or `--actor=agent`); every other flag is a boolean. */
 export const valueFlags: Record<string, string[]> = {
-  '': ['actor', 'port', 'project', 'study', 'task', 'key', 'commit'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit', 'host'], check: ['actor', 'key', 'study'], estimate: ['actor', 'study'],
+  '': ['actor', 'port', 'project', 'study', 'task', 'key', 'commit'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit', 'host'], check: ['actor', 'key', 'study'], estimate: ['actor', 'study', 'out'], lint: ['out'],
 }
 
 /** Splits `--flag`, `--flag=value` and, for flags the command declares, `--flag value`. */

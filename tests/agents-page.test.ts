@@ -32,5 +32,6 @@ it('keeps the agent study out of human dev mode: it admits the agent only', asyn
   const study = await readFile('apps/web/ui-tests/cli-first-run.ui.test.ts', 'utf8')
   expect(study).toContain("actors: ['agent']")
   expect(study).toContain("target: { cli: 'npx ui-tests' }")
-  expect(study).toContain("workspace.file('.ui-tests/runs/*/report.json')")
+  // Its outcome is a file the agent can reach inside the cli sandbox (offline, only npm and npx ui-tests): the example checked by lint.
+  expect(study).toContain("workspace.file('ui-tests-lint.json')")
 })

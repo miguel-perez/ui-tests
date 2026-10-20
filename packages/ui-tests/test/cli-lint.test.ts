@@ -1,5 +1,6 @@
 import { execFile } from 'node:child_process'
-import { readFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
@@ -15,6 +16,22 @@ async function lintIn(name: string, ...args: string[]) {
 }
 
 describe('ui-tests lint', () => {
+  it('writes the JSON result to a file with --out, beside the words on stdout; a study that cannot load writes its error', async () => {
+    const dir = await mkdtemp(join(tmpdir(), 'ui-tests-lint-out-'))
+    try {
+      const file = join(dir, 'nested', 'lint.json')
+      const { code, out } = await lintIn('example', '--out', file)
+      expect(code).toBe(0)
+      expect(out).toContain('Study: invite flow')
+      const written = JSON.parse(await readFile(file, 'utf8'))
+      expect(written).toEqual(JSON.parse((await lintIn('example', '--json')).out))
+      expect(written.studies[0].plan[0]).toBe('Study: invite flow')
+      const broken = join(dir, 'broken.json')
+      expect((await lintIn('throws', `--out=${broken}`)).code).toBe(2)
+      expect(JSON.parse(await readFile(broken, 'utf8')).error.message).toContain('boom at the top level')
+      expect((await lintIn('example', '--out')).code).toBe(2)
+    } finally { await rm(dir, { recursive: true, force: true }) }
+  })
   it('passes the example and prints the plan lines, including the video recording line', async () => {
     expect(await readFile(join(fixtures, 'example/ui-tests/invite.ui.test.ts'), 'utf8')).toBe(exampleFile)
     const { code, out } = await lintIn('example')

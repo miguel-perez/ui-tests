@@ -244,6 +244,32 @@ describe('the package installed in a trial', () => {
     vitestExpect(again.error, again.output).toBeUndefined()
     await harness.dispose()
   }, 120_000)
+
+  it('passes the repository\'s own agent study: five scripted trials install, init and lint through the real harness, offline', async () => {
+    const work = await mkdtemp(join(fixtures, '.tmp-first-run-'))
+    const data = await mkdtemp(join(tmpdir(), 'ui-tests-first-run-'))
+    try {
+      await copyFile(join(import.meta.dirname, '..', '..', '..', 'apps', 'web', 'ui-tests', 'cli-first-run.ui.test.ts'), join(work, 'cli-first-run.ui.test.ts'))
+      await writeFile(join(work, 'ui-tests.config.ts'), "export default { reporters: ['default', 'json'], agents: { model: { provider: 'scripted', name: './agent-script.json' } } }\n")
+      const line = (command: string): ScriptedTurn => ({ toolCalls: [{ name: 'run', input: { command } }] })
+      await writeFile(join(work, 'agent-script.json'), JSON.stringify([line('npm i -D ui-tests'), line('npx ui-tests init'), line('npx ui-tests lint --out ui-tests-lint.json'), done]))
+      let out = '', err = ''
+      const io: Io = {
+        stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, PATH: process.env.PATH ?? '' },
+        // The run disposes of the package it packed; this one is shared with the test above, so it is kept.
+        deps: { packLocal: async () => ({ ...local, dispose: () => {} }), signal: new AbortController().signal },
+      }
+      const code = await main(['--actor', 'agent', '--commit', 'abc'], io)
+      vitestExpect(out, err).toContain('pass^k: pass · 5 of 5 verified')
+      vitestExpect(code).toBe(0)
+      const runId = /Agent run (r_\w+)/.exec(out)![1]
+      const report = JSON.parse(await readFile(join(work, '.ui-tests', 'runs', runId!, 'report.json'), 'utf8'))
+      vitestExpect(report.tasks[0].trials.map((t: Trial) => [t.state, t.claimedDone])).toEqual(Array(5).fill(['verified', true]))
+    } finally {
+      await rm(work, { recursive: true, force: true })
+      await rm(data, { recursive: true, force: true })
+    }
+  }, 600_000)
 })
 
 describe('ui-tests --actor agent', () => {

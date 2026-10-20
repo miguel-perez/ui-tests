@@ -1,15 +1,16 @@
 import { loadConfig } from '../config.ts'
 import { StudyLoadError } from '../load.ts'
 import type { UiTestsConfig } from '../types.ts'
-import { loadStudies, withProduct } from './lint.ts'
+import { loadStudies, withProduct, writeOut } from './lint.ts'
 import type { Command } from './main.ts'
 
 /** The minutes a participant is asked for: the task time limits added up, to a tenth of a minute (the same figure `lint` shows per task). */
 const minutesOf = (seconds: number) => Math.round(seconds / 6) / 10
 
-/** `ui-tests estimate`: how many people (n) and how many minutes each, before anything is spent. Cost per source comes with the sources (R3). */
+/** `ui-tests estimate`: how many people (n) and how many minutes each, before anything is spent; `--out <file>` also writes the JSON to a file. Cost per source comes with the sources (R3). */
 export const estimate: Command = async (args, io) => {
   const json = args.flags.has('json')
+  if (args.flags.get('out') === true) { io.stderr.write('--out needs a file name\n'); return 2 }
   let loaded: Awaited<ReturnType<typeof loadStudies>>
   let config: UiTestsConfig
   try {
@@ -30,6 +31,7 @@ export const estimate: Command = async (args, io) => {
   if (candidates.length > 1) { io.stderr.write(`${candidates.length} studies; pass --study <name>:\n${candidates.map(l => `  ${l.compiled.name}`).join('\n')}\n`); return 2 }
   const { compiled } = candidates[0]
   const result = { n: compiled.sample.n, minutes: minutesOf(compiled.goals.reduce((sum, g) => sum + g.timeout.seconds, 0)) }
+  await writeOut(args, io, result)
   io.stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : `${result.n} people, up to ${result.minutes} minutes each. ${compiled.sample.sentence}\n`)
   return 0
 }
