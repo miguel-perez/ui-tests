@@ -1,3 +1,4 @@
+import { isLoopbackHost } from './hosts.ts'
 import type { RunRow, RunStore } from '../store/types.ts'
 
 /** Takes a picture of a page. The runner is given one so tests never need a browser. */
@@ -19,7 +20,7 @@ export function firstLookPage(run: RunRow): string {
 }
 
 /** Chromium at 1280×800 through `playwright-core`; needs `playwright install chromium`. */
-export function playwrightScreenshotter(): Screenshotter {
+export function playwrightScreenshotter(options: { loopbackOnly?: boolean } = {}): Screenshotter {
   return {
     async capture(url, headers) {
       const { chromium } = await import('playwright-core')
@@ -31,6 +32,8 @@ export function playwrightScreenshotter(): Screenshotter {
           const origin = new URL(url).origin
           await context.route('**/*', route => route.continue(new URL(route.request().url()).origin === origin ? { headers: { ...route.request().headers(), ...headers } } : undefined))
         }
+        // Local only: the page may reference third-party scripts, fonts or images; none of them is fetched.
+        if (options.loopbackOnly) await context.route('**/*', route => (isLoopbackHost(new URL(route.request().url()).hostname.replace(/^\[|\]$/g, '')) || /^(data|blob):/.test(route.request().url()) ? route.fallback() : route.abort()))
         const page = await context.newPage()
         await page.goto(url, { timeout: 15_000, waitUntil: 'load' })
         return new Uint8Array(await page.screenshot({ type: 'png' }))

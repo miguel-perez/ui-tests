@@ -13,7 +13,7 @@ export type CreateRunInput = {
   commit?: string
   deadlineHours?: number
   /** Whether the target answered when the run was made, and how participants reach it: facts of the run, not of the compiled study. */
-  reachability?: { url: string; reachable: boolean; checkedAt: string; mode?: Reachability }
+  reachability?: { url: string; reachable: boolean; checkedAt: string; mode?: Reachability; /** Set by `recruit --local`: nothing about this run is ever sent off the machine. */ localOnly?: boolean }
 }
 
 /** Creates the run for a compiled study, idempotent on `key`: a repeated key returns the existing run with `created: false`. */

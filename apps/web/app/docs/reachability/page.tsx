@@ -31,7 +31,9 @@ export default function Reachability() {
       <h2 id="local">Local only</h2>
       <p>For hallway testing, put the build on one machine and give the laptop to the person.</p>
       <Command text={local} />
-      <p>Local only makes no outbound network call. It opens no tunnel, asks no model, tells no GitHub and sends no webhook, and it says so when it starts. It refuses a target that is not on this machine. The run and its records are in the local store, and the trace says the run was reached by <code>local</code>.</p>
+      <p>Local only makes no outbound network call from the commands. It opens no tunnel, asks no model, tells no GitHub and sends no webhook, and it says so when it starts. That holds for every later command on the run too: <code>status</code>, <code>verify</code>, <code>check</code> and the trace tell no one about a local run.</p>
+      <p>To keep that true it refuses what would go out: a target that is not on this machine over http, and a store that is not on this machine (a <code>postgres://</code> database; SQLite and <code>pglite:</code> are fine). The picture of the first look is taken with every address but this machine&apos;s blocked.</p>
+      <p>It does not control the browser of the person you hand the laptop to, or what your own build asks for once it is open. The run and its records are in the local store, and the trace says the run was reached by <code>local</code>.</p>
     </section>
     <section aria-labelledby="how-reached">
       <h2 id="how-reached">How a run is reached</h2>

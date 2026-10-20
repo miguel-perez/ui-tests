@@ -91,16 +91,19 @@ export const recruit: Command = async (args, io) => {
   if (localOnly && args.flags.has('tunnel')) { io.stderr.write('--local and --tunnel cannot be combined: local only opens no tunnel.\n'); return 2 }
   if (localOnly && typeof hostFlag === 'string') { io.stderr.write('--local and --host cannot be combined: local only gives links on this machine; use --host to serve people inside your network.\n'); return 2 }
   if (args.flags.has('tunnel') && typeof hostFlag === 'string') { io.stderr.write('--host and --tunnel cannot be combined: a tunnel has its own address.\n'); return 2 }
+  const databaseUrl = io.env.UI_TESTS_DATABASE_URL
+  if (localOnly && databaseUrl && !databaseUrl.startsWith('pglite:')) { io.stderr.write('--local keeps the store on this machine: unset UI_TESTS_DATABASE_URL or use pglite:<dir>, not a remote database.\n'); return 2 }
   let hostBase: string | undefined
   try {
     if (localOnly && !isLoopbackHost(new URL(target).hostname.replace(/^\[|\]$/g, ''))) { io.stderr.write(`--local needs a target on this machine, not ${target}.\n`); return 2 }
+    if (localOnly && new URL(target).protocol !== 'http:') { io.stderr.write(`--local supports http targets on this machine; ${target} is ${new URL(target).protocol.replace(':', '')}. Serve the build over http on localhost.\n`); return 2 }
     if (typeof hostFlag === 'string') hostBase = linkBaseFor(target, hostFlag)
   } catch { io.stderr.write(`${typeof hostFlag === 'string' ? `--host ${hostFlag} is not a hostname` : `target is not a URL: ${target}`}\n`); return 2 }
   const mode = reachabilityOf(hostBase ?? target, { tunnel: args.flags.has('tunnel') })
   const diagnostics = json ? io.stderr : io.stdout
   diagnostics.write(`${planLines(chosen.compiled).join('\n')}\n${chosen.compiled.consent.payout}\n\n`)
   if (localOnly) diagnostics.write('Local only: no tunnel, model, GitHub or webhook call is made. The run, its records and the links stay on this machine.\n\n')
-  else if (hostBase) diagnostics.write(`Inside the perimeter: links are on ${hostBase}. The collector and the store stay where you run them; nothing leaves unless you export the record.\n\n`)
+  else if (hostBase && mode === 'perimeter') diagnostics.write(`Inside the perimeter: links are on ${hostBase}. The collector and the store stay where you run them; nothing leaves unless you export the record.\n\n`)
 
   const commitFlag = args.flags.get('commit')
   const commit = typeof commitFlag === 'string' ? commitFlag : await gitCommit(io.cwd)
@@ -142,7 +145,7 @@ export const recruit: Command = async (args, io) => {
       ;({ run, created } = await createRun({
         store, compiled: chosen.compiled, hooksBundle: chosen.code, target, actor, rehearsal: false, key, commit,
         ...(hours !== undefined && { deadlineHours: Number(hours) }),
-        reachability: { url: target, reachable: true, checkedAt: new Date().toISOString(), mode },
+        reachability: { url: target, reachable: true, checkedAt: new Date().toISOString(), mode, ...(localOnly && { localOnly: true }) },
       }))
       if (opened) tunnel = await recordTunnel({ store, runId: run.run, opened, now })
       const linkBase = tunnel?.url ?? hostBase ?? target
@@ -155,7 +158,7 @@ export const recruit: Command = async (args, io) => {
       if (missing) invites = await createInvites({ store, run, study: chosen.study, count: missing, firstSlot: made + 1, target, linkBase, ...(bypass && { bypass }) })
       if (reissued.length) invites = [...reissued, ...(invites ?? [])]
       // The first look is a picture of the start page, taken once now and shown to every participant of the run.
-      const shot = await attachFirstLook({ store, run, target, screenshotter: deps.screenshotter ?? playwrightScreenshotter(), ...(bypass && { headers: { [BYPASS_HEADER]: bypass } }) })
+      const shot = await attachFirstLook({ store, run, target, screenshotter: deps.screenshotter ?? playwrightScreenshotter({ loopbackOnly: localOnly }), ...(bypass && { headers: { [BYPASS_HEADER]: bypass } }) })
       if (shot.error) io.stderr.write(`${shot.error}\n`)
       if (!created) io.stderr.write(`Run ${run.run} already exists for key ${key}; ${missing ? `made ${missing} missing invite${missing === 1 ? '' : 's'}` : 'no new invites'}${reissued.length ? `; ${reissued.length} link${reissued.length === 1 ? '' : 's'} reissued under the new tunnel` : ''}.\n`)
       const tunnelLine = tunnel ? `Tunnel: ${tunnel.url} (open until ${run.deadline} or until this command ends)\n` : ''

@@ -9,6 +9,7 @@ import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { openStore } from '../src/store/open.ts'
 import type { GitHubClient } from '../src/github/types.ts'
 import type { Tunnel } from '../src/tunnel/types.ts'
+import { reporterFor } from '../src/cli/outward.ts'
 import { buildTrace } from '../src/trace/build.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
@@ -103,7 +104,7 @@ describe('recruit --local', () => {
     for (const call of Object.values(net.calls)) expect(call).not.toHaveBeenCalled()
     const s = await openStore({ UI_TESTS_DATA_DIR: data })
     cleanup.push(() => s.close())
-    expect((await s.listRuns()).find(r => r.key === 'local-1')!.reachability).toMatchObject({ mode: 'local' })
+    expect((await s.listRuns()).find(r => r.key === 'local-1')!.reachability).toMatchObject({ mode: 'local', localOnly: true })
   })
 
   it('does not tell the webhook or GitHub when a run finishes', async () => {
@@ -134,5 +135,76 @@ describe('recruit --local', () => {
       await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
     }
     expect(net.fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('refuses a remote store, and an https target, with a clear message', async () => {
+    const net = failingNetwork()
+    const remote = await recruit(['--local', '--key', 'remote'], net.deps, { UI_TESTS_DATABASE_URL: 'postgres://user:pw@db.example.com/ui' })
+    expect(remote.code).toBe(2)
+    expect(remote.err).toContain('--local keeps the store on this machine')
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: 'https://localhost:3100' } }\n`)
+    try {
+      const secure = await recruit(['--local', '--key', 'secure'], net.deps)
+      expect(secure.code).toBe(2)
+      expect(secure.err).toContain('--local supports http targets')
+    } finally {
+      await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+    }
+    expect(net.fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('says nothing about the perimeter for a public hostname given to --host', async () => {
+    const { code, err } = await recruit(['--json', '--host', 'tests.example.com', '--key', 'public-host'])
+    expect(code).toBe(0)
+    expect(err).not.toContain('Inside the perimeter')
+  })
+})
+
+describe('the result hook of a local run', () => {
+  async function settledRun(key: string, args: string[]) {
+    const made = await recruit(['--json', '--key', key, ...args])
+    expect(made.code).toBe(0)
+    const s = await openStore({ UI_TESTS_DATA_DIR: data })
+    cleanup.push(() => s.close())
+    const id = made.json().run as string
+    const run = (await s.getRun(id))!
+    // The hook fires once a run has a result; this one has settled with none found.
+    await s.updateRun(id, { result: 'none-found' }, run.revision)
+    return { s, id }
+  }
+  function spies() {
+    const fetchSpy = vi.fn(async () => new Response('ok'))
+    vi.stubGlobal('fetch', fetchSpy)
+    cleanup.push(() => vi.unstubAllGlobals())
+    const calls = { createCheck: vi.fn(), updateCheck: vi.fn(), upsertComment: vi.fn(), pullRequestsForCommit: vi.fn(async () => []) }
+    return { fetchSpy, calls, github: calls as unknown as GitHubClient }
+  }
+  const io = (github: GitHubClient): Io => ({ stdout: { write: () => true }, stderr: { write: () => true }, cwd: work, env: { UI_TESTS_DATA_DIR: data }, deps: { github, webhookBackoffMs: 1 } })
+
+  it('is not called by reporterFor, whoever settles the run: status, verify, check, a trace revision, an agent run', async () => {
+    const { s, id } = await settledRun('hook-local', ['--local'])
+    const net = spies()
+    await reporterFor(io(net.github))((await s.getRun(id))!, s)
+    expect(net.fetchSpy).not.toHaveBeenCalled()
+    for (const call of Object.values(net.calls)) expect(call).not.toHaveBeenCalled()
+  })
+
+  it('is called for a run that is not local only (control: the spies would see it)', async () => {
+    const { s, id } = await settledRun('hook-perimeter', ['--host', '10.0.0.5'])
+    const net = spies()
+    await reporterFor(io(net.github))((await s.getRun(id))!, s)
+    expect(net.fetchSpy).toHaveBeenCalled()
+  })
+
+  it('stays quiet through status, verify and a revision of a local run', async () => {
+    const { s, id } = await settledRun('hook-cli', ['--local'])
+    const net = spies()
+    const quiet = io(net.github)
+    expect(await main(['status', id], quiet)).toBeGreaterThanOrEqual(0)
+    expect(await main(['verify', id], quiet)).toBeGreaterThanOrEqual(0)
+    const { recordRevision } = await import('../src/trace/revise.ts')
+    await recordRevision(s, id, { kind: 'scenario', goalIndex: 0, text: 'Reworded' }, { by: 'me', onResult: reporterFor(quiet) })
+    expect(net.fetchSpy).not.toHaveBeenCalled()
+    for (const call of Object.values(net.calls)) expect(call).not.toHaveBeenCalled()
   })
 })

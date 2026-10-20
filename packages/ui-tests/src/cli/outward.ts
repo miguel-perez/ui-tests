@@ -17,6 +17,8 @@ export function githubFor(io: Io): GitHubClient | undefined {
 export function reporterFor(io: Io): ResultHook {
   let config: UiTestsConfig | undefined
   return async (run, store) => {
+    // A run made local only never tells GitHub or a webhook, whoever settles it and wherever (recruit, status, verify, check, a trace revision, an agent run).
+    if ((run.reachability as { localOnly?: boolean } | undefined)?.localOnly === true) return
     // A config that cannot be read fails the delivery: nothing is recorded as told, so a later run from the right place tells it with the right block_on.
     config ??= await loadConfig(io.cwd).then(c => c.config, error => { throw new Error(`cannot tell GitHub or the webhook: ${error instanceof Error ? error.message : String(error)}`) })
     const github = githubFor(io)

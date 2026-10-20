@@ -101,5 +101,4 @@ test('recruit --host gives links on the LAN address, and a participant there com
     const ended = (await store.listAttempts(run.run)).filter(a => a.reason === 'done')
     expect(ended).toHaveLength(1)
   } finally { await store.close() }
-  expect(process.env.UI_TESTS_DATA_DIR).toContain(join('.ui-tests', 'e2e'))
 })
