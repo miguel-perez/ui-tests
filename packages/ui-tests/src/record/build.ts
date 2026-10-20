@@ -6,7 +6,7 @@ import { FIRST_LOOK_SHOT, FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
 import { countedInResult, handleOf, resultComplete } from '../runner/progress.ts'
 import type { AttemptRow, HookResult, RunStore, Verification } from '../store/types.ts'
 import { buildTrace, type TraceAttempt } from '../trace/build.ts'
-import { agentResult, TRIAL_ANSWER, type TrialState } from '../agents/result.ts'
+import { agentResult, DEFAULT_TRIALS, TRANSCRIPT_ANSWER, TRIAL_ANSWER, type TrialState } from '../agents/result.ts'
 import { AGENT_EVIDENCE_STATEMENT, clauseEvidence, EVIDENCE_STATEMENT } from './clauses.ts'
 import { RUN_RECORD_SCHEMA_ID, runRecordSchema, type RunRecord } from './schema.ts'
 
@@ -21,7 +21,7 @@ const numbers = (values: unknown[]) => values.filter((v): v is number => typeof 
 function exportedAnswers(answers: Record<string, unknown>): Record<string, unknown> {
   const kept: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(answers)) {
-    if (key === 'screener' || key === FIRST_LOOK_SHOT || key.endsWith('.voice') || key === TRIAL_ANSWER) continue
+    if (key === 'screener' || key === FIRST_LOOK_SHOT || key.endsWith('.voice') || key === TRIAL_ANSWER || key === TRANSCRIPT_ANSWER) continue
     kept[key] = value
   }
   return kept
@@ -55,13 +55,20 @@ function agentPart(trace: Awaited<ReturnType<typeof buildTrace>>) {
   const tasks = trace.compiled.goals.map(goal => {
     const mine = trials.filter(t => t.goalIndex === goal.index)
     const reliability = goal.agent?.reliability ?? 'all'
-    return { goal, reliability, mine, ...agentResult(mine, reliability) }
-  }).filter(t => t.mine.length > 0)
-  const line = tasks.map(t => `${t.goal.name}: ${t.reliability === 'all' ? 'pass^k' : 'pass@k'} ${t.result}, ${t.mine.filter(x => x.state === 'verified').length} of ${t.mine.length} trials verified`).join('; ')
+    const k = goal.agent?.trials ?? DEFAULT_TRIALS
+    return { goal, reliability, mine, k, ...agentResult(mine, reliability) }
+  })
+  // No verdict is read from fewer than k trials (an interrupted run): pass^k, pass@k and each task's result stay pending.
+  const pending = tasks.some(t => t.mine.length < t.k)
+  const line = tasks.filter(t => t.mine.length > 0 || pending).map(t => {
+    const verified = t.mine.filter(x => x.state === 'verified').length
+    return t.mine.length < t.k
+      ? `${t.goal.name}: pending, ${t.mine.length} of ${t.k} trials run, ${verified} verified`
+      : `${t.goal.name}: ${t.reliability === 'all' ? 'pass^k' : 'pass@k'} ${t.result}, ${verified} of ${t.mine.length} trials verified`
+  }).join('; ')
   return {
     trials,
-    passK: tasks.length > 0 && tasks.every(t => t.passK),
-    passAtK: tasks.length > 0 && tasks.every(t => t.passAtK),
+    ...(!pending && tasks.length > 0 && { passK: tasks.every(t => t.passK), passAtK: tasks.every(t => t.passAtK) }),
     sentence: `${line || 'No trials yet'}. A capability test, not usability.`,
   }
 }

@@ -10,11 +10,12 @@ const needs: Record<Purpose, string> = {
 }
 
 /**
- * Whether a consumer may read an attempt's words, recording or hand it to a workflow: only what the person agreed to, and nothing the
- * source's own restrictions rule out (`no-<purpose>`). An attempt with no purposes, or a purpose they declined, is not read.
+ * Whether a consumer may read an attempt's words, recording or hand it to a workflow: only what the person agreed to, and only when
+ * the source's own restrictions (panel terms; none for a link) are empty. An attempt with no purposes, or a purpose they declined, is not read.
+ * The report page (`mayShow`) reads the same rule.
  */
 export function canRead(attempt: { purposes: string[]; restrictions: string[] }, purpose: Purpose): boolean {
-  return attempt.purposes.includes(needs[purpose]) && !attempt.restrictions.includes(`no-${purpose}`)
+  return attempt.purposes.includes(needs[purpose]) && attempt.restrictions.length === 0
 }
 
 /** Agent results may serve as an optimisation signal; human results never do. */

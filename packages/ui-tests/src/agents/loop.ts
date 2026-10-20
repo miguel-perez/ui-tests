@@ -5,7 +5,7 @@ import type { CompiledGoal } from '../schema/compiled.ts'
 import type { AttemptRow, RunRow, RunStore, Verification } from '../store/types.ts'
 import { verifyAttempt } from '../verify.ts'
 import type { AgentConfig } from './config.ts'
-import { agentParticipant, TRIAL_ANSWER } from './result.ts'
+import { agentParticipant, DEFAULT_TRIALS, TRANSCRIPT_ANSWER, TRIAL_ANSWER } from './result.ts'
 import type { AgentMessage, AgentModel, AgentStep, Harness, ToolSpec } from './model.ts'
 
 /** One agent trial of a task, as PRD 04 reads it. */
@@ -35,10 +35,10 @@ export type Trial = {
   transcript: AgentMessage[]
 }
 
-export const DEFAULT_TRIALS = 5
+export { DEFAULT_TRIALS }
 /** Where a stored trial attempt keeps its summary (the trial without its transcript, `TRIAL_ANSWER`) and its transcript's blob id. */
 export { TRIAL_ANSWER }
-export const TRANSCRIPT_ANSWER = 'agent.transcript'
+export { TRANSCRIPT_ANSWER }
 /** Budgets that apply when the config sets none: enough for a task, small enough that a stuck agent ends. */
 export const DEFAULT_BUDGETS = { calls: 30, seconds: 600 }
 const MAX_QUESTIONS = 3

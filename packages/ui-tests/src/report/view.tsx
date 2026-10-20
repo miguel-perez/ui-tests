@@ -1,5 +1,6 @@
 /** @jsxRuntime automatic @jsxImportSource react */
 // Rendered in Node under tsx as well as inside a Next app, so the JSX mode is stated here.
+import { canRead } from '../consumers.ts'
 import type { CSSProperties, ReactNode } from 'react'
 import { topThree } from '../issues.ts'
 import type { RunRecord } from '../record/schema.ts'
@@ -42,7 +43,7 @@ max-width:860px;margin:0 auto;padding:24px 16px 64px;font:16px/1.55 system-ui,sa
  * they have not withdrawn. The record carries what each person agreed to so that every reader makes this check.
  */
 export const mayShow = (attempt: Attempt): boolean =>
-  attempt.purposes.includes('analysis by the author') && attempt.restrictions.length === 0 && attempt.reason !== 'withdrew'
+  canRead(attempt, 'recordings') && attempt.reason !== 'withdrew'
 
 const identity = (path: string) => path
 const colour = (value: string | undefined) => (value && /^(#[0-9a-f]{3,8}|[a-z]+)$/i.test(value) ? value : undefined)

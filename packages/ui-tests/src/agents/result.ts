@@ -1,9 +1,15 @@
 /** Where a stored trial attempt keeps its summary (the trial without its transcript). Kept here so the record can read it without the loop. */
 export const TRIAL_ANSWER = 'agent.trial'
 /** An agent trial's participant id on its attempt row: `agent:<task>:<trial>`. Never an invite slot of a human run. */
+export const TRANSCRIPT_ANSWER = 'agent.transcript'
 export const AGENT_PARTICIPANT = 'agent:'
 export const agentParticipant = (goalIndex: number, trial: number) => `${AGENT_PARTICIPANT}${goalIndex}:${trial}`
 export const isAgentTrial = (participant: string) => participant.startsWith(AGENT_PARTICIPANT)
+
+/** The heading every agent result is printed under. */
+export const AGENT_HEADING = 'capability test, not usability'
+/** Trials per task when the task sets none. */
+export const DEFAULT_TRIALS = 5
 
 export type TrialState = 'verified' | 'stopped' | 'unknown'
 export type AgentVerdict = { result: 'pass' | 'fail' | 'inconclusive'; passK: boolean; passAtK: boolean }

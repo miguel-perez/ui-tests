@@ -54,8 +54,11 @@ export function agentTitle(record: RunRecord): string {
 }
 
 /** The page of an agent run's check: its sentence, what the check promises, and one line per trial. */
+/** Text in a Markdown table cell: a pipe or a line break would end the cell or the row. */
+const cell = (text: string) => text.replace(/\\/g, '\\\\').replace(/\|/g, '\\|').replace(/\s*\r?\n\s*/g, ' ')
+
 export function agentCheckPage(record: RunRecord): string {
-  const rows = (record.trials ?? []).map(t => `| ${record.compiled.goals[t.goalIndex]?.name ?? 'task'} | ${t.index} | ${t.state} | ${(t.wallMs / 1000).toFixed(1)} s | ${t.stoppedBy ?? ''} |`)
+  const rows = (record.trials ?? []).map(t => `| ${cell(record.compiled.goals[t.goalIndex]?.name ?? 'task')} | ${t.index} | ${t.state} | ${(t.wallMs / 1000).toFixed(1)} s | ${cell(t.stoppedBy ?? '')} |`)
   return [record.sentence, '', AGENT_NEVER_FAILS, '', '| Task | Trial | State | Time | What stopped it |', '| --- | --- | --- | --- | --- |', ...rows].join('\n')
 }
 

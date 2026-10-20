@@ -12,9 +12,9 @@ describe('consumer rules', () => {
     expect(canRead({ purposes: all, restrictions: [] }, 'workflow')).toBe(true)
     expect(canRead({ purposes: [], restrictions: [] }, 'recordings')).toBe(false)
   })
-  it('lets a source restriction rule a reading out', () => {
-    expect(canRead({ purposes: all, restrictions: ['no-recordings'] }, 'recordings')).toBe(false)
-    expect(canRead({ purposes: all, restrictions: ['no-recordings'] }, 'words')).toBe(true)
+  it('reads nothing from a source that carries restrictions', () => {
+    expect(canRead({ purposes: all, restrictions: ['panel terms'] }, 'recordings')).toBe(false)
+    expect(canRead({ purposes: all, restrictions: ['panel terms'] }, 'words')).toBe(false)
   })
   it('optimises only on agent results', () => {
     expect(optimisable({ actor: 'human' })).toBe(false)

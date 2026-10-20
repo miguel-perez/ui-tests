@@ -7,8 +7,7 @@ import { httpHarness } from '../agents/harness-http.ts'
 import { mcpHarness } from '../agents/harness-mcp.ts'
 import { webHarness } from '../agents/harness-web.ts'
 import { DEFAULT_TRIALS, runTrials, TRIAL_ANSWER, type Trial } from '../agents/loop.ts'
-import { agentResult, runResultOf } from '../agents/result.ts'
-import { AGENT_HEADING } from '../agents/report.tsx'
+import { agentResult, AGENT_HEADING, runResultOf } from '../agents/result.ts'
 import { packLocalPackage, type LocalPackage } from '../agents/pack.ts'
 import type { AgentModel, Harness } from '../agents/model.ts'
 import { scriptedModel, type ScriptedTurn } from '../agents/scripted.ts'
@@ -24,6 +23,7 @@ import { openStore } from '../store/open.ts'
 import type { UiTestsConfig } from '../types.ts'
 import { loadStudies, withProduct } from './lint.ts'
 import type { Command, Io } from './main.ts'
+import { reporterFor } from './outward.ts'
 import { interrupt } from './trace.ts'
 
 export { AGENT_HEADING }
@@ -158,6 +158,11 @@ export const agentRun: Command = async (args, io) => {
     if (results.every(r => r.verdict.result !== 'pending')) {
       const result = runResultOf(results.map(r => r.verdict.result as 'pass' | 'fail' | 'inconclusive'))
       if (latest.states.collection !== 'complete' || latest.result !== result) await store.updateRun(run.run, { states: { ...latest.states, collection: 'complete', verification: 'complete' }, result }, latest.revision)
+      // Tell the outside (the run's `ui-tests (agent)` check and the webhook) now that the result is out of pending; safe to repeat.
+      const settled = await store.getRun(run.run)
+      if (settled && settled.result !== 'pending') {
+        try { await reporterFor(io)(settled, store) } catch (error) { io.stderr.write(`${run.run}: ${error instanceof Error ? error.message : String(error)}\n`) }
+      }
     }
     const handle = handleOf((await store.getRun(run.run)) ?? run)
     const report = {
@@ -166,7 +171,7 @@ export const agentRun: Command = async (args, io) => {
       heading: AGENT_HEADING,
       study: chosen.compiled.name,
       agent: { fingerprint, config: config.agents },
-      tasks: results.map(({ goal, trials, verdict }) => ({ name: goal.name, target: goal.agent?.target, trials: trials.map(({ transcript: _transcript, ...rest }) => rest), reliability: goal.agent?.reliability ?? 'all', result: verdict.result, passK: verdict.passK, passAtK: verdict.passAtK })),
+      tasks: results.map(({ goal, trials, verdict }) => ({ name: goal.name, target: goal.agent?.target, trials: trials.map(({ transcript: _transcript, ...rest }) => rest), reliability: goal.agent?.reliability ?? 'all', result: verdict.result, passK: verdict.result === 'pending' ? null : verdict.passK, passAtK: verdict.result === 'pending' ? null : verdict.passAtK })),
     }
     if (config.reporters?.includes('json')) {
       const dir = join(io.cwd, '.ui-tests', 'runs', run.run)

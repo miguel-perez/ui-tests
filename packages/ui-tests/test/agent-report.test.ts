@@ -5,7 +5,7 @@ import { scriptedModel, type ScriptedTurn } from '../src/agents/scripted.ts'
 import { AgentReport } from '../src/agents/report.tsx'
 import { renderToString } from 'react-dom/server'
 import { createElement } from 'react'
-import { checkName, agentTitle, deliverResult, owedDeliveries } from '../src/github/check.ts'
+import { agentCheckPage, checkName, agentTitle, deliverResult, owedDeliveries } from '../src/github/check.ts'
 import { fakeGitHub } from '../src/github/fake.ts'
 import { runRecordSchema } from '../src/record/schema.ts'
 import { buildRecord } from '../src/record/build.ts'
@@ -76,7 +76,7 @@ describe('agent trials, record and report', () => {
     const html = renderToString(createElement(AgentReport, { record: await buildRecord(store, run.run) }))
     expect(html).toContain('capability test, not usability')
     expect(html).toContain('the flag does not exist')
-    expect(html.match(/<a href="[^"]*">Trace</g)).toHaveLength(5)
+    expect(html.match(/<a href="[^"]*">Trace, trial (?:<!-- -->)?\d</g)).toHaveLength(5)
     expect(html).toContain(`/runs/${run.run}/#`)
     expect(html).not.toMatch(/instead of a person|stand-?in|substitute/i)
   })
@@ -111,5 +111,29 @@ describe('agent trials, record and report', () => {
     expect(update.text).toContain('the flag does not exist')
     expect(github.calls.some(c => c.call === 'upsertComment')).toBe(false)
     expect(agentTitle(await buildRecord(store, run.run))).toBe(update.title)
+  })
+
+  it('reads no verdict from fewer than k trials: pending result, pass^k, pass@k and sentence', async () => {
+    const m = await agentStudy({ target: { cli: 'x' }, hook: async ({ workspace }) => { check(workspace.file('f')).toExist() }, trials: 5 })
+    stores.push(m.store)
+    m.goal.agent!.trials = 5
+    // Two of five trials run, both verified.
+    const some = await runTrials({ ...m, goal: { ...m.goal, agent: { ...m.goal.agent!, trials: 2 } }, model: scriptedModel([done]), harness: harness() })
+    expect(some.map(t => t.state)).toEqual(['verified', 'verified'])
+    const record = await buildRecord(m.store, m.run.run)
+    expect(record.trials).toHaveLength(2)
+    expect(record.passK).toBeUndefined()
+    expect(record.passAtK).toBeUndefined()
+    expect(record.handle.result).toBe('pending')
+    expect(record.sentence).toContain('pending, 2 of 5 trials run, 2 verified')
+    expect(record.sentence).not.toContain('pass^k pass')
+    expect(renderToString(createElement(AgentReport, { record }))).toContain('pass^k: pending')
+  })
+
+  it('keeps a pipe or a line break in a task name or stop line inside its Markdown table cell', async () => {
+    const { store, run } = await made([giveUp])
+    const record = await buildRecord(store, run.run)
+    const page = agentCheckPage({ ...record, trials: record.trials!.map(t => ({ ...t, stoppedBy: 'a | b\nc' })) })
+    expect(page).toContain('| a \\| b c |')
   })
 })

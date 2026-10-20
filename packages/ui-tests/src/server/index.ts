@@ -31,3 +31,4 @@ const handler = createCollector({
 /** The collector as route handlers: mount them at `/api/ui-tests/[[...path]]`. */
 export const GET = (request: Request) => handler(request)
 export const POST = (request: Request) => handler(request)
+export { canRead, combine, optimisable } from '../consumers.ts'

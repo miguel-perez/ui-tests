@@ -5,6 +5,8 @@ import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect as vitestExpect, it } from 'vitest'
 import { main, type Io } from '../src/cli/main.ts'
+import { fakeGitHub } from '../src/github/fake.ts'
+import { openStore } from '../src/store/open.ts'
 import { absolutePath, cliHarness, splitWords } from '../src/agents/harness-cli.ts'
 import { runTrials, type Trial } from '../src/agents/loop.ts'
 import type { AgentModel } from '../src/agents/model.ts'
@@ -267,7 +269,7 @@ study('first run', { users: 'developers trying ui-tests for the first time', pur
       const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, PATH: process.env.PATH ?? '' }, deps: { packLocal: async () => undefined, signal: new AbortController().signal, ...deps } }
       return { code: await main(argv, io), out, err }
     }
-    return { work, cli: cli_, cleanup: async () => { await rm(work, { recursive: true, force: true }); await rm(data, { recursive: true, force: true }) } }
+    return { work, data, cli: cli_, cleanup: async () => { await rm(work, { recursive: true, force: true }); await rm(data, { recursive: true, force: true }) } }
   }
   const scripted = "{ model: { provider: 'scripted', name: './agent-script.json' } }"
   const passing = [{ toolCalls: [{ name: 'run', input: { command: 'node ./fake-cli.mjs' } }] }, { toolCalls: [{ name: 'done', input: {} }] }]
@@ -295,6 +297,27 @@ study('first run', { users: 'developers trying ui-tests for the first time', pur
     } finally { await p.cleanup() }
   })
 
+  it('delivers the ui-tests (agent) check itself when the run finishes, neutral and without a comment', async () => {
+    const p = await project(scripted, passing, 2)
+    try {
+      const stopped = new AbortController()
+      stopped.abort()
+      vitestExpect((await p.cli(['--actor', 'agent', '--commit', 'ghi'], { signal: stopped.signal })).code).toBe(3)
+      const store = await openStore({ UI_TESTS_DATA_DIR: p.data })
+      const github = fakeGitHub()
+      try {
+        const [row] = await store.listRuns()
+        const { id } = await github.createCheck({ owner: 'o', repo: 'r', headSha: 's', name: 'ui-tests (agent)', status: 'in_progress', title: 'Waiting', summary: 'x' })
+        vitestExpect(await store.updateRun(row.run, { github: { owner: 'o', repo: 'r', pr: 7, headSha: 's', checkId: id, name: 'ui-tests (agent)' } }, row.revision)).toBe(true)
+      } finally { await store.close() }
+      const finished = await p.cli(['--actor', 'agent', '--commit', 'ghi'], { github })
+      vitestExpect(finished.code).toBe(0)
+      const update = github.calls.find(c => c.call === 'updateCheck')!.input as { conclusion: string; title: string }
+      vitestExpect(update).toMatchObject({ conclusion: 'neutral', title: 'Capability test passed · 2 of 2 trials verified' })
+      vitestExpect(github.calls.some(c => c.call === 'upsertComment')).toBe(false)
+    } finally { await p.cleanup() }
+  }, 30_000)
+
   it('finishes an interrupted run on the next invocation, and reads no verdict from fewer than k trials', async () => {
     const p = await project(scripted, passing, 5)
     try {
@@ -304,7 +327,7 @@ study('first run', { users: 'developers trying ui-tests for the first time', pur
       vitestExpect(await main(['--actor', 'agent', '--commit', 'def'], io)).toBe(3)
       vitestExpect(out).toContain('pass^k: pending · 1 of 1 verified · 1 of 5 trials run; run the same command again to finish')
       const runId = /Agent run (r_\w+)/.exec(out)![1]
-      vitestExpect(JSON.parse(await readFile(join(p.work, '.ui-tests', 'runs', runId, 'report.json'), 'utf8')).tasks[0].result).toBe('pending')
+      vitestExpect(JSON.parse(await readFile(join(p.work, '.ui-tests', 'runs', runId, 'report.json'), 'utf8')).tasks[0]).toMatchObject({ result: 'pending', passK: null, passAtK: null })
       out = ''
       const resumed = { ...io, deps: { signal: new AbortController().signal, packLocal: async () => undefined } }
       vitestExpect(await main(['--actor', 'agent', '--commit', 'def'], resumed)).toBe(0)

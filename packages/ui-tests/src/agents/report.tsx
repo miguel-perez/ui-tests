@@ -1,8 +1,7 @@
 /** @jsxRuntime automatic @jsxImportSource react */
 // Rendered in Node under tsx, which takes the JSX mode from the tsconfig of the folder it runs in (a Next app's says `preserve`).
 import type { RunRecord } from '../record/schema.ts'
-
-export const AGENT_HEADING = 'capability test, not usability'
+import { AGENT_HEADING } from './result.ts'
 
 const css = `
 body{font:15px/1.5 system-ui,sans-serif;margin:0;padding:24px 16px;color:#1a1a1a;background:#fff}
@@ -28,7 +27,7 @@ export function AgentReport({ record, base = '' }: { record: RunRecord; base?: s
       <p><span className="label">agent</span> · {AGENT_HEADING}</p>
       <h1>{compiled.name}</h1>
       <p>{record.sentence}</p>
-      <p>Run <code>{handle.run}</code> · result {handle.result} · {record.passK ? 'pass^k: every trial verified' : 'pass^k: not every trial verified'} · pass@k: {record.passAtK ? 'at least one verified' : 'none verified'}</p>
+      <p>Run <code>{handle.run}</code> · result {handle.result} · {record.passK === undefined ? 'pass^k: pending' : record.passK ? 'pass^k: every trial verified' : 'pass^k: not every trial verified'} · {record.passAtK === undefined ? 'pass@k: pending' : record.passAtK ? 'pass@k: at least one verified' : 'pass@k: none verified'}</p>
       {compiled.goals.map(goal => {
         const mine = trials.filter(t => t.goalIndex === goal.index)
         if (!mine.length) return null
@@ -44,7 +43,7 @@ export function AgentReport({ record, base = '' }: { record: RunRecord; base?: s
                     <td>{t.state}{t.claimedDone && t.state === 'stopped' ? ' (said it was done)' : ''}</td>
                     <td>{seconds(t.wallMs)}</td>
                     <td>{t.stoppedBy ?? t.infrastructure ?? ''}</td>
-                    <td><a href={`${base}/runs/${encodeURIComponent(handle.run)}/#${t.attempt}`}>Trace</a></td>
+                    <td><a href={`${base}/runs/${encodeURIComponent(handle.run)}/#${t.attempt}`}>Trace, trial {t.index}</a></td>
                   </tr>
                 ))}
               </tbody>
