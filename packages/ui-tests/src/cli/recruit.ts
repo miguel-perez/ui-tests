@@ -34,8 +34,9 @@ const pause = (ms: number, signal?: AbortSignal) => new Promise<void>(resolve =>
 async function waitForResult(store: RunStore, runId: string, io: Io, signal?: AbortSignal, localOnly = false): Promise<{ handle: RunHandle; code: number }> {
   const deps = io.deps ?? {}
   const now = deps.now ?? (() => new Date())
+  const bypass = io.env.VERCEL_AUTOMATION_BYPASS_SECRET || undefined
   for (;;) {
-    await verifyRun(store, runId)
+    await verifyRun(store, runId, bypass ? { bypass } : {})
     const run = await refreshRun(store, runId, now(), { ...(!localOnly && { onResult: reporterFor(io) }) })
     if (run.result !== 'pending') return { handle: handleOf(run), code: exitCodeFor(run.result) }
     if (signal?.aborted) return { handle: handleOf(run), code: 3 }

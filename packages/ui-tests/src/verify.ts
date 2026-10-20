@@ -5,6 +5,7 @@ import { loadBundle } from './load.ts'
 import { snapshotPage } from './snapshot-page.ts'
 import type { AttemptRow, HookResult, RunRow, RunStore, Verification } from './store/types.ts'
 import type { Hook, HookArgs, Workspace } from './types.ts'
+import { BYPASS_HEADER } from './runner/invites.ts'
 
 export type { HookResult, Verification } from './store/types.ts'
 
@@ -59,7 +60,12 @@ export async function verifyAttempt(input: { run: RunRow; attempt: AttemptRow; t
   return { ...result, steps, ...(answer && { answer }) }
 }
 
-type Options = { now?: number; requestFactory?: (baseURL: string) => Promise<APIRequestContext> }
+type Options = {
+  now?: number
+  requestFactory?: (baseURL: string) => Promise<APIRequestContext>
+  /** The Vercel protection-bypass secret (`VERCEL_AUTOMATION_BYPASS_SECRET`): the hooks' requests to the target carry it, so a protected preview answers rather than its login page. */
+  bypass?: string
+}
 
 /** The time of the attempt's last sign of life, in epoch milliseconds. */
 function lastActivity(attempt: AttemptRow, events: { at: number }[]): number {
@@ -89,7 +95,7 @@ export async function verifyRun(store: RunStore, runId: string, options: Options
   if (!pending.length) return { verified: 0, disconnected }
   const studies = await loadBundle(run.hooksBundle, run.compiled.name)
   const study = studies.find(s => s.name === run.compiled.name) ?? studies[0]
-  const request = await (options.requestFactory ?? defaultRequest)(run.target)
+  const request = await (options.requestFactory ?? ((baseURL: string) => defaultRequest(baseURL, options.bypass)))(run.target)
   let verified = 0
   try {
     for (const attempt of pending) {
@@ -106,4 +112,30 @@ export async function verifyRun(store: RunStore, runId: string, options: Options
   return { verified, disconnected }
 }
 
-const defaultRequest = (baseURL: string) => playwrightRequest.newContext({ baseURL, extraHTTPHeaders: {} })
+const defaultRequest = async (baseURL: string, bypass?: string): Promise<APIRequestContext> => {
+  const context = await playwrightRequest.newContext({ baseURL })
+  return bypass ? withBypass(context, baseURL, bypass) : context
+}
+
+const REQUEST_METHODS = new Set(['fetch', 'get', 'post', 'put', 'patch', 'delete', 'head'])
+
+/**
+ * The request context with the protection-bypass header on every request to the target's own origin, and on no other: the secret
+ * opens the author's preview and is never sent to a third party a hook happens to call.
+ */
+export function withBypass(context: APIRequestContext, baseURL: string, secret: string): APIRequestContext {
+  const origin = new URL(baseURL).origin
+  const sameOrigin = (url: unknown) => {
+    const address = typeof url === 'string' ? url : (url as { url?: () => string } | undefined)?.url?.()
+    try { return address !== undefined && new URL(address, baseURL).origin === origin } catch { return false }
+  }
+  return new Proxy(context, {
+    get(target, property, receiver) {
+      const value = Reflect.get(target, property, receiver) as unknown
+      if (typeof value !== 'function') return value
+      if (typeof property !== 'string' || !REQUEST_METHODS.has(property)) return value.bind(target)
+      return (url: unknown, options: { headers?: Record<string, string> } = {}) =>
+        value.call(target, url, sameOrigin(url) ? { ...options, headers: { ...options.headers, [BYPASS_HEADER]: secret } } : options)
+    },
+  })
+}

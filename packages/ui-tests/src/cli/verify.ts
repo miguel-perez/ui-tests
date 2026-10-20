@@ -18,7 +18,8 @@ export const verify: Command = async (args, io) => {
   const store = await openStore(io.env)
   try {
     if (!(await store.getRun(id))) { io.stderr.write(`No such run: ${id}\n`); return 2 }
-    const { verified, disconnected } = await verifyRun(store, id)
+    const bypass = io.env.VERCEL_AUTOMATION_BYPASS_SECRET || undefined
+    const { verified, disconnected } = await verifyRun(store, id, bypass ? { bypass } : {})
     await settleRun(store, id, reporterFor(io))
     // Verification has read the snapshots; what is past retention goes now.
     await applyRetention(store, io.deps?.now?.() ?? new Date())

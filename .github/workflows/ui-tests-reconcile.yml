@@ -2,7 +2,8 @@ name: ui-tests reconcile
 
 # Brings the ui-tests check of every open run up to date: verify, then status, which completes the check once there is a result.
 # Needs the repository secrets UI_TESTS_DATABASE_URL and UI_TESTS_SHARE_SECRET (see docs/github-check.md);
-# without UI_TESTS_DATABASE_URL it skips with a notice.
+# without UI_TESTS_DATABASE_URL it skips with a notice. With VERCEL_AUTOMATION_BYPASS_SECRET the outcome hooks' requests to a
+# protected Vercel preview carry the bypass header; without it they go without, with a notice.
 on:
   schedule:
     - cron: '*/15 * * * *'
@@ -24,6 +25,7 @@ jobs:
     env:
       UI_TESTS_DATABASE_URL: ${{ secrets.UI_TESTS_DATABASE_URL }}
       UI_TESTS_SHARE_SECRET: ${{ secrets.UI_TESTS_SHARE_SECRET }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
     steps:
       - name: Skip when not configured
         id: gate
@@ -33,6 +35,9 @@ jobs:
             echo "run=false" >> "$GITHUB_OUTPUT"
           else
             echo "run=true" >> "$GITHUB_OUTPUT"
+            if [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+              echo "::notice::VERCEL_AUTOMATION_BYPASS_SECRET is not set: outcome hooks reach the target without the protection-bypass header."
+            fi
           fi
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         if: steps.gate.outputs.run == 'true'
