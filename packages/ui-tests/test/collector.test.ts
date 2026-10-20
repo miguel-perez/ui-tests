@@ -1,5 +1,5 @@
 import { join } from 'node:path'
-import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { vi, beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { compileStudy } from '../src/compile.ts'
 import { bundleStudyFile, loadBundle } from '../src/load.ts'
 import { createCollector } from '../src/server/collector.ts'
@@ -319,6 +319,31 @@ describe('answers and withdrawal', () => {
       expect((await say(token, [...bytes])).status).toBe(200)
       expect((await store.getAttempt(attempt.id))?.answers['goal0.difficulty']).toBe(words)
     }
+  })
+
+  it('keeps typed words when the voice has none, replaces the earlier blob, and names a failing transcriber once', async () => {
+    const errors: unknown[][] = []
+    const spy = vi.spyOn(console, 'error').mockImplementation((...args) => { errors.push(args) })
+    try {
+      const broken = createCollector({ store: async () => store, now: () => clock, transcriber: { transcribe: async () => { throw new Error('no model') } } })
+      const { attempt, token } = await active(6)
+      await post(token, { action: 'end', reason: 'done', snapshot: snap() })
+      await post(token, { action: 'answers', ease: 6, confidence: 5 })
+      await post(token, { action: 'answers', uxlite: { useful: 5, easy: 4 } })
+      expect(await store.getAttempt(attempt.id)).toMatchObject({ answers: { uxliteVersion: 'uxlite-2024' } })
+      const say = (bytes: number[], typed?: string) => broken(new Request(endpoint, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: 'voice', question: 'anything', audio: Buffer.from(bytes).toString('base64'), contentType: 'audio/webm', ...(typed && { typed }) }) }))
+      expect((await say([1], 'typed first')).status).toBe(200)
+      const first = (await store.getAttempt(attempt.id))!.answers['anything.voice'] as string
+      expect((await store.getAttempt(attempt.id))!.answers.anything).toBe('typed first')
+      await store.updateAttempt(attempt.id, { status: 'questions' }, 'finished')
+      expect((await say([2])).status).toBe(200)
+      const after = (await store.getAttempt(attempt.id))!
+      expect(after.answers.anything).toBe('typed first')
+      expect(await store.getBlob(first)).toBeUndefined()
+      expect(await store.getBlob(after.answers['anything.voice'] as string)).toBeDefined()
+      expect(errors).toHaveLength(1)
+      expect(String(errors[0]![0])).toContain('no model')
+    } finally { spy.mockRestore() }
   })
 
   it('refuses a spoken answer while the task is still on', async () => {

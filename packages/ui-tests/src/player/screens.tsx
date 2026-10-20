@@ -24,9 +24,9 @@ export type ScreenProps = {
   onStart: () => void
   /** Stops and deletes the recording; offered on every screen after consent. */
   onWithdraw?: () => void
+  /** A spoken answer to an open question after the task; `typed` is what was already written. */
+  onVoice?: (id: string, blob: Blob, typed?: string) => void
   /** The flashed picture finished loading. */
-  /** A spoken answer to an open question after the task. */
-  onVoice?: (id: string, blob: Blob, transcript?: string) => void
   onFlashLoaded?: () => void
   /** The flashed picture could not be loaded. */
   onFlashFailed?: () => void
@@ -175,7 +175,7 @@ export function PlayerScreen(props: ScreenProps) {
   }
   const open = (id: string, required: boolean) => {
     const q = questionOf(view, id)
-    return q ? <><Open id={id} question={q.text} value={given(id)} onAnswer={onAnswer} />{props.onVoice && <VoiceAnswer participant={view.run} disabled={busy} onAnswer={(blob, transcript) => props.onVoice?.(id, blob, transcript)} />}{next(SUBMIT, !required || answered(id))}</> : null
+    return q ? <><Open id={id} question={q.text} value={given(id)} onAnswer={onAnswer} />{props.onVoice && <VoiceAnswer participant={view.run} disabled={busy} onAnswer={(blob) => props.onVoice?.(id, blob, typeof given(id) === 'string' ? (given(id) as string) : undefined)} />}{next(SUBMIT, !required || answered(id))}</> : null
   }
 
   let body: ReactNode

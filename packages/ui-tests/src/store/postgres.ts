@@ -212,6 +212,10 @@ export class PostgresStore implements RunStore {
     })
   }
 
+  deleteBlob(id: string) {
+    return this.op(async (db) => { await db.query('DELETE FROM blobs WHERE id = $1', [id]) })
+  }
+
   deleteBlobs(attemptId: string) {
     return this.op(async (db) => (await db.query('DELETE FROM blobs WHERE attempt_id = $1 RETURNING id', [attemptId])).rows.length)
   }

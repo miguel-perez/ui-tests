@@ -99,7 +99,7 @@ export function Player({ runId }: { runId: string }) {
   }
 
   /** A spoken answer is sent whole and counts as this screen's answer, so the next screen follows at once. */
-  async function voice(current: Screen, id: string, blob: Blob, transcript?: string) {
+  async function voice(current: Screen, id: string, blob: Blob, typed?: string) {
     if (!view || busy) return
     setBusy(true)
     setError(undefined)
@@ -107,7 +107,7 @@ export function Player({ runId }: { runId: string }) {
       const bytes = new Uint8Array(await blob.arrayBuffer())
       let binary = ''
       for (let i = 0; i < bytes.length; i += 0x8000) binary += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
-      const updated = await send({ action: 'voice', question: id, audio: btoa(binary), contentType: blob.type || 'audio/webm', ...(transcript && { transcript }) })
+      const updated = await send({ action: 'voice', question: id, audio: btoa(binary), contentType: blob.type || 'audio/webm', ...(typed && { typed }) })
       setView(updated)
       setScreen(nextScreen(updated, current, answers))
     } catch {
@@ -156,7 +156,7 @@ export function Player({ runId }: { runId: string }) {
       onNext={() => void advance(screen)}
       onStart={() => void start()}
       onWithdraw={() => void withdraw()}
-      onVoice={(id, blob, transcript) => void voice(screen, id, blob, transcript)}
+      onVoice={(id, blob, typed) => void voice(screen, id, blob, typed)}
       onFlashLoaded={() => {
         clearTimeout(flash.current)
         performance.mark('first-look:flash-start')

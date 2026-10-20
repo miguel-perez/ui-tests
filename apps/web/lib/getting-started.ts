@@ -28,7 +28,7 @@ export const gettingStarted = {
   },
   accessibility: {
     heading: 'Accessibility',
-    text: 'Everything a participant meets works with the keyboard alone: Tab and Shift+Tab to move, Space to choose, Enter to press. Every screen has one heading, one question and labelled controls; the bar announces the question it asks and any offer of more time. The checks run in a real browser with axe on every screen. What they cannot do is listen, so before you publish a study, check it by ear.',
+    text: 'Everything a participant meets works with the keyboard alone: Tab and Shift+Tab to move between questions and buttons, the arrow keys to choose within a set of choices, Space to tick a box, Enter to press a button. Every screen has one heading, one question and labelled controls; the bar announces the question it asks and any offer of more time. The checks run in a real browser with axe on every screen. What they cannot do is listen, so before you publish a study, check it by ear.',
     manual: [
       'On a Mac, open Safari and turn VoiceOver on with Command+F5.',
       'Open a participant link and go from the first screen to the thanks with the keyboard only.',
@@ -36,7 +36,7 @@ export const gettingStarted = {
       'On the task page, press Tab until the bar is read: the task, Done, and I couldn\'t do this. Press Done and listen for "Finished this task?".',
       'When the bar offers more time, listen for the offer, then press the button once with the keyboard.',
     ],
-    then: 'Do this by hand. It is not part of the automated checks. Each person also says which browser, device and assistive technology they use, and that is kept with their attempt.',
+    then: 'Do this by hand. It is not part of the automated checks. Each person also says which browser, device and assistive technology they use, and that is kept with their attempt. Spoken answers are kept as audio; set `UI_TESTS_TRANSCRIBER` to a module whose default export turns audio into text to keep the words too.',
   },
   steps: [
     { id: 'install', heading: 'Install', text: install.does, command: install.command },

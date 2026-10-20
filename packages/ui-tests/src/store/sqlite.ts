@@ -247,6 +247,10 @@ export class SqliteStore implements RunStore {
     })
   }
 
+  deleteBlob(id: string) {
+    return this.op(() => { this.run('DELETE FROM blobs WHERE id = ?', id) })
+  }
+
   deleteBlobs(attemptId: string) {
     return this.op(() => Number(this.run('DELETE FROM blobs WHERE attempt_id = ?', attemptId).changes))
   }

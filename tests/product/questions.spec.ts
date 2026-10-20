@@ -227,4 +227,52 @@ test.describe('voice answers', () => {
       }
     } finally { await store.close() }
   })
+
+  test('leaving the screen while recording sends nothing for the question that was left', async ({ page }) => {
+    const { runId, playerUrl } = await createRehearsalRun(fixture('questions'), { product: 'ui-tests' })
+    const voice: string[] = []
+    page.on('request', (r) => { if (r.method() === 'POST' && (r.postData() ?? '').includes('"voice"')) voice.push(r.url()) })
+    await page.goto(playerUrl)
+    await page.getByRole('button', { name: 'I agree and continue' }).click()
+    await page.getByRole('button', { name: 'Start task' }).click()
+    await page.waitForURL(`${PRODUCT_URL}/`)
+    await page.locator(BAR).getByRole('button', { name: 'Done' }).click()
+    await page.locator(BAR).getByRole('button', { name: 'Yes' }).click()
+    await page.waitForURL(/\/ui-tests\/[^/]+\/\?after=1$/)
+    await page.getByRole('radio', { name: '2', exact: true }).check()
+    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Talk instead' }).click()
+    await page.getByRole('button', { name: 'Use the microphone' }).click()
+    await expect(page.getByRole('button', { name: 'Stop and send' })).toBeVisible()
+    await page.getByRole('button', { name: 'Submit' }).click()
+    await expect(heading(page)).toHaveText('Would ui-tests be useful to you?')
+    await page.waitForTimeout(1_000)
+    expect(voice).toEqual([])
+    const store = await openStore()
+    try {
+      const [attempt] = await store.listAttempts(runId)
+      expect(attempt!.answers['goal0.difficulty.voice']).toBeUndefined()
+    } finally { await store.close() }
+  })
+
+  test('a recording stops by itself at 90 seconds, says so, and is sent', async ({ page }) => {
+    await page.clock.install()
+    const { playerUrl } = await createRehearsalRun(fixture('questions'), { product: 'ui-tests' })
+    await page.goto(playerUrl)
+    await page.getByRole('button', { name: 'I agree and continue' }).click()
+    await page.getByRole('button', { name: 'Start task' }).click()
+    await page.waitForURL(`${PRODUCT_URL}/`)
+    await page.locator(BAR).getByRole('button', { name: 'Done' }).click()
+    await page.locator(BAR).getByRole('button', { name: 'Yes' }).click()
+    await page.waitForURL(/\/ui-tests\/[^/]+\/\?after=1$/)
+    await page.getByRole('radio', { name: '2', exact: true }).check()
+    await page.getByRole('button', { name: 'Submit' }).click()
+    await page.getByRole('button', { name: 'Talk instead' }).click()
+    await page.getByRole('button', { name: 'Use the microphone' }).click()
+    await expect(page.getByRole('button', { name: 'Stop and send' })).toBeVisible()
+    const sent = page.waitForRequest((r) => r.method() === 'POST' && (r.postData() ?? '').includes('"voice"'))
+    await page.clock.fastForward(91_000)
+    await sent
+    await expect(page.getByRole('heading', { name: 'Would ui-tests be useful to you?' })).toBeVisible()
+  })
 })

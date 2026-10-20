@@ -61,6 +61,12 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
   const [confirming, setConfirming] = useState(false)
   const lastStep = !step || step.index === step.count - 1
   const [reading, setReading] = useState(false)
+  // A change of step is announced; the step on at the start is not, since the bar's own label and the visible text say it.
+  const [stepNote, setStepNote] = useState('')
+  const stepNow = useRef(step?.index)
+  useEffect(() => {
+    if (step && stepNow.current !== step.index) { stepNow.current = step.index; setStepNote(`Now on step ${step.index + 1} of ${step.count}, ${step.name}.`) }
+  }, [step])
   const [typing, setTyping] = useState(false)
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const root = useRef<HTMLDivElement>(null)
@@ -118,7 +124,7 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
         <div className="uit-handle" aria-hidden="true" onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}>⋮⋮</div>
         {/* Always present, so a change of text is announced: the question when it opens, and that more time can be asked for. */}
         <span role="status" aria-live="polite" className={confirming ? 'uit-question' : undefined}>
-          {confirming ? (lastStep ? 'Finished this task?' : 'Finished this step?') : offerMoreTime && <span className="uit-sr">Time is nearly up. You can ask for more time once.</span>}
+          {confirming ? (lastStep ? 'Finished this task?' : 'Finished this step?') : (stepNote || offerMoreTime) && <span className="uit-sr">{stepNote}{offerMoreTime && ' Time is nearly up. You can ask for more time once.'}</span>}
         </span>
         {confirming ? (
           <>

@@ -6,8 +6,10 @@ import type { TextModel } from '../model.ts'
 import { FIRST_LOOK_SHOT } from '../runner/screenshot.ts'
 import { fitScore } from '../derive/fit.ts'
 import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
+import { UXLITE_VERSION } from '../measures.ts'
 import { nullTranscriber, type Transcriber } from '../transcriber.ts'
-import { MORE_TIME, effectiveTimeout, isOwnSite, participantView } from './view.ts'
+import { MORE_TIME, effectiveTimeout, isOwnSite, participantView, type ParticipantView } from './view.ts'
+import type { CompiledGoal } from '../schema/compiled.ts'
 
 export type CollectorOptions = {
   store: () => Promise<RunStore>
@@ -64,7 +66,7 @@ const message = z.discriminatedUnion('action', [
   }),
   z.object({ action: z.literal('more-time') }),
   /** An open question answered by voice: the audio (base64), and the words when the browser already has them. */
-  z.object({ action: z.literal('voice'), question: z.string().max(100), audio: z.string().max(MAX_VOICE_CHARS), contentType: z.string().regex(/^audio\/[a-z0-9.+-]+/i).max(100), transcript: z.string().max(10_000).optional() }),
+  z.object({ action: z.literal('voice'), question: z.string().max(100), audio: z.string().max(MAX_VOICE_CHARS), contentType: z.string().regex(/^audio\/[a-z0-9.+-]+/i).max(100), transcript: z.string().max(10_000).optional(), typed: z.string().max(10_000).optional() }),
   z.object({ action: z.literal('withdraw') }),
 ])
 type Message = z.infer<typeof message>
@@ -79,6 +81,12 @@ function environmentOf(given: Record<string, unknown>): Record<string, string> |
   const text = (id: string) => { const v = given[id]; return Array.isArray(v) ? v.join(', ') : typeof v === 'string' ? v : undefined }
   const entries = (['browser', 'device', 'assistive'] as const).flatMap((key) => { const v = text(`screener.${key}`); return v ? [[key, v] as const] : [] })
   return entries.length ? Object.fromEntries(entries) : undefined
+}
+
+/** Whether every question the attempt is owed has an answer: the follow-ups only when asked, and the task's own question when it has one. */
+function allAnswered(view: ParticipantView, goal: CompiledGoal, answers: Record<string, unknown>): boolean {
+  return view.questions.every((q) => (q.askIf && !(typeof answers[q.askIf.id] === 'number' && (answers[q.askIf.id] as number) <= q.askIf.atOrBelow)) || answers[q.id] !== undefined) &&
+    (!goal.answer || answers[goal.answer.question] !== undefined)
 }
 
 const pathnameOf = (url: string, base = 'http://placeholder') => { try { return new URL(url, base).pathname.replace(/(.)\/$/, '$1') } catch { return undefined } }
@@ -135,6 +143,9 @@ function sameSecret(given: string, secret: string): boolean {
 /** Builds the collector: one handler for `GET` (the participant view) and `POST` (the participant's actions). */
 export function createCollector(options: CollectorOptions): (request: Request) => Promise<Response> {
   const now = options.now ?? Date.now
+  let warned = false
+  /** A failing transcriber is named once on stderr; the audio is kept either way. */
+  const warnTranscriber = (error: unknown) => { if (!warned) { warned = true; console.error(`ui-tests: the transcriber failed, voice answers are kept without text: ${error instanceof Error ? error.message : String(error)}`) } }
 
   return async function collector(request: Request): Promise<Response> {
     const url = new URL(request.url)
@@ -304,14 +315,12 @@ export function createCollector(options: CollectorOptions): (request: Request) =
             if (!asked) return { status: 400, text: `Unknown question ${id}` }
             if (value > (asked.points ?? 7)) return { status: 400, text: `${id} is answered on ${asked.points ?? 7} points` }
             given[id] = value
+            given.uxliteVersion = UXLITE_VERSION
           }
           if (body.comment !== undefined) given.anything = body.comment
           const answers = { ...current.answers, ...given }
           const view = participantView(run, { ...current, answers })
-          const answered = (id: string) => answers[id] !== undefined
-          const complete =
-            view.questions.every((q) => (q.askIf && !(typeof answers[q.askIf.id] === 'number' && (answers[q.askIf.id] as number) <= q.askIf.atOrBelow)) || answered(q.id)) &&
-            (!goal.answer || answered(goal.answer.question))
+          const complete = allAnswered(view, goal, answers)
           const finish = current.status === 'questions' && complete
           const environment = body.screener ? environmentOf(given.screener as Record<string, unknown>) : undefined
           const ok = await tx.updateAttempt(attempt.id, {
@@ -331,15 +340,19 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         const bytes = new Uint8Array(Buffer.from(body.audio, 'base64'))
         if (!bytes.length) return refuse(400, 'No audio')
         // Transcribed before the transaction opens, so a slow transcriber never holds a connection.
-        const words = (body.transcript?.trim() || (await (options.transcriber ?? nullTranscriber).transcribe(bytes).catch(() => undefined))?.trim()) || undefined
+        const heard = body.transcript?.trim() || (await (options.transcriber ?? nullTranscriber).transcribe(bytes).catch((error) => { warnTranscriber(error); return undefined }))?.trim()
+        // Words from the voice win; otherwise whatever was typed before pressing "Talk instead" stays.
+        const words = heard || body.typed?.trim() || undefined
         const result = await store.transaction(async (tx) => {
           const current = await tx.getAttempt(attempt.id)
           if (current?.status !== 'questions') return 'Questions are not open'
           const view = participantView(run, current)
           if (!view.questions.some((q) => q.id === key)) return 'This question is not asked'
+          const before = current.answers[`${key}.voice`]
           const blob = await tx.putBlob(attempt.id, 'voice', bytes, body.contentType)
-          const answers = { ...current.answers, [key]: words ?? '', [`${key}.voice`]: blob }
-          const complete = view.questions.every((q) => (q.askIf && !(typeof answers[q.askIf.id] === 'number' && (answers[q.askIf.id] as number) <= q.askIf.atOrBelow)) || answers[q.id] !== undefined) && (!goal.answer || answers[goal.answer.question] !== undefined)
+          if (typeof before === 'string') await tx.deleteBlob(before)
+          const answers = { ...current.answers, [key]: words ?? (typeof current.answers[key] === 'string' ? current.answers[key] : ''), [`${key}.voice`]: blob }
+          const complete = allAnswered(view, goal, answers)
           const ok = await tx.updateAttempt(attempt.id, { answers, ...(complete && { status: 'finished' as const }) }, 'questions')
           return ok ? undefined : 'The attempt moved on; try again'
         })

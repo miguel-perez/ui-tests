@@ -1,4 +1,4 @@
-/** The wording the two UX-Lite items had when they were asked; kept with the score so a later wording change is visible. */
+/** The wording the two UX-Lite items had when they were asked; stored with the answers (`uxliteVersion`) so a later wording change is visible. */
 export const UXLITE_VERSION = 'uxlite-2024'
 
 type Point = 1 | 2 | 3 | 4 | 5

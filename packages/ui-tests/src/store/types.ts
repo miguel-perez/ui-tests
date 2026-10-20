@@ -123,6 +123,7 @@ export interface RunStore {
   getSnapshot(attemptId: string, key: SnapshotKey): Promise<Snapshot | undefined>
   putBlob(attemptId: string, kind: string, bytes: Uint8Array, contentType: string): Promise<string>
   getBlob(id: string): Promise<{ bytes: Uint8Array; contentType: string } | undefined>
+  deleteBlob(id: string): Promise<void>
   deleteBlobs(attemptId: string): Promise<number>
   /** Deletes the attempt's recorded events (the replay); returns how many. */
   deleteEvents(attemptId: string): Promise<number>
