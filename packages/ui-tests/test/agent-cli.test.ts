@@ -1,3 +1,5 @@
+import { spawn } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { homedir, tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -117,17 +119,59 @@ describe('agent trials through the cli harness', () => {
 })
 
 describe('the cli harness sandbox', () => {
-  it('runs only the configured command, npm and npx, without a shell', async () => {
+  it('runs only the configured command and the allowed npm forms, without a shell', async () => {
     const harness = cliHarness(command, { cwd: fixtures })
     await harness.reset()
     for (const line of ['rm -rf /', 'node -e "1"', 'node ./other.mjs', 'sh -c ls']) {
-      vitestExpect((await harness.call('run', { command: line })).error).toBe(`tried to run \`${line}\`, but only \`node ./fake-cli.mjs …\`, \`npm …\` and \`npx …\` can be run here`)
+      vitestExpect((await harness.call('run', { command: line })).error).toBe(`tried to run \`${line}\`, but only \`node ./fake-cli.mjs …\`, \`npm i -D ui-tests\` and \`npx ui-tests …\` can be run here`)
     }
     const injected = await harness.call('run', { command: `${command}; touch pwned` })
     vitestExpect(injected.error).toContain('can be run here')
     vitestExpect((await harness.endState()).sideEffects).toEqual([])
     vitestExpect((await harness.call('shell', { command: 'ls' })).error).toBe('called shell, which is not a tool here')
-    vitestExpect((await harness.call('run', { command: 'npm --version' })).output).toMatch(/^exit 0\n\d+\.\d+/)
+    await harness.dispose()
+  })
+
+  it('refuses every npm and npx form that could run a shell, leave the trial or reach a registry, before anything starts', async () => {
+    const outside = await mkdtemp(join(tmpdir(), 'ui-tests-escape-'))
+    const marker = join(outside, 'escaped')
+    const started: string[][] = []
+    const recorder = ((file: string, args: readonly string[], opts: object) => { started.push([file, ...args]); return spawn(process.execPath, ['-e', ''], opts) }) as unknown as typeof spawn
+    try {
+      for (const target of [command, 'npx ui-tests']) {
+        const harness = cliHarness(target, { cwd: fixtures, spawn: recorder })
+        await harness.reset()
+        const escapes = [
+          `npx -c "touch ${marker}"`, `npx --call "touch ${marker}"`, 'npx -p left-pad left-pad', 'npx --yes ui-tests', 'npx left-pad', `npx ui-tests`,
+          `npm exec -c "touch ${marker}"`, `npm x -- sh -c "touch ${marker}"`, 'npm --offline=false view left-pad version', 'npm view left-pad version',
+          'npm i left-pad', 'npm i -D ui-tests left-pad', 'npm i -D ui-tests --registry=https://registry.npmjs.org/', 'npm i -D ui-tests --offline=false',
+          `npm i --prefix=${outside} ui-tests`, `npm i --userconfig=${outside}/npmrc ui-tests`, 'npm i ui-tests --script-shell=/bin/sh', 'npm i -g ui-tests',
+          `npm pkg set scripts.x="touch ${marker}"`, 'npm run x', 'npm run-script x', 'npm test', 'npm start', 'npm config set registry https://registry.npmjs.org/',
+          'npm publish', 'npm ci ui-tests', 'npm ci -D', 'npm', 'npm --version',
+        ]
+        for (const line of escapes) {
+          const result = await harness.call('run', { command: line })
+          vitestExpect(result.error, line).toMatch(new RegExp(`^tried to run \`${line.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\`, but `))
+        }
+        vitestExpect((await harness.call('run', { command: 'npx ui-tests --help' })).error).toBe('tried to run `npx ui-tests --help`, but ui-tests is not installed in this project; install it with `npm i -D ui-tests`')
+        await harness.dispose()
+      }
+      vitestExpect(started).toEqual([])
+      vitestExpect(existsSync(marker)).toBe(false)
+    } finally { await rm(outside, { recursive: true, force: true }) }
+  })
+
+  it('runs the allowed npm forms with the trial settings appended, offline and without scripts', async () => {
+    const started: string[][] = []
+    const recorder = ((file: string, args: readonly string[], opts: object) => { started.push([file, ...args]); return spawn(process.execPath, ['-e', ''], opts) }) as unknown as typeof spawn
+    const harness = cliHarness('npx ui-tests', { spawn: recorder })
+    await harness.reset()
+    for (const line of ['npm i -D ui-tests', 'npm install --save-dev ui-tests', 'npm i', 'npm ci']) vitestExpect((await harness.call('run', { command: line })).error, line).toBeUndefined()
+    const work = (await harness.endState()).workspace!.root
+    const home = work.replace(/work$/, 'home')
+    const fixed = ['--offline', '--ignore-scripts', '--no-audit', '--no-fund', '--no-update-notifier', `--prefix=${work}`, `--userconfig=${home}/.npmrc`, `--cache=${home}/.npm`]
+    vitestExpect(started.map(argv => argv.slice(1))).toEqual([['i', '-D', 'ui-tests', ...fixed], ['install', '--save-dev', 'ui-tests', ...fixed], ['i', ...fixed], ['ci', ...fixed]])
+    vitestExpect(started.every(argv => argv[0].endsWith('/npm'))).toBe(true)
     await harness.dispose()
   })
 
@@ -193,9 +237,9 @@ describe('the package installed in a trial', () => {
     const { workspace, sideEffects } = await harness.endState()
     vitestExpect(JSON.parse(workspace!.file('package.json')!).devDependencies).toEqual({ 'ui-tests': `^${local.version}` })
     vitestExpect(sideEffects).toEqual(vitestExpect.arrayContaining(['created node_modules/', 'changed package.json']))
-    const registry = await harness.call('run', { command: 'npm i -D left-pad' })
-    vitestExpect(registry.error).toMatch(/^ran `npm i -D left-pad`, which exited 1/)
-    vitestExpect(registry.output).toMatch(/ENOTCACHED|offline/i)
+    vitestExpect((await harness.call('run', { command: 'npm i -D left-pad' })).error).toBe('tried to run `npm i -D left-pad`, but only `ui-tests` can be installed here')
+    const again = await harness.call('run', { command: 'npm ci' })
+    vitestExpect(again.error, again.output).toBeUndefined()
     await harness.dispose()
   }, 120_000)
 })

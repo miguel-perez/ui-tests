@@ -69,6 +69,14 @@ export async function packLocalPackage(packageDir = PACKAGE_DIR): Promise<LocalP
     }
     const bundled = closure(packageDir)
     for (const [name, dir] of bundled) cpSync(dir, join(staging, 'node_modules', name), { recursive: true, dereference: true })
+    // An optional dependency for another platform (esbuild's) is not in the bundle; left listed, `npm ci` reads it as missing.
+    for (const name of bundled.keys()) {
+      const file = join(staging, 'node_modules', name, 'package.json')
+      const pkg = JSON.parse(readFileSync(file, 'utf8')) as Manifest
+      if (!pkg.optionalDependencies) continue
+      const present = Object.fromEntries(Object.entries(pkg.optionalDependencies).filter(([dep]) => bundled.has(dep)))
+      writeFileSync(file, `${JSON.stringify({ ...pkg, optionalDependencies: present }, null, 2)}\n`)
+    }
     const original = manifest(packageDir)
     const { peerDependencies: _peers, peerDependenciesMeta: _meta, devDependencies: _dev, scripts: _scripts, ...rest } = original
     const staged: Manifest = {
