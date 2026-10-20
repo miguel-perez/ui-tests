@@ -2,13 +2,16 @@ import { createServer } from 'node:http'
 import { fileURLToPath } from 'node:url'
 import { build } from 'esbuild'
 import type { AddressInfo } from 'node:net'
+import { userInfo } from 'node:os'
 import { createElement } from 'react'
 import { renderToString } from 'react-dom/server'
 import type { LintFinding } from '../lint.ts'
+import type { IncomingMessage } from 'node:http'
 import type { RunRow, RunStore } from '../store/types.ts'
 import { buildRecord } from '../record/build.ts'
 import { mayShow, ReportView } from '../report/view.tsx'
 import { buildTrace } from './build.ts'
+import { recordRevision, RevisionRefused, type RevisionRequest } from './revise.ts'
 import { momentLabel } from './reel.ts'
 import { RunList, TraceView } from './view.tsx'
 
@@ -29,6 +32,56 @@ function replayBundle(): Promise<string> {
   }).then((result) => result.outputFiles[0]!.text)
   clientBundle.catch(() => { clientBundle = undefined })
   return clientBundle
+}
+
+const MAX_FORM = 64 * 1024
+
+/** The form body, read up to a limit. */
+async function readForm(req: IncomingMessage): Promise<URLSearchParams | undefined> {
+  const chunks: Buffer[] = []
+  let size = 0
+  for await (const chunk of req) {
+    size += (chunk as Buffer).length
+    if (size > MAX_FORM) return undefined
+    chunks.push(chunk as Buffer)
+  }
+  return new URLSearchParams(Buffer.concat(chunks).toString('utf8'))
+}
+
+/**
+ * Whether a write came from a page this viewer served. A browser sends `Origin` on every form post, so a post without one, or from another
+ * origin (including a page on a rebound name), is refused; `Sec-Fetch-Site` must agree when it is sent.
+ */
+function sameOrigin(req: IncomingMessage): boolean {
+  const origin = req.headers.origin
+  if (typeof origin !== 'string' || origin !== `http://${req.headers.host}`) return false
+  const site = req.headers['sec-fetch-site']
+  return site === undefined || site === 'same-origin'
+}
+
+const text = (form: URLSearchParams, key: string) => form.get(key)?.trim() || undefined
+const whole = (value: string | undefined) => (value !== undefined && /^\d{1,9}$/.test(value) ? Number(value) : NaN)
+
+/** The revision a posted form asks for. The attempt a person is called in the trace ("Attempt 3") is the third of the run. */
+function requestFrom(form: URLSearchParams, attemptIds: string[]): RevisionRequest {
+  const kind = text(form, 'kind')
+  const attempt = text(form, 'attempt')
+  const goalIndex = whole(text(form, 'goalIndex'))
+  switch (kind) {
+    case 'exclude': return { kind, attempt: attempt!, reason: text(form, 'reason')! }
+    case 'incentive': return { kind, ...(attempt && { attempt }), amount: { minor: whole(text(form, 'minor')), currency: (text(form, 'currency') ?? '').toUpperCase() } }
+    case 'issue-edit': return { kind, issue: text(form, 'issue')!, ...(text(form, 'title') && { title: text(form, 'title')! }), ...(text(form, 'suggestedChange') && { suggestedChange: text(form, 'suggestedChange')! }) }
+    case 'issue-merge': return { kind, issues: form.getAll('issue') }
+    case 'issue-split': {
+      const groups = (form.get('groups') ?? '').split('\n').map(line => line.split(/[,\s]+/).filter(Boolean).map(n => attemptIds[Number(n) - 1] ?? `attempt ${n}`)).filter(g => g.length > 0)
+      return { kind, issue: text(form, 'issue')!, moments: groups }
+    }
+    case 'scenario': return { kind, goalIndex, text: text(form, 'text')! }
+    case 'promote-path': return { kind, goalIndex, path: (form.get('path') ?? '').split('\n').map(p => p.trim()).filter(Boolean) }
+    case 'code-impression': return { kind, attempt: attempt!, code: text(form, 'code') as 'no answer' }
+    case 'undo': return { kind, revision: whole(text(form, 'revision')) }
+    default: throw new RevisionRefused('Unknown revision')
+  }
 }
 
 const html = (node: Parameters<typeof renderToString>[0]) => `<!doctype html>${renderToString(node)}`
@@ -58,10 +111,11 @@ async function authorReport(store: RunStore, id: string, person: number | undefi
  * Serves the trace on this machine only: `/` lists runs, `/runs/<run>/` shows one, `/runs/<run>.json` is the same
  * data. It binds to the loopback address, because the trace is for the author's own session (PRD 06).
  */
-export async function serveTrace(options: { store: RunStore; port?: number; host?: string; lint?: LintFinding[] | ((run: RunRow) => LintFinding[]) }): Promise<{ url: string; close(): Promise<void> }> {
+export async function serveTrace(options: { store: RunStore; port?: number; host?: string; lint?: LintFinding[] | ((run: RunRow) => LintFinding[]); author?: string; now?: () => Date }): Promise<{ url: string; close(): Promise<void> }> {
   const host = options.host ?? '127.0.0.1'
   if (!loopback.has(host)) throw new Error(`The trace is served on this machine only; refusing to bind ${host}`)
   const { store } = options
+  const author = options.author ?? (process.env.USER || userInfo().username)
   const server = createServer(async (req, res) => {
     const send = (status: number, type: string, body: string) => {
       res.writeHead(status, { 'content-type': `${type}; charset=utf-8`, 'cache-control': 'no-store' })
@@ -70,8 +124,28 @@ export async function serveTrace(options: { store: RunStore; port?: number; host
     try {
       const hostName = (req.headers.host ?? '').replace(/:\d+$/, '')
       if (!loopback.has(hostName)) return send(403, 'text/plain', 'Forbidden')
-      if (req.method !== 'GET' && req.method !== 'HEAD') return send(405, 'text/plain', 'Method not allowed')
       const path = new URL(req.url ?? '/', 'http://localhost').pathname
+      if (req.method === 'POST') {
+        // The only write: a revision, from a form on this viewer's own page.
+        const target = /^\/runs\/([^/]+)\/revisions\/?$/.exec(path)
+        if (!target) return send(404, 'text/plain', 'Not found')
+        if (!sameOrigin(req)) return send(403, 'text/plain', 'Forbidden')
+        let id: string
+        try { id = decodeURIComponent(target[1]!) } catch { return send(404, 'text/plain', 'Not found') }
+        if (!(await store.getRun(id))) return send(404, 'text/plain', 'Not found')
+        const form = await readForm(req)
+        if (!form) return send(413, 'text/plain', 'Too large')
+        try {
+          const ids = (await store.listAttempts(id)).map(a => a.id)
+          await recordRevision(store, id, requestFrom(form, ids), { by: author, ...(options.now && { now: options.now }) })
+        } catch (error) {
+          if (error instanceof RevisionRefused) return send(422, 'text/plain', error.message)
+          throw error
+        }
+        res.writeHead(303, { location: `/runs/${encodeURIComponent(id)}/#revisions` })
+        return res.end()
+      }
+      if (req.method !== 'GET' && req.method !== 'HEAD') return send(405, 'text/plain', 'Method not allowed')
       if (path === '/replay.js') return send(200, 'text/javascript', await replayBundle())
       if (path === '/') return send(200, 'text/html', html(createElement(RunList, { runs: await store.listRuns() })))
       const shown = /^\/runs\/([^/]+)\/report(?:\/p([1-9]\d{0,5}))?\/?$/.exec(path)
@@ -98,7 +172,8 @@ export async function serveTrace(options: { store: RunStore; port?: number; host
         res.writeHead(308, { location: `/runs/${encodeURIComponent(id)}/` })
         return res.end()
       }
-      return send(200, 'text/html', html(createElement(TraceView, { trace })))
+      const record = await buildRecord(store, id)
+      return send(200, 'text/html', html(createElement(TraceView, { trace, issues: record.issues, exclusions: record.exclusions, author })))
     } catch (error) {
       send(500, 'text/plain', error instanceof Error ? error.message : 'Error')
     }

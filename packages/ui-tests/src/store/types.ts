@@ -1,3 +1,4 @@
+import type { Revision } from '../revisions.ts'
 import type { CompiledStudy } from '../schema/compiled.ts'
 
 /** Money in integer minor units with a currency. */
@@ -52,8 +53,8 @@ export type HookResult = { status: 'correct' | 'incorrect' | 'unknown'; reason?:
 /** The verified outcome of an attempt: the overall verdict, each step check, and the validation answer. */
 export type Verification = HookResult & { steps: (HookResult & { name: string })[]; answer?: HookResult }
 
-/** One revision of a run's findings, made in the trace viewer. Minimal here; the revision task extends it. */
-export type Revision = { at: string; author?: string; note?: string; data?: unknown }
+/** One revision of a run, made in the trace viewer (its kinds are in `revisions.ts`). */
+export type { Revision }
 
 export type AttemptRow = {
   id: string

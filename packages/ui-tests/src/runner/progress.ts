@@ -7,9 +7,9 @@ export function handleOf(run: RunRow): RunHandle {
   return { run: id, key, context, build, actor, states, result, deadline, revision }
 }
 
-/** Whether an attempt counts toward n: real, finished, started, verified, and neither withdrawn, disconnected nor retired. One predicate for the run's states and the run record. */
+/** Whether an attempt counts toward n: real, finished, started, verified, and neither withdrawn, disconnected, retired nor excluded by the author. One predicate for the run's states and the run record. */
 export function countsTowardN(a: AttemptRow): boolean {
-  return !a.rehearsal && a.status === 'finished' && a.reason !== 'withdrew' && a.reason !== 'disconnected' && !a.flags.includes('retired') && a.startedAt !== undefined && a.verification !== undefined
+  return !a.rehearsal && a.status === 'finished' && a.reason !== 'withdrew' && a.reason !== 'disconnected' && !a.flags.includes('retired') && !a.flags.includes('excluded') && a.startedAt !== undefined && a.verification !== undefined
 }
 
 /**
@@ -21,16 +21,23 @@ async function settle(store: RunStore, runId: string, now: Date): Promise<RunRow
     const run = await store.getRun(runId)
     if (!run) throw new Error(`No such run: ${runId}`)
     // Invite slots are made up front as `created`; only an attempt that has consented and moved on means people are collecting.
-    const live = (await store.listAttempts(runId)).filter(a => a.reason !== 'withdrew' && a.status !== 'created' && a.status !== 'consented')
+    const all = await store.listAttempts(runId)
+    const live = all.filter(a => a.reason !== 'withdrew' && a.status !== 'created' && a.status !== 'consented')
     const finished = live.filter(a => a.status === 'finished')
     const pending = finished.some(a => a.reason !== 'disconnected' && !a.verification)
     const counted = finished.filter(countsTowardN)
+    // A withdrawal after the result is complete removes recordings and marks the attempt; it does not change n or the result (PRD 03).
+    const wasComplete = !run.rehearsal && run.states.collection === 'complete' && run.result !== 'pending'
+    const heldForN = wasComplete
+      ? all.filter(a => a.reason === 'withdrew' && !a.rehearsal && a.startedAt !== undefined && a.verification !== undefined && !a.flags.includes('retired') && !a.flags.includes('excluded'))
+      : []
+    const inN = [...counted, ...heldForN]
     const verification = finished.length && !pending ? 'complete' : 'pending'
     const n = run.compiled.sample.n
-    const collection = !live.length ? 'waiting' : run.rehearsal ? (finished.length ? 'complete' : 'collecting') : counted.length >= n ? 'complete' : 'collecting'
+    const collection = !live.length ? 'waiting' : run.rehearsal ? (finished.length ? 'complete' : 'collecting') : inN.length >= n ? 'complete' : 'collecting'
     const deadlinePassed = Date.parse(run.deadline) < now.getTime()
-    const recruitment = run.rehearsal || run.states.recruitment !== 'open' ? run.states.recruitment : counted.length >= n ? 'filled' : deadlinePassed ? 'stopped' : 'open'
-    const result = run.rehearsal ? run.result : resultOf({ n, verified: counted.map(a => a.verification!.status), deadlinePassed })
+    const recruitment = run.rehearsal || run.states.recruitment !== 'open' ? run.states.recruitment : inN.length >= n ? 'filled' : deadlinePassed ? 'stopped' : 'open'
+    const result = run.rehearsal ? run.result : resultOf({ n, verified: inN.map(a => a.verification!.status), deadlinePassed })
     if (verification === run.states.verification && collection === run.states.collection && recruitment === run.states.recruitment && result === run.result) return run
     if (await store.updateRun(runId, { states: { ...run.states, recruitment, verification, collection }, result }, run.revision)) return (await store.getRun(runId))!
   }

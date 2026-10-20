@@ -52,7 +52,7 @@ beforeAll(async () => {
   })
   // An invite slot nobody has opened.
   await store.createAttempt({ runId, participant: 'p_3', goalIndex: 1, rehearsal: false })
-  await store.addRevision(runId, { at: '2026-10-19T10:00:00.000Z', note: 'Reworded the scenario' })
+  await store.addRevision(runId, { at: '2026-10-19T10:00:00.000Z', by: 'ana', kind: 'scenario', goalIndex: 0, text: 'Reworded the scenario' })
 })
 
 afterAll(async () => {
@@ -150,7 +150,7 @@ describe('run record', () => {
     expect(record.fit).toMatchObject({ screened: 1, matched: 1 })
     expect(record.recruitment.link).toMatchObject({ invited: 3, screened: 1, started: 2, finished: 2, paid: 0 })
     expect(record.money).toEqual({ estimate: 0, reserved: 0, paid: 0, truedUp: 0, currency: 'USD' })
-    expect(record.revisions).toHaveLength(1)
+    expect(record.revisions).toEqual([{ number: 1, undone: false, revision: { at: '2026-10-19T10:00:00.000Z', by: 'ana', kind: 'scenario', goalIndex: 0, text: 'Reworded the scenario' } }])
     expect(record.quality).toMatchObject({ attempts: 3, counted: 2, rehearsal: 0 })
     expect(record.issues.length).toBeGreaterThan(0)
   })

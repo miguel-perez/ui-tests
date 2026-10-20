@@ -6,12 +6,13 @@ import { highlightReel, type ReelMoment } from './reel.ts'
 import type { LintFinding } from '../lint.ts'
 import type { CompiledStudy } from '../schema/compiled.ts'
 import { attemptSignals, type Signal } from '../signals.ts'
-import type { AttemptRow, RecordedEvent, Revision, RunRow, RunStore, Verification } from '../store/types.ts'
+import { inForce, numbered, type NumberedRevision, type Revision } from '../revisions.ts'
+import type { AttemptRow, RecordedEvent, RunRow, RunStore, Verification } from '../store/types.ts'
 
 export type ImpressionResult = {
   text: string
   code: 'named the purpose' | 'did not name it' | 'no answer'
-  codedBy: 'rule' | 'model'
+  codedBy: 'rule' | 'model' | 'author'
   /** The first real click: the element, the address it led to, whether that is on the task's path (null: the task has no path), and when. Null when no click was asked, with the reason beside it. */
   firstClick?: { target: string; url: string; onPath: boolean | null; at: number } | null
   firstClickReason?: string
@@ -48,7 +49,10 @@ export type Trace = {
   run: RunRow
   compiled: CompiledStudy
   derivations: CompiledStudy['derivations']
-  scenario: { shown: string; edits: Revision[] }
+  /** `edits`: the scenario wording the author has revised, in force, with who made each. */
+  scenario: { shown: string; edits: (Extract<Revision, { kind: 'scenario' }> & { number: number })[] }
+  /** Every revision of the run, numbered, with the ones taken back marked. */
+  revisions: NumberedRevision[]
   attempts: TraceAttempt[]
   lint: LintFinding[]
   sentence: string
@@ -63,9 +67,11 @@ function screenerOf(attempt: AttemptRow): ScreenerResult | undefined {
 }
 
 /** The first look's answer as the collector stored it with its code. */
-function impressionOf(attempt: AttemptRow): ImpressionResult | undefined {
+function impressionOf(attempt: AttemptRow, recoded: Map<string, ImpressionResult['code']>): ImpressionResult | undefined {
   const stored = attempt.answers.impression as ImpressionResult | undefined
-  return stored && typeof stored === 'object' && typeof stored.code === 'string' ? stored : undefined
+  if (!stored || typeof stored !== 'object' || typeof stored.code !== 'string') return undefined
+  const code = recoded.get(attempt.id)
+  return code ? { ...stored, code, codedBy: 'author' } : stored
 }
 
 const pathOf = (url: string) => new URL(url, 'http://placeholder').pathname.replace(/(.)\/$/, '$1')
@@ -86,6 +92,10 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
   if (!run) throw new Error(`No run ${runId}`)
   const { compiled } = run
   const rows = await store.listAttempts(runId)
+  const revisions = await store.listRevisions(runId)
+  const inEffect = inForce(revisions)
+  const recoded = new Map<string, ImpressionResult['code']>()
+  for (const { revision } of inEffect) if (revision.kind === 'code-impression') recoded.set(revision.attempt, revision.code)
   const attempts: TraceAttempt[] = []
   for (const attempt of rows) {
     const goal = compiled.goals[attempt.goalIndex]
@@ -108,24 +118,27 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
       ...(end && { snapshotUrl: end.url }),
       ...(verification && { verification }),
       ...(screenerOf(attempt) && { screener: screenerOf(attempt)! }),
-      ...(impressionOf(attempt) && { impression: impressionOf(attempt)! }),
+      ...(impressionOf(attempt, recoded) && { impression: impressionOf(attempt, recoded)! }),
       ...(typeof attempt.answers[FIRST_LOOK_SKIPPED] === 'string' && { firstLookSkipped: attempt.answers[FIRST_LOOK_SKIPPED] as string }),
       signals,
       reel: highlightReel({ events: everything, signals, words: [] }),
       timings: { ...(started !== undefined && ended !== undefined && { onGoalMs: ended - started }) },
     })
   }
-  const counted = attempts.filter(a => !a.attempt.rehearsal)
+  const counted = attempts.filter(a => !a.attempt.rehearsal && !a.attempt.flags.includes('excluded'))
   const f = counted.filter(a => a.verification?.status === 'incorrect').length
   const x = counted.filter(a => a.verification?.status === 'correct').length
   const first = compiled.goals[0]
   const firstAttempt = rows.find(a => a.goalIndex === 0)
-  const edits = await store.listRevisions(runId)
   return {
     run,
     compiled,
     derivations: compiled.derivations,
-    scenario: { shown: first ? fillScenario(first.scenario.text, firstAttempt?.setupValues ?? {}) : '', edits },
+    scenario: {
+      shown: first ? fillScenario(first.scenario.text, firstAttempt?.setupValues ?? {}) : '',
+      edits: inEffect.flatMap(({ number, revision }) => (revision.kind === 'scenario' ? [{ ...revision, number }] : [])),
+    },
+    revisions: numbered(revisions),
     attempts,
     lint,
     sentence: sentence({ n: compiled.sample.n, affecting: compiled.sample.affecting, shape: first?.shape ?? 'goal-only', f, x, result: run.result, rehearsal: run.rehearsal, goal: (first?.name ?? '').toLowerCase() }),

@@ -59,7 +59,7 @@ const pageOf = (url: string | undefined) => {
 }
 const newer = (x: AttemptRow, y: AttemptRow) => (x.startedAt ?? '') > (y.startedAt ?? '') || ((x.startedAt ?? '') === (y.startedAt ?? '') && x.id > y.id)
 const normalised = (page: string) => page.replace(/(.)\/$/, '$1')
-const ignored = (a: AttemptRow) => a.rehearsal || a.flags.includes('retired') || a.reason === 'withdrew' || a.reason === 'disconnected'
+const ignored = (a: AttemptRow) => a.rehearsal || a.flags.includes('retired') || a.flags.includes('excluded') || a.reason === 'withdrew' || a.reason === 'disconnected'
 
 type Cluster = { goalIndex: number; page: string; element?: string; step?: number; hits: Map<string, { attempt: AttemptRow; signals: { attempt: string; signal: Signal }[] }>; kinds: Set<Signal['kind']> }
 

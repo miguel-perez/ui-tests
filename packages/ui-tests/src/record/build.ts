@@ -1,3 +1,4 @@
+import { applyRevisions } from '../revisions.ts'
 import { clusterIssues, retitleWithModel } from '../issues.ts'
 import { medians, uxLite } from '../measures.ts'
 import type { TextModel } from '../model.ts'
@@ -98,7 +99,7 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
     }
   }
 
-  const live = trace.attempts.filter(t => !t.attempt.rehearsal && t.attempt.reason !== 'withdrew' && t.attempt.reason !== 'disconnected' && !t.attempt.flags.includes('retired'))
+  const live = trace.attempts.filter(t => !t.attempt.rehearsal && !t.attempt.flags.includes('excluded') && t.attempt.reason !== 'withdrew' && t.attempt.reason !== 'disconnected' && !t.attempt.flags.includes('retired'))
   const rated = live.flatMap(({ attempt }) => {
     const { useful, easy } = attempt.answers
     const point = (v: unknown) => Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 5
@@ -173,11 +174,14 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
       instrumentationProblem: run.states.verification === 'instrumentation-problem',
       flags: [...new Set(trace.attempts.flatMap(t => t.attempt.flags))].sort(),
     },
-    revisions,
+    revisions: [],
+    exclusions: [],
+    studyEdits: [],
     recruitment: { link: funnelOf(real) },
     sentence: trace.sentence,
   }
-  const record = { ...partial, evidence: clauseEvidence(partial as Omit<RunRecord, 'evidence' | 'evidenceStatement'>), evidenceStatement: EVIDENCE_STATEMENT }
+  const revised = applyRevisions(partial as Omit<RunRecord, 'evidence' | 'evidenceStatement'>, revisions)
+  const record = { ...revised, evidence: clauseEvidence(revised), evidenceStatement: EVIDENCE_STATEMENT }
   // Parsing drops anything the schema does not name, so a field added upstream cannot leak into the record.
   return runRecordSchema.parse(record)
 }

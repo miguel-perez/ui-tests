@@ -1,3 +1,4 @@
+import { userInfo } from 'node:os'
 import { loadConfig } from '../config.ts'
 import { lint, type LintFinding } from '../lint.ts'
 import { openStore } from '../store/open.ts'
@@ -23,6 +24,12 @@ export async function lintFor(io: Io): Promise<(run: RunRow) => LintFinding[]> {
   } catch { return () => [] }
 }
 
+/** Who revisions made in the viewer are attributed to: the config's `author`, else the person running this command. */
+async function authorOf(io: Io): Promise<string> {
+  try { const { author } = (await loadConfig(io.cwd)).config; if (typeof author === 'string' && author.trim()) return author.trim() } catch { /* fall through */ }
+  return io.env.USER || userInfo().username
+}
+
 const pause = (signal: AbortSignal) => new Promise<void>(resolve => (signal.aborted ? resolve() : signal.addEventListener('abort', () => resolve(), { once: true })))
 
 /** `ui-tests trace <run>`: serves the trace on this machine, opens it and runs until Ctrl-C. */
@@ -33,7 +40,8 @@ export const trace: Command = async (args, io) => {
   try {
     if (!(await store.getRun(id))) { io.stderr.write(`No such run: ${id}\n`); return 2 }
     const port = args.flags.get('port')
-    const server = await serveTrace({ store, lint: await lintFor(io), ...(typeof port === 'string' && { port: Number(port) }) })
+    const author = await authorOf(io)
+    const server = await serveTrace({ store, lint: await lintFor(io), author, ...(typeof port === 'string' && { port: Number(port) }) })
     const url = `${server.url}/runs/${encodeURIComponent(id)}/`
     io.stdout.write(`Trace: ${url}\n`)
     if (!args.flags.has('no-open')) await (io.deps?.openUrl ?? openUrl)(url)

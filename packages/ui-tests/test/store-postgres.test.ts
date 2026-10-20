@@ -31,7 +31,7 @@ describe('PostgresStore on PGlite', () => {
   it('numbers concurrent revisions distinctly', async () => {
     const store = new PostgresStore(await pgliteClient())
     const { run } = await store.createRun(newRun('k1'))
-    const numbers = await Promise.all([1, 2, 3, 4].map((i) => store.addRevision(run.run, { at: `t${i}` })))
+    const numbers = await Promise.all([1, 2, 3, 4].map((i) => store.addRevision(run.run, { at: `t${i}`, by: 'ana', kind: 'undo', revision: i })))
     expect([...numbers].sort()).toEqual([1, 2, 3, 4])
     await store.close()
   })

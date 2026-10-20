@@ -155,9 +155,9 @@ export function describeStore(name: string, open: () => Promise<RunStore>) {
 
     it('keeps revisions in order and numbers them from one', async () => {
       const { run } = await store.createRun(newRun('k1'))
-      expect(await store.addRevision(run.run, { at: '2026-10-19T00:00:00.000Z', note: 'one' })).toBe(1)
-      expect(await store.addRevision(run.run, { at: '2026-10-19T00:01:00.000Z', note: 'two' })).toBe(2)
-      expect((await store.listRevisions(run.run)).map((r) => r.note)).toEqual(['one', 'two'])
+      expect(await store.addRevision(run.run, { at: '2026-10-19T00:00:00.000Z', by: 'ana', kind: 'scenario', goalIndex: 0, text: 'one' })).toBe(1)
+      expect(await store.addRevision(run.run, { at: '2026-10-19T00:01:00.000Z', by: 'ana', kind: 'scenario', goalIndex: 0, text: 'two' })).toBe(2)
+      expect((await store.listRevisions(run.run)).map((r) => (r.kind === 'scenario' ? r.text : ''))).toEqual(['one', 'two'])
     })
 
     it('reserves up to the cap and refuses beyond it', async () => {

@@ -30,7 +30,7 @@ export function checkConclusion(result: Finished, blockOn?: 'problems'): 'neutra
 /** The numbers a title needs, read from the record: people counted toward n, and how many of them reached the outcome. */
 export function figuresOf(record: RunRecord) {
   const counted = record.attempts.filter(a =>
-    !a.rehearsal && a.status === 'finished' && a.reason !== 'withdrew' && a.reason !== 'disconnected' && !a.flags.includes('retired') && a.timings.startedAt !== undefined && a.verification !== null)
+    !a.rehearsal && a.status === 'finished' && a.reason !== 'withdrew' && a.reason !== 'disconnected' && !a.flags.includes('retired') && !a.flags.includes('excluded') && a.timings.startedAt !== undefined && a.verification !== null)
   const reached = counted.filter(a => a.verification?.status === 'correct').length
   const result = record.handle.result === 'pending' ? 'inconclusive' : record.handle.result
   const problems = result === 'problems-found' ? Math.max(record.issues.length, 1) : 0

@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { numberedRevisionSchema } from '../revisions.ts'
 import { compiledGoalSchema, compiledStudySchema } from '../schema/compiled.ts'
 
 export const RUN_RECORD_SCHEMA_ID = 'https://ui-tests.com/schemas/run-record.v1.json' as const
@@ -121,7 +122,13 @@ export const runRecordSchema = z
       attempts: z.number(), counted: z.number(), rehearsal: z.number(), withdrawn: z.number(), disconnected: z.number(), retired: z.number(),
       awaitingVerification: z.number(), truncatedReplays: z.number(), instrumentationProblem: z.boolean(), flags: z.array(z.string()),
     }),
-    revisions: z.array(z.object({ at: z.string(), author: z.string().optional(), note: z.string().optional(), data: z.unknown().optional() })),
+    /** Every revision the author made, numbered from one, with who and when; `undone` ones are kept. `handle.revision` goes up with each. */
+    revisions: z.array(numberedRevisionSchema),
+    /** People the author excluded as not the audience: out of n and the counts, still in `attempts`, and still paid. */
+    exclusions: z.array(z.object({ attempt: z.string(), reason: z.string(), by: z.string(), at: z.string(), revision: z.number(), staysPaid: z.literal(true) })),
+    /** Scenario wording and promoted paths still to paste into the study file. */
+    studyEdits: z.array(z.object({ goalIndex: z.number(), scenario: z.string().optional(), path: z.array(z.string()).optional() })),
+    incentive: z.object({ amount: z.object({ minor: z.number(), currency: z.string() }).optional(), attempts: z.record(z.string(), z.object({ minor: z.number(), currency: z.string() })) }).optional(),
     recruitment: z.record(z.string(), funnel),
     sentence: z.string(),
     evidence: z.array(clauseSchema),
