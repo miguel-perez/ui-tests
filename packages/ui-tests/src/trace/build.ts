@@ -52,7 +52,8 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
   const attempts: TraceAttempt[] = []
   for (const attempt of rows) {
     const goal = compiled.goals[attempt.goalIndex]
-    const events = await store.listEvents(attempt.id)
+    // In the order they happened: an event sent on its own as a page unloads can reach the store before ones kept for a later flush.
+    const events = (await store.listEvents(attempt.id)).sort((x, y) => x.at - y.at)
     const verification = attempt.verification
     const end = await store.getSnapshot(attempt.id, 'end')
     const started = attempt.startedAt ? Date.parse(attempt.startedAt) : undefined

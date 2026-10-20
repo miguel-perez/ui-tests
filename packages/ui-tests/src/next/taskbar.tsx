@@ -63,8 +63,15 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
   const [offset, setOffset] = useState({ x: 0, y: 0 })
   const root = useRef<HTMLDivElement>(null)
   const yes = useRef<HTMLButtonElement>(null)
-  // The pressed Done is gone once the question shows; focus moves to its answer, so a keyboard user is not sent back to the top.
-  useEffect(() => { if (confirming) yes.current?.focus() }, [confirming])
+  const done = useRef<HTMLButtonElement>(null)
+  /** Set when the question closes and the bar stays: focus goes back to Done once it is enabled again. */
+  const backToDone = useRef(false)
+  // The pressed button is gone once the question shows or closes; focus moves with it, so a keyboard user is not sent back to the top.
+  useEffect(() => {
+    if (confirming) yes.current?.focus()
+    else if (backToDone.current && !busy) { backToDone.current = false; done.current?.focus() }
+  }, [confirming, busy])
+  const close = () => { backToDone.current = true; setConfirming(false) }
   const drag = useRef<{ x: number; y: number; from: { x: number; y: number } } | undefined>(undefined)
 
   useEffect(() => {
@@ -110,14 +117,14 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
         {confirming ? (
           <>
             <span className="uit-question">{lastStep ? 'Finished this task?' : 'Finished this step?'}</span>
-            <button ref={yes} type="button" className="uit-primary" disabled={busy} onClick={() => { if (step && !lastStep) { setConfirming(false); onStep?.(step.index) } else onEnd('done') }}>Yes</button>
-            <button type="button" disabled={busy} onClick={() => setConfirming(false)}>Not yet</button>
+            <button ref={yes} type="button" className="uit-primary" disabled={busy} onClick={() => { if (step && !lastStep) { close(); onStep?.(step.index) } else onEnd('done') }}>Yes</button>
+            <button type="button" disabled={busy} onClick={close}>Not yet</button>
           </>
         ) : (
           <>
             <button type="button" className="uit-summary" aria-expanded={reading} onClick={() => setReading((open) => !open)}>{view.goal.name}</button>
             {step && <span className="uit-step">Step {step.index + 1} of {step.count}: {step.name}</span>}
-            <button type="button" className="uit-primary" disabled={busy} onClick={() => setConfirming(true)}>Done</button>
+            <button ref={done} type="button" className="uit-primary" disabled={busy} onClick={() => setConfirming(true)}>Done</button>
             <button type="button" disabled={busy} onClick={() => onEnd('gave up')}>I couldn&apos;t do this</button>
             {offerMoreTime && <button type="button" className="uit-plain" disabled={busy} onClick={onMoreTime}>More time</button>}
           </>

@@ -16,6 +16,9 @@ export type UiTestsProps = {
   endpoint?: string
 }
 
+/** The attempt and address whose page visit this load has recorded: one per real load, however often the effect runs. */
+let visitRecorded: string | undefined
+
 const ACTIVE = /(?:^|;\s*)ui-tests-active=1(?:;|$)/
 const FLUSH_AFTER_MS = 1000
 /** Fetches with a keepalive body only while it fits the browsers' 64 KB budget for it. */
@@ -73,20 +76,39 @@ export function UiTests({ endpoint = '/api/ui-tests/' }: UiTestsProps) {
     buffer.current = kept
     let timer: ReturnType<typeof setTimeout> | undefined
     const flushSoon = () => { clearTimeout(timer); timer = setTimeout(() => void kept.flush(), FLUSH_AFTER_MS) }
-    const recorder = createRecorder((events) => void kept.push(events).then(flushSoon), { now: Date.now, mutationWindowMs: 300, pauseMs: 5000 })
+    // Every event is numbered here, above anything the buffer has given out on an earlier page: a copy sent on its own and the kept
+    // copy carry the same number, and the collector stores it once. Until IndexedDB has an event it is held here as well.
+    const base = Date.now() * 1000
+    let count = 0
+    const held = new Map<number, RecordedEvent>()
+    const keep = (events: RecordedEvent[]): RecordedEvent[] => {
+      const numbered = events.map((event) => ({ ...event, seq: base + count++ }))
+      for (const event of numbered) held.set(event.seq, event)
+      void kept.push(numbered).then(() => { for (const event of numbered) held.delete(event.seq) }, () => {}).then(flushSoon)
+      return numbered
+    }
+    const sendNow = (events: RecordedEvent[]) => { if (events.length) void post({ action: 'events', events: events.slice(0, 100) }).catch(() => {}) }
+    const recorder = createRecorder((events) => void keep(events), { now: Date.now, mutationWindowMs: 300, pauseMs: 5000 })
     const detach = recorder.attach(document)
-    // The page this document opened on. A full navigation starts a new recorder, which sees no change of address of its own.
-    void kept.push([{ type: 'url', at: Date.now(), url: location.href.slice(0, 2000) }]).then(flushSoon)
+    // The page this document opened on, once per load (React's strict mode runs this effect twice). A full navigation starts a new
+    // recorder, which sees no change of address of its own; the visit also goes out at once, so leaving fast does not lose it.
+    const href = location.href.slice(0, 2000)
+    if (visitRecorded !== `${attempt} ${href}`) {
+      visitRecorded = `${attempt} ${href}`
+      sendNow(keep([{ type: 'url', at: Date.now(), url: href }]))
+    }
     const replay = () => void kept.flush()
+    // Leaving: what IndexedDB does not have yet (a click that navigates away) goes out on a keepalive request, then the rest.
+    const leave = () => { sendNow([...held.values()]); replay() }
     // What was left from a lost connection or a reload replays now; what still cannot be sent stays kept for the next visit.
     replay()
     window.addEventListener('online', replay)
-    window.addEventListener('pagehide', replay)
+    window.addEventListener('pagehide', leave)
     return () => {
       detach()
       clearTimeout(timer)
       window.removeEventListener('online', replay)
-      window.removeEventListener('pagehide', replay)
+      window.removeEventListener('pagehide', leave)
     }
   }, [attempt, post])
 

@@ -60,8 +60,9 @@ export function createBuffer(post: (batch: RecordedEvent[]) => Promise<boolean>,
       const tx = database.transaction(STORE, 'readonly')
       const store = tx.objectStore(STORE)
       const [keys, events] = await Promise.all([request(store.getAllKeys()), request(store.getAll())])
-      // The key generator only counts up, so the key is the event's sequence number across reloads.
-      return keys.map((key, i) => ({ key: key as number, event: { ...(events[i] as RecordedEvent), seq: key as number } }))
+      // An event numbered by its sender keeps that number (it may also have gone out on its own, and the collector stores it once);
+      // otherwise the key generator, which only counts up, is its sequence number across reloads.
+      return keys.map((key, i) => ({ key: key as number, event: { ...(events[i] as RecordedEvent), seq: (events[i] as RecordedEvent).seq ?? (key as number) } }))
     } catch {
       return memory
     }
@@ -92,7 +93,7 @@ export function createBuffer(post: (batch: RecordedEvent[]) => Promise<boolean>,
         if (events.length === 0) return
         const database = await open()
         if (!database) {
-          for (const event of events) { const key = ++counter; memory.push({ key, event: { ...event, seq: key } }) }
+          for (const event of events) { const key = ++counter; memory.push({ key, event: { ...event, seq: event.seq ?? key } }) }
           return
         }
         const tx = database.transaction(STORE, 'readwrite')

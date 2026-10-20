@@ -261,11 +261,10 @@ test.describe('fixture studies through the same player and bar', () => {
     await page.locator('h1#promise').click()
     // The click's window is 300 ms; the page is left alone until it closes.
     await page.waitForTimeout(500)
-    // A person reads the page they open; here the test waits until the collector has its address before leaving it.
-    const docsRecorded = page.waitForResponse(r => r.url() === `${PRODUCT_URL}/api/ui-tests/` && (r.request().postDataJSON()?.events ?? []).some((e: { url: string }) => e.url.includes('/docs/getting-started')))
     await page.locator('.hero .actions').getByRole('link', { name: 'Get started' }).click()
     await page.waitForURL(`${PRODUCT_URL}/docs/getting-started/`)
-    await docsRecorded
+    // Left as soon as the bar shows, well inside the buffer's one-second wait: the visit must still be kept.
+    await expect(bar).toBeVisible()
     await page.goto(`${PRODUCT_URL}/`)
     await expect(bar).toBeVisible()
     await done(page, bar)
@@ -276,6 +275,10 @@ test.describe('fixture studies through the same player and bar', () => {
     expect(attempt.signals.find(s => s.kind === 'dead-click')).toMatchObject({ target: '#promise', detail: expect.stringContaining('#promise') })
     expect(attempt.signals.find(s => s.kind === 'deviation')).toMatchObject({ detail: 'Off the path: /docs/getting-started' })
     expect(attempt.signals.map(s => s.kind)).toContain('backtrack')
+    // The link click that took them away is stored too, settled as a change because the page unloaded inside its window.
+    const clicks = attempt.events.filter(e => e.type === 'click')
+    expect(clicks.map(e => [new URL(e.url).pathname, e.changed])).toEqual([['/', false], ['/', true]])
+    expect(clicks[1].target).toMatch(/^div:nth-of-type\(\d+\) > a:nth-of-type\(2\)$|a:nth-of-type\(2\)$/)
   })
 
   test('steps show one at a time, each with its own Done, and each is checked against its own snapshot', async ({ page }) => {
@@ -286,10 +289,21 @@ test.describe('fixture studies through the same player and bar', () => {
     await expect(bar.getByText(/Come back/)).toHaveCount(0)
     await page.locator('.hero .actions').getByRole('link', { name: 'Get started' }).click()
     await page.waitForURL(`${PRODUCT_URL}/docs/getting-started/`)
-    await bar.getByRole('button', { name: 'Done' }).click()
+    // By keyboard: focus follows the question in and back out to Done, whether it closes with Not yet or with a step's Yes.
+    const doneButton = bar.getByRole('button', { name: 'Done' })
+    await doneButton.focus()
+    await page.keyboard.press('Enter')
     await expect(bar.getByText('Finished this step?')).toBeVisible()
-    await bar.getByRole('button', { name: 'Yes' }).click()
+    await expect(bar.getByRole('button', { name: 'Yes' })).toBeFocused()
+    await page.keyboard.press('Tab')
+    await expect(bar.getByRole('button', { name: 'Not yet' })).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(doneButton).toBeFocused()
+    await page.keyboard.press('Enter')
+    await expect(bar.getByRole('button', { name: 'Yes' })).toBeFocused()
+    await page.keyboard.press('Enter')
     await expect(bar.getByText('Step 2 of 2: Come back to the first page')).toBeVisible()
+    await expect(doneButton).toBeFocused()
     await page.goto(`${PRODUCT_URL}/`)
     await expect(bar.getByText('Step 2 of 2: Come back to the first page')).toBeVisible()
     await done(page, bar)

@@ -28,6 +28,17 @@ describe('the retry buffer', () => {
     expect(sent.flat().map((e) => e.at)).toEqual([0, 1, 2, 3, 4])
   })
 
+  it('keeps the number an event was sent with, in IndexedDB and in memory, and numbers the rest by key', async () => {
+    for (const db of [new IDBFactory(), undefined]) {
+      const sent: RecordedEvent[] = []
+      const buffer = createBuffer(async (batch) => { sent.push(...batch); return true }, db)
+      await buffer.push([{ ...events(1)[0]!, seq: 1_792_000_000_000_000 }, ...events(1, 1)])
+      await buffer.flush()
+      expect(sent.map((e) => e.seq)).toEqual([1_792_000_000_000_000, expect.any(Number)])
+      expect(sent[1]!.seq).not.toBe(1_792_000_000_000_000)
+    }
+  })
+
   it('sends 250 events as 100, 100 and 50', async () => {
     const sizes: number[] = []
     const buffer = createBuffer(async (batch) => { sizes.push(batch.length); return true }, new IDBFactory())
