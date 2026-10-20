@@ -3,7 +3,7 @@ import { sampleSentence, sentence } from '../derive/sentence.ts'
 import type { LintFinding } from '../lint.ts'
 import type { CompiledStudy } from '../schema/compiled.ts'
 import { attemptSignals, type Signal } from '../signals.ts'
-import type { AttemptRow, RecordedEvent, Revision, RunRow, RunStore, Verification } from '../store/types.ts'
+import { SCREENED_OUT, type AttemptRow, type RecordedEvent, type Revision, type RunRow, type RunStore, type Verification } from '../store/types.ts'
 
 export type TraceAttempt = {
   attempt: AttemptRow
@@ -48,7 +48,8 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
   const run = await store.getRun(runId)
   if (!run) throw new Error(`No run ${runId}`)
   const { compiled } = run
-  const rows = await store.listAttempts(runId)
+  // People the screener turned away took no task; the report counts them as screened, not as attempts.
+  const rows = (await store.listAttempts(runId)).filter(a => !a.flags.includes(SCREENED_OUT))
   const attempts: TraceAttempt[] = []
   for (const attempt of rows) {
     const goal = compiled.goals[attempt.goalIndex]

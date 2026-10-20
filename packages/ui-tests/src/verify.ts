@@ -3,7 +3,7 @@ import type { AuthoredTask } from './authoring.ts'
 import { AssertionFailure } from './expect.ts'
 import { loadBundle } from './load.ts'
 import { snapshotPage } from './snapshot-page.ts'
-import type { AttemptRow, HookResult, RunRow, RunStore, Verification } from './store/types.ts'
+import { SCREENED_OUT, type AttemptRow, type HookResult, type RunRow, type RunStore, type Verification } from './store/types.ts'
 import type { Hook, HookArgs } from './types.ts'
 
 export type { HookResult, Verification } from './store/types.ts'
@@ -85,7 +85,7 @@ export async function verifyRun(store: RunStore, runId: string, options: Options
       if (await store.updateAttempt(attempt.id, { status: 'finished', reason: 'disconnected', endedAt: new Date(now).toISOString() }, 'active')) disconnected++
     }
   }
-  const pending = (await store.listAttempts(runId)).filter(a => a.status === 'finished' && !a.verification && a.reason !== 'disconnected' && a.reason !== 'withdrew')
+  const pending = (await store.listAttempts(runId)).filter(a => a.status === 'finished' && !a.verification && a.reason !== 'disconnected' && a.reason !== 'withdrew' && !a.flags.includes(SCREENED_OUT))
   if (!pending.length) return { verified: 0, disconnected }
   const studies = await loadBundle(run.hooksBundle, run.compiled.name)
   const study = studies.find(s => s.name === run.compiled.name) ?? studies[0]

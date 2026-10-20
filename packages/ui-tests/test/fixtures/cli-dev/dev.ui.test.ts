@@ -1,6 +1,6 @@
 import { expect, outcome, setup, study, task } from 'ui-tests'
 
-study('dev fixture', { users: 'People who read docs', purpose: 'find the getting started page' }, () => {
+study('dev fixture', { users: { are: 'People who read docs', did: 'read documentation', within: '3 months' }, purpose: 'find the getting started page' }, () => {
   setup(async ({ request }) => {
     await request.get('/')
     return { start: '/' }

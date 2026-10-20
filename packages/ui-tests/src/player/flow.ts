@@ -70,6 +70,8 @@ export function entryScreen(view: ParticipantView): Screen {
 export function nextScreen(view: ParticipantView, current: Screen, answers: Record<string, unknown>): Screen {
   switch (current.kind) {
     case 'screener':
+      // The collector ended the attempt on a rejecting answer: the next screen is the thank-you, not consent.
+      if (view.status === 'finished') return { kind: 'thanks' }
       return current.index + 1 < view.screener.length ? { kind: 'screener', index: current.index + 1 } : { kind: 'consent' }
     case 'consent':
       return beforeCard(view)
@@ -117,7 +119,8 @@ export function messageFor(view: ParticipantView, screen: Screen, answers: Recor
     case 'consent':
       return { action: 'consent' }
     case 'screener':
-      return screen.index + 1 < view.screener.length ? undefined : { action: 'answers', screener: Object.fromEntries(view.screener.map((q) => [q.id, answers[q.id]]).filter(([, v]) => v !== undefined)) }
+      // Sent after every question, with everything answered so far, so a rejecting answer ends the screener at once.
+      return { action: 'answers', screener: Object.fromEntries(view.screener.slice(0, screen.index + 1).map((q) => [q.id, answers[q.id]]).filter(([, v]) => v !== undefined && v !== '')) }
     case 'impression':
       return screen.phase === 'question' ? { action: 'answers', impression: String(answers.impression ?? '') } : undefined
     case 'answer':

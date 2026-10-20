@@ -10,6 +10,15 @@ export const PRODUCT_URL = 'http://127.0.0.1:3100'
  * `UI_TESTS_DATA_DIR` names (the one the product server reads). Returns the participant's link.
  */
 export async function createRehearsalRun(file: string): Promise<{ runId: string; token: string; playerUrl: string }> {
+  return createRun(file, true)
+}
+
+/** The same for a link run: one invite for the study's first task, which meets the screener and the practice screen before the task. */
+export async function createLinkRun(file: string): Promise<{ runId: string; token: string; playerUrl: string }> {
+  return createRun(file, false)
+}
+
+async function createRun(file: string, rehearsal: boolean): Promise<{ runId: string; token: string; playerUrl: string }> {
   const { code } = await bundleStudyFile(file)
   const [authored] = await loadBundle(code, file)
   if (!authored) throw new Error(`No study in ${file}`)
@@ -23,10 +32,10 @@ export async function createRehearsalRun(file: string): Promise<{ runId: string;
       actor: 'human',
       compiled,
       hooksBundle: code,
-      rehearsal: true,
+      rehearsal,
       target: PRODUCT_URL,
     })
-    const { token } = await store.createAttempt({ runId: run.run, participant: 'p_e2e', goalIndex: 0, rehearsal: true })
+    const { token } = await store.createAttempt({ runId: run.run, participant: 'p_e2e', goalIndex: 0, rehearsal })
     return { runId: run.run, token, playerUrl: `${PRODUCT_URL}/ui-tests/${run.run}/?t=${encodeURIComponent(token)}` }
   } finally {
     await store.close()

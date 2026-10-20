@@ -1,10 +1,11 @@
-import type { CSSProperties, ReactNode } from 'react'
+import { useState, type CSSProperties, type ReactNode } from 'react'
 import type { ParticipantView } from '../server/view.ts'
 import { answerKey } from './flow.ts'
 import type { Screen } from './flow.ts'
 import {
   AGREE, AGREEMENT_ENDS, CARD_FOOTER, CARD_TITLE, CONFIDENCE_ENDS, CONSENT_TITLE, CONTINUE, EASE_ENDS, POWERED_BY, RECORDING, SCREENER_TITLE,
-  START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, WITHDRAW, WITHDRAWN_BODY, WITHDRAWN_TITLE, contact, duration,
+  PRACTICE_CONFIRM, PRACTICE_DONE, PRACTICE_DONE_NOTE, PRACTICE_INTRO, PRACTICE_NOT_YET, PRACTICE_STUCK, PRACTICE_STUCK_NOTE, PRACTICE_TITLE, PRACTICE_YES,
+  SCREENED_BODY, START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, WITHDRAW, WITHDRAWN_BODY, WITHDRAWN_TITLE, contact, duration,
 } from './copy.ts'
 
 export type ScreenProps = {
@@ -48,6 +49,8 @@ const css = `
 .pl-error{color:#b3261e}
 .pl-fix{font-size:3rem;text-align:center;margin:auto}
 .pl-frame{width:100%;height:70vh;border:1px solid var(--pl-hair);border-radius:8px}
+.pl-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px;border:1px solid var(--pl-hair);border-radius:999px}
+.pl button.pl-ghost{color:var(--pl-fg);background:transparent;border:1px solid var(--pl-hair)}
 .pl-foot{margin-top:auto;padding-top:24px;color:var(--pl-dim);font-size:.8125rem}
 `
 
@@ -121,6 +124,30 @@ function Open({ id, question, value, onAnswer }: { id: string; question: string;
   )
 }
 
+/** The bar the person will meet during the task, with the same two buttons and the same confirmation, that records nothing. */
+function PracticeBar() {
+  const [state, setState] = useState<'idle' | 'confirm' | 'done' | 'stuck'>('idle')
+  return (
+    <>
+      <div role="group" aria-label="Practice bar" className="pl-bar">
+        {state === 'confirm' ? (
+          <>
+            <span>{PRACTICE_CONFIRM}</span>
+            <button type="button" onClick={() => setState('done')}>{PRACTICE_YES}</button>
+            <button type="button" className="pl-ghost" onClick={() => setState('idle')}>{PRACTICE_NOT_YET}</button>
+          </>
+        ) : (
+          <>
+            <button type="button" onClick={() => setState('confirm')}>{PRACTICE_DONE}</button>
+            <button type="button" className="pl-ghost" onClick={() => setState('stuck')}>{PRACTICE_STUCK}</button>
+          </>
+        )}
+      </div>
+      <p className="pl-dim" role="status">{state === 'done' ? PRACTICE_DONE_NOTE : state === 'stuck' ? PRACTICE_STUCK_NOTE : ''}</p>
+    </>
+  )
+}
+
 const questionOf = (view: ParticipantView, id: string) => view.questions.find((q) => q.id === id)
 
 /** One screen of the player. Pure: the player owns the state and the requests. */
@@ -161,14 +188,14 @@ export function PlayerScreen(props: ScreenProps) {
       body = q ? (
         <>
           <p className="pl-dim">{SCREENER_TITLE}</p>
-          <Choice id={q.id} question={q.text} options={q.options} multi={q.multi} value={given(q.id)} onAnswer={onAnswer} />
+          {q.open ? <Open id={q.id} question={q.text} value={given(q.id)} onAnswer={onAnswer} /> : <Choice id={q.id} question={q.text} options={q.options} multi={q.multi} value={given(q.id)} onAnswer={onAnswer} />}
           {next(CONTINUE, answered(q.id))}
         </>
       ) : null
       break
     }
     case 'practice':
-      body = <><h1>{CARD_TITLE}</h1>{next(CONTINUE)}</>
+      body = <><h1>{PRACTICE_TITLE}</h1><p>{PRACTICE_INTRO}</p><PracticeBar />{next(CONTINUE)}</>
       break
     case 'impression': {
       const imp = view.impression
@@ -215,12 +242,12 @@ export function PlayerScreen(props: ScreenProps) {
       body = open('anything', false)
       break
     case 'thanks':
-      body = <><h1>{THANKS_TITLE}</h1><p>{THANKS_BODY}</p></>
+      body = <><h1>{THANKS_TITLE}</h1><p>{view.screenedOut ? SCREENED_BODY : THANKS_BODY}</p></>
       break
     case 'withdrawn':
       body = <><h1>{WITHDRAWN_TITLE}</h1><p>{WITHDRAWN_BODY}</p></>
       break
   }
-  const after = view.status !== 'created' && !['screener', 'consent', 'withdrawn'].includes(screen.kind)
+  const after = view.status !== 'created' && !view.screenedOut && !['screener', 'consent', 'withdrawn'].includes(screen.kind)
   return <Frame view={view} error={error} onWithdraw={after ? onWithdraw : undefined}>{body}</Frame>
 }

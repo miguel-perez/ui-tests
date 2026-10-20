@@ -26,3 +26,14 @@ export const contact = (who: string) => `Questions about this study? Ask ${who}.
 export const WITHDRAW = 'Stop and delete my recording'
 export const WITHDRAWN_TITLE = 'Your recording is deleted'
 export const WITHDRAWN_BODY = 'Nothing more is needed from you. You can close this page.'
+
+export const SCREENED_BODY = 'We have what we need from you for this study, so there is nothing more to do. You can close this page.'
+export const PRACTICE_TITLE = 'A quick practice'
+export const PRACTICE_INTRO = 'During the task a small bar stays on the page with two buttons. Try them here. Nothing you press on this screen is recorded.'
+export const PRACTICE_DONE = 'Done'
+export const PRACTICE_STUCK = "I couldn't do this"
+export const PRACTICE_CONFIRM = 'Finished this task?'
+export const PRACTICE_YES = 'Yes'
+export const PRACTICE_NOT_YET = 'Not yet'
+export const PRACTICE_DONE_NOTE = 'That is what Done does: it asks once, then moves on to a few questions.'
+export const PRACTICE_STUCK_NOTE = "That is what I couldn't do this does: it ends the task at once, and it is always fine to press it."

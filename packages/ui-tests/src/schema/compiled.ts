@@ -5,7 +5,7 @@ export const compiledSchemaUrl = 'https://ui-tests.com/schemas/compiled-study.v1
 const timeout = z.object({ seconds: z.number(), rule: z.string() })
 
 /**
- * One question, minimal on purpose so the impression (Task 4) and screener (Task 19) can extend it: a stable `id`,
+ * One question, minimal on purpose so the impression can extend it: a stable `id`,
  * the words shown, how it is answered, and optionally a follow-up condition. One question is shown per screen and
  * nothing is preselected.
  */
@@ -21,6 +21,26 @@ export const compiledQuestionSchema = z.object({
   askIf: z.object({ id: z.string(), atOrBelow: z.number() }).optional(),
 })
 export type CompiledQuestion = z.infer<typeof compiledQuestionSchema>
+
+/**
+ * One screener question with the rule of each option. The rules and `field` stay on the author's side: `participantView` copies the
+ * labels only.
+ */
+export const screenerQuestionSchema = z.object({
+  id: z.string(),
+  text: z.string(),
+  options: z.array(z.object({ label: z.string(), rule: z.enum(['accept', 'reject', 'may-select']) })),
+  multi: z.boolean(),
+  /** Where the question comes from: a `users` field, `purpose`, or `environment`. */
+  field: z.string(),
+  /** How the question is read, in words. */
+  rule: z.string(),
+  /** Read from a `users` sentence rather than written by the author. */
+  inferred: z.boolean().optional(),
+  /** A free-text question: no options. */
+  open: z.boolean().optional(),
+})
+export type CompiledScreenerQuestion = z.infer<typeof screenerQuestionSchema>
 
 /**
  * The first look at the start page: whether it runs (`on`), which page, the fixed timing and words, and `reason`
@@ -74,7 +94,7 @@ const usersSchema = z.object({
   did: z.string().optional(),
   within: z.string().optional(),
   often: z.string().optional(),
-  role: z.string().optional(),
+  role: z.union([z.string(), z.array(z.string())]).optional(),
   uses: z.array(z.string()).optional(),
   not: z.array(z.string()).optional(),
   where: z.union([z.string(), z.array(z.string())]).optional(),
@@ -96,7 +116,10 @@ export const compiledStudySchema = z.object({
   actors: z.array(z.enum(['human', 'agent'])),
   sample: z.object({ affecting: z.number(), confidence: z.number(), n: z.number(), sentence: z.string() }),
   impression: compiledImpressionSchema,
-  screener: z.array(compiledQuestionSchema),
+  screener: z.array(screenerQuestionSchema),
+  /** Whether link participants see the practice screen before the first look. */
+  practice: z.boolean(),
+  brand: z.object({ accent: z.string().optional(), poweredBy: z.boolean() }),
   goals: z.array(compiledGoalSchema),
   questions: z.array(compiledQuestionSchema),
   consent: compiledConsentSchema,

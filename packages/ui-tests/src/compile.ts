@@ -3,6 +3,8 @@ import type { AuthoredStudy, AuthoredTask } from './authoring.ts'
 import { consentText } from './derive/consent.ts'
 import { distractors, shuffleChoices } from './derive/distractors.ts'
 import { deriveImpression } from './derive/impression.ts'
+import { inferUsers } from './derive/infer-users.ts'
+import { deriveScreener } from './derive/screener.ts'
 import { scenarioTemplate } from './derive/scenario.ts'
 import { detectionChance, sampleSentence, sampleSize } from './derive/sample.ts'
 import { goalTimeout } from './derive/timeout.ts'
@@ -11,7 +13,7 @@ import { compiledSchemaUrl, type CompiledGoal, type CompiledQuestion, type Compi
 import type { UiTestsConfig, Users } from './types.ts'
 
 export { compiledStudySchema, compiledSchemaUrl } from './schema/compiled.ts'
-export type { CompiledConsent, CompiledGoal, CompiledImpression, CompiledQuestion, CompiledStudy } from './schema/compiled.ts'
+export type { CompiledConsent, CompiledGoal, CompiledImpression, CompiledQuestion, CompiledScreenerQuestion, CompiledStudy } from './schema/compiled.ts'
 export { sampleSize, detectionChance } from './derive/sample.ts'
 export { goalTimeout } from './derive/timeout.ts'
 export { validateUsers, contextId } from './derive/users.ts'
@@ -19,6 +21,11 @@ export { scenarioTemplate, fillScenario } from './derive/scenario.ts'
 export { distractors, shuffleChoices } from './derive/distractors.ts'
 export { consentText, payoutLine } from './derive/consent.ts'
 export { deriveImpression } from './derive/impression.ts'
+export { deriveScreener, screen, STANDING_EXCLUSION, NONE_OF_THESE } from './derive/screener.ts'
+export type { ScreenerQuestion, ScreenerOption, OptionRule } from './derive/screener.ts'
+export { inferUsers, printUsersDraft } from './derive/infer-users.ts'
+export { fitScore } from './derive/fit.ts'
+export type { Fit } from './derive/fit.ts'
 export { sentence, resultOf } from './derive/sentence.ts'
 export { CARD_FOOTER, START_TASK } from './copy.ts'
 export { nullModel } from './model.ts'
@@ -56,7 +63,7 @@ export function compileStudy(study: AuthoredStudy, config: UiTestsConfig): Compi
 function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
   const { errors } = validateUsers(study.options.users)
   if (errors.length) throw new Error(`study "${study.name}": ${errors.map(e => `${e.field}: ${e.message}`).join('; ')}`)
-  const users = normalizeUsers(study.options.users)
+  const users = normalizeUsers(typeof study.options.users === 'string' ? inferUsers(study.options.users).users : study.options.users)
   if (!study.tasks.length) throw new Error(`study "${study.name}" has no tasks`)
   const derivations: Derivation[] = []
   const derive = (field: string, rule: string, source: string) => derivations.push({ field, rule, source })
@@ -120,6 +127,11 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
   const impression = deriveImpression(study, goals)
   derive('impression', impression.reason, 'firstLook, setup')
 
+  const screener = deriveScreener(study.options.users, purpose)
+  derive('screener', 'what users says (recency from did and within, often, role, uses, not with the standing exclusion), then three fit questions from the purpose, then browser, device and assistive technology; a users sentence is read for did and within', 'users, purpose')
+  derive('practice', 'shown to link participants before the first look', 'participants')
+  derive('brand', 'config brand; no ui-tests name unless poweredBy is true', 'config.brand')
+
   const questions: CompiledQuestion[] = [
     { id: 'useful', text: `Would ${product} be useful to you?`, type: 'scale', points: 7 },
     { id: 'easy', text: `${product} is easy to use.`, type: 'scale', points: 7 },
@@ -143,7 +155,9 @@ function compile(study: AuthoredStudy, config: UiTestsConfig): CompiledStudy {
     actors,
     sample: { affecting: sampleOptions.affecting, confidence: sampleOptions.confidence, n, sentence: sampleSentence(n, sampleOptions.affecting) },
     impression,
-    screener: [],
+    screener,
+    practice: true,
+    brand: { ...(config.brand?.accent && { accent: config.brand.accent }), poweredBy: config.brand?.poweredBy ?? false },
     goals,
     questions,
     consent: consentText({ product, author: config.author ?? '' }, { workflows: config.consent?.workflows ?? false, ...(config.participants?.link?.amount && { amount: { minor: config.participants.link.amount, currency: config.participants.budget?.currency ?? 'USD' } }) }),

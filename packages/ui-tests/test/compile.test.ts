@@ -26,7 +26,7 @@ describe('compileStudy', () => {
     expect(compiled.impression).toMatchObject({ on: true, page: '/', flashMs: 500 })
     expect(compiled.questions[0].text).toBe('Would Weekboard be useful to you?')
     expect(goal.questions.map(q => q.id)).toEqual(['goal0.ease', 'goal0.difficulty'])
-    expect(compiled.screener).toEqual([])
+    expect(compiled.screener.map(q => q.field)).toEqual(['did', 'uses', 'not', 'purpose', 'purpose', 'purpose', 'environment', 'environment', 'environment'])
   })
 
   it('parses against the schema and holds no functions', () => {

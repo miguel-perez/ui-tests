@@ -1,5 +1,6 @@
 import type { AuthoredStudy, AuthoredTask } from './authoring.ts'
 import { CARD_FOOTER } from './copy.ts'
+import { inferUsers, printUsersDraft } from './derive/infer-users.ts'
 import { validateUsers } from './derive/users.ts'
 import type { CompiledStudy } from './schema/compiled.ts'
 import type { Hook, UiTestsConfig } from './types.ts'
@@ -184,8 +185,27 @@ export const rules: Rule[] = [
       if ('screen' in study.options) emit({ message: 'a separate "screen" key is now fields under users', fix: 'move did, within, often, role, uses, not, where, language and age into users', line: study.line })
     },
   },
-  { id: 'users-inferred', severity: 'warning', source: 'this contract', reason: 'Filled in with the screener (Task 19).', run() {} },
-  { id: 'users-did', severity: 'warning', source: 'this contract', reason: 'Filled in with the screener (Task 19).', run() {} },
+  {
+    id: 'users-inferred', severity: 'warning', source: 'this contract',
+    reason: 'A users sentence is read for what people did and how recently, so the screener can ask it; guessed fields should be written down and checked.',
+    run({ study }, emit) {
+      const users = study.options.users
+      if (typeof users !== 'string') return
+      const { users: read, inferred } = inferUsers(users)
+      if (!inferred.length) return
+      emit({ message: `the screener reads "${users}" as ${[read.did && `did "${read.did}"`, read.within && `within "${read.within}"`].filter(Boolean).join(' and ')}: ${printUsersDraft(read)}`, fix: `paste ${printUsersDraft(read)} and correct it`, line: study.line })
+    },
+  },
+  {
+    id: 'users-did', severity: 'warning', source: 'this contract',
+    reason: 'People are screened on what they did, not on what they say they are; without a behaviour the screener cannot ask when they last did it.',
+    run({ study }, emit) {
+      const users = study.options.users
+      const fields = typeof users === 'string' ? inferUsers(users).users : users
+      if (!fields || typeof fields !== 'object' || fields.did) return
+      emit({ message: `users "${fields.are}" says who they are but not what they did${fields.often || fields.within ? ' (often and within need did)' : ''}`, fix: 'add did: what they did, in the past tense, such as "booked a trip", and within: how recently', line: study.line })
+    },
+  },
   {
     id: 'fixture-synthetic', severity: 'warning', source: 'PRD 06 Privacy',
     reason: 'A real-looking address in a scenario may reach a real person; use a .example or .test address.',

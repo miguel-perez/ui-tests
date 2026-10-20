@@ -1,6 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
-import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
+import { screen } from '../derive/screener.ts'
+import { SCREENED_OUT, type AttemptReason, type AttemptRow, type RecordedEvent, type RunRow, type RunStore } from '../store/types.ts'
 import { MORE_TIME, effectiveTimeout, participantView } from './view.ts'
 
 export type CollectorOptions = {
@@ -57,6 +58,13 @@ const headers = { 'Cache-Control': 'no-store' }
 const refuse = (status: number, text: string) => new Response(text, { status, headers })
 
 const cookieValue = (request: Request, name: string) => new RegExp(`(?:^|;\\s*)${name}=([^;]+)`).exec(request.headers.get('cookie') ?? '')?.[1]
+
+/** The usual browser, device and assistive technology a person gave while screening. */
+function environmentOf(given: Record<string, unknown>): Record<string, string> | undefined {
+  const text = (id: string) => { const v = given[id]; return Array.isArray(v) ? v.join(', ') : typeof v === 'string' ? v : undefined }
+  const entries = (['browser', 'device', 'assistive'] as const).flatMap((key) => { const v = text(`screener.${key}`); return v ? [[key, v] as const] : [] })
+  return entries.length ? Object.fromEntries(entries) : undefined
+}
 
 const first = (value: string | null) => value?.split(',')[0]?.trim() || undefined
 
@@ -222,7 +230,8 @@ export function createCollector(options: CollectorOptions): (request: Request) =
           if (body.answer !== undefined && !goal.answer) return { status: 400, text: 'This task asks no question to answer' }
           const given: Record<string, unknown> = {}
           const prefix = `goal${goal.index}`
-          if (body.screener) given.screener = body.screener
+          // Screener answers add up as the person goes, so a rejecting answer can end it early.
+          if (body.screener) given.screener = { ...(current.answers.screener as Record<string, unknown> | undefined), ...body.screener }
           if (body.impression !== undefined) given.impression = body.impression
           if (body.ease !== undefined) given[`${prefix}.ease`] = body.ease
           if (body.difficulty !== undefined) given[`${prefix}.difficulty`] = body.difficulty
@@ -240,7 +249,15 @@ export function createCollector(options: CollectorOptions): (request: Request) =
             view.questions.every((q) => (q.askIf && !(typeof answers[q.askIf.id] === 'number' && (answers[q.askIf.id] as number) <= q.askIf.atOrBelow)) || answered(q.id)) &&
             (!goal.answer || answered(goal.answer.question))
           const finish = current.status === 'questions' && complete
-          const ok = await tx.updateAttempt(attempt.id, { answers, ...(finish && { status: 'finished' as const }) }, current.status)
+          // A reject ends the attempt here: no consent, no task, nothing to verify. Rehearsals are never screened.
+          const turnedAway = body.screener !== undefined && current.status === 'created' && !run.rehearsal && !current.rehearsal && screen(given.screener as Record<string, unknown>, run.compiled.screener) === 'reject'
+          const environment = body.screener ? environmentOf(given.screener as Record<string, unknown>) : undefined
+          const ok = await tx.updateAttempt(attempt.id, {
+            answers,
+            ...(finish && { status: 'finished' as const }),
+            ...(turnedAway && { status: 'finished' as const, flags: [...current.flags, SCREENED_OUT], endedAt: new Date(now()).toISOString() }),
+            ...(environment && { environment }),
+          }, current.status)
           return ok ? undefined : { status: 409, text: 'The attempt moved on; try again' }
         })
         return result ? refuse(result.status, result.text) : reload()

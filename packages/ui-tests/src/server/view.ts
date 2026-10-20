@@ -1,6 +1,6 @@
 import { fillScenario, scenarioTemplate } from '../derive/scenario.ts'
 import type { CompiledQuestion } from '../schema/compiled.ts'
-import type { AttemptRow, RunRow } from '../store/types.ts'
+import { SCREENED_OUT, type AttemptRow, type RunRow } from '../store/types.ts'
 
 /** What the participant's page may know. Built by allowlist in `participantView`; nothing else crosses the boundary. */
 export type ParticipantView = {
@@ -10,8 +10,10 @@ export type ParticipantView = {
   product: string
   brand: { accent?: string; poweredBy: boolean }
   consent: { text: string[]; purposes: string[]; payout: string }
-  screener: { id: string; text: string; options: string[]; multi: boolean }[]
+  screener: { id: string; text: string; options: string[]; multi: boolean; open?: boolean }[]
   practice: boolean
+  /** The screener turned this person away; there is no task for them. */
+  screenedOut?: true
   /** About how long the whole study takes; the consent screen says so. */
   minutes: number
   impression?: { page: string; flashMs: number; question: string }
@@ -53,15 +55,17 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
   const startValue = values.start
   const last = attempt.goalIndex === study.goals.length - 1
   const impression = study.impression
+  const rehearsal = attempt.rehearsal || run.rehearsal
   return {
     run: run.run,
     attempt: attempt.id,
     author: study.author,
     product: study.product,
-    brand: { poweredBy: false },
+    brand: study.brand,
     consent: { text: study.consent.text, purposes: study.consent.purposes, payout: study.consent.payout },
-    screener: study.screener.map((q) => ({ id: q.id, text: q.text, options: q.choices ?? [], multi: false })),
-    practice: false,
+    // Only link participants are screened and practise; a rehearsal is the author taking their own study.
+    screener: rehearsal ? [] : study.screener.map((q) => ({ id: q.id, text: q.text, options: q.options.map((o) => o.label), multi: q.multi, ...(q.open && { open: true }) })),
+    practice: study.practice && !rehearsal,
     minutes: Math.max(1, study.goals.reduce((sum, g) => sum + (g.minutes ?? Math.ceil(g.timeout.seconds / 60)), 0)),
     ...(impression.on && { impression: { page: impression.page ?? goal.start, flashMs: impression.flashMs, question: impression.question } }),
     goal: {
@@ -76,7 +80,8 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
     ...(goal.answer && { answer: { question: goal.answer.question, choices: goal.answer.choices } }),
     questions: last ? [...goal.questions, ...study.questions] : goal.questions,
     status: attempt.status,
+    ...(attempt.flags.includes(SCREENED_OUT) && { screenedOut: true as const }),
     record: study.record,
-    rehearsal: attempt.rehearsal || run.rehearsal,
+    rehearsal,
   }
 }

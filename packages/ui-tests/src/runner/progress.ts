@@ -1,5 +1,5 @@
 import { resultOf } from '../derive/sentence.ts'
-import type { RunHandle, RunRow, RunStore } from '../store/types.ts'
+import { SCREENED_OUT, type RunHandle, type RunRow, type RunStore } from '../store/types.ts'
 
 /** The run handle of PRD 05: the stored run without the compiled study, hooks, target and other internals. */
 export function handleOf(run: RunRow): RunHandle {
@@ -9,14 +9,14 @@ export function handleOf(run: RunRow): RunHandle {
 
 /**
  * Brings a run's states and result in line with its attempts and the deadline. Only attempts that are not rehearsals, passed the
- * screener (they began; TODO Task 19: use the screener's own verdict), were not withdrawn or disconnected, and were verified count toward n. A rehearsal never changes the result.
+ * screener (not flagged screened-out, and they began), were not withdrawn or disconnected, and were verified count toward n. A rehearsal never changes the result.
  */
 export async function refreshRun(store: RunStore, runId: string, now: Date = new Date()): Promise<RunRow> {
   for (let tries = 0; tries < 5; tries++) {
     const run = await store.getRun(runId)
     if (!run) throw new Error(`No such run: ${runId}`)
     // Invite slots are made up front as `created`; only an attempt that has consented and moved on means people are collecting.
-    const live = (await store.listAttempts(runId)).filter(a => a.reason !== 'withdrew' && a.status !== 'created' && a.status !== 'consented')
+    const live = (await store.listAttempts(runId)).filter(a => a.reason !== 'withdrew' && !a.flags.includes(SCREENED_OUT) && a.status !== 'created' && a.status !== 'consented')
     const finished = live.filter(a => a.status === 'finished')
     const pending = finished.some(a => a.reason !== 'disconnected' && !a.verification)
     const counted = finished.filter(a => !a.rehearsal && a.reason !== 'disconnected' && a.startedAt !== undefined && a.verification)
