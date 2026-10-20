@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { exampleFile } from '../../../apps/web/lib/example.ts'
-import { main, type Io } from '../src/cli/main.ts'
+import { main, parseArgs, type Io } from '../src/cli/main.ts'
 import { addVitestExclude } from '../src/cli/init.ts'
 import { configTemplate } from '../src/templates/config.ts'
 import { exampleTemplate } from '../src/templates/example.ts'
@@ -49,6 +49,31 @@ describe('ui-tests init', () => {
     expect(await addVitestExclude(cwd)).toBe('updated')
     expect(await readFile(join(cwd, 'vitest.config.ts'), 'utf8')).toBe(config)
   })
+  it('edits only an exclude directly inside the test block', async () => {
+    await withVitest()
+    const head = "import { defineConfig } from 'vitest/config'\n"
+    await writeFile(join(cwd, 'vitest.config.ts'), `${head}export default defineConfig({ test: { coverage: { exclude: ['x/**'] } } })\n`)
+    expect(await addVitestExclude(cwd)).toBe('updated')
+    const coverage = await readFile(join(cwd, 'vitest.config.ts'), 'utf8')
+    expect(coverage).toContain("coverage: { exclude: ['x/**'] }")
+    expect(coverage).toContain("exclude: [...configDefaults.exclude, '**/*.ui.test.ts']")
+    await writeFile(join(cwd, 'vitest.config.ts'), `${head}export default defineConfig({\n  test: {\n    // exclude: ['old'],\n    globals: true,\n  },\n})\n`)
+    await addVitestExclude(cwd)
+    const commented = await readFile(join(cwd, 'vitest.config.ts'), 'utf8')
+    expect(commented).toContain("// exclude: ['old'],")
+    expect(commented).toContain("exclude: [...configDefaults.exclude, '**/*.ui.test.ts']")
+    await writeFile(join(cwd, 'vitest.config.ts'), `${head}export default defineConfig({ test: { exclude: ['a'], coverage: { exclude: ['b'] } } })\n`)
+    await addVitestExclude(cwd)
+    expect(await readFile(join(cwd, 'vitest.config.ts'), 'utf8')).toContain("test: { exclude: ['**/*.ui.test.ts', 'a'], coverage: { exclude: ['b'] } }")
+  })
+  it('throws the manual-add error without a test block, and init still writes the files but exits 1', async () => {
+    await withVitest()
+    await writeFile(join(cwd, 'vitest.config.ts'), "export default {}\n")
+    await expect(addVitestExclude(cwd)).rejects.toThrow('add it by hand')
+    expect(await run('init')).toBe(1)
+    expect(err).toContain('add it by hand')
+    expect(await readFile(join(cwd, 'ui-tests.config.ts'), 'utf8')).toBe(configTemplate)
+  })
   it('leaves Vitest alone when the project does not use it', async () => {
     expect(await addVitestExclude(cwd)).toBe('no-vitest')
     await run('init')
@@ -76,6 +101,16 @@ describe('ui-tests arguments', () => {
     expect(await run()).toBe(2)
     expect(err).toContain('Usage: ui-tests <command>')
     expect(out).toBe('')
+  })
+  it('reads space-separated values for flags a command declares, and --flag=value', () => {
+    expect(parseArgs(['recruit', '--actor', 'agent', '--key=k1', '--json', 'x']).flags).toEqual(new Map<string, string | true>([['actor', 'agent'], ['key', 'k1'], ['json', true]]))
+    expect(parseArgs(['recruit', '--actor', 'agent', '--json', 'x']).positionals).toEqual(['recruit', 'x'])
+    expect(parseArgs(['--port', '4000']).flags.get('port')).toBe('4000')
+    expect(parseArgs(['lint', '--json', 'a.ui.test.ts']).positionals).toEqual(['lint', 'a.ui.test.ts'])
+  })
+  it('prints the command usage for lint --help', async () => {
+    expect(await run('lint', '--help')).toBe(0)
+    expect(out).toContain('Usage: ui-tests lint')
   })
   it('prints usage and exits 0 for --help', async () => {
     expect(await run('--help')).toBe(0)

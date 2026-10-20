@@ -34,17 +34,30 @@ Options:
   --help            show this text
 `
 
+const commandUsage: Record<string, string> = {
+  lint: 'Usage: ui-tests lint [files...] [--json]\n\nChecks each study against the rules, prints what a run would do, and exits 1 on an error finding or 2 when a file cannot load.\n',
+}
+
 const defaultIo = (): Io => ({ stdout: process.stdout, stderr: process.stderr, cwd: process.cwd(), env: process.env })
 
-/** Splits `--flag`, `--flag value` is not supported: flags are booleans or `--flag=value`. */
+/** The flags each command reads a value for (`--actor agent` or `--actor=agent`); every other flag is a boolean. */
+export const valueFlags: Record<string, string[]> = {
+  '': ['actor', 'port', 'project'], host: ['panel'], recruit: ['actor', 'key'], check: ['actor', 'key'], estimate: ['actor'],
+}
+
+/** Splits `--flag`, `--flag=value` and, for flags the command declares, `--flag value`. */
 export function parseArgs(argv: string[]): Args {
   const positionals: string[] = []
   const flags = new Map<string, string | true>()
-  for (const arg of argv) {
-    if (arg.startsWith('--')) {
-      const [name, ...value] = arg.slice(2).split('=')
-      flags.set(name, value.length ? value.join('=') : true)
-    } else positionals.push(arg)
+  const command = argv[0] === undefined || argv[0].startsWith('--') ? '' : argv[0]
+  const valued = valueFlags[command] ?? []
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i]
+    if (!arg.startsWith('--')) { positionals.push(arg); continue }
+    const [name, ...value] = arg.slice(2).split('=')
+    if (value.length) flags.set(name, value.join('='))
+    else if (valued.includes(name) && i + 1 < argv.length && !argv[i + 1].startsWith('--')) flags.set(name, argv[++i])
+    else flags.set(name, true)
   }
   return { positionals, flags }
 }
@@ -53,7 +66,7 @@ export function parseArgs(argv: string[]): Args {
 export async function main(argv: string[], io: Io = defaultIo()): Promise<number> {
   const args = parseArgs(argv)
   const [name, ...rest] = args.positionals
-  if (args.flags.has('help') || name === 'help') { io.stdout.write(usage()); return 0 }
+  if (args.flags.has('help') || name === 'help') { io.stdout.write(name && name !== 'help' && commandUsage[name] ? commandUsage[name] : usage()); return 0 }
   const command = name === undefined ? undefined : Object.hasOwn(commands, name) ? commands[name] : undefined
   if (!command) {
     io.stderr.write(`${name === undefined ? 'No command given' : `Unknown command: ${name}`}\n\n${usage()}`)
