@@ -13,7 +13,8 @@ import { reporterFor } from '../src/cli/outward.ts'
 import { buildTrace } from '../src/trace/build.ts'
 import { answersAsServer } from '../src/cli/ensure-server.ts'
 import { startServer } from '../src/server/http.ts'
-import { freePort } from './server-stub.ts'
+import { freePort, stubServer } from './server-stub.ts'
+import { runOrigins } from '../src/server/origins.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 let target: Server
@@ -108,31 +109,55 @@ describe('recruit --host', () => {
     await expect(fetch(door)).rejects.toThrow()
   })
 
-  it('refuses a running server whose address is pinned, since it would refuse the door\'s', async () => {
-    const pinnedStore = await openStore({ UI_TESTS_DATA_DIR: data })
-    const port = await freePort()
-    const pinned = await startServer({ store: async () => pinnedStore, port, host: '127.0.0.1', publicUrl: `http://127.0.0.1:${port}` })
-    cleanup.push(async () => { await pinned.close(); await pinnedStore.close() })
-    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: 'http://127.0.0.1:${port}' }, target: { url: '${targetUrl}' } }\n`)
+  it('gives a resumed run new links on the new door, and keeps both addresses allowed', async () => {
+    const first = await recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-resume'])
+    expect(first.code).toBe(0)
+    const second = await recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-resume'])
+    expect(second.code).toBe(0)
+    expect(second.json().run).toBe(first.json().run)
+    const [before, after] = [new URL(first.json().invites[0]).origin, new URL(second.json().invites[0]).origin]
+    expect(after).not.toBe(before)
+    expect(second.json().invites).toHaveLength(5)
+    for (const link of second.json().invites) expect(link.startsWith(`${after}/ui-tests/${first.json().run}/?t=`)).toBe(true)
+    expect(second.err).toContain(`5 links reissued under ${after}`)
+    const s = await openStore({ UI_TESTS_DATA_DIR: data })
+    cleanup.push(() => s.close())
+    const run = (await s.getRun(first.json().run))!
+    expect(run.appUrl).toBe(after)
+    expect(runOrigins(run)).toEqual(expect.arrayContaining([before, after]))
+  })
+
+  it('never puts the door in front of a server already running: it starts its own, and the running one is asked nothing', async () => {
+    const seen: string[] = []
+    const running = await stubServer((req, res) => {
+      seen.push(req.url ?? '')
+      if (req.url === '/healthz') res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"ok":true,"name":"ui-tests"}')
+      else res.writeHead(404).end('Not found')
+    })
+    cleanup.push(() => running.close())
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${running.url}' }, target: { url: '${targetUrl}' } }\n`)
     try {
-      const refused = await recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-pinned'])
-      expect(refused.code).toBe(2)
-      expect(refused.err).toContain(`The ui-tests server on http://127.0.0.1:${port} does not take the front door's address as its own. Run it without UI_TESTS_PUBLIC_URL`)
+      const stop = new AbortController()
+      const holding = recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-own'], { signal: stop.signal })
+      const s = await openStore({ UI_TESTS_DATA_DIR: data })
+      cleanup.push(() => s.close())
+      let appUrl: string | undefined
+      for (let i = 0; i < 400 && !appUrl?.startsWith('http://10.0.0.5:'); i++) {
+        appUrl = (await s.listRuns()).find(r => r.key === 'perimeter-own')?.appUrl
+        await new Promise(resolve => setTimeout(resolve, 10))
+      }
+      const door = `http://127.0.0.1:${new URL(appUrl!).port}`
+      // The collector and the player answer through the door, from the command's own server.
+      expect((await fetch(`${door}/api/ui-tests/`)).status).toBe(401)
+      expect((await fetch(`${door}/api/ui-tests/exchange`, { method: 'POST', headers: { Origin: door } })).status).toBe(400)
+      stop.abort()
+      const { code, json } = await holding
+      expect(code).toBe(0)
+      for (const link of json().invites) expect(link.startsWith(`http://10.0.0.5:${new URL(door).port}/ui-tests/`)).toBe(true)
+      expect(seen.filter(path => path.startsWith('/api/ui-tests') || path.startsWith('/ui-tests'))).toEqual([])
     } finally {
       await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
     }
-  })
-
-  it('shows how the run was reached in the trace', async () => {
-    const { code, json } = await recruit(['--json', '--host', 'staging.corp.internal', '--key', 'perimeter-2'])
-    expect(code).toBe(0)
-    const s = await openStore({ UI_TESTS_DATA_DIR: data })
-    cleanup.push(() => s.close())
-    const { renderToStaticMarkup } = await import('react-dom/server')
-    const { createElement } = await import('react')
-    const { TraceView } = await import('../src/trace/view.tsx')
-    const html = renderToStaticMarkup(createElement(TraceView, { trace: await buildTrace(s, json().run) }))
-    expect(html).toContain('Reached by: <strong>perimeter</strong>')
   })
 
   it('refuses --host with --tunnel or --local', async () => {

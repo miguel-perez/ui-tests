@@ -9,8 +9,8 @@ import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { PRODUCT_URL, SERVER_URL, isBarCall } from './helpers'
 
 /**
- * Inside the perimeter: `recruit --host <LAN address>` starts a front door on every interface that serves the product server and
- * `ui-tests serve` (both on this machine's loopback) from one origin, and points the app's tag at it. A participant opens an invite
+ * Inside the perimeter: `recruit --host <LAN address>` starts a ui-tests server of its own on loopback and a front door on every
+ * interface that serves it and the product server from one origin, and points the app's tag at it. A participant opens an invite
  * link at the LAN address and takes the task with every request on the door's origin; a route guard fails the test on any other.
  */
 
@@ -26,7 +26,7 @@ test.beforeAll(async () => {
   await mkdir(join(import.meta.dirname, '..', '..', '.ui-tests'), { recursive: true })
   work = await mkdtemp(join(import.meta.dirname, '..', '..', '.ui-tests', 'lan-'))
   await copyFile(fixture, join(work, 'landing.ui.test.ts'))
-  // The default server address, where `ui-tests serve` runs with no public address pinned, so the door's is its own.
+  // The default server address, where `ui-tests serve` already runs: the door never uses it, and starts its own on the same store.
   await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${PRODUCT_URL}' } }\n`)
 })
 test.afterAll(async () => { if (work) await rm(work, { recursive: true, force: true }) })

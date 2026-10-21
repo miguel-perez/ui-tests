@@ -16,7 +16,7 @@ import type { UiTestsConfig } from '../types.ts'
 import { verifyRun } from '../verify.ts'
 import { loadStudies, withProduct } from './lint.ts'
 import type { Command, Io } from './main.ts'
-import { answersAsServer, ensureServer, ServerUnreachable, takesForwardedHost } from './ensure-server.ts'
+import { answersAsServer, ensureServer, ServerUnreachable, startDoorServer } from './ensure-server.ts'
 import { startFrontDoor } from '../server/front-door.ts'
 import { setRunApp } from '../server/origins.ts'
 import { reporterFor } from './outward.ts'
@@ -113,7 +113,7 @@ export const recruit: Command = async (args, io) => {
   } catch { io.stderr.write(`the ui-tests server is not a URL: ${server}\n`); return 2 }
   // A tunnel or a LAN name reaches the app and the ui-tests server through one front door on this machine.
   const throughDoor = args.flags.has('tunnel') || hostName !== undefined
-  // The links open the player on the ui-tests server, so it must answer before any run is made. Local only, and the front door, start one if they can.
+  // The links open the player on the ui-tests server, so it must answer before any run is made. Local only starts one if it can; the front door always starts its own.
   if (!localOnly && !throughDoor && !(await answersAsServer(server))) { io.stderr.write(`${new ServerUnreachable(server).message}\n`); return 2 }
   const mode = reachabilityOf(hostName ? `http://${hostName}` : target, { tunnel: args.flags.has('tunnel') })
   const diagnostics = json ? io.stderr : io.stdout
@@ -130,15 +130,11 @@ export const recruit: Command = async (args, io) => {
 
   const store = await openStore(io.env)
   let started: Awaited<ReturnType<typeof ensureServer>> | undefined
+  let doorServer: Awaited<ReturnType<typeof startDoorServer>> | undefined
   try {
-    if (localOnly || throughDoor) {
-      // Behind the front door the server's own address is the one each request comes in on, so one it starts pins none.
-      try { started = await ensureServer({ url: server, store, io, ...(throughDoor && { publicUrl: false as const }) }) } catch (error) {
+    if (localOnly) {
+      try { started = await ensureServer({ url: server, store, io }) } catch (error) {
         io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
-        return 2
-      }
-      if (throughDoor && !started.started && !(await takesForwardedHost(server, bypass ? { [BYPASS_HEADER]: bypass } : {}))) {
-        io.stderr.write(`The ui-tests server on ${server} does not take the front door's address as its own. Run it without UI_TESTS_PUBLIC_URL, or stop it and let this command start one.\n`)
         return 2
       }
     }
@@ -157,8 +153,12 @@ export const recruit: Command = async (args, io) => {
       io.stderr.write(`Run ${existing.run} is past its deadline; no tunnel opened and no links reissued.\n`)
       tunneling = false
     }
-    // The front door serves the app and the ui-tests server from one origin, and points the app's tag at it, for as long as this command runs.
-    if (tunneling || hostName) door = await startFrontDoor({ app: target, server, ...(hostName && { host: '0.0.0.0' }), ...(bypass && { appHeaders: { [BYPASS_HEADER]: bypass } }) })
+    // The front door serves the app and a ui-tests server of this command's own from one origin, and points the app's tag at it, for as
+    // long as this command runs. That server is never one already running: it trusts the address the door names, and only the door reaches it.
+    if (tunneling || hostName) {
+      doorServer = await startDoorServer({ store, io })
+      door = await startFrontDoor({ app: target, server: doorServer.url, ...(hostName && { host: '0.0.0.0' }), ...(bypass && { appHeaders: { [BYPASS_HEADER]: bypass } }) })
+    }
     // A tunnel is run-scoped: it is opened to the front door (and must answer) before any run exists, recorded on the run, and closed at the deadline or when this command ends.
     if (tunneling && door) {
       try { opened = await openReachableTunnel({ tunnel: chooseTunnel(io.env, deps.tunnel), localUrl: door.url, ...(deps.fetch && { fetch: deps.fetch }), retryMs: deps.pollMs ?? 500 }) } catch (error) {
@@ -186,8 +186,8 @@ export const recruit: Command = async (args, io) => {
       if (doorBase && !created) run = await setRunApp(store, run.run, doorBase)
       if (opened) tunnel = await recordTunnel({ store, runId: run.run, opened, now })
       const linkBase = doorBase ?? server
-      // A resumed run reopens its tunnel at a new address, so slots nobody opened get new links under it.
-      const reissued = tunnel ? await reissueInvites({ store, run, linkBase, ...(bypass && { bypass }) }) : []
+      // A resumed run reopens its door at a new address (a new tunnel, or a new port for --host), so slots nobody opened get new links under it.
+      const reissued = doorBase && !created ? await reissueInvites({ store, run, linkBase, ...(bypass && { bypass }) }) : []
       // Invite slots are made up to n, so a run whose setup failed part-way is repaired by running the same command again.
       const made = slotCount(await store.listAttempts(run.run))
       const missing = Math.max(0, run.compiled.sample.n - made)
@@ -197,7 +197,7 @@ export const recruit: Command = async (args, io) => {
       // The first look is a picture of the start page, taken once now and shown to every participant of the run.
       const shot = await attachFirstLook({ store, run, target, screenshotter: deps.screenshotter ?? playwrightScreenshotter({ loopbackOnly: localOnly }), ...(bypass && { headers: { [BYPASS_HEADER]: bypass } }) })
       if (shot.error) io.stderr.write(`${shot.error}\n`)
-      if (!created) io.stderr.write(`Run ${run.run} already exists for key ${key}; ${missing ? `made ${missing} missing invite${missing === 1 ? '' : 's'}` : 'no new invites'}${reissued.length ? `; ${reissued.length} link${reissued.length === 1 ? '' : 's'} reissued under the new tunnel` : ''}.\n`)
+      if (!created) io.stderr.write(`Run ${run.run} already exists for key ${key}; ${missing ? `made ${missing} missing invite${missing === 1 ? '' : 's'}` : 'no new invites'}${reissued.length ? `; ${reissued.length} link${reissued.length === 1 ? '' : 's'} reissued under ${doorBase}` : ''}.\n`)
       const tunnelLine = tunnel ? `Tunnel: ${tunnel.url} (open until ${run.deadline} or until this command ends)\n` : ''
 
       let handle = handleOf(run)
@@ -231,6 +231,7 @@ export const recruit: Command = async (args, io) => {
       await door?.close()
     }
   } finally {
+    await doorServer?.close()
     await started?.close()
     await store.close()
   }

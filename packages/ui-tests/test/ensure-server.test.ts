@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { ensureServer, ServerUnreachable, takesForwardedHost } from '../src/cli/ensure-server.ts'
+import { ensureServer, ServerUnreachable, startDoorServer } from '../src/cli/ensure-server.ts'
 import { startServer } from '../src/server/http.ts'
 import type { Io } from '../src/cli/main.ts'
 import { openStore } from '../src/store/open.ts'
@@ -61,25 +61,18 @@ describe('ensureServer', () => {
     await again.close()
   })
 
-  it('starts one with no public address for a front door, so the door\'s address is its own', async () => {
-    const url = `http://127.0.0.1:${await freePort()}`
-    const server = await ensureServer({ url, store, io: io(), publicUrl: false })
+  it('starts a server of its own for a front door: loopback, any free port, no public address', async () => {
+    const running = await stubServer()
+    cleanup.push(() => running.close())
+    const server = await startDoorServer({ store, io: io() })
     cleanup.push(() => server.close())
-    expect(server.started).toBe(true)
+    expect(server.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+$/)
+    expect(server.url).not.toBe(running.url)
+    expect(startServer).toHaveBeenCalledWith(expect.objectContaining({ host: '127.0.0.1', port: 0 }))
     expect(vi.mocked(startServer).mock.calls[0]![0]).not.toHaveProperty('publicUrl')
-    expect(await takesForwardedHost(url)).toBe(true)
-  })
-
-  it('tells a server that takes the forwarded address from one pinned to its own', async () => {
-    const port = await freePort()
-    const pinned = await startServer({ store: async () => store, port, host: '127.0.0.1', publicUrl: `http://127.0.0.1:${port}` })
-    cleanup.push(() => pinned.close())
-    expect(await takesForwardedHost(pinned.url)).toBe(false)
-    // Another service, or nothing at all, does not take it either.
-    const other = await stubServer((_req, res) => res.end('ok'))
-    cleanup.push(() => other.close())
-    expect(await takesForwardedHost(other.url)).toBe(false)
-    expect(await takesForwardedHost(`http://127.0.0.1:${await freePort()}`)).toBe(false)
+    // It takes the address the door names as its own: a page there may trade a code (here, an empty body is read and refused as such).
+    const asked = await fetch(`${server.url}/api/ui-tests/exchange`, { method: 'POST', headers: { Origin: 'https://abc.trycloudflare.com', 'X-Forwarded-Host': 'abc.trycloudflare.com', 'X-Forwarded-Proto': 'https' } })
+    expect(asked.status).toBe(400)
   })
 
   it('refuses another service on the port', async () => {
