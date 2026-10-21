@@ -160,6 +160,18 @@ describe('recruit --host', () => {
     }
   })
 
+  it('shows how the run was reached in the trace', async () => {
+    const { code, json } = await recruit(['--json', '--host', 'staging.corp.internal', '--key', 'perimeter-2'])
+    expect(code).toBe(0)
+    const s = await openStore({ UI_TESTS_DATA_DIR: data })
+    cleanup.push(() => s.close())
+    const { renderToStaticMarkup } = await import('react-dom/server')
+    const { createElement } = await import('react')
+    const { TraceView } = await import('../src/trace/view.tsx')
+    const html = renderToStaticMarkup(createElement(TraceView, { trace: await buildTrace(s, json().run) }))
+    expect(html).toContain('Reached by: <strong>perimeter</strong>')
+  })
+
   it('refuses --host with --tunnel or --local', async () => {
     const tunnelled = await recruit(['--host', 'wiki', '--tunnel'])
     expect(tunnelled.code).toBe(2)
