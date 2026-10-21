@@ -3,7 +3,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Locator, type Page } from '@playwright/test'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { uxLite } from '../../packages/ui-tests/src/measures.ts'
-import { PRODUCT_URL, createLinkRun, createRehearsalRun, hasFocus } from './helpers'
+import { BAR, PRODUCT_URL, barOf, createLinkRun, createRehearsalRun, hasFocus } from './helpers'
 
 /**
  * The questions after the task, and the way there, by keyboard alone and with a screen reader's tree in mind (Task 21). A link
@@ -15,7 +15,6 @@ const fixture = (name: string) => join(import.meta.dirname, 'fixtures', `${name}
 // A fake microphone, so the voice answer records without a person speaking.
 test.use({ permissions: ['microphone'], launchOptions: { args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream'] } })
 
-const BAR = '[data-ui-tests-root]'
 const heading = (page: Page) => page.getByRole('heading', { level: 1 })
 
 /** Zero violations of WCAG 2 A and AA rules on what the page shows now (or inside `include`). */
@@ -85,7 +84,7 @@ test.describe('a link participant, keyboard only, from the screener to the thank
     // The bar on the target: reachable in tab order, and what it says changes in a live region.
     await page.waitForURL(`${PRODUCT_URL}/`)
     const bar = page.locator(BAR)
-    await expect(bar.getByRole('region')).toBeVisible()
+    await expect(barOf(page)).toBeVisible()
     await axe(page, BAR)
     await expect(bar.getByRole('status')).toHaveAttribute('aria-live', 'polite')
     // Shift+Tab from the top of the page lands on the bar, the last thing in the document; its buttons come in reading order.

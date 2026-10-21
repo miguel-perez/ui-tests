@@ -2,6 +2,7 @@
 .env
 .env.*
 !.env.example
+!apps/web/.env.development
 node_modules/
 __pycache__/
 *.py[cod]
@@ -24,4 +25,3 @@ next-env.d.ts
 # Superdesign local state
 .superdesign/
 .ui-tests/
-.next-server/

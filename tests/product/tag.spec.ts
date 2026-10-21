@@ -3,16 +3,15 @@ import { join } from 'node:path'
 import { expect, test, type Page, type Request } from '@playwright/test'
 import { tagFor } from '../../packages/ui-tests/src/browser/tag.ts'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
-import { PLAIN_URL, PRODUCT_URL, SERVER_URL, createRehearsalRun } from './helpers'
+import { BAR, PLAIN_URL, SERVER_URL, barOf, createRehearsalRun } from './helpers'
 
 /**
- * The tag on a plain static site and on this site: from the player on `ui-tests serve` to the app's page and back, with the bar in a
+ * The tag on a plain static site: from the player on `ui-tests serve` to the app's page and back, with the bar in a
  * shadow root and the attempt key as the page's only credential.
  */
 
 const fixture = join(import.meta.dirname, 'fixtures', 'plain.ui.test.ts')
 const plain = join(import.meta.dirname, 'fixtures', 'plain')
-const ROOT = '[data-ui-tests-root]'
 const GOAL = 'Reach the next page'
 const STORED = 'ui-tests-attempt'
 
@@ -35,7 +34,7 @@ test('a page with the tag and no attempt makes no request and changes nothing', 
   await page.goto(PLAIN_URL)
   await page.waitForLoadState('networkidle')
   expect(elsewhere).toEqual([])
-  await expect(page.locator(ROOT)).toHaveCount(0)
+  await expect(page.locator(BAR)).toHaveCount(0)
   const file = await readFile(join(plain, 'index.html'), 'utf8')
   const body = /<body>([\s\S]*)<\/body>/.exec(file)![1]!
   expect((await page.evaluate(() => document.body.innerHTML)).trim()).toBe(body.trim())
@@ -56,11 +55,11 @@ test('a person goes from the player to the plain page and back, with the bar in 
   await startTask(page, playerUrl)
   await page.waitForURL(`${PLAIN_URL}/`)
   expect(new URL(page.url()).hash).toBe('')
-  const bar = page.getByRole('region', { name: GOAL })
+  const bar = barOf(page, GOAL)
   await expect(bar).toBeVisible()
-  expect(await page.locator(ROOT).evaluate((host) => host.shadowRoot !== null)).toBe(true)
-  await expect(page.locator(ROOT).getByRole('button', { name: 'Done' })).toBeVisible()
-  await expect(page.locator(ROOT).getByRole('button', { name: "I couldn't do this" })).toBeVisible()
+  expect(await page.locator(BAR).evaluate((host) => host.shadowRoot !== null)).toBe(true)
+  await expect(page.locator(BAR).getByRole('button', { name: 'Done' })).toBeVisible()
+  await expect(page.locator(BAR).getByRole('button', { name: "I couldn't do this" })).toBeVisible()
   expect(JSON.parse((await stored(page))!)).toMatchObject({ v: 1, server: SERVER_URL, run: runId })
 
   await page.getByRole('link', { name: 'Go to the next page' }).click()
@@ -88,7 +87,7 @@ test('a person goes from the player to the plain page and back, with the bar in 
   const app = await page.context().newPage()
   await app.goto(`${PLAIN_URL}/next.html`)
   expect(await stored(app)).toBeNull()
-  await expect(app.locator(ROOT)).toHaveCount(0)
+  await expect(app.locator(BAR)).toHaveCount(0)
 
   const store = await openStore()
   try {
@@ -104,36 +103,36 @@ test('every tab of the app sees the attempt, and the end', async ({ page, contex
   const { playerUrl } = await createRehearsalRun(fixture, { app: PLAIN_URL, player: SERVER_URL })
   await startTask(page, playerUrl)
   await page.waitForURL(`${PLAIN_URL}/`)
-  const bar = page.getByRole('region', { name: GOAL })
+  const bar = barOf(page, GOAL)
   await expect(bar).toBeVisible()
 
   const other = await context.newPage()
   await other.goto(`${PLAIN_URL}/next.html`)
-  await expect(other.getByRole('region', { name: GOAL })).toBeVisible()
+  await expect(barOf(other, GOAL)).toBeVisible()
 
   await bar.getByRole('button', { name: 'Done' }).click()
   await bar.getByRole('button', { name: 'Yes' }).click()
-  await expect(other.locator(ROOT)).toHaveCount(0, { timeout: 2000 })
+  await expect(other.locator(BAR)).toHaveCount(0, { timeout: 2000 })
 })
 
 test("the host page's CSS cannot hide the bar", async ({ page }) => {
   const { playerUrl } = await createRehearsalRun(fixture, { app: PLAIN_URL, player: SERVER_URL })
   await startTask(page, playerUrl)
   await page.waitForURL(`${PLAIN_URL}/`)
-  await expect(page.getByRole('region', { name: GOAL })).toBeVisible()
+  await expect(barOf(page, GOAL)).toBeVisible()
   // The task starts on the plain page; the next page the person opens hides every element it has.
   await page.goto(`${PLAIN_URL}/hostile.html`)
-  const done = page.locator(ROOT).getByRole('button', { name: 'Done' })
+  const done = page.locator(BAR).getByRole('button', { name: 'Done' })
   await expect(done).toBeVisible()
   await done.click()
-  await expect(page.locator(ROOT).getByText('Finished this task?')).toBeVisible()
+  await expect(page.locator(BAR).getByText('Finished this task?')).toBeVisible()
 })
 
 test('a spent or crafted link loads nothing from elsewhere', async ({ page, browser }) => {
   const { runId, playerUrl } = await createRehearsalRun(fixture, { app: PLAIN_URL, player: SERVER_URL })
   const handoff = await startTask(page, playerUrl)
   await page.waitForURL(`${PLAIN_URL}/`)
-  await expect(page.getByRole('region', { name: GOAL })).toBeVisible()
+  await expect(barOf(page, GOAL)).toBeVisible()
 
   // The same link again, in a browser that keeps nothing: the code is spent.
   const fresh = await browser.newContext()
@@ -143,7 +142,7 @@ test('a spent or crafted link loads nothing from elsewhere', async ({ page, brow
     await again.goto(handoff)
     // The exchange is the loader's last request: refused, it stops there.
     expect((await exchanged).status()).toBe(401)
-    await expect(again.locator(ROOT)).toHaveCount(0)
+    await expect(again.locator(BAR)).toHaveCount(0)
     expect(await again.evaluate(() => localStorage.length)).toBe(0)
 
     // A link that names another script: only the tag's own server and the page itself are asked for one.
@@ -156,7 +155,7 @@ test('a spent or crafted link loads nothing from elsewhere', async ({ page, brow
     await exchange
     expect(scripts.length).toBeGreaterThan(0)
     for (const origin of scripts) expect([SERVER_URL, PLAIN_URL]).toContain(origin)
-    await expect(crafted.locator(ROOT)).toHaveCount(0)
+    await expect(crafted.locator(BAR)).toHaveCount(0)
   } finally {
     await fresh.close()
   }
@@ -167,16 +166,6 @@ test('the collector refuses an origin the run does not know', async ({ request }
   const response = await request.post(`${SERVER_URL}/api/ui-tests/exchange?run=${runId}`, { headers: { Origin: 'http://evil.test' }, data: { code: '0'.repeat(64) } })
   expect(response.status()).toBe(403)
   expect(response.headers()['access-control-allow-origin']).toBeUndefined()
-})
-
-test('apps/web carries the tag and shows one bar', async ({ page }) => {
-  const { playerUrl } = await createRehearsalRun(join(import.meta.dirname, 'fixtures', 'mount.ui.test.ts'), { app: PRODUCT_URL, player: SERVER_URL })
-  await startTask(page, playerUrl)
-  await page.waitForURL(`${PRODUCT_URL}/`)
-  await expect(page.getByRole('region', { name: 'Read the landing page' })).toBeVisible()
-  // The tag's bar, in its shadow root, has loaded; this site's own mount, which would show first, has stayed out.
-  await expect.poll(() => page.locator(ROOT).evaluateAll((roots) => roots.filter((root) => root.shadowRoot).length)).toBe(1)
-  await expect(page.locator(ROOT)).toHaveCount(1)
 })
 
 test('the plain fixture carries the tag init prints', async () => {

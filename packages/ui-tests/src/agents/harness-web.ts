@@ -98,10 +98,9 @@ export function webHarness(input: WebHarnessInput, options: WebHarnessOptions = 
         const request = route.request()
         return request.isNavigationRequest() && !allowed.has(new URL(request.url()).origin) ? route.abort('blockedbyclient') : route.continue()
       })
-      // Consent was given with the attempt, so the player never sets the cookies a person's consent does; the same two are set here.
+      // Consent was given with the attempt, so the player never sets the cookie a person's consent does; the same one is set here.
       await context.addCookies([
         { name: 'ui-tests-run', value: attempt.token, url: player.origin, httpOnly: true, sameSite: 'Lax', secure: player.protocol === 'https:' },
-        { name: 'ui-tests-active', value: '1', url: player.origin, sameSite: 'Lax', secure: player.protocol === 'https:' },
       ])
       const page = await context.newPage()
       const state = { context, page, ended: false }

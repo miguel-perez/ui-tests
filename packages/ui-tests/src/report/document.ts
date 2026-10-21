@@ -38,6 +38,7 @@ export function reportDocument(input: ReportDocumentInput): string | undefined {
         createElement('meta', { charSet: 'utf-8' }),
         createElement('meta', { name: 'viewport', content: 'width=device-width, initial-scale=1' }),
         createElement('meta', { name: 'robots', content: 'noindex, nofollow' }),
+        createElement('meta', { name: 'description', content: 'A usability report.' }),
         createElement('title', null, `Report · ${record.compiled.name}`),
         fontUrl && createElement('link', { rel: 'stylesheet', href: fontUrl })),
       createElement('body', { style: { margin: 0 } }, body, script ? createElement('script', { type: 'module', src: input.replayScript }) : null)),

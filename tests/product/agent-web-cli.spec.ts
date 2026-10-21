@@ -16,7 +16,7 @@ const fixtures = join(import.meta.dirname, 'fixtures')
 
 async function project(target: string, server = SERVER_URL) {
   const work = await mkdtemp(join(fixtures, '.tmp-agent-web-'))
-  const source = (await readFile(join(fixtures, 'agent-web.ui.test.ts'), 'utf8')).replace('http://127.0.0.1:3100', target)
+  const source = (await readFile(join(fixtures, 'agent-web.ui.test.ts'), 'utf8')).replace('http://127.0.0.1:3000', target)
   await writeFile(join(work, 'agent-web.ui.test.ts'), source)
   await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server}' }, reporters: ['default', 'json'], agents: { model: { provider: 'scripted', name: './agent-script.json' } } }\n`)
   await writeFile(join(work, 'agent-script.json'), JSON.stringify([{ toolCalls: [{ name: 'goto', input: { path: '/docs/getting-started' } }] }, { toolCalls: [{ name: 'done', input: {} }] }]))

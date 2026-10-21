@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { serveTrace } from '../../packages/ui-tests/src/trace/serve.ts'
 import { videoChunks } from '../../packages/ui-tests/src/video.ts'
-import { PRODUCT_URL, SERVER_URL, createRehearsalRun, isBarCall } from './helpers'
+import { PRODUCT_URL, SERVER_URL, barOf, createRehearsalRun, isBarCall } from './helpers'
 
 /**
  * Screen recording opt-in (Task 33). The browser's own screen picker cannot be driven here, so `getDisplayMedia` is stubbed with a
@@ -43,7 +43,7 @@ test('a study that records the screen says so, asks first, shows a red dot with 
   await expect(page.getByText('your browser will ask whether to share your screen')).toBeVisible()
   await page.getByRole('button', { name: 'Start task' }).click()
   await page.waitForURL(`${PRODUCT_URL}/`)
-  const bar = page.getByRole('region', { name: 'Read the landing page' })
+  const bar = barOf(page, 'Read the landing page')
   await expect(bar).toBeVisible()
 
   // Nothing is recorded until the person says yes.
@@ -113,7 +113,7 @@ test('saying no keeps the attempt, marks it, and records nothing', async ({ page
   await begin(page, playerUrl)
   await page.getByRole('button', { name: 'Start task' }).click()
   await page.waitForURL(`${PRODUCT_URL}/`)
-  const bar = page.getByRole('region', { name: 'Read the landing page' })
+  const bar = barOf(page, 'Read the landing page')
   await page.getByRole('button', { name: 'No thanks' }).click()
   await expect(page.getByRole('group', { name: 'Share your screen' })).toHaveCount(0)
   await expect(bar.getByRole('status', { name: /Recording your screen/ })).toHaveCount(0)
@@ -141,7 +141,7 @@ test('a study without record asks for nothing and shows no dot', async ({ page }
   await expect(page.getByText('your browser will ask whether to share your screen')).toHaveCount(0)
   await page.getByRole('button', { name: 'Start task' }).click()
   await page.waitForURL(`${PRODUCT_URL}/`)
-  const bar = page.getByRole('region', { name: 'Read the landing page' })
+  const bar = barOf(page, 'Read the landing page')
   await expect(bar).toBeVisible()
   await expect(page.getByRole('group', { name: 'Share your screen' })).toHaveCount(0)
   await expect(bar.getByRole('status', { name: /Recording your screen/ })).toHaveCount(0)

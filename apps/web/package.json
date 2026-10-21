@@ -8,10 +8,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "UI_TESTS_SERVER=1 next dev --hostname 127.0.0.1",
+    "dev": "next dev --hostname 127.0.0.1",
     "build": "next build",
-    "build:server": "UI_TESTS_SERVER=1 next build",
-    "start:server": "UI_TESTS_SERVER=1 next start --hostname 0.0.0.0 --port 3100",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

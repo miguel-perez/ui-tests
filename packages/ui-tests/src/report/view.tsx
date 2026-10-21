@@ -1,5 +1,5 @@
 /** @jsxRuntime automatic @jsxImportSource react */
-// Rendered in Node under tsx as well as inside a Next app, so the JSX mode is stated here.
+// Rendered in Node under tsx, which takes the JSX mode from the tsconfig of the folder it runs in, so the mode is stated here.
 import { contrast, parseColour } from '../browser/theme.ts'
 import { canRead } from '../consumers.ts'
 import type { CSSProperties, ReactNode } from 'react'

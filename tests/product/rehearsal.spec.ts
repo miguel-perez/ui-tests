@@ -5,7 +5,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { buildTrace, type Trace } from '../../packages/ui-tests/src/trace/build.ts'
-import { PRODUCT_URL, SERVER_URL, createRehearsalRun, hasFocus } from './helpers'
+import { BAR, PRODUCT_URL, SERVER_URL, barOf, createRehearsalRun, hasFocus } from './helpers'
 
 /**
  * The rehearsal end to end (Task 15): the site is the first context under test. The author runs `npx ui-tests` in apps/web,
@@ -18,7 +18,6 @@ const web = join(root, 'apps', 'web')
 const bin = join(root, 'packages', 'ui-tests', 'bin', 'ui-tests.mjs')
 const fixture = (name: string) => join(import.meta.dirname, 'fixtures', `${name}.ui.test.ts`)
 const REHEARSAL = 'Rehearsal: 0 of 5 planned attempts recorded.'
-const BAR = '[data-ui-tests-root]'
 
 test.use({ reducedMotion: 'reduce' })
 
@@ -29,7 +28,7 @@ test.afterEach(() => {
 })
 
 /**
- * `ui-tests …` in `cwd`, with the product server as the target and `ui-tests serve` as the server; stdout is collected as it comes. The bin `npx ui-tests` resolves
+ * `ui-tests …` in `cwd`, with the static export as the target and `ui-tests serve` as the server; stdout is collected as it comes. The bin `npx ui-tests` resolves
  * to, run by this Node directly: npx starts it under `sh -c`, and where sh is dash (Debian, Ubuntu, so CI) the shell neither
  * execs the CLI nor passes a SIGINT on, so the Ctrl-C below would never reach it.
  */
@@ -111,7 +110,7 @@ async function throughConsent(page: Page, player: string) {
 async function start(page: Page, name: string) {
   await page.getByRole('button', { name: 'Start task' }).click()
   await page.waitForURL(`${PRODUCT_URL}/`)
-  const bar = page.getByRole('region', { name })
+  const bar = barOf(page, name)
   await expect(bar).toBeVisible()
   return bar
 }
@@ -221,7 +220,7 @@ test.describe('the landing study, rehearsed with the CLI', () => {
     await axe()
     await press('button', 'Start task', 'Enter')
     await page.waitForURL(`${PRODUCT_URL}/`)
-    await expect(page.locator(BAR).getByRole('region')).toBeVisible()
+    await expect(barOf(page)).toBeVisible()
     await axe(BAR)
     await press('link', 'Get started', 'Enter')
     await page.waitForURL(`${PRODUCT_URL}/docs/getting-started/`)
@@ -385,9 +384,9 @@ test.describe('fixture studies through the same player and bar', () => {
     await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
   })
 
-  test('the view the collector serves and the server build\'s static files hold neither the path nor the expected answer', async ({ page, request }) => {
+  test('the view the collector serves and the site\'s exported files hold neither the path nor the expected answer', async ({ page, request }) => {
     const { runId, token, playerUrl } = await createRehearsalRun(fixture('sentinel'))
-    const view = await (await request.get(`${PRODUCT_URL}/api/ui-tests/?run=${runId}&t=${encodeURIComponent(token)}`)).text()
+    const view = await (await request.get(`${SERVER_URL}/api/ui-tests/?run=${runId}&t=${encodeURIComponent(token)}`)).text()
     expect(view).toContain('Read the landing page')
     for (const secret of ['/sentinel-path-7f3a', 'sentinel-answer-91c2']) expect(view).not.toContain(secret)
     await page.goto(playerUrl)
@@ -402,7 +401,7 @@ test.describe('fixture studies through the same player and bar', () => {
         else files.push(path)
       }
     }
-    await walk(join(web, '.next-server', 'static'))
+    await walk(join(web, 'out'))
     expect(files.length).toBeGreaterThan(0)
     for (const file of files) {
       const text = await readFile(file, 'latin1')

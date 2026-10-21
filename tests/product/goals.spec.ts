@@ -2,7 +2,7 @@ import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { GOAL_ORDER } from '../../packages/ui-tests/src/runner/sequence.ts'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
-import { PRODUCT_URL, createLinkRun } from './helpers'
+import { BAR, PRODUCT_URL, createLinkRun } from './helpers'
 
 /**
  * A link participant attempts every goal of a two-goal study (PRD 02: "the same people attempt every goal"): one screener, consent and
@@ -10,7 +10,6 @@ import { PRODUCT_URL, createLinkRun } from './helpers'
  */
 
 const fixture = join(import.meta.dirname, 'fixtures', 'two-goals.ui.test.ts')
-const BAR = '[data-ui-tests-root]'
 const heading = (page: Page) => page.getByRole('heading', { level: 1 })
 const next = (page: Page) => page.getByRole('button', { name: /^(Continue|Submit)$/ })
 

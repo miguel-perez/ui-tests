@@ -6,11 +6,11 @@ import { main, type Io } from '../../packages/ui-tests/src/cli/main.ts'
 import { lanAddress } from '../../packages/ui-tests/src/runner/hosts.ts'
 import { stubScreenshotter } from '../../packages/ui-tests/src/runner/screenshot.ts'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
-import { PRODUCT_URL, SERVER_URL, isBarCall } from './helpers'
+import { PRODUCT_URL, SERVER_URL, barOf, isBarCall } from './helpers'
 
 /**
  * Inside the perimeter: `recruit --host <LAN address>` starts a ui-tests server of its own on loopback and a front door on every
- * interface that serves it and the product server from one origin, and points the app's tag at it. A participant opens an invite
+ * interface that serves it and the site from one origin, and points the app's tag at it. A participant opens an invite
  * link at the LAN address and takes the task with every request on the door's origin; a route guard fails the test on any other.
  */
 
@@ -31,7 +31,7 @@ test.beforeAll(async () => {
 })
 test.afterAll(async () => { if (work) await rm(work, { recursive: true, force: true }) })
 
-/** `ui-tests recruit` in the work directory, against the store the product server reads; it holds its front door until `stop`. */
+/** `ui-tests recruit` in the work directory, against the store `ui-tests serve` reads; it holds its front door until `stop`. */
 function recruit(argv: string[]) {
   let out = ''
   let err = ''
@@ -97,7 +97,7 @@ test('recruit --host gives links on the front door at the LAN address, and a par
     await page.waitForURL(`${door}/`)
     // The app's tag names the door, so the bar loads from it.
     expect(await page.locator('script[data-ui-tests]').getAttribute('data-ui-tests')).toBe(door)
-    const bar = page.getByRole('region', { name: 'Read the landing page' })
+    const bar = barOf(page, 'Read the landing page')
     await expect(bar).toBeVisible()
     const ended = page.waitForResponse(r => isBarCall(r, 'end'))
     await bar.getByRole('button', { name: 'Done' }).click()

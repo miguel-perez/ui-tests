@@ -12,10 +12,7 @@ import { FirstClickBar, Taskbar } from './taskbar.tsx'
 import type { EndReason, ScreenBar } from './taskbar.tsx'
 import { brandedHost, chromeTheme, readHost } from './theme.ts'
 
-/**
- * How the bar reaches the collector and the player. The app's page holds an attempt key (`keyClient`); the transitional Next.js mount
- * holds the participant's cookie.
- */
+/** How the bar reaches the collector and the player: on the app's page, with the attempt key it holds (`keyClient`). */
 export type BarClient = {
   /** The bar's view of the attempt, or undefined when there is none to show. */
   view(): Promise<BarView | undefined>
@@ -33,10 +30,9 @@ const REPLAY_WAIT_MS = 3000
 
 /**
  * The bar and everything behind it: it records the attempt, keeps events until the collector has them, and shows the task, its steps,
- * Done and the time. It renders nothing until the client has a view of an attempt that is on, or of a first click to take. `markRoot`
- * marks the bar itself for the recorder and the snapshot, where no marked shadow host holds it.
+ * Done and the time. It renders nothing until the client has a view of an attempt that is on, or of a first click to take.
  */
-export function Bar({ client, markRoot = false }: { client: BarClient; markRoot?: boolean }) {
+export function Bar({ client }: { client: BarClient }) {
   const [view, setView] = useState<BarView>()
   const [busy, setBusy] = useState(false)
   const [lateWarning, setLateWarning] = useState(false)
@@ -252,8 +248,7 @@ export function Bar({ client, markRoot = false }: { client: BarClient; markRoot?
       if (response.ok) {
         setMoreTimeUsed(true)
         setLateWarning(false)
-        // The collector answers with the view: the bar's to an attempt key; to the transitional cookie, the participant's, whose fields
-        // the bar reads are the same (and with no `firstClick`, which is false once the task is on).
+        // The collector answers with the bar's view.
         setView((await response.json()) as BarView)
       } else if (response.status === 409) setMoreTimeUsed(true)
     } catch {
@@ -264,7 +259,7 @@ export function Bar({ client, markRoot = false }: { client: BarClient; markRoot?
 
   const shown = active ?? looking
   const theme = useMemo(() => (shown ? chromeTheme(brandedHost(readHost(document), shown.brand)) : undefined), [shown])
-  if (looking && theme) return <FirstClickBar theme={theme} brand={looking.brand} markRoot={markRoot} />
+  if (looking && theme) return <FirstClickBar theme={theme} brand={looking.brand} />
   if (!active || !theme) return null
   const steps = active.goal.steps
   const step = steps.length ? { index: Math.min(stepIndex, steps.length - 1), count: steps.length, name: steps[Math.min(stepIndex, steps.length - 1)]! } : undefined
@@ -272,7 +267,7 @@ export function Bar({ client, markRoot = false }: { client: BarClient; markRoot?
     screenState === 'asking' ? { state: 'asking', onShare: () => void shareScreen(), onDecline: () => void declineScreen() }
     : screenState === 'on' || screenState === 'paused' ? { state: screenState, seconds: screenSeconds, onPause: () => { screenRecording.current?.pause(); setScreenState('paused') }, onResume: () => { screenRecording.current?.resume(); setScreenState('on') } }
     : undefined
-  return <Taskbar view={active} theme={theme} markRoot={markRoot} busy={busy} step={step} {...(screen && { screen })} offerMoreTime={lateWarning && !moreTimeUsed} onEnd={(reason) => void finish(reason)} onStep={(index) => void finishStep(index)} onMoreTime={() => void moreTime()} />
+  return <Taskbar view={active} theme={theme} busy={busy} step={step} {...(screen && { screen })} offerMoreTime={lateWarning && !moreTimeUsed} onEnd={(reason) => void finish(reason)} onStep={(index) => void finishStep(index)} onMoreTime={() => void moreTime()} />
 }
 
 /** What the person chose about sharing their screen on this device. */

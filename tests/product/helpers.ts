@@ -1,15 +1,22 @@
+import type { Page } from '@playwright/test'
 import { bundleStudyFile, loadBundle } from '../../packages/ui-tests/src/load.ts'
 import { compileStudy } from '../../packages/ui-tests/src/compile.ts'
 import { attachFirstLook, stubScreenshotter } from '../../packages/ui-tests/src/runner/screenshot.ts'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { createParticipant } from '../../packages/ui-tests/src/runner/invites.ts'
 
-/** Where the `product` project serves `apps/web` in server mode. */
-export const PRODUCT_URL = 'http://127.0.0.1:3100'
-/** Where `ui-tests serve` runs, on the same store: the collector, the player and `ui-tests.js`. */
+/** This site as it ships: the static export, whose tag points at the server below. */
+export const PRODUCT_URL = 'http://127.0.0.1:3000'
+/** Where `ui-tests serve` runs: the collector, the player, the shared report and `ui-tests.js`. */
 export const SERVER_URL = 'http://127.0.0.1:4300'
 /** A plain static site that carries only the tag. */
 export const PLAIN_URL = 'http://127.0.0.1:3200'
+
+/** What marks the bar's host: the shadow root the bar lives in hangs from it. */
+export const BAR = '[data-ui-tests-root]'
+
+/** The bar on the app's page, by the region it shows: found inside its own host, so nothing else on the page can stand in for it. */
+export const barOf = (page: Page, name?: string) => page.locator(BAR).getByRole('region', name === undefined ? {} : { name })
 
 /** Whether `node` has focus, looking through open shadow roots: inside the bar's, `document.activeElement` is only its host. Runs in the page. */
 export function hasFocus(node: Element): boolean {
@@ -26,7 +33,7 @@ export function isBarCall(response: { url(): string; request(): { method(): stri
 
 /**
  * Compiles the study file's first study and stores it as a rehearsal run with one attempt for its first task, in the store
- * `UI_TESTS_DATA_DIR` names (the one the product server reads). Returns the participant's link.
+ * `UI_TESTS_DATA_DIR` names (the one `ui-tests serve` reads). Returns the participant's link.
  */
 export async function createRehearsalRun(file: string, options: RunOptions = {}): Promise<{ runId: string; token: string; playerUrl: string }> {
   return createRun(file, true, options)
@@ -44,7 +51,7 @@ export type RunOptions = {
   product?: string
   /** The app the run tests: its target and where participants open it. */
   app?: string
-  /** The server whose player the link opens. */
+  /** The server whose player the link opens; `ui-tests serve` by default. */
   player?: string
 }
 
@@ -71,7 +78,7 @@ async function createRun(file: string, rehearsal: boolean, options: RunOptions =
       ? await store.createAttempt({ runId: run.run, participant: 'p_e2e', goalIndex: 0, rehearsal })
       : await createParticipant(store, { run, participant: 'p_e2e' })
     if (options.shot) await attachFirstLook({ store, run, target: app, screenshotter: stubScreenshotter(options.shot) })
-    return { runId: run.run, token, playerUrl: `${options.player ?? PRODUCT_URL}/ui-tests/${run.run}/?t=${encodeURIComponent(token)}` }
+    return { runId: run.run, token, playerUrl: `${options.player ?? SERVER_URL}/ui-tests/${run.run}/?t=${encodeURIComponent(token)}` }
   } finally {
     await store.close()
   }

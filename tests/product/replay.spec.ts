@@ -3,7 +3,7 @@ import { expect, test, type Page } from '@playwright/test'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { buildTrace } from '../../packages/ui-tests/src/trace/build.ts'
 import { serveTrace } from '../../packages/ui-tests/src/trace/serve.ts'
-import { PRODUCT_URL, SERVER_URL, createRehearsalRun, isBarCall } from './helpers'
+import { PRODUCT_URL, SERVER_URL, barOf, createRehearsalRun, isBarCall } from './helpers'
 
 /**
  * Event replay (Task 23): rrweb is fetched only once an attempt has begun, every typed value is masked and private fields are
@@ -26,7 +26,7 @@ function watchScripts(page: Page) {
   return async () => (await Promise.all(scripts)).filter((body) => body.includes(RRWEB_MARK)).length
 }
 
-test('the landing loads no rrweb without the run cookie', async ({ page }) => {
+test('the landing loads no rrweb without an attempt', async ({ page }) => {
   const rrwebScripts = watchScripts(page)
   await page.goto(`${PRODUCT_URL}/`)
   await expect(page.locator('h1').first()).toBeVisible()
@@ -45,7 +45,7 @@ test('during an attempt rrweb loads, typed values never reach the store, and the
   expect(await rrwebScripts()).toBe(0)
   await page.getByRole('button', { name: 'Start task' }).click()
   await page.waitForURL(`${PRODUCT_URL}/`)
-  const bar = page.getByRole('region', { name: 'Read the landing page' })
+  const bar = barOf(page, 'Read the landing page')
   await expect(bar).toBeVisible()
   await expect.poll(rrwebScripts).toBeGreaterThan(0)
 

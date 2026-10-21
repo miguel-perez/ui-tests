@@ -12,10 +12,8 @@
   },
   "exports": {
     ".": "./src/index.ts",
-    "./next": "./src/next/index.tsx",
     "./config": "./src/define-config.ts",
     "./tag": "./src/browser/tag.ts",
-    "./server": "./src/server/index.ts",
     "./schemas/*": "./schemas/*"
   },
   "scripts": {

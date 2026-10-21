@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
-import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest'
+import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { main, type Io } from '../src/cli/main.ts'
 import { compileStudy } from '../src/compile.ts'
 import { bundleStudyFile, loadBundle } from '../src/load.ts'
@@ -12,6 +12,7 @@ import type { RunRecord } from '../src/record/schema.ts'
 import { normalisePath, signedUrl, signPath, verifyPath } from '../src/report/sign.ts'
 import { ReportView } from '../src/report/view.tsx'
 import { FIRST_LOOK_SKIPPED } from '../src/runner/screenshot.ts'
+import { reportResponse } from '../src/server/report.ts'
 import { SqliteStore } from '../src/store/sqlite.ts'
 import { serveTrace } from '../src/trace/serve.ts'
 import { newRun } from './store-conformance.ts'
@@ -177,41 +178,37 @@ describe('the report', () => {
   })
 })
 
-describe('the report page', () => {
-  async function page(secret: string | undefined) {
-    vi.resetModules()
-    vi.doMock('../src/server/store.ts', () => ({ getStore: async () => store }))
-    if (secret === undefined) delete process.env.UI_TESTS_SHARE_SECRET
-    else process.env.UI_TESTS_SHARE_SECRET = secret
-    return import('../src/server/report-page.tsx')
+describe('the shared report on the server', () => {
+  const bundles = { loader: '', assets: new Map<string, string>(), player: 'player-abc.js', replay: 'replay-abc.js' }
+  const get = async (path: string, secret: string | null = SECRET) => {
+    const response = await reportResponse(new Request(`http://server.test${path}`), { store, bundles, ...(secret !== null && { shareSecret: secret }) })
+    return { status: response.status, html: await response.text() }
   }
-  const props = (path: string[], search: Record<string, string> = {}) => ({ params: Promise.resolve({ path }), searchParams: Promise.resolve(search) })
-  const missing = { digest: expect.stringContaining('NEXT_HTTP_ERROR_FALLBACK;404') }
 
   it('is a 404 without the secret, without a signature, with a wrong one, and for a run that is not there', async () => {
     const sig = signPath(`/r/${runId}`, SECRET)
-    const { ReportPage } = await page(undefined)
-    await expect(ReportPage(props([runId], { sig }))).rejects.toMatchObject(missing)
-    const set = await page(SECRET)
-    await expect(set.ReportPage(props([runId]))).rejects.toMatchObject(missing)
-    await expect(set.ReportPage(props([runId], { sig: `${sig}x` }))).rejects.toMatchObject(missing)
-    await expect(set.ReportPage(props([runId], { sig: signPath(`/r/${runId}`, 'other') }))).rejects.toMatchObject(missing)
-    await expect(set.ReportPage(props(['r_nope'], { sig: signPath('/r/r_nope', SECRET) }))).rejects.toMatchObject(missing)
-    await expect(set.ReportPage(props([runId, 'p1'], { sig }))).rejects.toMatchObject(missing)
-    await expect(set.ReportPage(props([runId, 'p9'], { sig: signPath(`/r/${runId}/p9`, SECRET) }))).rejects.toMatchObject(missing)
-    await expect(set.ReportPage(props([runId, 'p3'], { sig: signPath(`/r/${runId}/p3`, SECRET) }))).rejects.toMatchObject(missing)
-    await expect(set.reportMetadata(props([runId]))).rejects.toMatchObject(missing)
+    expect((await get(`/r/${runId}?sig=${sig}`, null)).status).toBe(404)
+    for (const path of [
+      `/r/${runId}`,
+      `/r/${runId}?sig=${sig}x`,
+      `/r/${runId}?sig=${signPath(`/r/${runId}`, 'other')}`,
+      `/r/r_nope?sig=${signPath('/r/r_nope', SECRET)}`,
+      `/r/${runId}/p1?sig=${sig}`,
+      `/r/${runId}/p9?sig=${signPath(`/r/${runId}/p9`, SECRET)}`,
+      `/r/${runId}/p3?sig=${signPath(`/r/${runId}/p3`, SECRET)}`,
+    ]) expect((await get(path)).status, path).toBe(404)
   })
 
   it('renders the whole report and one person for their own signatures, with signed links inside', async () => {
-    const { ReportPage, reportMetadata } = await page(SECRET)
-    const whole = renderToStaticMarkup(await ReportPage(props([runId], { sig: signPath(`/r/${runId}`, SECRET) })))
-    expect(whole).toContain(record.sentence.replace(/&/g, '&amp;'))
-    expect(whole).toContain(`/r/${runId}/p1/?sig=${signPath(`/r/${runId}/p1`, SECRET)}`)
-    const one = renderToStaticMarkup(await ReportPage(props([runId, 'p1'], { sig: signPath(`/r/${runId}/p1`, SECRET), at: '4000' })))
-    expect(text(one)).toContain('Person 1')
-    expect(text(one)).toContain('Opened at the moment 0:03')
-    expect(await reportMetadata(props([runId], { sig: signPath(`/r/${runId}`, SECRET) }))).toMatchObject({ title: 'Report · verify fixture' })
+    const whole = await get(`/r/${runId}?sig=${signPath(`/r/${runId}`, SECRET)}`)
+    expect(whole.status).toBe(200)
+    expect(whole.html).toContain(record.sentence.replace(/&/g, '&amp;'))
+    expect(whole.html).toContain(`/r/${runId}/p1/?sig=${signPath(`/r/${runId}/p1`, SECRET)}`)
+    expect(whole.html).toContain('<title>Report · verify fixture</title>')
+    expect(whole.html).toContain('<meta name="description" content="A usability report."/>')
+    const one = await get(`/r/${runId}/p1?sig=${signPath(`/r/${runId}/p1`, SECRET)}&at=4000`)
+    expect(text(one.html)).toContain('Person 1')
+    expect(text(one.html)).toContain('Opened at the moment 0:03')
   })
 })
 
@@ -310,15 +307,12 @@ describe('consent gates the words and the recording', () => {
       await server.close()
       await store.updateAttempt(first!.id, { purposes: first!.purposes })
     }
-    vi.resetModules()
-    vi.doMock('../src/server/store.ts', () => ({ getStore: async () => store }))
-    process.env.UI_TESTS_SHARE_SECRET = SECRET
+    // The shared report holds the recording back too.
     await store.updateAttempt(first!.id, { purposes: [] })
     try {
-      const { ReportPage } = await import('../src/server/report-page.tsx')
-      const props = { params: Promise.resolve({ path: [runId, 'p1'] }), searchParams: Promise.resolve({ sig: signPath(`/r/${runId}/p1`, SECRET), at: '4000' }) }
-      const html = renderToStaticMarkup(await ReportPage(props))
-      expect(html).not.toContain('player')
+      const response = await reportResponse(new Request(`http://server.test/r/${runId}/p1?sig=${signPath(`/r/${runId}/p1`, SECRET)}&at=4000`), { store, shareSecret: SECRET, bundles: { loader: '', assets: new Map(), player: 'player-abc.js', replay: 'replay-abc.js' } })
+      const html = await response.text()
+      expect(html).not.toContain('data-replay=')
       expect(text(html)).toContain('did not agree')
     } finally { await store.updateAttempt(first!.id, { purposes: first!.purposes }) }
   })

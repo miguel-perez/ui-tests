@@ -106,9 +106,9 @@ test('the agent opens only paths on the product', async () => {
     await harness.begin!({ id: attempt.id, token })
     for (const path of ['https://example.com/', '//example.com/x', 'docs']) {
       const answer = await harness.call('goto', { path })
-      expect(answer.error, path).toMatch(/^called goto .*, (which is not on|but only paths on) http:\/\/127\.0\.0\.1:3100/)
+      expect(answer.error, path).toMatch(/^called goto .*, (which is not on|but only paths on) http:\/\/127\.0\.0\.1:3000/)
     }
-    expect((await harness.call('goto', { path: '/docs/getting-started' })).output).toContain('url: http://127.0.0.1:3100/docs/getting-started')
+    expect((await harness.call('goto', { path: '/docs/getting-started' })).output).toContain('url: http://127.0.0.1:3000/docs/getting-started')
     expect((await harness.call('click', { ref: 'e9999' })).error).toMatch(/^called click e9999, which failed/)
   } finally { await harness.dispose(); await store.close() }
 })

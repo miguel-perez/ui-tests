@@ -370,10 +370,8 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         } else if (attempt.status !== 'consented') return conflict('Consent was already given or the attempt moved on')
         // A CLI-secret request has no participant token, so it sets no cookie: the secret never goes into one.
         if (!token) return reload()
-        const flag = secure ? '; Secure' : ''
-        const cookies = new Headers()
-        cookies.append('Set-Cookie', `ui-tests-run=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=7200${flag}`)
-        cookies.append('Set-Cookie', `ui-tests-active=1; Path=/; SameSite=Lax; Max-Age=7200${flag}`)
+        // The run cookie is the player's; the app's page carries the attempt key instead, never a cookie.
+        const cookies = new Headers({ 'Set-Cookie': `ui-tests-run=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=7200${secure ? '; Secure' : ''}` })
         return reload(cookies)
       }
       case 'begin': {

@@ -5,10 +5,10 @@ import { PostgresStore } from './postgres.ts'
 import { SqliteStore } from './sqlite.ts'
 import type { RunStore } from './types.ts'
 
-/** The local data directory: `UI_TESTS_DATA_DIR`, or `.ui-tests` next to the nearest `package-lock.json`. */
-export function dataDirectory(env: NodeJS.ProcessEnv = process.env): string {
+/** The local data directory: `UI_TESTS_DATA_DIR`, or `.ui-tests` next to the `package-lock.json` nearest `cwd`. */
+export function dataDirectory(env: NodeJS.ProcessEnv = process.env, cwd = process.cwd()): string {
   if (env.UI_TESTS_DATA_DIR) return env.UI_TESTS_DATA_DIR
-  let root = process.cwd()
+  let root = cwd
   while (!existsSync(path.join(root, 'package-lock.json')) && path.dirname(root) !== root) root = path.dirname(root)
   return path.join(root, '.ui-tests')
 }

@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import type { BarView } from '../server/view.ts'
 import { FIRST_CLICK_PROMPT } from '../player/copy.ts'
-import { ROOT_ATTRIBUTE } from './recorder.ts'
 import { chromeVars } from './theme.ts'
 import type { ChromeTheme } from './theme.ts'
 
@@ -31,8 +30,6 @@ export type TaskbarProps = {
   onMoreTime(): void
   /** Present only when the study records the screen and the person has not said no. */
   screen?: ScreenBar
-  /** Marks the bar's root for the recorder and the snapshot; in a shadow root the host carries the mark instead. */
-  markRoot?: boolean
 }
 
 const css = `
@@ -72,7 +69,7 @@ export function isTyping(active: Element | null, root: Element | null): boolean 
 }
 
 /** The one floating pill: the task, Done, and I couldn't do this. Draggable; steps aside while the participant types in the page. */
-export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep, onMoreTime, screen, markRoot = false }: TaskbarProps) {
+export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep, onMoreTime, screen }: TaskbarProps) {
   const [confirming, setConfirming] = useState(false)
   const lastStep = !step || step.index === step.count - 1
   const [reading, setReading] = useState(false)
@@ -122,7 +119,6 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
   return (
     <div
       ref={root}
-      {...(markRoot && { [ROOT_ATTRIBUTE]: '' })}
       className="uit-bar"
       role="region"
       aria-label={view.goal.name}
@@ -181,9 +177,9 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
 }
 
 /** The bar while the first click is taken: one line, no Done and no way out of the task, since the task has not begun. */
-export function FirstClickBar({ theme, brand, markRoot = false }: { theme: ChromeTheme; brand: BarView['brand']; markRoot?: boolean }) {
+export function FirstClickBar({ theme, brand }: { theme: ChromeTheme; brand: BarView['brand'] }) {
   return (
-    <div {...(markRoot && { [ROOT_ATTRIBUTE]: '' })} className="uit-bar" role="region" aria-label={FIRST_CLICK_PROMPT} style={chromeVars(theme)}>
+    <div className="uit-bar" role="region" aria-label={FIRST_CLICK_PROMPT} style={chromeVars(theme)}>
       <style>{css}</style>
       <div className="uit-pill">
         {brand.logo && <img className="uit-logo" src={brand.logo} alt={brand.name} />}
