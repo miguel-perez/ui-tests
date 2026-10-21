@@ -25,3 +25,5 @@ next-env.d.ts
 # Superdesign local state
 .superdesign/
 .ui-tests/
+.vercel
+.env*.local
