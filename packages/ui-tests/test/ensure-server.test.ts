@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { ensureServer, ServerUnreachable } from '../src/cli/ensure-server.ts'
+import { ensureServer, ServerUnreachable, takesForwardedHost } from '../src/cli/ensure-server.ts'
 import { startServer } from '../src/server/http.ts'
 import type { Io } from '../src/cli/main.ts'
 import { openStore } from '../src/store/open.ts'
@@ -59,6 +59,27 @@ describe('ensureServer', () => {
     const again = await ensureServer({ url, store, io: io() })
     expect(again.started).toBe(true)
     await again.close()
+  })
+
+  it('starts one with no public address for a front door, so the door\'s address is its own', async () => {
+    const url = `http://127.0.0.1:${await freePort()}`
+    const server = await ensureServer({ url, store, io: io(), publicUrl: false })
+    cleanup.push(() => server.close())
+    expect(server.started).toBe(true)
+    expect(vi.mocked(startServer).mock.calls[0]![0]).not.toHaveProperty('publicUrl')
+    expect(await takesForwardedHost(url)).toBe(true)
+  })
+
+  it('tells a server that takes the forwarded address from one pinned to its own', async () => {
+    const port = await freePort()
+    const pinned = await startServer({ store: async () => store, port, host: '127.0.0.1', publicUrl: `http://127.0.0.1:${port}` })
+    cleanup.push(() => pinned.close())
+    expect(await takesForwardedHost(pinned.url)).toBe(false)
+    // Another service, or nothing at all, does not take it either.
+    const other = await stubServer((_req, res) => res.end('ok'))
+    cleanup.push(() => other.close())
+    expect(await takesForwardedHost(other.url)).toBe(false)
+    expect(await takesForwardedHost(`http://127.0.0.1:${await freePort()}`)).toBe(false)
   })
 
   it('refuses another service on the port', async () => {

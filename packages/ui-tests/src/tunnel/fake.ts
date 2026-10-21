@@ -4,14 +4,15 @@ import type { Tunnel } from './types.ts'
 
 /**
  * A tunnel for tests and offline runs (`UI_TESTS_TUNNEL=fake`): a local reverse proxy on a port of its own, so the "public" URL is
- * `http://127.0.0.1:<proxy>` and everything reaches the build the way it would through a real tunnel. Never touches the network.
+ * `http://127.0.0.1:<proxy>` and everything reaches the front door the way it would through a real tunnel: like cloudflared, it keeps
+ * the `Host` the browser sent, so the door sees the tunnel's address. Never touches the network.
  */
 export function fakeTunnel(): Tunnel {
   return {
     async open(localUrl) {
       const target = new URL(localUrl)
       const server: Server = createServer((req, res) => {
-        const upstream = request({ hostname: target.hostname, port: target.port, path: req.url, method: req.method, headers: { ...req.headers, host: target.host } }, answer => {
+        const upstream = request({ hostname: target.hostname, port: target.port, path: req.url, method: req.method, headers: req.headers }, answer => {
           res.writeHead(answer.statusCode ?? 502, answer.headers)
           answer.pipe(res)
         })

@@ -7,20 +7,23 @@ import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { main, type CliDeps, type Io } from '../src/cli/main.ts'
-import { createCollector } from '../src/server/collector.ts'
+import { startServer } from '../src/server/http.ts'
+import { runOrigins } from '../src/server/origins.ts'
 import { openStore } from '../src/store/open.ts'
 import type { RunStore } from '../src/store/types.ts'
 import { cloudflaredTunnel, parseTunnelUrl } from '../src/tunnel/cloudflared.ts'
 import { isSlot } from '../src/runner/invites.ts'
 import { fakeTunnel } from '../src/tunnel/fake.ts'
 import type { TunnelRecord } from '../src/tunnel/types.ts'
-import { stubServer } from './server-stub.ts'
+import { freePort } from './server-stub.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
+const LANDING = '<script data-ui-tests="http://localhost:4300"></script>landing'
 const hour = 3_600_000
 let target: Server
 let targetUrl: string
-let server: Awaited<ReturnType<typeof stubServer>>
+/** The ui-tests server, as `ui-tests serve` runs it: no public address, so the front door's is its own. */
+let server: Awaited<ReturnType<typeof startServer>>
 let work: string
 let data: string
 let collectorStore: RunStore
@@ -29,22 +32,11 @@ const cleanup: (() => Promise<unknown> | unknown)[] = []
 beforeAll(async () => {
   data = await mkdtemp(join(tmpdir(), 'ui-tests-tunnel-'))
   collectorStore = await openStore({ UI_TESTS_DATA_DIR: data })
-  const collect = createCollector({ store: async () => collectorStore })
-  // A stand-in for the host app: a public landing, the collector, and a player route that shows the study only to a token that opens it.
-  target = createServer(async (req, res) => {
-    const url = new URL(req.url ?? '/', targetUrl)
-    if (url.pathname.startsWith('/api/ui-tests')) {
-      const answer = await collect(new Request(url, { method: req.method, headers: req.headers as Record<string, string> }))
-      res.writeHead(answer.status).end(await answer.text())
-    } else if (url.pathname.startsWith('/ui-tests/')) {
-      const token = url.searchParams.get('t')
-      const answer = token ? await collect(new Request(`${targetUrl}/api/ui-tests/`, { headers: { Authorization: `Bearer ${token}` } })) : undefined
-      res.end(answer?.status === 200 ? `study: ${answer.status}` : 'no study')
-    } else res.end('landing')
-  })
+  // A stand-in for the app: a public landing carrying the tag, built to point at the ui-tests server on this machine.
+  target = createServer((_req, res) => res.writeHead(200, { 'Content-Type': 'text/html' }).end(LANDING))
   await new Promise<void>(resolve => target.listen(0, '127.0.0.1', resolve))
   targetUrl = `http://127.0.0.1:${(target.address() as AddressInfo).port}`
-  server = await stubServer()
+  server = await startServer({ store: async () => collectorStore, port: await freePort(), host: '127.0.0.1' })
   work = await mkdtemp(join(fixtures, '.tmp-tunnel-'))
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
   await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' } }\n`)
@@ -83,21 +75,32 @@ async function store(): Promise<RunStore> {
 }
 const tunnelsOf = async (run: string) => ((await (await store()).getRun(run))?.tunnels ?? []) as TunnelRecord[]
 const text = async (url: string) => (await fetch(url)).text()
+/** The status of the participant view a link's token opens, asked at `base` (the link's own address unless given). */
+const study = async (link: string, base = new URL(link).origin) => {
+  const { pathname, searchParams } = new URL(link)
+  return (await fetch(`${base}/api/ui-tests/?run=${pathname.split('/')[2]}&t=${searchParams.get('t')}`)).status
+}
 
 describe('recruit --tunnel with the fake tunnel', () => {
-  it('serves the public landing, refuses the collector without a token and shows no study without one', async () => {
+  it('serves the app and the ui-tests server at the tunnel\'s address, with the tag pointed there', async () => {
     const session = start(['--key', 'k-serve'])
     const handle = await session.ready()
     const tunnel = new URL(handle.tunnel)
     expect(tunnel.hostname).toBe('127.0.0.1')
     expect(handle.tunnel).not.toBe(targetUrl)
-    expect(await text(handle.tunnel)).toBe('landing')
+    // The app's page, its tag pointed at the tunnel, so the bar and the collector are on the page's own origin.
+    expect(await text(handle.tunnel)).toBe(`<script data-ui-tests="${handle.tunnel}"></script>landing`)
+    // Only the server's own paths reach it: its health check is the app's path here.
+    expect(await text(`${handle.tunnel}/healthz`)).toContain('landing')
     expect((await fetch(`${handle.tunnel}/api/ui-tests/`)).status).toBe(401)
-    expect(await text(`${handle.tunnel}/ui-tests/${handle.run}/`)).toBe('no study')
     // The links are under the tunnel, and a token opens the study through it.
     expect(handle.invites).toHaveLength(5)
     for (const link of handle.invites) expect(link.startsWith(`${handle.tunnel}/ui-tests/${handle.run}/?t=`)).toBe(true)
-    expect(await text(handle.invites[0])).toBe('study: 200')
+    expect(await study(handle.invites[0])).toBe(200)
+    // Participants open the app at the tunnel's address, and the collector takes its origin.
+    const run = (await (await store()).getRun(handle.run))!
+    expect(run.appUrl).toBe(handle.tunnel)
+    expect(runOrigins(run)).toContain(handle.tunnel)
     session.stop()
     expect(await session.done).toBe(0)
   })
@@ -142,12 +145,16 @@ describe('recruit --tunnel with the fake tunnel', () => {
     expect(b.tunnel).not.toBe(a.tunnel)
     expect(await tunnelsOf(a.run)).toMatchObject([{ url: a.tunnel, closedAt: expect.any(String) }, { url: b.tunnel }])
     expect(b.invites).toHaveLength(5)
-    for (const link of b.invites) expect(link.startsWith(b.tunnel)).toBe(true)
-    expect(await text(b.invites[0])).toBe('study: 200')
+    for (const link of b.invites) expect(link.startsWith(`${b.tunnel}/ui-tests/${b.run}/?t=`)).toBe(true)
+    expect(await study(b.invites[0])).toBe(200)
+    // The app moves to the new address, and both addresses stay allowed.
+    const run = (await (await store()).getRun(a.run))!
+    expect(run.appUrl).toBe(b.tunnel)
+    expect(runOrigins(run)).toEqual(expect.arrayContaining([a.tunnel, b.tunnel]))
     // The old slots are retired: their tokens open nothing, even through the new tunnel, and they are not slots.
     const oldToken = new URL(a.invites[0]).searchParams.get('t')!
     expect((await fetch(`${b.tunnel}/api/ui-tests/`, { headers: { Authorization: `Bearer ${oldToken}` } })).status).toBe(401)
-    expect(await text(a.invites[0].replace(a.tunnel, b.tunnel))).toBe('no study')
+    expect(await study(a.invites[0], b.tunnel)).toBe(401)
     const all = await (await store()).listAttempts(a.run)
     expect(all).toHaveLength(10)
     const live = all.filter(isSlot)
@@ -161,7 +168,7 @@ describe('recruit --tunnel with the fake tunnel', () => {
     let clock = Date.now()
     const session = start(['--key', 'k-deadline'], { now: () => new Date(clock) })
     const handle = await session.ready()
-    expect(await text(handle.tunnel)).toBe('landing')
+    expect(await text(handle.tunnel)).toContain('landing')
     clock += 49 * hour
     expect(await session.done).toBe(0)
     await expect(fetch(handle.tunnel)).rejects.toThrow()
@@ -216,7 +223,7 @@ describe('recruit --tunnel with the fake tunnel', () => {
 describe('fakeTunnel', () => {
   it('forwards to the local build and closes twice without error', async () => {
     const opened = await fakeTunnel().open(targetUrl)
-    expect(await text(opened.url)).toBe('landing')
+    expect(await text(opened.url)).toBe(LANDING)
     await opened.close()
     await opened.close()
   })

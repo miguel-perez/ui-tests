@@ -20,7 +20,10 @@ async function updateTunnels(store: RunStore, runId: string, change: (tunnels: T
 
 type Opened = { url: string; close(): Promise<void> }
 
-/** Opens the tunnel and waits until its address answers, so a tunnel that started but serves nothing fails before a run exists. */
+/**
+ * Opens the tunnel to `localUrl` (for `recruit`, the front door, so the app and the ui-tests server share its address) and waits until
+ * the address answers, so a tunnel that started but serves nothing fails before a run exists.
+ */
 export async function openReachableTunnel(input: { tunnel: Tunnel; localUrl: string; fetch?: typeof fetch; retryMs?: number; tries?: number }): Promise<Opened> {
   const { tunnel, localUrl, retryMs = 500, tries = 20 } = input
   const opened = await tunnel.open(localUrl)

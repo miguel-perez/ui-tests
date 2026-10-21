@@ -12,13 +12,14 @@ import type { Tunnel } from '../src/tunnel/types.ts'
 import { reporterFor } from '../src/cli/outward.ts'
 import { buildTrace } from '../src/trace/build.ts'
 import { answersAsServer } from '../src/cli/ensure-server.ts'
-import { freePort, stubServer } from './server-stub.ts'
+import { startServer } from '../src/server/http.ts'
+import { freePort } from './server-stub.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 let target: Server
 let targetUrl: string
-/** The ui-tests server the links are on, already running on this machine. */
-let server: Awaited<ReturnType<typeof stubServer>>
+/** The ui-tests server the links are on, already running on this machine as `ui-tests serve` runs it: no public address pinned. */
+let server: Awaited<ReturnType<typeof startServer>>
 let work: string
 let data: string
 const cleanup: (() => Promise<unknown> | unknown)[] = []
@@ -27,9 +28,11 @@ beforeAll(async () => {
   target = createServer((_req, res) => res.end('ok'))
   await new Promise<void>(resolve => target.listen(0, '127.0.0.1', resolve))
   targetUrl = `http://127.0.0.1:${(target.address() as AddressInfo).port}`
-  server = await stubServer()
   work = await mkdtemp(join(fixtures, '.tmp-perimeter-'))
   data = await mkdtemp(join(tmpdir(), 'ui-tests-perimeter-'))
+  const serverStore = await openStore({ UI_TESTS_DATA_DIR: data })
+  const started = await startServer({ store: async () => serverStore, port: await freePort(), host: '127.0.0.1' })
+  server = { ...started, close: async () => { await started.close(); await serverStore.close() } }
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
   // A webhook is configured on purpose: local only must not call it.
   await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
@@ -46,26 +49,78 @@ afterEach(async () => { vi.restoreAllMocks(); while (cleanup.length) await clean
 async function recruit(argv: string[], deps: CliDeps = {}, env: Record<string, string> = {}) {
   let out = ''
   let err = ''
-  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { pollMs: 1, screenshotter: stubScreenshotter(new Uint8Array([0])), ...deps } }
+  // --host holds its front door open until the deadline or Ctrl-C; unless a test says otherwise, it is stopped at once.
+  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { pollMs: 1, screenshotter: stubScreenshotter(new Uint8Array([0])), ...(argv.includes('--host') && { signal: AbortSignal.abort() }), ...deps } }
   const code = await main(['recruit', ...argv], io)
   return { code, out, err, json: () => JSON.parse(out) }
 }
 
 describe('recruit --host', () => {
-  it('puts the invite links on the internal hostname and records the run as inside the perimeter', async () => {
+  it('puts the invite links and the app on the front door under the internal hostname, and records the run as inside the perimeter', async () => {
     const { code, json, err } = await recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-1'])
     expect(code).toBe(0)
-    // The links are on the ui-tests server's port under that name; the app is reached there on its own port.
-    const serverPort = new URL(server.url).port
+    // The links are on the front door's port under that name, and the app is reached through the same door.
     expect(json().invites).toHaveLength(5)
-    for (const link of json().invites) expect(link).toMatch(new RegExp(`^http://10\\.0\\.0\\.5:${serverPort}/ui-tests/r_\\w+/\\?t=\\S+$`))
-    expect(err).toContain(`Inside the perimeter: links are on http://10.0.0.5:${serverPort}.`)
+    const port = new URL(json().invites[0]).port
+    expect(port).not.toBe(new URL(server.url).port)
+    expect(port).not.toBe(new URL(targetUrl).port)
+    for (const link of json().invites) expect(link).toMatch(new RegExp(`^http://10\\.0\\.0\\.5:${port}/ui-tests/r_\\w+/\\?t=\\S+$`))
+    expect(err).toContain(`Inside the perimeter: links are on http://10.0.0.5:${port}. Keep this command running while people take part.`)
     const s = await openStore({ UI_TESTS_DATA_DIR: data })
     cleanup.push(() => s.close())
     const run = (await s.listRuns()).find(r => r.key === 'perimeter-1')!
     expect(run.reachability).toMatchObject({ url: targetUrl, reachable: true, mode: 'perimeter' })
     expect(run.target).toBe(targetUrl)
-    expect(run.appUrl).toBe(`http://10.0.0.5:${new URL(targetUrl).port}`)
+    expect(run.appUrl).toBe(`http://10.0.0.5:${port}`)
+  })
+
+  it('takes only the name from a --host given with a port or a scheme', async () => {
+    for (const [given, key] of [['10.0.0.5:8080', 'perimeter-port'], ['https://10.0.0.5:8443/x', 'perimeter-url']] as const) {
+      const { code, json, err } = await recruit(['--json', '--host', given, '--key', key])
+      expect(code, err).toBe(0)
+      const port = new URL(json().invites[0]).port
+      expect(port).not.toBe('8080')
+      for (const link of json().invites) expect(link.startsWith(`http://10.0.0.5:${port}/ui-tests/`)).toBe(true)
+      expect(err).toContain(`--host ${given}: links are on the front door's own port, so only the name 10.0.0.5 is used.`)
+    }
+  })
+
+  it('holds the front door open, serving the app and the server, until stopped', async () => {
+    const stop = new AbortController()
+    const running = recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-hold'], { signal: stop.signal })
+    const s = await openStore({ UI_TESTS_DATA_DIR: data })
+    cleanup.push(() => s.close())
+    let run: Awaited<ReturnType<typeof s.listRuns>>[number] | undefined
+    for (let i = 0; i < 400 && !run?.appUrl?.startsWith('http://10.0.0.5:'); i++) {
+      run = (await s.listRuns()).find(r => r.key === 'perimeter-hold')
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
+    // The door listens on every interface; on this machine it answers at loopback on the same port.
+    const door = `http://127.0.0.1:${new URL(run!.appUrl!).port}`
+    let page = ''
+    for (let i = 0; i < 400 && !page; i++) page = await fetch(door).then(r => r.text(), () => '')
+    expect(page).toBe('ok')
+    expect((await fetch(`${door}/api/ui-tests/`)).status).toBe(401)
+    stop.abort()
+    const { code, err } = await running
+    expect(code).toBe(0)
+    expect(err).toContain('The front door stays open for the participants. Press Ctrl-C to close it.')
+    await expect(fetch(door)).rejects.toThrow()
+  })
+
+  it('refuses a running server whose address is pinned, since it would refuse the door\'s', async () => {
+    const pinnedStore = await openStore({ UI_TESTS_DATA_DIR: data })
+    const port = await freePort()
+    const pinned = await startServer({ store: async () => pinnedStore, port, host: '127.0.0.1', publicUrl: `http://127.0.0.1:${port}` })
+    cleanup.push(async () => { await pinned.close(); await pinnedStore.close() })
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: 'http://127.0.0.1:${port}' }, target: { url: '${targetUrl}' } }\n`)
+    try {
+      const refused = await recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-pinned'])
+      expect(refused.code).toBe(2)
+      expect(refused.err).toContain(`The ui-tests server on http://127.0.0.1:${port} does not take the front door's address as its own. Run it without UI_TESTS_PUBLIC_URL`)
+    } finally {
+      await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+    }
   })
 
   it('shows how the run was reached in the trace', async () => {
@@ -81,7 +136,9 @@ describe('recruit --host', () => {
   })
 
   it('refuses --host with --tunnel or --local', async () => {
-    expect((await recruit(['--host', 'wiki', '--tunnel'])).code).toBe(2)
+    const tunnelled = await recruit(['--host', 'wiki', '--tunnel'])
+    expect(tunnelled.code).toBe(2)
+    expect(tunnelled.err).toContain('--host and --tunnel cannot be combined')
     const both = await recruit(['--host', 'wiki', '--local'])
     expect(both.code).toBe(2)
     expect(both.err).toContain('--local and --host cannot be combined')

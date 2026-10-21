@@ -19,18 +19,18 @@ export class ServerUnreachable extends Error {
   }
 }
 
-/** The body of a GET, asked over a plain socket rather than `fetch`, so a stubbed or failing `fetch` never decides it; undefined on any failure. */
-function get(url: string): Promise<string | undefined> {
+/** The status and body of a request, asked over a plain socket rather than `fetch`, so a stubbed or failing `fetch` never decides it; undefined on any failure. */
+function ask(url: string, init: { method?: string; headers?: Record<string, string> } = {}): Promise<{ status: number; body: string } | undefined> {
   return new Promise(resolve => {
     let target: URL
     try { target = new URL(url) } catch { return resolve(undefined) }
     const request = target.protocol === 'https:' ? httpsRequest : target.protocol === 'http:' ? httpRequest : undefined
     if (!request) return resolve(undefined)
-    const req = request(target, { method: 'GET', timeout: HEALTH_TIMEOUT_MS }, res => {
+    const req = request(target, { method: init.method ?? 'GET', headers: init.headers ?? {}, timeout: HEALTH_TIMEOUT_MS }, res => {
       let body = ''
       res.setEncoding('utf8')
       res.on('data', (chunk: string) => { body += chunk; if (body.length > MAX_HEALTH_BYTES) req.destroy() })
-      res.on('end', () => resolve(res.statusCode === 200 ? body : undefined))
+      res.on('end', () => resolve({ status: res.statusCode ?? 0, body }))
       res.on('error', () => resolve(undefined))
     })
     req.on('timeout', () => req.destroy())
@@ -39,6 +39,9 @@ function get(url: string): Promise<string | undefined> {
     req.end()
   })
 }
+
+/** The body of a 200 GET; undefined for any other answer or failure. */
+const get = async (url: string) => { const answer = await ask(url); return answer?.status === 200 ? answer.body : undefined }
 
 /** Whether a ui-tests server answers at `url`: its `/healthz` names it. Another service on the same port does not count. */
 export async function answersAsServer(url: string, fetcher?: typeof fetch): Promise<boolean> {
@@ -54,12 +57,27 @@ export async function answersAsServer(url: string, fetcher?: typeof fetch): Prom
 }
 
 /**
+ * Whether the ui-tests server at `url` takes the address a front door forwards (`X-Forwarded-Host`) as its own. It is asked to trade
+ * an empty body at that address: a server whose origin is pinned (`UI_TESTS_PUBLIC_URL`), or a proxy that replaces the header,
+ * refuses the origin (403) where one that takes it reads the body (400). Nothing is stored either way.
+ */
+export async function takesForwardedHost(url: string, headers: Record<string, string> = {}): Promise<boolean> {
+  const door = 'front-door.invalid'
+  const answer = await ask(`${url.replace(/\/+$/, '')}/api/ui-tests/exchange`, {
+    method: 'POST',
+    headers: { ...headers, Origin: `http://${door}`, 'X-Forwarded-Host': door, 'X-Forwarded-Proto': 'http', 'Content-Type': 'application/json' },
+  })
+  return answer?.status === 400
+}
+
+/**
  * The ui-tests server at `url`, running for the length of a command. One that answers is used as it is (`started: false`, and
  * `close` leaves it running). Otherwise, for an http address on this machine, one is started there on the command's store, bound to
- * `bind` (loopback by default), and `close` stops it. Anything else throws `ServerUnreachable`: a server elsewhere is never started
+ * `bind` (loopback by default), and `close` stops it. It takes `url` as its public address unless `publicUrl` names another, or is
+ * `false` for a server behind a front door, whose address comes from the door's `X-Forwarded-Host`. Anything else throws `ServerUnreachable`: a server elsewhere is never started
  * for you, and a port another service holds is never taken.
  */
-export async function ensureServer(input: { url: string; store: RunStore; io: Io; bind?: string; fetch?: typeof fetch }): Promise<{ url: string; started: boolean; close(): Promise<void> }> {
+export async function ensureServer(input: { url: string; store: RunStore; io: Io; bind?: string; publicUrl?: string | false; fetch?: typeof fetch }): Promise<{ url: string; started: boolean; close(): Promise<void> }> {
   const url = input.url.replace(/\/+$/, '')
   if (await answersAsServer(url, input.fetch)) return { url, started: false, close: async () => {} }
   let address: URL
@@ -72,7 +90,7 @@ export async function ensureServer(input: { url: string; store: RunStore; io: Io
       store: async () => input.store,
       port: Number(address.port || 80),
       host: input.bind ?? '127.0.0.1',
-      publicUrl: url,
+      ...(input.publicUrl !== false && { publicUrl: input.publicUrl ?? url }),
       transcriber: moduleTranscriber(() => env.UI_TESTS_TRANSCRIBER),
       ...(env.UI_TESTS_CLI_SECRET && { cliSecret: env.UI_TESTS_CLI_SECRET }),
       ...(env.UI_TESTS_SHARE_SECRET && { shareSecret: env.UI_TESTS_SHARE_SECRET }),

@@ -15,7 +15,7 @@ export function newRun(key: string, extra: Partial<NewRun> = {}): NewRun {
     hooksBundle: '// hooks',
     rehearsal: false,
     target: 'http://localhost:3000',
-    deadline: '2026-10-21T00:00:00.000Z',
+    deadline: '2099-01-01T00:00:00.000Z',
     ...extra,
   }
 }

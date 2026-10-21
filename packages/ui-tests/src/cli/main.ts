@@ -67,7 +67,8 @@ Commands:
   --actor agent     run the study's tasks as agent trials: a capability test, not usability
   verify <run>      run the hooks against the stored snapshots
   recruit           make a run and print the invite links to the player on the ui-tests server (--wait for the result,
-                    --tunnel to serve a local build, --host <name> for links inside your network, --local for this machine only)
+                    --tunnel to serve a local build, --host <name> for links inside your network, --local for this machine only;
+                    --tunnel and --host serve the app and the ui-tests server through one front door on this machine)
   status <run>      show the four states of a run
   check             post the pull request check for a preview (--reconcile updates the open ones)
   report <run>      the report in words, the run record (--json), or a signed link to share (--share)
