@@ -75,6 +75,8 @@ describe('handoff', () => {
     expect(url).toMatch(/^http:\/\/app\.test\/board#ui-tests=r_[0-9A-Z]{26}\.[0-9a-f]{64}$/)
     expect(url).toContain(`#ui-tests=${run.run}.`)
     const code = url.split('.').at(-1)
+    // Without an Origin it is not a page's request: refused, and the code is not spent.
+    expect((await post(undefined, { code }, `/exchange?run=${run.run}`)).status).toBe(403)
     const first = await exchange(code)
     expect(first.status).toBe(200)
     const body = await first.json()

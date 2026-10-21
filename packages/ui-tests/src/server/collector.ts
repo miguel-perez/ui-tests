@@ -252,7 +252,8 @@ export function createCollector(options: CollectorOptions): (request: Request) =
   }
 
   async function handle(store: RunStore, request: Request, url: URL, own: string, source: Source): Promise<Response> {
-    if (url.pathname.endsWith('/exchange')) return source === 'foreign' ? refuse(403, 'Invalid origin') : exchange(store, request, url)
+    // The exchange is the tag's, on a page of one of the run's origins: a request with no Origin is not a browser's page, and is refused.
+    if (url.pathname.endsWith('/exchange')) return source === 'foreign' || !request.headers.get('origin') ? refuse(403, 'Invalid origin') : exchange(store, request, url)
     const get = request.method === 'GET'
     if (!get && request.method !== 'POST') return refuse(405, 'Method not allowed')
     const length = Number(request.headers.get('content-length') ?? 0)

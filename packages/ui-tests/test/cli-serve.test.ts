@@ -31,7 +31,17 @@ describe('ui-tests serve', () => {
     const health = await fetch(`http://127.0.0.1:${port}/healthz`)
     expect(health.status).toBe(200)
     expect(await health.json()).toEqual({ ok: true, name: 'ui-tests' })
+    expect(server.err()).toBe('')
     expect(await server.stop()).toBe(0)
+  }, 60_000)
+
+  it('advises a public address when it serves every interface without one', async () => {
+    const server = await serve(['--port', '0'])
+    expect(server.err()).toContain('Set UI_TESTS_PUBLIC_URL to the address people reach this server at')
+    expect(await server.stop()).toBe(0)
+    const named = await serve(['--port', '0'], { UI_TESTS_PUBLIC_URL: 'https://t.test' })
+    expect(named.err()).toBe('')
+    expect(await named.stop()).toBe(0)
   }, 60_000)
 
   const lan = Object.values(networkInterfaces()).flat().find((info) => info && info.family === 'IPv4' && !info.internal)?.address

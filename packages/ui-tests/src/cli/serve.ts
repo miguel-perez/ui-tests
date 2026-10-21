@@ -83,6 +83,8 @@ export const serve: Command = async (args, io) => {
     const local = ['0.0.0.0', '::', '127.0.0.1', '::1', 'localhost'].includes(host)
     const address = publicUrl ?? (local ? `http://localhost:${new URL(server.url).port}` : server.url)
     io.stdout.write(`ui-tests server: ${address}\n${tagFor(address)}\n`)
+    // Without a public address the server takes the one each request names, which any client can on an address others reach.
+    if (!publicUrl && !['127.0.0.1', '::1', 'localhost'].includes(host)) io.stderr.write('Set UI_TESTS_PUBLIC_URL to the address people reach this server at; until then it takes the address each request names.\n')
     await pause(io.deps?.signal ?? stopped())
     await server.close()
     return 0

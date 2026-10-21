@@ -122,6 +122,8 @@ test("the host page's CSS cannot hide the bar", async ({ page }) => {
   await expect(barOf(page, GOAL)).toBeVisible()
   // The task starts on the plain page; the next page the person opens hides every element it has.
   await page.goto(`${PLAIN_URL}/hostile.html`)
+  // The page's stylesheet applied: its own heading is hidden.
+  await expect(page.getByRole('heading', { name: 'A hostile page' })).toBeHidden()
   const done = page.locator(BAR).getByRole('button', { name: 'Done' })
   await expect(done).toBeVisible()
   await done.click()
