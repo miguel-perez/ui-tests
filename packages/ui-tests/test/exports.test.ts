@@ -26,7 +26,7 @@ describe('what the package offers', () => {
       const text = readFileSync(file, 'utf8')
       const inPackage = file.startsWith(join(pkg, 'src'))
       // Import and export statements only: a page's copy may quote one.
-      const bad = [/^\s*(?:import|export)\b.*from ['"]ui-tests\/(?:next|server)['"]/m, ...(inPackage ? [/^\s*(?:import|export)\b.*from ['"]next(?:\/[\w-]+)?['"]/m] : [])]
+      const bad = [/^\s*(?:import|export)\b[^;'"`]*?from ['"]ui-tests\/(?:next|server)['"]/m, ...(inPackage ? [/^\s*(?:import|export)\b[^;'"`]*?from ['"]next(?:\/[\w-]+)?['"]/m] : [])]
       return bad.some((pattern) => pattern.test(text)) ? [relative(root, file)] : []
     })
     expect(found).toEqual([])

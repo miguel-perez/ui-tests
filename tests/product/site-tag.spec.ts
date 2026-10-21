@@ -60,6 +60,8 @@ test('the cookie stays on the server', async ({ page, context }) => {
   await page.goto(playerUrl)
   await page.getByRole('button', { name: 'I agree and continue' }).click()
   await expect(page.getByRole('heading', { name: 'Your task' })).toBeVisible()
+  // The token has left the address bar; the cookie carries the run on the server from here.
+  expect(new URL(page.url()).search).toBe('')
   const server = await context.cookies(SERVER_URL)
   expect(server.find((c) => c.name === 'ui-tests-run')).toMatchObject({ httpOnly: true, sameSite: 'Lax' })
   expect(server.find((c) => c.name === 'ui-tests-active')).toBeUndefined()
