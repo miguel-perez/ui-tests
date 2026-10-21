@@ -133,7 +133,7 @@ describe('actions', () => {
   it('consent sets the HttpOnly run cookie and nothing else', async () => {
     const { token } = await start()
     const response = await post(token, { action: 'consent' })
-    expect(response.headers.getSetCookie()).toEqual([`ui-tests-run=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=7200`])
+    expect(response.headers.getSetCookie()).toEqual([`ui-tests-run=${token}; Path=/api/ui-tests/; HttpOnly; SameSite=Lax; Max-Age=7200`])
     expect((await response.json()).status).toBe('consented')
     expect((await store.getAttempt((await store.authorize(token))!.attempt.id))?.purposes).toEqual(run.compiled.consent.purposes)
   })

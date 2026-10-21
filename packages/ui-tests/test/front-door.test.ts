@@ -91,6 +91,17 @@ describe('startFrontDoor', () => {
     }
   })
 
+  it('never sends our cookies to the app, and keeps the app\'s own', async () => {
+    appSeen.length = 0
+    await get('/', { Cookie: 'session=abc; ui-tests-run=token; theme=dark' })
+    await get('/', { Cookie: 'ui-tests-run=token; UI-TESTS-other=x' })
+    await get('/')
+    expect(appSeen.map(s => s.headers.cookie)).toEqual(['session=abc; theme=dark', undefined, undefined])
+    serverSeen.length = 0
+    await get('/api/ui-tests/', { Cookie: 'ui-tests-run=token' })
+    expect(serverSeen[0]!.headers.cookie).toBe('ui-tests-run=token')
+  })
+
   it('points the app\'s tag at the door, and changes nothing else', async () => {
     const page = await get('/')
     const port = new URL(door.url).port

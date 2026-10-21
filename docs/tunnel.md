@@ -6,6 +6,8 @@
 
 Participants need both the app and the ui-tests server: the player, the collector and `ui-tests.js`, which the app's tag loads. So `recruit --tunnel` starts a front door on this machine, one origin that sends the server's paths (`/ui-tests.js`, `/ui-tests/`, `/api/ui-tests/`, `/r/`, `/rv/`) to a ui-tests server of the command's own, on a free loopback port, and everything else to the app at `target.url`. In the app's HTML answers it rewrites the address in the tag's `data-ui-tests` to its own origin, so the tag works through the tunnel as written, with no rebuild or restart of the app. The tunnel opens to the front door.
 
+The door never sends a `ui-tests-*` cookie to the app, and the participant's cookie is scoped to `/api/ui-tests/`, so the app's server and its logs never see the participant's token. Behind the front door, though, the app shares the server's origin: a script on the app's pages, the app's own or a third party's, can call the collector, and the browser sends the participant's cookie with it, so such a script can read the participant's view, answer and withdraw as the participant. That is the front door's limit. For a run where it matters, reach the server on its own origin: run `npx ui-tests serve` at its own address and recruit without `--tunnel` or `--host`, as in the named tunnel below.
+
 ## Quick tunnel (the default)
 
 1. Install `cloudflared` (https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/).

@@ -45,6 +45,12 @@ function decoded(body: Buffer, encoding: string | undefined): Buffer {
   }
 }
 
+/** The app's cookies without ours: a `ui-tests-*` cookie is the server's and never reaches the app; undefined when none is left. */
+export function appCookies(cookie: string | string[] | undefined): string | undefined {
+  const kept = (Array.isArray(cookie) ? cookie.join('; ') : cookie ?? '').split(';').map(part => part.trim()).filter(part => part && !/^ui-tests-/i.test(part))
+  return kept.length ? kept.join('; ') : undefined
+}
+
 /** Sends `req` to `upstream` with `headers`, and hands the answer to `answer`; a failed upstream is a 502. */
 function forward(req: IncomingMessage, res: ServerResponse, upstream: URL, headers: IncomingHttpHeaders, answer: (upstreamRes: IncomingMessage) => void) {
   const send = upstream.protocol === 'https:' ? httpsRequest : request
@@ -56,7 +62,7 @@ function forward(req: IncomingMessage, res: ServerResponse, upstream: URL, heade
 /**
  * One origin for the app and the ui-tests server, so a tunnel or a LAN name reaches both: the server's paths go to `server`, told the
  * address the browser asked for (`X-Forwarded-Host`, `X-Forwarded-Proto`) so it takes it as its own; everything else goes to `app`
- * with `appHeaders`, and its HTML comes back with the tag pointed at the door. Binds `host` (loopback by default) on `port` (any).
+ * with `appHeaders` and without our cookies, and its HTML comes back with the tag pointed at the door. Binds `host` (loopback by default) on `port` (any).
  */
 export async function startFrontDoor(input: { app: string; server: string; host?: string; port?: number; appHeaders?: Record<string, string> }): Promise<{ url: string; close(): Promise<void> }> {
   const app = new URL(input.app)
@@ -71,7 +77,9 @@ export async function startFrontDoor(input: { app: string; server: string; host?
       forward(req, res, server, headers, answer => { res.writeHead(answer.statusCode ?? 502, answer.headers); answer.pipe(res) })
       return
     }
-    const headers = { ...req.headers, ...input.appHeaders, host: app.host, 'accept-encoding': 'identity' }
+    const { cookie, ...rest } = req.headers
+    const kept = appCookies(cookie)
+    const headers = { ...rest, ...input.appHeaders, host: app.host, 'accept-encoding': 'identity', ...(kept && { cookie: kept }) }
     forward(req, res, app, headers, answer => {
       const outHeaders = { ...answer.headers }
       // A redirect to the app's own address stays on the door.

@@ -100,7 +100,7 @@ export function webHarness(input: WebHarnessInput, options: WebHarnessOptions = 
       })
       // Consent was given with the attempt, so the player never sets the cookie a person's consent does; the same one is set here.
       await context.addCookies([
-        { name: 'ui-tests-run', value: attempt.token, url: player.origin, httpOnly: true, sameSite: 'Lax', secure: player.protocol === 'https:' },
+        { name: 'ui-tests-run', value: attempt.token, url: `${player.origin}/api/ui-tests/`, httpOnly: true, sameSite: 'Lax', secure: player.protocol === 'https:' },
       ])
       const page = await context.newPage()
       const state = { context, page, ended: false }
