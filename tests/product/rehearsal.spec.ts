@@ -101,10 +101,11 @@ async function throughConsent(page: Page, player: string) {
     await page.getByRole('textbox').fill('To start testing what I built')
     await page.getByRole('button', { name: 'Continue' }).click()
     await page.waitForURL(`${PRODUCT_URL}/`)
+    // The bar is the sign the first click is being taken; a click before the tag has mounted it is the page's own.
+    await expect(barOf(page, 'Click where you would start.')).toBeVisible()
     await page.getByRole('link', { name: 'Get started' }).first().click()
   }
-  // The first look's click goes through the tag and the server and back to the player; the first test meets them cold.
-  await expect(card).toBeVisible({ timeout: 15_000 })
+  await expect(card).toBeVisible()
 }
 
 /** Start task, then the bar on the target. */
@@ -216,6 +217,7 @@ test.describe('the landing study, rehearsed with the CLI', () => {
     await press('textbox', undefined, 'Space')
     await press('button', 'Continue', 'Enter')
     await page.waitForURL(`${PRODUCT_URL}/`)
+    await expect(barOf(page, 'Click where you would start.')).toBeVisible()
     await press('link', 'Get started', 'Enter')
     await expect(page.getByRole('heading', { name: 'Your task' })).toBeVisible()
     await axe()
