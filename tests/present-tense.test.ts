@@ -6,7 +6,7 @@ import { expect, it } from 'vitest'
 
 /**
  * Every tracked document states what the product, the page or the research is; git holds how it got there. The factory's
- * documents are not this product's, and `docs/superpowers/` holds the working notes of the branch in progress.
+ * documents are not this product's.
  */
 const narration = [
   /\bsuperseded\b/i,
@@ -19,7 +19,7 @@ const narration = [
   /^#+ .*\b(?:version|v)\s?\d+\b/i,
   /\bredrawn\b/i,
 ]
-const kept = /^(?:factory\/|docs\/superpowers\/)/
+const kept = /^factory\//
 
 const documents = () => execFileSync('git', ['ls-files', '*.md'], { encoding: 'utf8' })
   .split('\n').filter(file => file && !kept.test(file))

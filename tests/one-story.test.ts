@@ -4,8 +4,7 @@ import { expect, it } from 'vitest'
 
 /**
  * One story everywhere: an app carries the script tag, and the author runs a ui-tests server while a study is open. No tracked doc,
- * page, test or source names a component, a route or a page to mount in the app. `docs/superpowers/` holds the working notes of the
- * branch in progress, and the factory is not this product's.
+ * page, test or source names a component, a route or a page to mount in the app. The factory is not this product's.
  */
 const mounted = [
   /ui-tests\/next\b/,
@@ -18,7 +17,7 @@ const mounted = [
   /lines to mount/i,
   /Mount it in your app/,
 ]
-const kept = /^(?:factory\/|docs\/superpowers\/)|^package-lock\.json$|^tests\/one-story\.test\.ts$/
+const kept = /^factory\/|^package-lock\.json$|^tests\/one-story\.test\.ts$/
 
 it('tells the tag-and-server story in every tracked file, and never the mount', async () => {
   const files = execFileSync('git', ['ls-files', '*.md', '*.ts', '*.tsx', '*.mjs', '*.json', '*.yml', '*.html'], { encoding: 'utf8' })
