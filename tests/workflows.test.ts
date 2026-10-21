@@ -31,6 +31,13 @@ it('starts the server before ui-tests check needs it', async () => {
   expect(serve).toBeLessThan(steps.findIndex(step => step.includes('npx ui-tests check')))
 })
 
+it('verifies and reports from apps/web, where the config is, reading the run id from the repository root', async () => {
+  const step = (await checkSteps()).find(candidate => candidate.includes('npx ui-tests verify'))!
+  expect(step).toContain('working-directory: apps/web')
+  expect(step).toContain('npx ui-tests status "$(cat ../../.ui-tests/preview-run)"')
+  expect(step).toContain('npx ui-tests verify "$(cat ../../.ui-tests/preview-run)"')
+})
+
 it('keeps the job named Automation CI', async () => {
   expect(await read('ci.yml')).toMatch(/name: Automation CI/)
 })

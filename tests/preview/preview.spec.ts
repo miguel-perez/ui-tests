@@ -28,6 +28,8 @@ async function runFor(store: RunStore): Promise<string> {
   if (process.env.UI_TESTS_RUN) return process.env.UI_TESTS_RUN
   const known = (await store.listRuns()).filter(run => run.build.url === PREVIEW_URL).at(-1)
   if (known) return known.run
+  // In CI the run is the one `ui-tests check` made for this preview; a made-up one would leave the pull request's check pending.
+  if (process.env.CI) throw new Error(`No run for ${PREVIEW_URL} in the store: set UI_TESTS_RUN, or run ui-tests check first.`)
   const { code } = await bundleStudyFile(study)
   const [authored] = await loadBundle(code, study)
   if (!authored) throw new Error(`No study in ${study}`)

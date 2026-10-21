@@ -114,9 +114,10 @@ jobs:
         run: npx playwright test -c playwright.preview.config.ts
       - name: Verify and report the result
         if: steps.configured.outputs.run == 'true'
+        working-directory: apps/web
         env:
           GITHUB_TOKEN: ${{ github.token }}
           PREVIEW_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
         run: |
-          npx ui-tests verify "$(cat .ui-tests/preview-run)"
-          npx ui-tests status "$(cat .ui-tests/preview-run)"
+          npx ui-tests verify "$(cat ../../.ui-tests/preview-run)"
+          npx ui-tests status "$(cat ../../.ui-tests/preview-run)"
