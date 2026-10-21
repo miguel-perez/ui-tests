@@ -82,8 +82,8 @@ it('prices the paid panel at $12 a person everywhere: five from $60, the $70 cap
     })
   }
   expect(found).toEqual([])
-  for (const file of ['design/artefacts/sources-section.html', 'docs/design/landing-content-v3.md']) expect((await readFile(file, 'utf8')).replace(/<\/?b>/g, ''), file).toContain('Paid $60 of the $70 cap · $10 back')
-  for (const file of ['apps/web/lib/copy.ts', 'design/artefacts/compile-section.html', 'docs/design/landing-content-v3.md']) expect(await readFile(file, 'utf8'), file).toContain('five people cost from $60')
+  for (const file of ['design/artefacts/sources-section.html', 'docs/design/landing-content.md']) expect((await readFile(file, 'utf8')).replace(/<\/?b>/g, ''), file).toContain('Paid $60 of the $70 cap · $10 back')
+  for (const file of ['apps/web/lib/copy.ts', 'design/artefacts/compile-section.html', 'docs/design/landing-content.md']) expect(await readFile(file, 'utf8'), file).toContain('five people cost from $60')
   expect(await readFile('docs/prd/03-participants.md', 'utf8')).toContain('starts at $12 a person, so five people cost from $60')
 })
 

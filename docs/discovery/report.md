@@ -1,10 +1,10 @@
 # What goes through people's minds when they try to find out whether others can actually use what they built, and what gets in the way?
 
-Study D0, 15 October 2026. 124 public first-person accounts (Stack Exchange and Hacker News posts, 2009 to 2026), 523 summaries of moment-bound thinking, grouped by shared purpose into 27 groups, 7 broader concerns and 3 top groups. Counts below are of distinct accounts, not of summaries. Group membership and the per-group counts trace to `groups.csv`, which is retained. Summary-level references (`s123`) pointed at `summaries.csv` and `rows.csv`, which were purged on 15 October 2026 with the raw accounts; they identify which summary a claim came from but can no longer be checked against the text without regenerating the study (see `D0-purposes.md`).
+Study D0, 15 October 2026. 124 public first-person accounts (Stack Exchange and Hacker News posts, 2009 to 2026), 523 summaries of moment-bound thinking, grouped by shared purpose into 27 groups, 7 broader concerns and 3 top groups. Counts below are of distinct accounts, not of summaries. Group membership and the per-group counts trace to `groups.csv`, which is retained. Summary-level references (`s123`) point at `summaries.csv` and `rows.csv`, which are not retained, with the raw accounts; they identify which summary a claim came from but cannot be checked against the text without regenerating the study (see `D0-purposes.md`).
 
 ## The short answer
 
-People want to see other people use the thing, because they know they can no longer see it themselves. Most of them never get to. They post instead.
+People want to see other people use the thing, because they know they cannot see it fresh themselves. Most of them never get to. They post instead.
 
 Eighty-five of 124 accounts contain thinking about finding out from real people whether what they built works for them. Of those, 32 describe the moment of watching someone use it and being shown something they could not have seen alone. Twenty-six describe turning to a forum because they have no reference to lean on, and for many of them the post is the test. What stands between the want and the watching is, in order of how many people hit it: not knowing how to run a fair test, not being able to afford or reach a tool, not having people who match the audience, and not having anyone around them who thinks it matters.
 

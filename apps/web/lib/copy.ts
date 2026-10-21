@@ -185,7 +185,7 @@ export const worth = {
   ],
 }
 /**
- * The host section (design/artefacts/hosted-section.html; docs/discovery/hosting-decision.md; issue #56), verbatim: the heading, the
+ * The host section (design/artefacts/hosted-section.html; docs/prd/05-integration.md, "Where things run"), verbatim: the heading, the
  * lead, two unnumbered pieces (the command and its terminal as drawn, the line and its script tag) and the closing. The server is the
  * author's, started with `ui-tests serve` or the Docker image; the line is the same tag `init` prints, for the example's address.
  */

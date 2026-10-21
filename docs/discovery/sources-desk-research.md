@@ -31,7 +31,7 @@
 - **UserTesting** ([network](https://www.usertesting.com/platform/network)): "100% proprietary… We never buy audiences"; a five-step "How it works"; the guarantee as caveat: "you'll never pay for a fraudulent session"; no turnaround stated.
 - **Userbrain** ([pricing](https://www.userbrain.com/en/pricing)): pricing cards; own testers "do not use your panel-tester balance".
 - **PlaybookUX** ([pricing](https://www.playbookux.com/pricing/)): "7M+ Consumers & Professionals"; bring-your-own is Enterprise only.
-- **Hotjar Engage** is no longer sold to new customers; Trymata redirects to QuestionPro.
+- **Hotjar Engage** is not sold to new customers; Trymata redirects to QuestionPro.
 
 Pattern: nobody uses a three-way table of link, panel and intercept. The panel gets its own page; "your own users" is one line or card. For their core panels the vendors state turnaround in hours or "same day"; only the extended or partner panels (Maze Extended, Lyssna's partner panel, TestingTime) are quoted in days, and those are the narrow-audience cases.
 

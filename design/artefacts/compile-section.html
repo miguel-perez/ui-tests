@@ -1,8 +1,8 @@
 <!--
-  Approved landing section "What you write, what they see" (D2 round six), exported from the design artifact.
-  Replaces the blocks "What the person sees" and "Three commands". One 800px reading column: heading and lead, the three
-  commands, the whole 23-line Weekboard file, then six pieces in participant order, each with the lines that produce it,
-  the screen in a constant light frame with the chrome at real size, and what comes back. Stepped frames keep one height.
+  Approved landing section "What you write, what they see", exported from the design artifact.
+  The heading and lead, the commands, then the six pieces in participant order as tabs, one step visible at a time: its name
+  and note on the left, the screen in a constant light frame with the chrome at real size and what comes back on the right;
+  the previous and next row; then the whole Weekboard file. Stepped frames keep one height.
   Research: docs/discovery/contract-to-study-research.md and participant-chrome-research.md. Theme rules: README.md here.
   The page skeleton (doctype, head, body) is added by the site; this file is the content and its styles and script.
 -->
@@ -62,7 +62,7 @@ img { display: block; max-width: 100%; }
 .head p { color: var(--muted); max-width: 64ch; justify-self: end; }
 .head p em { font-style: normal; color: var(--ink); border-bottom: 1px dashed var(--comment); }
 
-/* The commands, by what they cost (issue #68): one stacked list, the command on the left (22ch) and what it does on the right, one
+/* The commands, by what they cost: one stacked list, the command on the left (22ch) and what it does on the right, one
    row each; at phone width each row stacks. Nothing under it. */
 .cmds { display: grid; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); margin-bottom: 36px; }
 .cmd { padding: 12px 16px; display: grid; grid-template-columns: minmax(0, 22ch) minmax(0, 1fr); gap: 6px 24px; align-items: baseline; }

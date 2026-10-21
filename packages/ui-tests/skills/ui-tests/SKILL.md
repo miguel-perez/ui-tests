@@ -36,7 +36,7 @@ The old names (`context`, `goal`, `beforeEach`, `happyPath`, `catch`, `video: tr
 Run `npx ui-tests lint` (or the `lint` tool) before anything is sent to people. Each finding gives the file and line, the rule, why it exists, and the fix. Fix errors first; a warning is worth reading.
 
 <!-- lint-rules:start -->
-- `renamed` (error): The authoring API took new names in issue #68; the old ones no longer do anything. Source: issue #68.
+- `renamed` (error): Each contract name has an authoring API name (study, task, setup, path, sample, record, firstLook, the users fields); the contract name does nothing in a study. Source: issue #68.
 - `interface-terms` (error): A task name or scenario that names interface parts tells people where to look, so the study cannot show whether they find it. Steps may name them. Source: NN/g task writing.
 - `one-outcome` (error): A task that asks for two outcomes cannot say which one failed. Source: MeasuringU task tips.
 - `outcome-present` (error): Without an outcome, an answer or a time box, nothing says whether the task was done. Source: this contract.

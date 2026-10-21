@@ -29,7 +29,7 @@ function Piece({ id, name, intro, children }: { id: string; name: string; intro:
 }
 
 /**
- * The host section (design/artefacts/hosted-section.html; docs/discovery/hosting-decision.md; issue #56), the landing's last: the
+ * The host section (design/artefacts/hosted-section.html; docs/prd/05-integration.md, "Where things run"), the landing's last: the
  * heading in the first five columns and the lead in the right seven, flush to the container's right edge; then "The command" with
  * the terminal exactly as drawn and "The line" with the script tag, both across twelve columns; then the closing line. No dashboard.
  */

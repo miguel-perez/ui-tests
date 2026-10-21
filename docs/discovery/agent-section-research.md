@@ -1,6 +1,6 @@
 # Agents use interfaces, too: the agent section
 
-17 October 2026. Research for the landing's agent block, which the author found reads as "agents are synthetic users", with a brief for a visually distinct section. Sources: `docs/prd/04-agent-studies.md`, the current copy in `apps/web/lib/copy.ts`, the field, and the design corpus.
+17 October 2026. Research for the landing's agent section, which must not read as "agents are synthetic users", with a brief for a visually distinct section. Sources: `docs/prd/04-agent-studies.md`, the current copy in `apps/web/lib/copy.ts`, the field, and the design corpus.
 
 ## 1. Why the current block reads as synthetic users
 

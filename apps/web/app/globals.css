@@ -13,9 +13,8 @@
   --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
 }
 /* The site's own tokens on top of the block above, which is the light block of design/artefacts/tokens.css verbatim
-   (tests/contrast.test.ts holds them equal). The artefacts carry Tokyo Night as the viewer's dark alternate; the site does not
-   (issue #43). The theme rules are written once, in design/artefacts/README.md. Round four's name for going off your path is
-   the accent. The demo app under test keeps its own light grey (public/demo/weekboard.html, weekboard-light.css), unchanged, so
+   (tests/contrast.test.ts holds them equal). The artefacts carry Tokyo Night as the viewer's dark alternate; the site does not.
+   The theme rules are written once, in design/artefacts/README.md. Going off your path is the accent. The demo app under test keeps its own light grey (public/demo/weekboard.html, weekboard-light.css), unchanged, so
    its frames match its screenshots; the participant chrome over it is the inverse with the mint accent (ch-*, player-styles.ts). */
 :root { --path: var(--accent); --host-bg: #e1e2e7; --host-chrome: #eef0f5; --host-line: #c4c8da;
   --radius: 8px; --space-1: 24px; --space-2: 48px; --space-3: 96px; --gutter: 24px; }
@@ -84,7 +83,7 @@ main { position: relative; isolation: isolate; }
 .section-head { align-items: baseline; }
 .section-head h2, .section-title { grid-column: 1; }
 .section-head p { grid-column: 2; color: var(--muted); font-size: 18px; max-width: 64ch; text-wrap: pretty; }
-/* One rule for section leads (issue #65, item 3; the host section's since issue #56): 64ch inside the right seven, ending flush with
+/* One rule for section leads: 64ch inside the right seven, ending flush with
    the container's right edge; left-aligned in one column on a phone. */
 .section-head > p { justify-self: end; }
 

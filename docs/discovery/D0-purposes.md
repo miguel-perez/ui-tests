@@ -27,15 +27,11 @@ Public posts are reconnaissance, not participation. No quotes from review sites 
 4. Run purpose-graphing as a whole study in `docs/discovery/study/` with the question above. Helpers take one account each.
 5. Read `reports/` and `groups.csv`.
 
-## Deliverables
+## Outputs
 
 - `docs/discovery/report.md`: the skill's report, answering the question with counterexamples.
-- `docs/personas.md`: two to four proto-personas, each a purpose group in people's words with the circumstances that produce it, the solutions they tried, and what stopped them. Marked provisional per Lean UX until R1 participants confirm or refute them.
-- Revisions to `pitch.md` (Who, Why, Solutions today, riskiest assumption) and to the R0 issue's landing copy and the landing study's audience and goal.
-
-## Check-in
-
-Miguel reads the report and decides whether "designer-developers who ship UI with CI and have no researcher" survives, is narrowed, or is replaced. No R0 issue is opened before that decision.
+- `docs/personas.md`: two to four proto-personas, each a purpose group in people's words with the circumstances that produce it, the solutions they tried, and what stopped them. Provisional per Lean UX until R1 participants confirm or refute them.
+- The Who, Why, Solutions today and riskiest assumption sections of `pitch.md`, and the landing study's audience and goal.
 
 ## Later use of the same skill
 
@@ -47,4 +43,4 @@ From R1, participants' free-text comments and give-up reasons are first-person a
 
 **15 October 2026, study run.** Hand-checked the top 200 of the ranked list: 95 clear accounts, 29 borderline kept, 76 rejected (precision 0.70 at 50, 0.62 at 200; `candidates/labels-top200.csv`). 124 accounts (30,263 words) rewritten as single Person turns with attribution in `accounts-index.csv`. Whole study run with purpose-graphing: 41 helpers, 1,023 rows, 524 kind-1 rows, 523 summaries, one duplicate set aside; grouped by the parent into 27 level-1, 7 level-2 and 3 level-3 groups with every summary placed and three set aside with reasons. Outputs: `study/graph.db`, `report.md`, `groups.csv`, `summaries.csv`, `rows.csv`, and [`../personas.md`](../personas.md). Pitch Who and riskiest-assumption sections rewritten from them.
 
-**15 October 2026, purge.** The raw material was deleted so that nothing in `docs/` republishes other people's posts or a third-party skill: `accounts/`, `accounts-index.csv`, `candidates/`, `rows.csv`, `summaries.csv`, `study/` (including `graph.db`), `skill/`, and the per-passage files under `ranked/` (`ranked.md`, `calibration.md`, `calibration-key.csv`, `top200-full.txt`, `all-summaries.txt`, `summaries-with-source.txt`, `summary-source.json`, `summary.txt`, `valence.csv`). What remains is derived: `report.md`, `groups.csv`, `ranked/opportunity-map.md`, `ranked/people-per-group.json`, `ranked/valence-by-group.json`, the memos, and the `collect/` scripts. Account ids such as `hn_2726997` resolve to `https://news.ycombinator.com/item?id=2726997`; `s123`-style summary ids no longer resolve. To regenerate, rerun the `collect/` scripts and the purpose-graphing skill as described under Procedure.
+**15 October 2026, purge.** The raw material was deleted so that nothing in `docs/` republishes other people's posts or a third-party skill: `accounts/`, `accounts-index.csv`, `candidates/`, `rows.csv`, `summaries.csv`, `study/` (including `graph.db`), `skill/`, and the per-passage files under `ranked/` (`ranked.md`, `calibration.md`, `calibration-key.csv`, `top200-full.txt`, `all-summaries.txt`, `summaries-with-source.txt`, `summary-source.json`, `summary.txt`, `valence.csv`). What remains is derived: `report.md`, `groups.csv`, `ranked/opportunity-map.md`, `ranked/people-per-group.json`, `ranked/valence-by-group.json`, the memos, and the `collect/` scripts. Account ids such as `hn_2726997` resolve to `https://news.ycombinator.com/item?id=2726997`; `s123`-style summary ids do not resolve. To regenerate, rerun the `collect/` scripts and the purpose-graphing skill as described under Procedure.

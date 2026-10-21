@@ -1,6 +1,6 @@
 # Content audit: SDK sites and usability platforms, and what ui-tests takes from each
 
-16 October 2026. Input to the second design pass (D2). Sixteen marketing sites were reduced to their content schema: what kinds of content appear, in what order, with what artefacts. Layouts and copy were not recorded; a few phrases under fifteen words are quoted for identification. The audit was done by two research subagents reading each home page and its getting-started entry; per-site records are in the appendix.
+Audited 16 October 2026. Sixteen marketing sites were reduced to their content schema: what kinds of content appear, in what order, with what artefacts. Layouts and copy were not recorded; a few phrases under fifteen words are quoted for identification. The audit was done by two research subagents reading each home page and its getting-started entry; per-site records are in the appendix.
 
 Sites. SDK and developer tooling: Vitest, Playwright, Sentry, PostHog, Storybook, Checkly, Cypress, Resend. Usability and research platforms: Maze, Optimal Workshop, UserTesting, Lookback, Useberry, Lyssna, Hotjar (now a Contentsquare page), Userlytics.
 
@@ -64,31 +64,7 @@ Drop from both: logo walls, stat tiles, testimonials and case-study numbers (non
 
 The "layers" framing (functional, usable, desirable, pleasurable) is the report's reading order in the PRD, not a story a visitor needs. It survives as one sentence ("your tests prove it works; this proves people can use it") and as the structure of the docs page on reading a report. The four-cell grid goes.
 
-## 4. The proposed content schema for the landing page
-
-Inverted pyramid: each block answers the next question a developer asks, and each is grounded in a need from the opportunity map (N numbers) or the PRD. Every example artefact is generated from the real product's shapes (compiled context, scenario card, taskbar, trace with issue kinds, outcome line, sentence) and is labelled as an example.
-
-| # | Block | Question it answers | Content | Artefact | Source |
-| --- | --- | --- | --- | --- | --- |
-| 1 | The claim | What is this and is it for me | One line: usability testing that runs like your tests. One line for whom: developers who ship UI and have no researcher. Get started, GitHub. | The contract in motion: the test file on one side; on the other, in sequence, the scenario a person reads, their attempt, the trace filling with issue moments, the sentence. Animated, replayable, reduced-motion safe. | Pitch one-liner; persona 1; N2 |
-| 2 | What you write | How much do I have to learn | The context: users, purpose, a goal, an outcome hook, a happy path if you have one. "A developer who has written a Playwright test already knows the answer." Everything else is derived and shown. | The real landing test file, highlighted, with margin notes on each field. | PRD 01 inputs table |
-| 3 | What it turns into | What does the person see | The derived scenario card (never the happy path), the fit questions, the impression stage, the taskbar with done and can't. Derived defaults are the researcher you don't have. | Player screens as real UI, side by side with the field each came from. | PRD 01 derived table; PRD 02 flow; N1 |
-| 4 | What you get back | What do I actually learn | A trace: the path, the moments, the issue signals (dead click, deviation, pause, gave up, low ease) with the cause, in the person's words where there are words. Then the issues ranked across people. | A generated five-person example: a trace timeline for one person and the ranked issue list for five, realistic, labelled example. | PRD 02 measures and issues; verify.ts signal kinds; N2 |
-| 5 | What the numbers may say | Can I trust five people | The sentence. Five people give an 87% chance of seeing any problem that hits one in three. Problems found or none found at this n; never pass, never a percentage. | The sentence as rendered in the CLI and the report, beside the n derivation. | PRD 02 sample size; N7 (satisfaction 2 of 10 across the market) |
-| 6 | Where it runs | Does it fit my loop | On yourself in dev mode today. By link with five people from your audience, and as a check on the pull request, next. Honest status: what runs now, what is planned, in those words. | CLI output as it is; a mock of the planned check, marked planned. | PRD 01 CLI and CI; N5; story map R0 to R1 |
-| 7 | Install | How long until I see something | Three commands, Node 22 and Next.js App Router, one afternoon to a first result. | Shell block with copy. | PRD goal 1 |
-| 8 | Why we built it | Is this grounded | Three or four quotes from the 124 accounts, attributed by link, and the counts: 85 wanted outside eyes, 32 described the moment, 26 posted instead. The ISO line. | Pull quotes; the research link. | Discovery report; the non-bending rules |
-| 9 | Terms | What does it cost, who owns what | Open source. Nothing to sign up for. Free with your own participants; a panel costs what the panel costs, under a cap you set. No seats. | Plain text. | N4, N9; PRD goal 7 |
-
-The getting-started page keeps its five steps but each step pairs the thing you type with the thing you see, which is the gap every audited docs page has.
-
-## 5. Decisions this audit asks for
-
-1. The spine above, or a different order. The audit argues for the contract first and research last; the previous page did roughly the reverse.
-2. The layers: one sentence and the docs, not a section.
-3. Generated examples: a five-person example run is invented and labelled. The alternative is to show only the author's own rehearsal, which is real but thin (0 of 5).
-4. Brand: a logomark, explored before the layout. The previous brief banned one.
-5. Motion: the hero contract plays. The previous brief banned motion.
+The landing built on this marriage is written out in [`landing-content.md`](landing-content.md).
 
 ## Appendix A: SDK per-site records
 
