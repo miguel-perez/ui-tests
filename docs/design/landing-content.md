@@ -290,7 +290,7 @@ From [`../../design/artefacts/hosted-section.html`](../../design/artefacts/hoste
 
 **Lead.** The consent, the questions, the collector and the report run on a ui-tests server you start for as long as a study is open: on your laptop, a machine you rent or a free tier. Nobody else runs it, and the recordings stay on your box. `npx ui-tests host`, one command that puts it in an account you own, is not shipped yet.
 
-**The command.** On any machine with Node 24 or later, with UI_TESTS_PUBLIC_URL set to the address people reach it at. It prints that address and the tag that points there. A Docker image built from the repository runs the same thing; it is to be published as ghcr.io/miguel-perez/ui-tests.
+**The command.** On any machine with Node 24 or later, with UI_TESTS_PUBLIC_URL set to the address people reach it at. It prints that address and the tag that points there. The Docker image, to be published as ghcr.io/miguel-perez/ui-tests, is built from the repository and runs the same thing.
 
 ```text
 $ npx ui-tests serve

@@ -62,8 +62,10 @@ test('the cookie stays on the server', async ({ page, context }) => {
   await expect(page.getByRole('heading', { name: 'Your task' })).toBeVisible()
   // The token has left the address bar; the cookie carries the run on the server from here.
   expect(new URL(page.url()).search).toBe('')
-  const server = await context.cookies(SERVER_URL)
+  // Scoped to the collector: the player's own page and every other path of the server's origin go without it.
+  const server = await context.cookies(`${SERVER_URL}/api/ui-tests/`)
   expect(server.find((c) => c.name === 'ui-tests-run')).toMatchObject({ httpOnly: true, sameSite: 'Lax', path: '/api/ui-tests/' })
+  expect((await context.cookies(SERVER_URL)).find((c) => c.name === 'ui-tests-run')).toBeUndefined()
   expect(server.find((c) => c.name === 'ui-tests-active')).toBeUndefined()
 
   await page.getByRole('button', { name: 'Start task' }).click()
