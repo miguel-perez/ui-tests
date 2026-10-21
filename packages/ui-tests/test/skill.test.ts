@@ -31,7 +31,7 @@ describe('the skill', () => {
 
   it('tells the tag-and-server story: the tag init prints, ui-tests serve and the image', async () => {
     const text = await skill
-    for (const word of ['prints the script tag', 'npx ui-tests serve', 'ghcr.io/miguel-perez/ui-tests', 'front door']) expect(text).toContain(word)
+    for (const word of ['prints the script tag', 'npx ui-tests serve', 'docker build -t ui-tests .', 'ghcr.io/miguel-perez/ui-tests', 'front door']) expect(text).toContain(word)
   })
 
   it('is shipped by the package and the plugin manifest', async () => {

@@ -290,7 +290,7 @@ From [`../../design/artefacts/hosted-section.html`](../../design/artefacts/hoste
 
 **Lead.** The consent, the questions, the collector and the report run on a ui-tests server you start for as long as a study is open: on your laptop, a machine you rent or a free tier. Nobody else runs it, and the recordings stay on your box. `npx ui-tests host`, one command that puts it in an account you own, is not shipped yet.
 
-**The command.** On any machine with Node 24 or later, with UI_TESTS_PUBLIC_URL set to the address people reach it at. It prints that address and the tag that points there. The Docker image, ghcr.io/miguel-perez/ui-tests, runs the same thing.
+**The command.** On any machine with Node 24 or later, with UI_TESTS_PUBLIC_URL set to the address people reach it at. It prints that address and the tag that points there. A Docker image built from the repository runs the same thing; it is to be published as ghcr.io/miguel-perez/ui-tests.
 
 ```text
 $ npx ui-tests serve
@@ -310,7 +310,7 @@ ui-tests server: https://tests.weekboard.example
 
 1. **Install.** `npm install -D ui-tests`: adds the package.
 2. **Write the config and a study.** `npx ui-tests init`: writes a study file and a config, and prints the script tag for your app.
-3. **Add the tag and start the server.** The tag goes in the `<head>` of the app's HTML layout, whatever the app is built with, with its address read from the environment, one line per setup (Vite, Astro, Next.js, Rails, plain HTML). It does nothing until a person is in an attempt. Rehearsal starts a ui-tests server on the machine; `npx ui-tests serve` or `docker run -p 4300:4300 -v ui-tests:/data ghcr.io/miguel-perez/ui-tests` runs one by hand.
+3. **Add the tag and start the server.** The tag goes in the `<head>` of the app's HTML layout, whatever the app is built with, with its address read from the environment, one line per setup (Vite, Astro, Next.js, Rails, plain HTML). It does nothing until a person is in an attempt. Rehearsal starts a ui-tests server on the machine; `npx ui-tests serve` runs one by hand, or from a clone of the repository `docker build -t ui-tests .` then `docker run -p 4300:4300 -v ui-tests:/data ui-tests` (the image is to be published as `ghcr.io/miguel-perez/ui-tests`).
 4. **Write the study.** The study this site runs on itself, `ui-tests/landing.ui.test.ts`.
 5. **Run it on yourself.** `npx ui-tests`: the whole study on you, in your browser. Recruits nobody, costs nothing.
 6. **Read the result.** Whether the check passed, the moments that got in the way, and the trace; a rehearsal never counts toward the people a study plans for: "Rehearsal: 0 of 5 planned attempts recorded."

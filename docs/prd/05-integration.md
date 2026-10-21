@@ -5,7 +5,7 @@
 | Piece | Runner track | Hosted track |
 | --- | --- | --- |
 | Recorder and taskbar | One inline `<script>` tag in the app's HTML layout, whatever the app is built with. Without a person in an attempt it makes no request and changes nothing on the page; with one, it loads the bar and the recorder from the ui-tests server | The same tag, on the live site, through the layout or a tag manager |
-| Player, collector, shareable report | The author's ui-tests server, `npx ui-tests serve` or the Docker image `ghcr.io/miguel-perez/ui-tests`, running while a study is open: on the author's machine (rehearsal starts it), behind the front door of `recruit --tunnel` or `--host`, or on a machine the author runs for the length of the study | The same server, on the author's deploy |
+| Player, collector, shareable report | The author's ui-tests server, `npx ui-tests serve` or the Docker image built from the repository (to be published as `ghcr.io/miguel-perez/ui-tests`), running while a study is open: on the author's machine (rehearsal starts it), behind the front door of `recruit --tunnel` or `--host`, or on a machine the author runs for the length of the study | The same server, on the author's deploy |
 | Run store | The server's: a SQLite file under `.ui-tests/` on one machine; Postgres for previews and CI; independent of any deployment | the deploy's store (D1 on the first provider), recordings in the author's bucket (R2) |
 | Hooks | Run by `ui-tests verify` in CI or on the dev machine against stored end-state snapshots; never inside the app under test | Success checks by URL, element or question, evaluated on the deploy |
 | Context definition | `*.ui.test.ts` | a form on the deploy with the same inputs |

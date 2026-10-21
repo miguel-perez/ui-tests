@@ -1,5 +1,5 @@
 # ui-tests serve: the collector, the player, the shared report and the tag's script, as one server.
-# Build from the repository root: docker build -t ghcr.io/miguel-perez/ui-tests .
+# Build from the repository root: docker build -t ui-tests .
 FROM node:24-slim
 WORKDIR /app
 

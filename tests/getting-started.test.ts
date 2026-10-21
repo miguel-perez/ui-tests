@@ -37,7 +37,8 @@ it('adds the tag init prints, the line for each setup, and the server: npx ui-te
   expect(tag.text).toContain('does nothing until a person is in an attempt')
   expect(tag.text).toContain('rehearsal starts one on this machine for you')
   expect('command' in tag && tag.command).toBe('npx ui-tests serve')
-  expect('docker' in tag && tag.docker).toBe('docker run -p 4300:4300 -v ui-tests:/data ghcr.io/miguel-perez/ui-tests')
+  expect('docker' in tag && tag.docker).toBe('docker build -t ui-tests .\ndocker run -p 4300:4300 -v ui-tests:/data ui-tests')
+  expect('serve' in tag && tag.serve).toContain('not on a registry yet')
 })
 
 it('runs the server for a study from CI, and points the preview\'s tag at it', () => {

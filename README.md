@@ -56,10 +56,11 @@ The consent, the questions, the collector and the report run on a ui-tests serve
 
 ```sh
 npx ui-tests serve                # http://localhost:4300; PORT, UI_TESTS_PUBLIC_URL, UI_TESTS_DATABASE_URL
-docker run -p 4300:4300 -v ui-tests:/data ghcr.io/miguel-perez/ui-tests
+docker build -t ui-tests .        # from a clone of the repository
+docker run -p 4300:4300 -v ui-tests:/data ui-tests
 ```
 
-The image is built from the [`Dockerfile`](Dockerfile) at the root (`docker build -t ghcr.io/miguel-perez/ui-tests .`); publishing it to the registry needs an account and is not run from here.
+The image is built from the [`Dockerfile`](Dockerfile) at the root. It is not on a registry yet: it is to be published as `ghcr.io/miguel-perez/ui-tests`, which needs an account and is not run from here.
 
 ## What is here
 
