@@ -1,10 +1,10 @@
-<title>One Command, No Repo</title>
+<title>Your Server, One Command</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500&family=Fira+Sans:wght@400;500&display=swap">
 <style>
-/* Layout: the landing section "No repo to put it in? One command." on the page grid. Head 5/7. Three pieces across twelve
-   columns: the command and what it deploys, the line it prints, the dashboard it serves. */
+/* Layout: the landing section "Your server, one command." on the page grid. Head 5/7. Two pieces across twelve columns: the
+   command that starts the ui-tests server and what it prints, and the tag the app carries. */
 :root {
   color-scheme: light;
   --canvas: #f6f6f6; --surface: #ffffff; --raised: #efefef; --line: #e2e2e2; --ink: #111111; --muted: #575757;
@@ -30,9 +30,9 @@ h1,h2,p,ul,ol{margin:0} ul,ol{padding:0;list-style:none} code,.mono{font-family:
 .piece .intro p{color:var(--muted);font-size:15px;line-height:1.6}
 .window{background:var(--surface);border:1px solid var(--line);border-radius:8px;overflow:hidden}
 .window .tab{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--line);font:400 12px/1 var(--mono);color:var(--muted)}
-.term{padding:18px 20px;font:400 13.5px/1.75 var(--mono);white-space:pre-wrap}
-.term .p{color:var(--comment)} .term .a{color:var(--green)} .term .u{color:var(--blue)} .term .k{color:var(--muted)} .term b{font-weight:500;color:var(--ink)}
-.snip{padding:16px 20px;font:400 14px/1.6 var(--mono)} .snip .t{color:var(--purple)} .snip .at{color:var(--teal)} .snip .s{color:var(--green)}
+.term{padding:18px 20px;font:400 13.5px/1.75 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+.term .t{color:var(--purple)} .term .at{color:var(--teal)} .term .s{color:var(--green)} .term .p{color:var(--comment)} .term .a{color:var(--green)} .term .u{color:var(--blue)} .term .k{color:var(--muted)} .term b{font-weight:500;color:var(--ink)}
+.snip{padding:16px 20px;font:400 14px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere} .snip .t{color:var(--purple)} .snip .at{color:var(--teal)} .snip .s{color:var(--green)}
 table{width:100%;border-collapse:collapse;font-size:14px}
 th{font:400 12px/1 var(--mono);color:var(--muted);text-align:left;padding:12px 16px;border-bottom:1px solid var(--line)}
 td{padding:14px 16px;border-bottom:1px solid var(--line);vertical-align:middle}
@@ -48,23 +48,20 @@ td.n{font-family:var(--mono);color:var(--muted)} td b{font-weight:500}
 </style>
 <section class="page" aria-labelledby="host-h">
   <header class="head">
-    <h1 id="host-h">No repo to put it in? One command.</h1>
-    <p><code>npx ui-tests host</code> puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.</p>
+    <h1 id="host-h">Your server, one command.</h1>
+    <p>The consent, the questions, the collector and the report run on a ui-tests server you start for as long as a study is open: on your laptop, a machine you rent or a free tier. Nobody else runs it, and the recordings stay on your box. <code>npx ui-tests host</code>, one command that puts it in an account you own, is not shipped yet.</p>
   </header>
 
   <section class="piece">
-    <div class="intro"><h2>The command</h2><p>Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.</p></div>
-    <div class="window"><div class="tab"><span>Terminal</span><span>Example</span></div><div class="term"><span class="p">$</span> npx ui-tests <span class="a">host</span>
-<span class="k">Deploying to your account…</span>
-  collector   <span class="u">https://ui-tests.weekboard.workers.dev</span>
-  player      <span class="u">https://ui-tests.weekboard.workers.dev/t</span>
-  store       <b>weekboard-ui-tests</b>, your bucket, 0 recordings
-  panel       no key yet · <span class="k">add one with</span> <span class="a">ui-tests host --panel prolific</span></div></div>
+    <div class="intro"><h2>The command</h2><p>On any machine with Node 24 or later, with UI_TESTS_PUBLIC_URL set to the address people reach it at. It prints that address and the tag that points there. The Docker image, ghcr.io/miguel-perez/ui-tests, runs the same thing.</p></div>
+    <div class="window"><div class="tab"><span>Terminal</span><span>Example</span></div><div class="term"><span class="p">$</span> npx ui-tests <span class="a">serve</span>
+<span class="k">ui-tests server: </span><span class="u">https://tests.weekboard.example</span>
+<span class="t">&lt;script</span> <span class="at">data-ui-tests</span>=<span class="s">"https://tests.weekboard.example"</span><span class="t">&gt;</span>…<span class="t">&lt;/script&gt;</span></div></div>
   </section>
 
   <section class="piece">
-    <div class="intro"><h2>The line</h2><p>One script tag, pointing at your deploy. It records only while a run is open and a person has said yes; the rest of the time it is forty lines that do nothing.</p></div>
-    <div class="window"><div class="tab"><span>index.html</span><span>or your tag manager</span></div><div class="snip"><span class="t">&lt;script</span> <span class="at">src</span>=<span class="s">"https://ui-tests.weekboard.workers.dev/s.js"</span> <span class="at">async</span><span class="t">&gt;&lt;/script&gt;</span></div></div>
+    <div class="intro"><h2>The line</h2><p>One inline script tag in your HTML layout, whatever your app is built with. It does nothing until a person is in an attempt: no request, no change to the page.</p></div>
+    <div class="window"><div class="tab"><span>index.html</span><span>or your layout</span></div><div class="snip"><span class="t">&lt;script</span> <span class="at">data-ui-tests</span>=<span class="s">"https://tests.weekboard.example"</span><span class="t">&gt;</span>(function(){try{var d=document,u=d.currentScript&amp;&amp;d.currentScript.getAttribute('data-ui-tests')||'';if(!/^https?:\/\/[^/?#\s]+\/?$/i.test(u))return;u=new URL(u).origin;var l=location,m=/(^#|&amp;)ui-tests=([^&amp;]*)/.exec(l.hash);if(m){var h=l.hash.replace(m[0],m[1]=='#'?'#':'').replace('#&amp;','#');history.replaceState(history.state,'',l.href.split('#')[0]+(h=='#'?'':h))}else{var j=JSON.parse(localStorage.getItem('ui-tests-attempt'));if(!j||j.server!==u||!(j.expiresAt&gt;Date.now()))return}var s=d.createElement('script');s.type='module';s.src=u+'/ui-tests.js'+(m?'#'+m[2]:'');d.head.appendChild(s)}catch(e){}})()<span class="t">&lt;/script&gt;</span></div></div>
   </section>
 
   <p class="closing">Same test, same report, on a box you own.</p>

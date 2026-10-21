@@ -42,11 +42,6 @@ export const offences = (text: string, words: [string, RegExp][]) => words.filte
  */
 export const verbatim = ['Like the panel, under a daily cap you set', 'your own panel account', "each panel's filters", 'a link or a panel run', 'Panel people answer screeners for money.', 'Each attempt labelled with its panel', 'a dead click']
 /**
- * Issue #56: the host section's terminal, as design/artefacts/hosted-section.html draws it, names its last row `panel`; the phrase is
- * taken out before the list is checked and must stay in that artefact word for word (whitespace collapsed).
- */
-export const hostVerbatim = ['panel       no key yet']
-/**
  * Issue #56, item 5: there is no hosted service. ui-tests.com is never "the hosted version", and nothing says it keeps people's
  * recordings or money: the deploy, the bucket and the panel wallet are the author's.
  */

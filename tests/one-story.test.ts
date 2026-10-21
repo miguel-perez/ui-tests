@@ -25,7 +25,8 @@ it('tells the tag-and-server story in every tracked file, and never the mount', 
     .split('\n').filter(file => file && !kept.test(file))
   const found: string[] = []
   for (const file of files) {
-    const lines = (await readFile(file, 'utf8').catch(() => '')).split('\n')
+    // A tracked file that cannot be read fails the check rather than hiding a match.
+    const lines = (await readFile(file, 'utf8')).split('\n')
     lines.forEach((line, i) => { if (mounted.some(pattern => pattern.test(line))) found.push(`${file}:${i + 1}`) })
   }
   expect(found).toEqual([])

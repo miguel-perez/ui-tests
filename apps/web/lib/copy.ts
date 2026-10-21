@@ -1,3 +1,4 @@
+import { tagFor } from 'ui-tests/tag'
 import { exampleFile, exampleFileName } from './example'
 
 /** Approved D2 copy: every word on the landing page. */
@@ -185,21 +186,19 @@ export const worth = {
 }
 /**
  * The host section (design/artefacts/hosted-section.html; docs/discovery/hosting-decision.md; issue #56), verbatim: the heading, the
- * lead, two unnumbered pieces (the command and its terminal as drawn, the line and its script tag) and the closing. There is no hosted
- * service: the deploy is the author's.
+ * lead, two unnumbered pieces (the command and its terminal as drawn, the line and its script tag) and the closing. The server is the
+ * author's, started with `ui-tests serve` or the Docker image; the line is the same tag `init` prints, for the example's address.
  */
+export const hostedServer = 'https://tests.weekboard.example'
 export const hosted = {
-  heading: 'No repo to put it in? One command.',
-  lead: '`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.',
-  command: { name: 'The command', intro: 'Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.', tab: ['Terminal', 'Example'] },
-  terminal: `$ npx ui-tests host
-Deploying to your account…
-  collector   https://ui-tests.weekboard.workers.dev
-  player      https://ui-tests.weekboard.workers.dev/t
-  store       weekboard-ui-tests, your bucket, 0 recordings
-  panel       no key yet · add one with ui-tests host --panel prolific`,
-  line: { name: 'The line', intro: 'One script tag, pointing at your deploy. It records only while a run is open and a person has said yes; the rest of the time it is forty lines that do nothing.', tab: ['index.html', 'or your tag manager'] },
-  snippet: '<script src="https://ui-tests.weekboard.workers.dev/s.js" async></script>',
+  heading: 'Your server, one command.',
+  lead: 'The consent, the questions, the collector and the report run on a ui-tests server you start for as long as a study is open: on your laptop, a machine you rent or a free tier. Nobody else runs it, and the recordings stay on your box. `npx ui-tests host`, one command that puts it in an account you own, is not shipped yet.',
+  command: { name: 'The command', intro: 'On any machine with Node 24 or later, with UI_TESTS_PUBLIC_URL set to the address people reach it at. It prints that address and the tag that points there. The Docker image, ghcr.io/miguel-perez/ui-tests, runs the same thing.', tab: ['Terminal', 'Example'] },
+  terminal: `$ npx ui-tests serve
+ui-tests server: ${hostedServer}
+<script data-ui-tests="${hostedServer}">…</script>`,
+  line: { name: 'The line', intro: 'One inline script tag in your HTML layout, whatever your app is built with. It does nothing until a person is in an attempt: no request, no change to the page.', tab: ['index.html', 'or your layout'] },
+  snippet: tagFor(hostedServer),
   closing: 'Same test, same report, on a box you own.',
 }
 /** The footer's links (issue #51): the author's site, the licence and the new-issue page; the header already links to GitHub. */

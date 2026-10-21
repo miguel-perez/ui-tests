@@ -19,6 +19,6 @@ The repository is two npm workspaces: `packages/ui-tests`, the package (authorin
 | Agent runs | Harnesses for cli, mcp, http and web (Playwright through the same player) | Same test file and hooks; one actor per run; separate records, checks and reports from human runs |
 | Panels | Prolific and CloudResearch Connect, bring-your-own key | The only two self-serve full-lifecycle APIs |
 | Skill and MCP | `skills/ui-tests/SKILL.md` in the package; MCP server over the CLI with `@modelcontextprotocol/sdk` | Agents learn and drive the runner the same way people do |
-| Tunnel | cloudflared quick tunnel, ngrok as the alternative | Run-scoped tunnels from a local build; the factory already uses cloudflared for its webhook |
+| Tunnel | cloudflared quick tunnel | Run-scoped tunnels from a local build; the factory already uses cloudflared for its webhook |
 
 Everything a slice adds must be runnable by one person from a clean clone with `npm ci && npm run dev`, and every UI must be visible on a Vercel preview or on `ui-tests serve`.

@@ -425,7 +425,7 @@ main { position: relative; isolation: isolate; }
 .host-term, .host-snip { padding: 18px 20px; font: 400 13.5px/1.75 var(--font-mono), monospace; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
 .host-snip { padding: 16px 20px; font-size: 14px; line-height: 1.6; }
 .host-term .p { color: var(--muted); } .host-term .a { color: var(--green); } .host-term .u { color: var(--blue); } .host-term .k { color: var(--muted); } .host-term b { font-weight: 500; color: var(--ink); }
-.host-snip .t { color: var(--purple); } .host-snip .at { color: var(--teal); } .host-snip .s { color: var(--green); }
+.host-term .t, .host-snip .t { color: var(--purple); } .host-term .at, .host-snip .at { color: var(--teal); } .host-term .s, .host-snip .s { color: var(--green); }
 
 /* A step: the number and title in the first five columns, sticky; its sentence, what you type and what you see in the right seven. */
 .step { padding-top: var(--space-3); align-items: start; }

@@ -4,26 +4,23 @@ import { SectionHead } from '../site/section-head'
 import { Caption } from '../site/caption'
 
 /** A URL in the terminal, in the blue the artefact gives it. */
-const urls = (text: string) => text.split(/(https:\/\/\S+)/).map((part, index) => index % 2 ? <span className="u" key={index}>{part}</span> : part)
+const urls = (text: string) => text.split(/(https:\/\/[^\s"]+)/).map((part, index) => index % 2 ? <span className="u" key={index}>{part}</span> : part)
 
-/**
- * One line of the terminal as the artefact colours it: the prompt muted (the artefact's comment grey is under 4.5:1 as text) with the command's name in green, the status
- * muted, then each row's label and value: URLs in blue, the store's name in ink, the hint muted with its command in green.
- */
-function line(text: string, index: number): ReactNode {
-  if (text.startsWith('$ ')) { const [prompt, ...rest] = text.split(' '), name = rest.pop(); return <><span className="p">{prompt}</span> {rest.join(' ')} <span className="a">{name}</span></> }
-  if (index === 1) return <span className="k">{text}</span>
-  const [, label, value] = /^(\s+\S+\s+)(.*)$/.exec(text)!
-  const store = /^([\w-]+)(,.*)$/.exec(value), hint = /^(.*· )(add one with) (.*)$/.exec(value)
-  if (hint) return <>{label}{hint[1]}<span className="k">{hint[2]}</span> <span className="a">{hint[3]}</span></>
-  if (store && !value.startsWith('https')) return <>{label}<b>{store[1]}</b>{store[2]}</>
-  return <>{label}{urls(value)}</>
+/** The tag as the artefact colours it: the tag in violet, its attribute in teal, the address in green, the script in ink. */
+function Tag({ code }: { code: string }) {
+  const [, server, script] = /^<script data-ui-tests="([^"]*)">([\s\S]*)<\/script>$/.exec(code)!
+  return <><span className="t">&lt;script</span> <span className="at">data-ui-tests</span>=<span className="s">&quot;{server}&quot;</span><span className="t">&gt;</span>{script}<span className="t">&lt;/script&gt;</span></>
 }
 
-/** The script tag as the artefact colours it: the tag in violet, its attributes in teal, the URL in green. */
-function Snippet({ code }: { code: string }) {
-  const [, src] = /src="([^"]+)"/.exec(code)!
-  return <code><span className="t">&lt;script</span> <span className="at">src</span>=<span className="s">&quot;{src}&quot;</span> <span className="at">async</span><span className="t">&gt;&lt;/script&gt;</span></code>
+/**
+ * One line of the terminal as the artefact colours it: the prompt muted with the command's name in green, then what `serve` prints:
+ * its label muted with the address in blue, and the tag coloured as the line below draws it.
+ */
+function line(text: string): ReactNode {
+  if (text.startsWith('$ ')) { const [prompt, ...rest] = text.split(' '), name = rest.pop(); return <><span className="p">{prompt}</span> {rest.join(' ')} <span className="a">{name}</span></> }
+  if (text.startsWith('<script')) return <Tag code={text} />
+  const [, label, value] = /^([^:]+: )(.*)$/.exec(text)!
+  return <><span className="k">{label}</span>{urls(value)}</>
 }
 
 /** A piece without a number (the artefact draws none): its name and at most 64ch of text over its window, all twelve columns. */
@@ -43,13 +40,13 @@ export function Host() {
     <Piece id="host-command" name={command.name} intro={command.intro}>
       <figure className="window host-window" data-figure>
         <figcaption className="window-chrome"><span>{command.tab[0]}</span><span className="example-label">{command.tab[1]}</span></figcaption>
-        <pre className="host-term">{hosted.terminal.split('\n').map((text, index) => <span key={index}>{index > 0 && '\n'}{line(text, index)}</span>)}</pre>
+        <pre className="host-term">{hosted.terminal.split('\n').map((text, index) => <span key={index}>{index > 0 && '\n'}{line(text)}</span>)}</pre>
       </figure>
     </Piece>
     <Piece id="host-line" name={snippet.name} intro={snippet.intro}>
       <figure className="window host-window" data-figure>
         <figcaption className="window-chrome"><span>{snippet.tab[0]}</span><span>{snippet.tab[1]}</span></figcaption>
-        <pre className="host-snip"><Snippet code={hosted.snippet} /></pre>
+        <pre className="host-snip"><code><Tag code={hosted.snippet} /></code></pre>
       </figure>
     </Piece>
     <Caption text={hosted.closing} />

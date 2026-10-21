@@ -80,3 +80,22 @@ it('licenses the code under MIT to miguel.design, with no personal name, and say
   for (const text of [licence, shell]) expect(text).not.toMatch(/Miguel|Pérez|Perez/)
 })
 
+it('holds the host section to its artefact word for word: the server\'s command, what it prints, and the tag init prints', async () => {
+  const { hosted, hostedServer } = await import('../apps/web/lib/copy')
+  const { tagFor } = await import('../packages/ui-tests/src/browser/tag')
+  const { parseHTML } = await import('linkedom')
+  const artefact = parseHTML(await readFile('design/artefacts/hosted-section.html', 'utf8')).document
+  const text = (selector: string) => [...artefact.querySelectorAll(selector)].map(node => node.textContent!)
+  expect(text('.head h1')).toEqual([hosted.heading])
+  expect(text('.head p')).toEqual([hosted.lead.replaceAll('`', '')])
+  expect(text('.intro h2')).toEqual([hosted.command.name, hosted.line.name])
+  expect(text('.intro p')).toEqual([hosted.command.intro, hosted.line.intro])
+  expect(text('.tab span')).toEqual([...hosted.command.tab, ...hosted.line.tab])
+  expect(text('.term')).toEqual([hosted.terminal])
+  expect(text('.snip')).toEqual([hosted.snippet])
+  expect(text('.closing')).toEqual([hosted.closing])
+  // One way in: the line is the tag init prints, for the example's server, and the terminal starts that server.
+  expect(hosted.snippet).toBe(tagFor(hostedServer))
+  expect(hosted.terminal.split('\n')).toEqual(['$ npx ui-tests serve', `ui-tests server: ${hostedServer}`, `<script data-ui-tests="${hostedServer}">…</script>`])
+  expect(hosted.lead).toContain('`npx ui-tests host`, one command that puts it in an account you own, is not shipped yet.')
+})

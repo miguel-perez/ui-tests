@@ -111,8 +111,8 @@ for (const width of [1440, 375]) {
         // Issue #22: nothing in the report rows, the check or the terminals uses the old words.
         for (const selector of ['section[aria-labelledby="comes-back"]', '.terminal-window']) for (const text of await page.locator(selector).allInnerTexts()) expect(offences(text, shown), selector).toEqual([])
         await expect(page.locator('.checks-box, .findings-list, [data-artefact="checks-box"], [data-artefact="findings-list"]')).toHaveCount(0)
-        // Issue #56: the host section is the artefact's: two unnumbered pieces, the terminal exactly as drawn and the script tag with its
-        // tab, then the closing line. No dashboard, no form and no reels; nothing names ui-tests.com as a host.
+        // The host section is the artefact's: two unnumbered pieces, the terminal exactly as drawn and the script tag with its tab, then
+        // the closing line. No dashboard, no form and no reels; nothing names ui-tests.com as a host.
         const hostBlock = page.locator('section[aria-labelledby="hosted"]')
         await expect(hostBlock.locator('video, table, form, [data-artefact="attempt-view"], [data-artefact="run-report"], [data-artefact="dashboard"]')).toHaveCount(0)
         await expect(page.locator('[data-artefact="dashboard"], .dashboard')).toHaveCount(0)
@@ -122,10 +122,10 @@ for (const width of [1440, 375]) {
         const [terminal, tag] = await hostBlock.locator('.host-window').all()
         await expect(terminal.locator('figcaption')).toHaveText(hosted.command.tab.join(''))
         expect(await terminal.locator('pre').innerText()).toBe(hosted.terminal)
-        expect((await terminal.locator('pre').innerText()).split('\n').at(-1)).toMatch(/^\s+panel\s/)
+        expect((await terminal.locator('pre').innerText()).split('\n')[0]).toBe('$ npx ui-tests serve')
         await expect(tag.locator('figcaption')).toHaveText(hosted.line.tab.join(''))
         expect(await tag.locator('pre').innerText()).toBe(hosted.snippet)
-        expect(hosted.snippet).toContain('https://ui-tests.weekboard.workers.dev/s.js')
+        expect(hosted.snippet).toMatch(/^<script data-ui-tests="https:\/\/tests\.weekboard\.example">/)
         for (const fragment of await textColours(page, '.host-term, .host-snip')) expect(fragment.colours.length, `host ${fragment.text}`).toBeGreaterThanOrEqual(3)
         await expect(hostBlock.locator('.caption')).toHaveText(hosted.closing)
         expect(await hostBlock.innerText()).not.toMatch(/ui-tests\.com|hosted version|our servers|we store|our wallet/i)

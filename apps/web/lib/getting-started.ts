@@ -22,11 +22,11 @@ export const gettingStarted = {
     text: 'Runs and results live in a database, so a record outlives any one preview. Locally that is a file; for CI and previews use Postgres on Neon. These steps need your own accounts, so nothing here is done for you.',
     steps: [
       'Create a Neon project and a database, and copy its pooled connection string.',
-      'For the length of the study, run `npx ui-tests serve` (or the Docker image) where people can reach it, with `UI_TESTS_DATABASE_URL` set to that string and `UI_TESTS_PUBLIC_URL` set to the address people reach it at.',
+      'Run a ui-tests server that people can reach for the length of the study, with `UI_TESTS_DATABASE_URL` set to that string and `UI_TESTS_PUBLIC_URL` set to the address they reach it at: `npx ui-tests serve` on a machine you run, or `docker run -p 4300:4300 -v ui-tests:/data -e UI_TESTS_DATABASE_URL=… -e UI_TESTS_PUBLIC_URL=… ghcr.io/miguel-perez/ui-tests`.',
       'In Vercel, set `NEXT_PUBLIC_UI_TESTS_URL` (or your framework\'s variable for the tag\'s address) in the Preview environment to that address, so the preview\'s tag points at the server.',
-      'In GitHub, add the same string as the repository secret `UI_TESTS_DATABASE_URL`, and pass it to the workflow that runs your studies.',
+      'In GitHub, add the same string as the repository secret `UI_TESTS_DATABASE_URL`, and set `UI_TESTS_PUBLIC_URL` to the server\'s address in the workflow that runs your studies: the config `init` writes reads `server.url` from it, so `npx ui-tests check` finds the server and puts the invite links on it.',
     ],
-    then: 'For a local try-out without Neon, `UI_TESTS_DATABASE_URL=pglite:memory` runs the same store in memory. The tables are created on first use.',
+    then: 'To prove a preview without people, start `npx ui-tests serve` inside the job instead, before `npx ui-tests check`, and leave `UI_TESTS_PUBLIC_URL` unset: the check finds the server on this machine, as this repository\'s `.github/workflows/ui-tests-check.yml` does. That server ends with the job, so it is not one to invite people to. For a local try-out without Neon, `UI_TESTS_DATABASE_URL=pglite:memory` runs the same store in memory. The tables are created on first use.',
   },
   sharing: {
     heading: 'Sharing a report',
