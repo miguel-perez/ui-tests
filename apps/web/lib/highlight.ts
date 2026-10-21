@@ -1,7 +1,7 @@
 import { codeToHtml } from 'shiki'
 
 /**
- * The code roles (design/artefacts/tokens.css), shared by code windows and inline code so a fragment reads the same in both.
+ * The code roles (app/globals.css), shared by code windows and inline code so a fragment reads the same in both.
  * Every colour is a site token: keyword violet, string green, property teal on the light site.
  */
 export const codeRoles = {

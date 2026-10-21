@@ -1,0 +1,131 @@
+import { request as httpRequest } from 'node:http'
+import { request as httpsRequest } from 'node:https'
+import { isLoopbackHost } from '../runner/hosts.ts'
+import { startServer } from '../server/http.ts'
+import type { RunStore } from '../store/types.ts'
+import { moduleTranscriber } from '../transcriber.ts'
+import type { Io } from './main.ts'
+
+/** How long the health check waits for an answer. */
+const HEALTH_TIMEOUT_MS = 2000
+/** A health answer is a few bytes; anything longer is not one. */
+const MAX_HEALTH_BYTES = 4096
+
+/** No ui-tests server answers at the address, and none can be started there. */
+export class ServerUnreachable extends Error {
+  constructor(readonly url: string) {
+    super(`ui-tests server not reachable: ${url}`)
+    this.name = 'ServerUnreachable'
+  }
+}
+
+/** A ui-tests server answers, but not from the store this command wrote the run to. */
+export class ServerReadsAnotherStore extends Error {
+  constructor(readonly url: string) {
+    super(`ui-tests server at ${url} does not read this project's store: stop it, or point UI_TESTS_DATABASE_URL at the same store`)
+    this.name = 'ServerReadsAnotherStore'
+  }
+}
+
+/** How long the server may take to answer for a run: its first player page builds the player. */
+const RUN_CHECK_TIMEOUT_MS = 60_000
+
+/** The status of a GET, asked over a plain socket as `get` is; undefined on any failure. */
+function statusOf(url: string, timeout: number): Promise<number | undefined> {
+  return new Promise(resolve => {
+    let target: URL
+    try { target = new URL(url) } catch { return resolve(undefined) }
+    const request = target.protocol === 'https:' ? httpsRequest : target.protocol === 'http:' ? httpRequest : undefined
+    if (!request) return resolve(undefined)
+    const req = request(target, { method: 'GET', timeout }, res => { resolve(res.statusCode); res.resume() })
+    req.on('timeout', () => req.destroy())
+    req.on('error', () => resolve(undefined))
+    req.on('close', () => resolve(undefined))
+    req.end()
+  })
+}
+
+/**
+ * Throws `ServerReadsAnotherStore` unless the server knows `run`: its player page answers for it. A server the command started reads
+ * the command's store, so only a reused one is asked; one started elsewhere with another store answers 404 for a run it never saw.
+ */
+export async function ensureServerKnowsRun(server: { url: string; started: boolean }, run: string, fetcher?: typeof fetch): Promise<void> {
+  if (server.started) return
+  const page = `${server.url}/ui-tests/${encodeURIComponent(run)}/`
+  let status: number | undefined
+  if (fetcher) {
+    try { status = (await fetcher(page, { redirect: 'manual', signal: AbortSignal.timeout(RUN_CHECK_TIMEOUT_MS) })).status } catch { status = undefined }
+  } else status = await statusOf(page, RUN_CHECK_TIMEOUT_MS)
+  if (status === undefined) throw new ServerUnreachable(server.url)
+  if (status !== 200) throw new ServerReadsAnotherStore(server.url)
+}
+
+/** The body of a GET, asked over a plain socket rather than `fetch`, so a stubbed or failing `fetch` never decides it; undefined on any failure. */
+function get(url: string): Promise<string | undefined> {
+  return new Promise(resolve => {
+    let target: URL
+    try { target = new URL(url) } catch { return resolve(undefined) }
+    const request = target.protocol === 'https:' ? httpsRequest : target.protocol === 'http:' ? httpRequest : undefined
+    if (!request) return resolve(undefined)
+    const req = request(target, { method: 'GET', timeout: HEALTH_TIMEOUT_MS }, res => {
+      let body = ''
+      res.setEncoding('utf8')
+      res.on('data', (chunk: string) => { body += chunk; if (body.length > MAX_HEALTH_BYTES) req.destroy() })
+      res.on('end', () => resolve(res.statusCode === 200 ? body : undefined))
+      res.on('error', () => resolve(undefined))
+    })
+    req.on('timeout', () => req.destroy())
+    req.on('error', () => resolve(undefined))
+    req.on('close', () => resolve(undefined))
+    req.end()
+  })
+}
+
+/** Whether a ui-tests server answers at `url`: its `/healthz` names it. Another service on the same port does not count. */
+export async function answersAsServer(url: string, fetcher?: typeof fetch): Promise<boolean> {
+  const health = `${url}/healthz`
+  let body: string | undefined
+  if (fetcher) {
+    try {
+      const response = await fetcher(health, { redirect: 'manual', signal: AbortSignal.timeout(HEALTH_TIMEOUT_MS) })
+      body = response.status === 200 ? await response.text() : undefined
+    } catch { body = undefined }
+  } else body = await get(health)
+  try { return (JSON.parse(body ?? '') as { name?: unknown } | null)?.name === 'ui-tests' } catch { return false }
+}
+
+/** What a server the CLI starts runs with: the command's store, and the transcriber and secrets of its environment. */
+const serverOptions = (store: RunStore, env: Io['env']) => ({
+  store: async () => store,
+  transcriber: moduleTranscriber(() => env.UI_TESTS_TRANSCRIBER),
+  ...(env.UI_TESTS_CLI_SECRET && { cliSecret: env.UI_TESTS_CLI_SECRET }),
+  ...(env.UI_TESTS_SHARE_SECRET && { shareSecret: env.UI_TESTS_SHARE_SECRET }),
+})
+
+/**
+ * A ui-tests server of the command's own, for a front door to stand in front of: on a free loopback port and with no public address,
+ * so it takes the address each request names in `X-Forwarded-Host`, which only the door, its one client, sets. A server already
+ * running is never used for this, since it may be reached by others who could name any address.
+ */
+export const startDoorServer = (input: { store: RunStore; io: Io }): Promise<{ url: string; close(): Promise<void> }> =>
+  startServer({ ...serverOptions(input.store, input.io.env), port: 0, host: '127.0.0.1' })
+
+/**
+ * The ui-tests server at `url`, running for the length of a command. One that answers is used as it is (`started: false`, and
+ * `close` leaves it running). Otherwise, for an http address on this machine, one is started there on the command's store, bound to
+ * `bind` (loopback by default), and `close` stops it. Anything else throws `ServerUnreachable`: a server elsewhere is never started
+ * for you, and a port another service holds is never taken.
+ */
+export async function ensureServer(input: { url: string; store: RunStore; io: Io; bind?: string; fetch?: typeof fetch }): Promise<{ url: string; started: boolean; close(): Promise<void> }> {
+  const url = input.url.replace(/\/+$/, '')
+  if (await answersAsServer(url, input.fetch)) return { url, started: false, close: async () => {} }
+  let address: URL
+  try { address = new URL(url) } catch { throw new ServerUnreachable(url) }
+  if (address.protocol !== 'http:' || !isLoopbackHost(address.hostname.replace(/^\[|\]$/g, ''))) throw new ServerUnreachable(url)
+  let server: Awaited<ReturnType<typeof startServer>>
+  try {
+    server = await startServer({ ...serverOptions(input.store, input.io.env), port: Number(address.port || 80), host: input.bind ?? '127.0.0.1', publicUrl: url })
+  } catch { throw new ServerUnreachable(url) }
+  input.io.stderr.write(`Started the ui-tests server on ${url}\n`)
+  return { url, started: true, close: () => server.close() }
+}

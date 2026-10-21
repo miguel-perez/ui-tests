@@ -1,6 +1,6 @@
 # ui-tests PRD
 
-**Status, 20 October 2026:** the R0 to R2 slices are built and verified offline: the `ui-tests` package, the landing page, and the player, collector and report in server mode; see the status lines in [`../story-map.md`](../story-map.md) for what is built, what is documented but not executed (npm publish, a Neon database, the Vercel Preview environment, GitHub secrets, a model API key, a named tunnel, the VoiceOver check) and what the release metrics still need. Paying a panel (R3) and `ui-tests host` ([#59](https://github.com/miguel-perez/ui-tests/issues/59)) are not built. "Not shipped yet" below means not built.
+**Status:** the R0 to R2 slices are built and verified offline: the `ui-tests` package with its script tag and the ui-tests server (`npx ui-tests serve`, or the Docker image) that runs the player, collector and report, and the landing page, which carries the tag; see the status lines in [`../story-map.md`](../story-map.md) for what is built, what is documented but not executed (npm publish, publishing the Docker image, a Neon database, the Vercel Preview environment, GitHub secrets, a model API key, a named tunnel, the VoiceOver check) and what the release metrics still need. Paying a panel (R3) and `ui-tests host` ([#59](https://github.com/miguel-perez/ui-tests/issues/59)) are not built. "Not shipped yet" below means not built.
 
 Built on [`../pitch.md`](../pitch.md), [`../stack.md`](../stack.md), [`../personas.md`](../personas.md). Each file owns one area. Release order lives in [`../story-map.md`](../story-map.md).
 
@@ -29,7 +29,7 @@ Unit and end-to-end tests prove the code works, not that people can use it. Usab
 
 ## Non-goals
 
-Figma prototypes, mobile native, moderated sessions, comparisons between builds, synthetic users as stand-ins for people, think-aloud recording, GEPA itself, any framework adapter other than Next.js.
+Figma prototypes, mobile native, moderated sessions, comparisons between builds, synthetic users as stand-ins for people, think-aloud recording, GEPA itself, framework adapters or plugins: one script tag serves every framework.
 
 ## Personas
 

@@ -6,8 +6,8 @@
  */
 
 /**
- * The four problems the report finds, as the troupe acts them out. Issue #75 names the third with the old word for it; here it is
- * "went back", issue #22's word, as everywhere on the site (tests/vocabulary.ts).
+ * The four problems the report finds, as the troupe acts them out. The third is "went back", the site's word for it everywhere
+ * (tests/vocabulary.ts).
  */
 export type Fate = 'hesitation' | 'rage click' | 'went back' | 'long pause'
 export type Exit = 'confusion' | 'frustration' | 'hook' | 'spinner'

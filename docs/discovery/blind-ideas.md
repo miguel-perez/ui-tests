@@ -1,6 +1,6 @@
 # Blind ideation from the D0 evidence (no proposal seen)
 
-A fresh subagent given only `report.md`, `personas.md`, `tool-alignment.md`, `summaries.csv` and the raw accounts, 15 October 2026. Reproduced verbatim as the subagent's words; my reading is in `reviews.md`.
+A fresh subagent given only `report.md`, `personas.md`, `tool-alignment.md`, `summaries.csv` and the raw accounts, 15 October 2026. Reproduced verbatim as the subagent's words.
 
 ## A. Ten ideas
 

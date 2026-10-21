@@ -6,9 +6,11 @@ import type { UiTestsConfig } from './types.ts'
 
 export type { UiTestsConfig } from './types.ts'
 
-export type LoadedConfig = { config: Required<Pick<UiTestsConfig, 'target'>> & UiTestsConfig; file?: string }
+export type LoadedConfig = { config: Required<Pick<UiTestsConfig, 'target'>> & UiTestsConfig & { server: { url: string } }; file?: string }
 
 const defaultUrl = 'http://localhost:3000'
+/** Where the ui-tests server is when the config does not say: `ui-tests serve`'s own port on this machine. */
+export const DEFAULT_SERVER_URL = 'http://localhost:4300'
 const skipped = new Set(['node_modules', 'out'])
 
 async function readModule(file: string): Promise<unknown> {
@@ -34,7 +36,7 @@ export async function loadConfig(cwd: string): Promise<LoadedConfig> {
       if (exported && typeof exported === 'object' && exported.uiTests) { file = join(cwd, name); found = exported.uiTests; break }
     }
   }
-  return { config: { ...found, target: { ...found.target, url: found.target?.url ?? defaultUrl } }, file }
+  return { config: { ...found, target: { ...found.target, url: found.target?.url ?? defaultUrl }, server: { ...found.server, url: found.server?.url ?? DEFAULT_SERVER_URL } }, file }
 }
 
 /** Lists every `*.ui.test.ts` under `cwd`, relative-sorted, skipping dependencies and build output. */

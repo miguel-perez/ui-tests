@@ -1,9 +1,8 @@
 import { test, expect, type Page } from '@playwright/test'
 import { writeFile, mkdir } from 'node:fs/promises'
-import { pathToFileURL } from 'node:url'
 
 /**
- * The page grid (design/artefacts/README.md, "The page grid, in one place"; issue #46, item 1). Every landing and guide section sits on
+ * The page grid (issue #46, item 1). Every landing and guide section sits on
  * the 1248px container: at 1440 its heading starts at 96; a landing section's lead, where it has one, keeps to 64ch inside the right
  * seven and ends flush with the container at 1344 (the host section's rule since issue #56, every section's since issue #65), and a
  * guide step's lead starts at 630 over the figures it introduces in the right seven; every figure takes all twelve columns
@@ -73,27 +72,6 @@ for (const [name, route, count] of [['landing', '/', 6]] as const) {
     readings[`${name}-375`] = { height: await page.evaluate(() => document.documentElement.scrollHeight), sections: sections.map(({ section, heading, lead, figures }) => ({ section, heading: heading.x, lead: lead?.x ?? null, figures: figures.map(figure => `${figure.x}+${figure.width}`) })) }
   })
 }
-
-// Issue #65, item 3: the artefacts agree with the page. In each section artefact with a lead, the lead keeps to 64ch inside the right
-// seven and ends flush with the container at 1344 at 1440; at 375 it is left-aligned in the one column, under the heading.
-for (const artefact of ['compile-section', 'sources-section', 'agents-section', 'hosted-section']) test(`the lead of ${artefact}.html ends at 1344 at 1440 and starts at 16 at 375`, async ({ page }) => {
-  for (const width of [1440, 375]) {
-    await page.setViewportSize({ width, height: 1000 })
-    await page.goto(pathToFileURL(`design/artefacts/${artefact}.html`).href)
-    const { heading, lead } = await page.locator('.head').first().evaluate(head => {
-      const box = (node: Element) => { const r = node.getBoundingClientRect(); return { x: r.x, right: r.right, y: r.y, bottom: r.bottom } }
-      return { heading: box(head.querySelector('h1, h2')!), lead: box(head.querySelector(':scope > p')!) }
-    })
-    if (width === 1440) {
-      expect(near(heading.x, 96), `${artefact} heading at ${heading.x}`).toBe(true)
-      expect(near(lead.right, 1344), `${artefact} lead ends at ${lead.right}`).toBe(true)
-      expect(lead.x, `${artefact} lead in the right seven`).toBeGreaterThanOrEqual(630 - 2)
-    } else {
-      expect(near(lead.x, 16), `${artefact} lead at ${lead.x}`).toBe(true)
-      expect(lead.y, `${artefact} lead under its heading`).toBeGreaterThanOrEqual(heading.bottom)
-    }
-  }
-})
 
 // Issue #51, item 3: no separators and one rhythm in three steps, --space-1 24, --space-2 48 and --space-3 96, which on a phone are
 // 24, 36 and 64. Every section opens with --space-3; a head is followed by --space-2; nothing else spaces a section's top-level

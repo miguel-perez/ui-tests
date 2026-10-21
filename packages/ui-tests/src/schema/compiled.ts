@@ -119,6 +119,17 @@ const usersSchema = z.object({
   age: z.union([z.string(), z.object({ min: z.number().optional(), max: z.number().optional() })]).optional(),
 })
 
+/** What participants see in place of our name: stored with the run so the server and the bar render it without the author's files. */
+export const compiledBrandSchema = z.object({
+  name: z.string(),
+  logo: z.string().optional(),
+  accent: z.string().optional(),
+  background: z.string().optional(),
+  text: z.string().optional(),
+  font: z.object({ family: z.string(), url: z.string().optional() }).optional(),
+})
+export type CompiledBrand = z.infer<typeof compiledBrandSchema>
+
 export const compiledStudySchema = z.object({
   schema: z.literal(compiledSchemaUrl),
   id: z.string(),
@@ -139,10 +150,23 @@ export const compiledStudySchema = z.object({
   screener: z.array(screenerQuestionSchema),
   /** Whether link participants see the practice screen before the first look. */
   practice: z.boolean(),
-  brand: z.object({ accent: z.string().optional(), poweredBy: z.boolean() }),
+  brand: compiledBrandSchema,
   goals: z.array(compiledGoalSchema),
   questions: z.array(compiledQuestionSchema),
   consent: compiledConsentSchema,
   derivations: z.array(z.object({ field: z.string(), rule: z.string(), source: z.string() })),
 })
 export type CompiledStudy = z.infer<typeof compiledStudySchema>
+
+/**
+ * A stored study as this version reads it. Runs compiled before the brand carried a name stored `{ accent?, poweredBy }`: the name is
+ * filled as compileStudy fills it (the author, else the product) and `poweredBy` is dropped, since participants never see our name.
+ */
+export function readCompiled<T extends { author: string; product: string; brand: unknown }>(study: T): T {
+  const stored = study.brand as (Partial<CompiledBrand> & { poweredBy?: unknown }) | undefined
+  if (!stored || (typeof stored.name === 'string' && !('poweredBy' in stored))) return study
+  const { poweredBy: _dropped, ...brand } = stored
+  return { ...study, brand: { ...brand, name: typeof brand.name === 'string' ? brand.name : study.author || study.product } }
+}
+/** A stored run with its study read as this version reads it. */
+export const readRun = <T extends { compiled: CompiledStudy }>(run: T): T => (run.compiled ? { ...run, compiled: readCompiled(run.compiled) } : run)

@@ -11,6 +11,7 @@ import { lintCommand } from './lint.ts'
 import { mcp } from './mcp.ts'
 import { recruit } from './recruit.ts'
 import { report } from './report.ts'
+import { serve } from './serve.ts'
 import { status } from './status.ts'
 import { trace } from './trace.ts'
 import { verify } from './verify.ts'
@@ -55,25 +56,30 @@ export const commands: Record<string, Command> = {
   check,
   estimate,
   mcp,
+  serve,
 }
 
 export const usage = () => `Usage: ui-tests <command> [options]
 
 Commands:
-  (none)            rehearse a study on yourself: open the player, verify, show the trace
+  (none)            rehearse a study on yourself: open the player on the ui-tests server (started for you on this
+                    machine when none answers), verify, show the trace
   --actor agent     run the study's tasks as agent trials: a capability test, not usability
   verify <run>      run the hooks against the stored snapshots
-  recruit           make a run and print the invite links (--wait for the result, --tunnel to serve a local build,
-                    --host <name> for links inside your network, --local for this machine only)
+  recruit           make a run and print the invite links to the player on the ui-tests server (--wait for the result,
+                    --tunnel to serve a local build, --host <name> for links inside your network, --local for this machine only;
+                    --tunnel and --host serve the app and the ui-tests server through one front door on this machine)
   status <run>      show the four states of a run
   check             post the pull request check for a preview (--reconcile updates the open ones)
   report <run>      the report in words, the run record (--json), or a signed link to share (--share)
   trace <run>       serve the trace of a run on this machine
-  init              write ui-tests.config.ts, an example study and the Vitest exclude
+  init              write ui-tests.config.ts, an example study and the Vitest exclude, and print the script tag for your app
   estimate          how many people and how many minutes each, before anything is spent (--out <file> also writes the JSON)
   mcp               serve lint, estimate, run, status, verify, report and trace as MCP tools over stdio
   lint [files...]   check studies against the rules and show what a run would do (--out <file> also writes the JSON)
   host              deploy the collector, the player and the store to your own account
+  serve             serve the collector, the player, the report and the tag's script while a study is open
+                    (--port <n>, --bind <addr>; UI_TESTS_PUBLIC_URL is the address people reach it at)
 
 Options:
   --json            write JSON to stdout; diagnostics go to stderr
@@ -88,7 +94,7 @@ const defaultIo = (): Io => ({ stdout: process.stdout, stderr: process.stderr, c
 
 /** The flags each command reads a value for (`--actor agent` or `--actor=agent`); every other flag is a boolean. */
 export const valueFlags: Record<string, string[]> = {
-  '': ['actor', 'port', 'project', 'study', 'task', 'key', 'commit'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit', 'host'], check: ['actor', 'key', 'study'], estimate: ['actor', 'study', 'out'], lint: ['out'],
+  '': ['actor', 'port', 'project', 'study', 'task', 'key', 'commit'], trace: ['port'], host: ['panel'], recruit: ['actor', 'key', 'deadline', 'study', 'pr', 'commit', 'host'], check: ['actor', 'key', 'study'], estimate: ['actor', 'study', 'out'], lint: ['out'], serve: ['port', 'bind'],
 }
 
 /** Splits `--flag`, `--flag=value` and, for flags the command declares, `--flag value`. */

@@ -5,7 +5,7 @@ import AxeBuilder from '@axe-core/playwright'
 import { expect, test, type Page } from '@playwright/test'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { buildTrace, type Trace } from '../../packages/ui-tests/src/trace/build.ts'
-import { PRODUCT_URL, createRehearsalRun } from './helpers'
+import { BAR, PRODUCT_URL, SERVER_URL, barOf, createRehearsalRun, hasFocus } from './helpers'
 
 /**
  * The rehearsal end to end (Task 15): the site is the first context under test. The author runs `npx ui-tests` in apps/web,
@@ -18,7 +18,6 @@ const web = join(root, 'apps', 'web')
 const bin = join(root, 'packages', 'ui-tests', 'bin', 'ui-tests.mjs')
 const fixture = (name: string) => join(import.meta.dirname, 'fixtures', `${name}.ui.test.ts`)
 const REHEARSAL = 'Rehearsal: 0 of 5 planned attempts recorded.'
-const BAR = '[data-ui-tests]'
 
 test.use({ reducedMotion: 'reduce' })
 
@@ -29,12 +28,12 @@ test.afterEach(() => {
 })
 
 /**
- * `ui-tests …` in `cwd`, with the product server as the target; stdout is collected as it comes. The bin `npx ui-tests` resolves
+ * `ui-tests …` in `cwd`, with the static export as the target and `ui-tests serve` as the server; stdout is collected as it comes. The bin `npx ui-tests` resolves
  * to, run by this Node directly: npx starts it under `sh -c`, and where sh is dash (Debian, Ubuntu, so CI) the shell neither
  * execs the CLI nor passes a SIGINT on, so the Ctrl-C below would never reach it.
  */
 function cli(args: string[], cwd: string) {
-  const child = spawn(process.execPath, [bin, ...args], { cwd, env: { ...process.env, PREVIEW_URL: PRODUCT_URL }, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
+  const child = spawn(process.execPath, [bin, ...args], { cwd, env: { ...process.env, PREVIEW_URL: PRODUCT_URL, UI_TESTS_PUBLIC_URL: SERVER_URL }, detached: true, stdio: ['ignore', 'pipe', 'pipe'] })
   started.push(child)
   let stdout = ''
   let stderr = ''
@@ -58,10 +57,12 @@ async function waitFor(run: ReturnType<typeof cli>, pattern: RegExp, timeout = 6
 /** Ctrl-C: the CLI closes the trace server and exits 0. */
 const interrupt = (child: ChildProcess) => { child.kill('SIGINT') }
 
-/** Starts dev mode on the landing study and returns the participant's link. */
+/** Starts dev mode on the landing study and returns the participant's link: the player on the running ui-tests server, which it reuses. */
 async function rehearse() {
   const run = cli(['--no-open', '--port', '0'], web)
   const [, player] = await waitFor(run, /\{"player":"([^"]+)"\}/)
+  expect(player).toMatch(new RegExp(`^${SERVER_URL}/ui-tests/r_\\w+/\\?t=[0-9a-f]{64}$`))
+  expect(run.errors()).not.toContain('Started the ui-tests server')
   return { run, player }
 }
 
@@ -100,6 +101,8 @@ async function throughConsent(page: Page, player: string) {
     await page.getByRole('textbox').fill('To start testing what I built')
     await page.getByRole('button', { name: 'Continue' }).click()
     await page.waitForURL(`${PRODUCT_URL}/`)
+    // The bar is the sign the first click is being taken; a click before the tag has mounted it is the page's own.
+    await expect(barOf(page, 'Click where you would start.')).toBeVisible()
     await page.getByRole('link', { name: 'Get started' }).first().click()
   }
   await expect(card).toBeVisible()
@@ -109,7 +112,7 @@ async function throughConsent(page: Page, player: string) {
 async function start(page: Page, name: string) {
   await page.getByRole('button', { name: 'Start task' }).click()
   await page.waitForURL(`${PRODUCT_URL}/`)
-  const bar = page.getByRole('region', { name })
+  const bar = barOf(page, name)
   await expect(bar).toBeVisible()
   return bar
 }
@@ -201,7 +204,7 @@ test.describe('the landing study, rehearsed with the CLI', () => {
     /** Tabs until `name` has focus, then presses `key`. */
     const press = async (role: 'button' | 'link' | 'radio' | 'textbox', name: string | undefined, key: 'Enter' | 'Space') => {
       const target = name === undefined ? page.getByRole(role).first() : page.getByRole(role, { name, exact: true }).first()
-      for (let i = 0; i < 400 && !(await target.evaluate(node => node === document.activeElement).catch(() => false)); i++) await page.keyboard.press('Tab')
+      for (let i = 0; i < 400 && !(await target.evaluate(hasFocus).catch(() => false)); i++) await page.keyboard.press('Tab')
       await expect(target).toBeFocused()
       await page.keyboard.press(key)
     }
@@ -214,12 +217,13 @@ test.describe('the landing study, rehearsed with the CLI', () => {
     await press('textbox', undefined, 'Space')
     await press('button', 'Continue', 'Enter')
     await page.waitForURL(`${PRODUCT_URL}/`)
+    await expect(barOf(page, 'Click where you would start.')).toBeVisible()
     await press('link', 'Get started', 'Enter')
     await expect(page.getByRole('heading', { name: 'Your task' })).toBeVisible()
     await axe()
     await press('button', 'Start task', 'Enter')
     await page.waitForURL(`${PRODUCT_URL}/`)
-    await expect(page.locator(BAR)).toBeVisible()
+    await expect(barOf(page)).toBeVisible()
     await axe(BAR)
     await press('link', 'Get started', 'Enter')
     await page.waitForURL(`${PRODUCT_URL}/docs/getting-started/`)
@@ -346,10 +350,11 @@ test.describe('fixture studies through the same player and bar', () => {
   test('white label: no participant surface names ui-tests, and the bar takes its colours from the host\'s variables', async ({ page }) => {
     const { playerUrl } = await createRehearsalRun(fixture('sentinel'))
     const unbranded = async (scope: string) => {
+      // The bar is inside its host's shadow root: what it shows is there.
       const found = await page.locator(scope).evaluateAll(nodes => nodes.flatMap(node => [
-        (node as HTMLElement).innerText,
-        ...[...node.querySelectorAll('[alt]')].map(el => el.getAttribute('alt') ?? ''),
-        ...[...node.querySelectorAll('[href]'), ...(node.matches('[href]') ? [node] : [])].map(el => el.getAttribute('href') ?? ''),
+        node.shadowRoot ? [...node.shadowRoot.children].map(child => (child as HTMLElement).innerText ?? '').join('\n') : (node as HTMLElement).innerText,
+        ...[...(node.shadowRoot ?? node).querySelectorAll('[alt]')].map(el => el.getAttribute('alt') ?? ''),
+        ...[...(node.shadowRoot ?? node).querySelectorAll('[href]'), ...(node.matches('[href]') ? [node] : [])].map(el => el.getAttribute('href') ?? ''),
       ]))
       expect(found.filter(text => /ui-tests/i.test(text)), scope).toEqual([])
     }
@@ -364,7 +369,7 @@ test.describe('fixture studies through the same player and bar', () => {
     const colours = await page.evaluate(() => {
       const root = getComputedStyle(document.documentElement)
       const probe = (value: string) => { const el = document.createElement('i'); el.style.color = value; document.body.append(el); const rgb = getComputedStyle(el).color; el.remove(); return rgb }
-      const pill = getComputedStyle(document.querySelector('[data-ui-tests] .uit-pill')!)
+      const pill = getComputedStyle(document.querySelector('[data-ui-tests-root]')!.shadowRoot!.querySelector('.uit-pill')!)
       return { ink: probe(root.getPropertyValue('--ink').trim()), canvas: probe(root.getPropertyValue('--canvas').trim()), surface: pill.backgroundColor, text: pill.color }
     })
     // The inverse of the host page: its ink is the bar's surface, its ground the bar's text.
@@ -382,9 +387,9 @@ test.describe('fixture studies through the same player and bar', () => {
     await expect(page.getByRole('heading', { name: 'Thank you' })).toBeVisible()
   })
 
-  test('the view the collector serves and the server build\'s static files hold neither the path nor the expected answer', async ({ page, request }) => {
+  test('the view the collector serves and the site\'s exported files hold neither the path nor the expected answer', async ({ page, request }) => {
     const { runId, token, playerUrl } = await createRehearsalRun(fixture('sentinel'))
-    const view = await (await request.get(`${PRODUCT_URL}/api/ui-tests/?run=${runId}&t=${encodeURIComponent(token)}`)).text()
+    const view = await (await request.get(`${SERVER_URL}/api/ui-tests/?run=${runId}&t=${encodeURIComponent(token)}`)).text()
     expect(view).toContain('Read the landing page')
     for (const secret of ['/sentinel-path-7f3a', 'sentinel-answer-91c2']) expect(view).not.toContain(secret)
     await page.goto(playerUrl)
@@ -399,7 +404,7 @@ test.describe('fixture studies through the same player and bar', () => {
         else files.push(path)
       }
     }
-    await walk(join(web, '.next-server', 'static'))
+    await walk(join(web, 'out'))
     expect(files.length).toBeGreaterThan(0)
     for (const file of files) {
       const text = await readFile(file, 'latin1')

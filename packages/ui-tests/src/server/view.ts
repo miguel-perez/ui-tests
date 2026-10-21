@@ -1,7 +1,7 @@
 import { fillScenario, scenarioTemplate } from '../derive/scenario.ts'
-import type { CompiledQuestion } from '../schema/compiled.ts'
+import type { CompiledBrand, CompiledQuestion } from '../schema/compiled.ts'
 import { FIRST_LOOK_SHOT } from '../runner/screenshot.ts'
-import type { AttemptRow, RunRow } from '../store/types.ts'
+import type { AttemptRow, AttemptStatus, RunRow } from '../store/types.ts'
 import { placeOf } from '../runner/sequence.ts'
 
 /** What the participant's page may know. Built by allowlist in `participantView`; nothing else crosses the boundary. */
@@ -10,7 +10,7 @@ export type ParticipantView = {
   attempt: string
   author: string
   product: string
-  brand: { accent?: string; poweredBy: boolean }
+  brand: CompiledBrand
   consent: { text: string[]; purposes: string[]; payout: string }
   screener: { id: string; text: string; options: string[]; multi: boolean; open?: boolean }[]
   practice: boolean
@@ -107,5 +107,36 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
     status: attempt.status,
     record: study.record,
     rehearsal,
+  }
+}
+
+/**
+ * What the bar on the app's page may know: the page holds only an attempt key, so no consent text, screener, question, answer or start
+ * address crosses here. The scenario does, filled as the person read it: the bar shows it again on request.
+ */
+export type BarView = {
+  run: string
+  attempt: string
+  status: AttemptStatus
+  goal: { name: string; scenario: string; steps: string[]; timeoutSeconds: number }
+  record: 'events' | 'video'
+  brand: CompiledBrand
+  /** The bar is there to take the first click on the author's own site: the question was answered and the click is pending. */
+  firstClick: boolean
+  rehearsal: boolean
+}
+
+/** Projects a run and an attempt onto the bar. An allowlist taken from the participant's own view. */
+export function barView(run: RunRow, attempt: AttemptRow): BarView {
+  const view = participantView(run, attempt)
+  return {
+    run: view.run,
+    attempt: view.attempt,
+    status: view.status,
+    goal: { name: view.goal.name, scenario: view.goal.scenario, steps: view.goal.steps, timeoutSeconds: view.goal.timeoutSeconds },
+    record: view.record,
+    brand: view.brand,
+    firstClick: Boolean(view.status === 'consented' && view.impression?.asked && view.impression.click),
+    rehearsal: view.rehearsal,
   }
 }

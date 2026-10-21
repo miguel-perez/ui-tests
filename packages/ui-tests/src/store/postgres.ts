@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { newId, newRunId, newToken } from '../ids.ts'
+import { readRun } from '../schema/compiled.ts'
 import { postgresMigrations, type SqlClient } from './sql.ts'
 import type {
   AttemptRow, AttemptStatus, Money, NewAttempt, NewRun, RecordedEvent, Revision, RunRow, RunStore, Snapshot, SnapshotKey,
@@ -67,7 +68,7 @@ export class PostgresStore implements RunStore {
   }
 
   private runRow(row: Row | undefined): RunRow | undefined {
-    return row ? (row.data as RunRow) : undefined
+    return row ? readRun(row.data as RunRow) : undefined
   }
 
   private attemptRow(row: Row | undefined): AttemptRow | undefined {
@@ -146,12 +147,49 @@ export class PostgresStore implements RunStore {
     return this.op(async (db) => {
       // Only the sha256 of a token is stored and looked up through the primary-key index; the presented token is never
       // compared byte by byte, so there is no secret-dependent comparison for timing to reveal.
-      const row = (await db.query<Row>('SELECT attempt_id, run_id FROM tokens WHERE hash = $1', [hashToken(token)])).rows[0]
-      if (!row) return undefined
-      const attempt = this.attemptRow((await db.query<Row>('SELECT data FROM attempts WHERE id = $1', [row.attempt_id])).rows[0])
-      const run = this.runRow((await db.query<Row>('SELECT data FROM runs WHERE id = $1', [row.run_id])).rows[0])
-      return attempt && run ? { run, attempt } : undefined
+      return this.holder(db, (await db.query<Row>("SELECT attempt_id, run_id FROM tokens WHERE hash = $1 AND kind = 'participant'", [hashToken(token)])).rows[0])
     })
+  }
+
+  /** The run and attempt a token row belongs to. */
+  private async holder(db: SqlClient, row: Row | undefined) {
+    if (!row) return undefined
+    const attempt = this.attemptRow((await db.query<Row>('SELECT data FROM attempts WHERE id = $1', [row.attempt_id])).rows[0])
+    const run = this.runRow((await db.query<Row>('SELECT data FROM runs WHERE id = $1', [row.run_id])).rows[0])
+    return attempt && run ? { run, attempt } : undefined
+  }
+
+  /** Stores the hash of a new expiring credential of `kind` for the attempt; returns the credential. */
+  private async issue(db: SqlClient, attemptId: string, kind: 'handoff' | 'attempt-key', expiresAt: string) {
+    const credential = newToken()
+    const attempt = (await db.query<Row>('SELECT run_id FROM attempts WHERE id = $1', [attemptId])).rows[0]
+    if (!attempt) throw new Error(`No such attempt: ${attemptId}`)
+    await db.query('INSERT INTO tokens (hash, attempt_id, run_id, kind, expires_at) VALUES ($1, $2, $3, $4, $5)', [hashToken(credential), attemptId, attempt.run_id, kind, expiresAt])
+    return credential
+  }
+
+  createHandoff(attemptId: string, expiresAt: string) {
+    return this.op((db) => this.issue(db, attemptId, 'handoff', expiresAt))
+  }
+
+  redeemHandoff(code: string, now: string) {
+    return this.op(async (db) => {
+      // Deleted in the statement that reads it, so two redemptions cannot both succeed; a late code is spent by the try.
+      const row = (await db.query<Row>("DELETE FROM tokens WHERE hash = $1 AND kind = 'handoff' RETURNING attempt_id, run_id, expires_at", [hashToken(code)])).rows[0]
+      return row && (row.expires_at as string) > now ? this.holder(db, row) : undefined
+    })
+  }
+
+  createAttemptKey(attemptId: string, expiresAt: string) {
+    return this.op((db) => this.issue(db, attemptId, 'attempt-key', expiresAt))
+  }
+
+  authorizeAttemptKey(key: string, now: string) {
+    return this.op(async (db) => this.holder(db, (await db.query<Row>("SELECT attempt_id, run_id FROM tokens WHERE hash = $1 AND kind = 'attempt-key' AND expires_at > $2", [hashToken(key), now])).rows[0]))
+  }
+
+  revokeAttemptKeys(attemptId: string) {
+    return this.op(async (db) => { await db.query("DELETE FROM tokens WHERE attempt_id = $1 AND kind IN ('handoff', 'attempt-key')", [attemptId]) })
   }
 
   getAttempt(id: string) {

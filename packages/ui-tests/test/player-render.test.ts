@@ -39,11 +39,10 @@ describe('consent', () => {
     expect(render(view({ record: 'video' }), { kind: 'consent' })).toContain('as a video')
   })
 
-  it('names no ui-tests anywhere unless poweredBy is on', () => {
+  it('names no ui-tests anywhere', () => {
     for (const [, screen] of screens(view({ answer: { question: 'Which plan?', choices: ['A', 'B'] } }))) {
       expect(render(view({ answer: { question: 'Which plan?', choices: ['A', 'B'] } }), screen).toLowerCase()).not.toContain('ui-tests')
     }
-    expect(render(view({ brand: { poweredBy: true } }), { kind: 'consent' })).toContain('Powered by ui-tests')
   })
 })
 

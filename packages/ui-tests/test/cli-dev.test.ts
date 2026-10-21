@@ -12,10 +12,13 @@ import { createRun } from '../src/runner/create-run.ts'
 import { createCollector } from '../src/server/collector.ts'
 import { openStore } from '../src/store/open.ts'
 import { runSetup, checkReachable } from '../src/runner/setup.ts'
+import { freePort, stubServer } from './server-stub.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 let target: Server
 let targetUrl: string
+/** Where rehearsal starts its own ui-tests server: nothing listens there until a rehearsal does. */
+let serverUrl: string
 let work: string
 let data: string
 const cleanup: (() => Promise<unknown> | unknown)[] = []
@@ -27,7 +30,8 @@ beforeAll(async () => {
   work = await mkdtemp(join(fixtures, '.tmp-cli-dev-'))
   data = await mkdtemp(join(tmpdir(), 'ui-tests-dev-'))
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
-  await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' } }\n`)
+  serverUrl = `http://127.0.0.1:${await freePort()}`
+  await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, server: { url: '${serverUrl}' } }\n`)
 })
 afterAll(async () => {
   target.closeAllConnections()
@@ -61,11 +65,17 @@ describe('ui-tests dev mode', () => {
     const done = main(['--no-open'], s.io)
     await until(s.out, /"player"/)
     expect(s.out()).toContain('Study: dev fixture')
-    const player = new URL(JSON.parse(/\{"player".*\}/.exec(s.out())![0]).player)
-    expect(player.origin).toBe(targetUrl)
+    const printed = JSON.parse(/\{"player".*\}/.exec(s.out())![0]).player as string
+    // The player is on the ui-tests server rehearsal started, not on the app.
+    expect(printed).toMatch(new RegExp(`^${serverUrl}/ui-tests/r_\\w+/\\?t=[0-9a-f]{64}$`))
+    expect(s.err()).toContain(`Started the ui-tests server on ${serverUrl}`)
+    const player = new URL(printed)
     const token = player.searchParams.get('t')!
     const [, , runId] = player.pathname.split('/')
     expect(runId).toMatch(/^r_/)
+    // The server answers there while the rehearsal runs, with the player of this run.
+    expect((await fetch(`${serverUrl}/healthz`)).status).toBe(200)
+    expect((await fetch(printed)).headers.get('content-type')).toContain('text/html')
 
     const store = await openStore(s.io.env)
     cleanup.push(() => store.close())
@@ -80,7 +90,7 @@ describe('ui-tests dev mode', () => {
     expect(s.out()).toContain('Outcome: correct')
     expect(s.out()).toContain('Rehearsal: 0 of 5 planned attempts recorded.')
     const run = (await store.getRun(runId))!
-    expect(run).toMatchObject({ rehearsal: true, key: expect.stringMatching(/^rehearsal:/), reachability: { url: targetUrl, reachable: true } })
+    expect(run).toMatchObject({ rehearsal: true, key: expect.stringMatching(/^rehearsal:/), reachability: { url: targetUrl, reachable: true }, target: targetUrl, appUrl: targetUrl })
     expect(run.states).toMatchObject({ collection: 'complete', verification: 'complete' })
     const [attempt] = await store.listAttempts(runId)
     expect(attempt).toMatchObject({ rehearsal: true, status: 'finished', verification: { status: 'correct' } })
@@ -100,6 +110,60 @@ describe('ui-tests dev mode', () => {
 
     s.controller.abort()
     expect(await done).toBe(0)
+    // Closed with the trace.
+    await expect(fetch(`${serverUrl}/healthz`)).rejects.toThrow()
+  })
+
+  it('reuses a ui-tests server that is already running, and leaves it running', async () => {
+    // A server on the same store: it answers the player page of the run rehearsal makes.
+    const running = await stubServer((req, res) => {
+      if (req.url === '/healthz') res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"ok":true,"name":"ui-tests"}')
+      else if (/^\/ui-tests\/r_\w+\/$/.test(req.url ?? '')) res.writeHead(200, { 'Content-Type': 'text/html' }).end('<!doctype html>')
+      else res.writeHead(404).end('Not found')
+    })
+    cleanup.push(() => running.close())
+    const dir = await mkdtemp(join(fixtures, '.tmp-cli-dev-reuse-'))
+    cleanup.push(() => rm(dir, { recursive: true, force: true }))
+    await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, server: { url: '${running.url}' } }\n`)
+    const s = session(dir)
+    const done = main(['--no-open'], s.io)
+    await until(s.out, /"player"/)
+    expect(JSON.parse(/\{"player".*\}/.exec(s.out())![0]).player).toMatch(new RegExp(`^${running.url}/ui-tests/r_\\w+/\\?t=`))
+    expect(s.err()).not.toContain('Started')
+    s.controller.abort()
+    expect(await done).toBe(0)
+    expect((await fetch(`${running.url}/healthz`)).status).toBe(200)
+  })
+
+  it('exits 2 when a running ui-tests server does not know the run, since it reads another store', async () => {
+    // Answers its health check as ui-tests does, and 404 for the run: it was started on another store.
+    const elsewhere = await stubServer()
+    cleanup.push(() => elsewhere.close())
+    const dir = await mkdtemp(join(fixtures, '.tmp-cli-dev-store-'))
+    cleanup.push(() => rm(dir, { recursive: true, force: true }))
+    await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, server: { url: '${elsewhere.url}' } }\n`)
+    const s = session(dir)
+    expect(await main(['--no-open'], s.io)).toBe(2)
+    expect(s.err()).toBe(`ui-tests server at ${elsewhere.url} does not read this project's store: stop it, or point UI_TESTS_DATABASE_URL at the same store\n`)
+    expect(s.out()).not.toContain('"player"')
+  })
+
+  it('exits 2 when the ui-tests server is neither running nor its to start, before any run exists', async () => {
+    const other = await stubServer((_req, res) => res.end('ok'))
+    cleanup.push(() => other.close())
+    const dir = await mkdtemp(join(fixtures, '.tmp-cli-dev-other-'))
+    const empty = await mkdtemp(join(tmpdir(), 'ui-tests-empty-'))
+    cleanup.push(() => rm(dir, { recursive: true, force: true }), () => rm(empty, { recursive: true, force: true }))
+    await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, server: { url: '${other.url}' } }\n`)
+    const s = session(dir, {}, { UI_TESTS_DATA_DIR: empty })
+    expect(await main(['--no-open'], s.io)).toBe(2)
+    expect(s.err()).toBe(`ui-tests server not reachable: ${other.url}\n`)
+    const store = await openStore(s.io.env)
+    expect(await store.listRuns()).toEqual([])
+    await store.close()
   })
 
   it('takes a screenshot of the end page through the injected screenshotter', async () => {

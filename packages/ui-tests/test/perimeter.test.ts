@@ -11,10 +11,16 @@ import type { GitHubClient } from '../src/github/types.ts'
 import type { Tunnel } from '../src/tunnel/types.ts'
 import { reporterFor } from '../src/cli/outward.ts'
 import { buildTrace } from '../src/trace/build.ts'
+import { answersAsServer } from '../src/cli/ensure-server.ts'
+import { startServer } from '../src/server/http.ts'
+import { freePort, stubServer } from './server-stub.ts'
+import { runOrigins } from '../src/server/origins.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 let target: Server
 let targetUrl: string
+/** The ui-tests server the links are on, already running on this machine as `ui-tests serve` runs it: no public address pinned. */
+let server: Awaited<ReturnType<typeof startServer>>
 let work: string
 let data: string
 const cleanup: (() => Promise<unknown> | unknown)[] = []
@@ -25,11 +31,15 @@ beforeAll(async () => {
   targetUrl = `http://127.0.0.1:${(target.address() as AddressInfo).port}`
   work = await mkdtemp(join(fixtures, '.tmp-perimeter-'))
   data = await mkdtemp(join(tmpdir(), 'ui-tests-perimeter-'))
+  const serverStore = await openStore({ UI_TESTS_DATA_DIR: data })
+  const started = await startServer({ store: async () => serverStore, port: await freePort(), host: '127.0.0.1' })
+  server = { ...started, close: async () => { await started.close(); await serverStore.close() } }
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
   // A webhook is configured on purpose: local only must not call it.
-  await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+  await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
 })
 afterAll(async () => {
+  await server.close()
   target.closeAllConnections()
   await new Promise(resolve => target.close(resolve))
   await rm(work, { recursive: true, force: true })
@@ -40,23 +50,114 @@ afterEach(async () => { vi.restoreAllMocks(); while (cleanup.length) await clean
 async function recruit(argv: string[], deps: CliDeps = {}, env: Record<string, string> = {}) {
   let out = ''
   let err = ''
-  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { pollMs: 1, screenshotter: stubScreenshotter(new Uint8Array([0])), ...deps } }
+  // --host holds its front door open until the deadline or Ctrl-C; unless a test says otherwise, it is stopped at once.
+  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { pollMs: 1, screenshotter: stubScreenshotter(new Uint8Array([0])), ...(argv.includes('--host') && { signal: AbortSignal.abort() }), ...deps } }
   const code = await main(['recruit', ...argv], io)
   return { code, out, err, json: () => JSON.parse(out) }
 }
 
 describe('recruit --host', () => {
-  it('puts the invite links on the internal hostname and records the run as inside the perimeter', async () => {
-    const { code, json } = await recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-1'])
+  it('puts the invite links and the app on the front door under the internal hostname, and records the run as inside the perimeter', async () => {
+    const { code, json, err } = await recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-1'])
     expect(code).toBe(0)
-    const port = new URL(targetUrl).port
+    // The links are on the front door's port under that name, and the app is reached through the same door.
     expect(json().invites).toHaveLength(5)
+    const port = new URL(json().invites[0]).port
+    expect(port).not.toBe(new URL(server.url).port)
+    expect(port).not.toBe(new URL(targetUrl).port)
     for (const link of json().invites) expect(link).toMatch(new RegExp(`^http://10\\.0\\.0\\.5:${port}/ui-tests/r_\\w+/\\?t=\\S+$`))
+    expect(err).toContain(`Inside the perimeter: links are on http://10.0.0.5:${port}. Keep this command running while people take part.`)
     const s = await openStore({ UI_TESTS_DATA_DIR: data })
     cleanup.push(() => s.close())
     const run = (await s.listRuns()).find(r => r.key === 'perimeter-1')!
     expect(run.reachability).toMatchObject({ url: targetUrl, reachable: true, mode: 'perimeter' })
     expect(run.target).toBe(targetUrl)
+    expect(run.appUrl).toBe(`http://10.0.0.5:${port}`)
+  })
+
+  it('takes only the name from a --host given with a port or a scheme', async () => {
+    for (const [given, key] of [['10.0.0.5:8080', 'perimeter-port'], ['https://10.0.0.5:8443/x', 'perimeter-url']] as const) {
+      const { code, json, err } = await recruit(['--json', '--host', given, '--key', key])
+      expect(code, err).toBe(0)
+      const port = new URL(json().invites[0]).port
+      expect(port).not.toBe('8080')
+      for (const link of json().invites) expect(link.startsWith(`http://10.0.0.5:${port}/ui-tests/`)).toBe(true)
+      expect(err).toContain(`--host ${given}: links are on the front door's own port, so only the name 10.0.0.5 is used.`)
+    }
+  })
+
+  it('holds the front door open, serving the app and the server, until stopped', async () => {
+    const stop = new AbortController()
+    const running = recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-hold'], { signal: stop.signal })
+    const s = await openStore({ UI_TESTS_DATA_DIR: data })
+    cleanup.push(() => s.close())
+    let run: Awaited<ReturnType<typeof s.listRuns>>[number] | undefined
+    for (let i = 0; i < 400 && !run?.appUrl?.startsWith('http://10.0.0.5:'); i++) {
+      run = (await s.listRuns()).find(r => r.key === 'perimeter-hold')
+      await new Promise(resolve => setTimeout(resolve, 10))
+    }
+    // The door listens on every interface; on this machine it answers at loopback on the same port.
+    const door = `http://127.0.0.1:${new URL(run!.appUrl!).port}`
+    let page = ''
+    for (let i = 0; i < 400 && !page; i++) page = await fetch(door).then(r => r.text(), () => '')
+    expect(page).toBe('ok')
+    expect((await fetch(`${door}/api/ui-tests/`)).status).toBe(401)
+    stop.abort()
+    const { code, err } = await running
+    expect(code).toBe(0)
+    expect(err).toContain('The front door stays open for the participants. Press Ctrl-C to close it.')
+    await expect(fetch(door)).rejects.toThrow()
+  })
+
+  it('gives a resumed run new links on the new door, and keeps both addresses allowed', async () => {
+    const first = await recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-resume'])
+    expect(first.code).toBe(0)
+    const second = await recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-resume'])
+    expect(second.code).toBe(0)
+    expect(second.json().run).toBe(first.json().run)
+    const [before, after] = [new URL(first.json().invites[0]).origin, new URL(second.json().invites[0]).origin]
+    expect(after).not.toBe(before)
+    expect(second.json().invites).toHaveLength(5)
+    for (const link of second.json().invites) expect(link.startsWith(`${after}/ui-tests/${first.json().run}/?t=`)).toBe(true)
+    expect(second.err).toContain(`5 links reissued under ${after}`)
+    const s = await openStore({ UI_TESTS_DATA_DIR: data })
+    cleanup.push(() => s.close())
+    const run = (await s.getRun(first.json().run))!
+    expect(run.appUrl).toBe(after)
+    expect(runOrigins(run)).toEqual(expect.arrayContaining([before, after]))
+  })
+
+  it('never puts the door in front of a server already running: it starts its own, and the running one is asked nothing', async () => {
+    const seen: string[] = []
+    const running = await stubServer((req, res) => {
+      seen.push(req.url ?? '')
+      if (req.url === '/healthz') res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"ok":true,"name":"ui-tests"}')
+      else res.writeHead(404).end('Not found')
+    })
+    cleanup.push(() => running.close())
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${running.url}' }, target: { url: '${targetUrl}' } }\n`)
+    try {
+      const stop = new AbortController()
+      const holding = recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-own'], { signal: stop.signal })
+      const s = await openStore({ UI_TESTS_DATA_DIR: data })
+      cleanup.push(() => s.close())
+      let appUrl: string | undefined
+      for (let i = 0; i < 400 && !appUrl?.startsWith('http://10.0.0.5:'); i++) {
+        appUrl = (await s.listRuns()).find(r => r.key === 'perimeter-own')?.appUrl
+        await new Promise(resolve => setTimeout(resolve, 10))
+      }
+      const door = `http://127.0.0.1:${new URL(appUrl!).port}`
+      // The collector and the player answer through the door, from the command's own server.
+      expect((await fetch(`${door}/api/ui-tests/`)).status).toBe(401)
+      expect((await fetch(`${door}/api/ui-tests/exchange`, { method: 'POST', headers: { Origin: door } })).status).toBe(400)
+      stop.abort()
+      const { code, json } = await holding
+      expect(code).toBe(0)
+      for (const link of json().invites) expect(link.startsWith(`http://10.0.0.5:${new URL(door).port}/ui-tests/`)).toBe(true)
+      expect(seen.filter(path => path.startsWith('/api/ui-tests') || path.startsWith('/ui-tests'))).toEqual([])
+    } finally {
+      await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+    }
   })
 
   it('shows how the run was reached in the trace', async () => {
@@ -72,7 +173,9 @@ describe('recruit --host', () => {
   })
 
   it('refuses --host with --tunnel or --local', async () => {
-    expect((await recruit(['--host', 'wiki', '--tunnel'])).code).toBe(2)
+    const tunnelled = await recruit(['--host', 'wiki', '--tunnel'])
+    expect(tunnelled.code).toBe(2)
+    expect(tunnelled.err).toContain('--host and --tunnel cannot be combined')
     const both = await recruit(['--host', 'wiki', '--local'])
     expect(both.code).toBe(2)
     expect(both.err).toContain('--local and --host cannot be combined')
@@ -121,18 +224,58 @@ describe('recruit --local', () => {
     for (const call of Object.values(net.calls)) expect(call).not.toHaveBeenCalled()
   })
 
+  it('starts the ui-tests server when none answers on this machine, and keeps it up for the links until stopped', async () => {
+    const net = failingNetwork()
+    const url = `http://127.0.0.1:${await freePort()}`
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${url}' }, target: { url: '${targetUrl}' } }\n`)
+    try {
+      const stop = new AbortController()
+      const running = recruit(['--json', '--local', '--key', 'local-start'], { ...net.deps, signal: stop.signal })
+      // While the command holds, the links open the player on the server it started.
+      // (asked over a socket, as the check itself does: the global fetch is the failing one here).
+      let up = false
+      for (let i = 0; i < 200 && !up; i++) {
+        up = await answersAsServer(url)
+        if (!up) await new Promise(resolve => setTimeout(resolve, 50))
+      }
+      expect(up).toBe(true)
+      stop.abort()
+      const { code, err, json } = await running
+      expect(code).toBe(0)
+      expect(err).toContain(`Started the ui-tests server on ${url}`)
+      expect(err).toContain('The ui-tests server stays up for the participants. Press Ctrl-C to stop it.')
+      for (const link of json().invites) expect(link.startsWith(`${url}/ui-tests/${json().run}/?t=`)).toBe(true)
+      expect(net.fetchSpy).not.toHaveBeenCalled()
+    } finally {
+      await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+    }
+  })
+
+  it('refuses a ui-tests server that is not on this machine', async () => {
+    const net = failingNetwork()
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: 'https://tests.example.com' }, target: { url: '${targetUrl}' } }\n`)
+    try {
+      const away = await recruit(['--local', '--key', 'away-server'], net.deps)
+      expect(away.code).toBe(2)
+      expect(away.err).toBe('--local needs the ui-tests server on this machine, not https://tests.example.com.\n')
+    } finally {
+      await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+    }
+    expect(net.fetchSpy).not.toHaveBeenCalled()
+  })
+
   it('refuses a tunnel, and a target that is not on this machine', async () => {
     const net = failingNetwork()
     const tunnelled = await recruit(['--local', '--tunnel'], net.deps)
     expect(tunnelled.code).toBe(2)
     expect(tunnelled.err).toContain('--local and --tunnel cannot be combined')
-    await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: 'http://10.0.0.5:3100' } }\n`)
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: 'http://10.0.0.5:3100' } }\n`)
     try {
       const away = await recruit(['--local', '--key', 'away'], net.deps)
       expect(away.code).toBe(2)
       expect(away.err).toContain('--local needs a target on this machine')
     } finally {
-      await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+      await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
     }
     expect(net.fetchSpy).not.toHaveBeenCalled()
   })
@@ -142,13 +285,13 @@ describe('recruit --local', () => {
     const remote = await recruit(['--local', '--key', 'remote'], net.deps, { UI_TESTS_DATABASE_URL: 'postgres://user:pw@db.example.com/ui' })
     expect(remote.code).toBe(2)
     expect(remote.err).toContain('--local keeps the store on this machine')
-    await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: 'https://localhost:3100' } }\n`)
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: 'https://localhost:3100' } }\n`)
     try {
       const secure = await recruit(['--local', '--key', 'secure'], net.deps)
       expect(secure.code).toBe(2)
       expect(secure.err).toContain('--local supports http targets')
     } finally {
-      await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+      await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
     }
     expect(net.fetchSpy).not.toHaveBeenCalled()
   })

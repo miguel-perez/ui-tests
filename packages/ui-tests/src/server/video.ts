@@ -2,7 +2,7 @@ import { signedUrl, verifyPath } from '../report/sign.ts'
 import { assembleVideo, videoResponse } from '../report/video.ts'
 import { mayShow } from '../report/view.tsx'
 import { buildRecord } from '../record/build.ts'
-import { getStore } from './store.ts'
+import type { RunStore } from '../store/types.ts'
 
 const notFound = () => new Response('Not found', { status: 404, headers: { 'Cache-Control': 'no-store' } })
 
@@ -11,11 +11,11 @@ export const sharedVideoPath = (run: string, person: number) => `/rv/${encodeURI
 export const sharedVideoUrl = (run: string, person: number, secret: string) => signedUrl(sharedVideoPath(run, person), secret)
 
 /**
- * The video of one person in a shared report: mount at `app/rv/[...path]/route.server.ts`. Answers only to its own signature, only for
- * a person who agreed to their recording being shown, and never for one who withdrew.
+ * The video of one person in a shared report, at `/rv/<run>/p<n>`. Answers only to its own signature under `shareSecret`, only for a
+ * person who agreed to their recording being shown, and never for one who withdrew.
  */
-export async function reportVideo(request: Request): Promise<Response> {
-  const secret = process.env.UI_TESTS_SHARE_SECRET
+export async function reportVideo(request: Request, options: { store: RunStore; shareSecret?: string }): Promise<Response> {
+  const secret = options.shareSecret
   const url = new URL(request.url)
   const path = url.pathname
   if (!secret || !verifyPath(path, url.searchParams.get('sig'), secret)) return notFound()
@@ -24,7 +24,7 @@ export async function reportVideo(request: Request): Promise<Response> {
   const [prefix, run, who, ...rest] = segments
   const person = /^p([1-9]\d{0,5})$/.exec(who ?? '')?.[1]
   if (prefix !== 'rv' || !run || !person || rest.length) return notFound()
-  const store = await getStore()
+  const { store } = options
   const row = await store.getRun(run)
   if (!row || row.actor === 'agent') return notFound()
   const attempt = (await buildRecord(store, run)).attempts[Number(person) - 1]

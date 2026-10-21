@@ -1,1 +1,0 @@
-Minimal flat vector logomark for a developer tool called ui-tests. A single solid black glyph on a plain white background: a terminal prompt chevron > followed by a simple almond-shaped eye with a round pupil, joined into one compact mark. Geometric, one colour, no text, no gradients, no shading, centered with generous margin.

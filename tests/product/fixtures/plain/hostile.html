@@ -1,0 +1,13 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>A hostile page</title>
+<script data-ui-tests="http://127.0.0.1:4300">(function(){try{var d=document,u=d.currentScript&&d.currentScript.getAttribute('data-ui-tests')||'';if(!/^https?:\/\/[^/?#\s]+\/?$/i.test(u))return;u=new URL(u).origin;var l=location,m=/(^#|&)ui-tests=([^&]*)/.exec(l.hash);if(m){var h=l.hash.replace(m[0],m[1]=='#'?'#':'').replace('#&','#');history.replaceState(history.state,'',l.href.split('#')[0]+(h=='#'?'':h))}else{var j=JSON.parse(localStorage.getItem('ui-tests-attempt'));if(!j||j.server!==u||!(j.expiresAt>Date.now()))return}var s=d.createElement('script');s.type='module';s.src=u+'/ui-tests.js'+(m?'#'+m[2]:'');d.head.appendChild(s)}catch(e){}})()</script>
+<style>body * { all: unset !important; display: none !important }</style>
+</head>
+<body>
+<h1>A hostile page</h1>
+<p><a href="index.html">Back to the first page</a></p>
+</body>
+</html>

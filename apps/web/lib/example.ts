@@ -1,5 +1,5 @@
 /**
- * The study file the landing shows, with the Weekboard example filled in (design/artefacts/compile-section.html): what
+ * The study file the landing shows, with the Weekboard example filled in: what
  * `npx ui-tests init` would write, per docs/prd/01-dx-contract.md.
  */
 export const exampleFileName = 'ui-tests/invite.ui.test.ts'

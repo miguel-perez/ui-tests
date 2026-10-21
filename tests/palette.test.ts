@@ -8,8 +8,8 @@ function luminance(hex: string) {
   return rgb[0] * .2126 + rgb[1] * .7152 + rgb[2] * .0722
 }
 function contrast(a: string, b: string) { const x = luminance(a), y = luminance(b); return (Math.max(x,y) + .05) / (Math.min(x,y) + .05) }
-// The tokens' own floors are in tests/contrast.test.ts, read from design/artefacts/tokens.css.
-const tokenFile = await readFile('design/artefacts/tokens.css', 'utf8')
+// The tokens' own floors are in tests/contrast.test.ts, read from the token block of globals.css.
+const tokenFile = await readFile('apps/web/app/globals.css', 'utf8')
 // The site is light only (issue #43), so the page's texture is only ever on the light block.
 const themes = {
   light: Object.fromEntries([...(/^:root \{([^}]*)\}/m.exec(tokenFile)![1]).matchAll(/--([\w-]+): (#[\da-f]{6})/g)].map(match => [match[1], match[2]])),

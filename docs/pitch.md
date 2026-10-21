@@ -38,8 +38,8 @@ Your tests prove it works and keeps working. ui-tests proves people can use it, 
 
 ## What users will do to get value
 
-1. Install the package, run `npx ui-tests init`, and change the study it writes to their own site.
-2. Run it on themselves in dev mode.
+1. Install the package, run `npx ui-tests init`, add the script tag it prints to their app, whatever it is built with, and change the study it writes to their own site.
+2. Run it on themselves in dev mode, which starts the ui-tests server on their machine. For real people they run the server themselves, `npx ui-tests serve` or the Docker image, while the study is open.
 3. Share a link with five people from their audience, or add a panel key and a cap. Put `npx ui-tests check` in the job that deploys the preview: one run per pull request, within the cap.
 4. Read the fit, the problems and the sentence. Fix the UI, or the purpose. Re-run.
 
@@ -67,9 +67,9 @@ This does not test traction. That is fine.
 - **Results**: a run reports the problems it found, or that it found none this time; there is no score and no pass. Findings are reported at the level they belong to: the UI, the goal, or the context.
 - **Success**: defined by the author's hooks, run in the runner, never in the app under test. A participant's own judgement is recorded as data.
 - **Review**: the trace is auditable. Generated scenario wording can be edited before launch. Exclusions and incentive adjustments are recorded as revisions.
-- **White label**: everything a participant sees is the author's name and theme; our brand appears only where the author opts in.
+- **White label**: everything a participant sees carries the author's name, logo, colours and font; no ui-tests mark appears to participants.
 - **Participants**: a person who is not the audience is excluded with one click and still paid. Accommodation is never a quality flag. The incentive formula is a floor; pay only goes up from it, except for people the author brings themselves.
 
 ## Non-goals
 
-Figma prototypes, mobile native, moderated sessions, comparisons between builds, synthetic users as stand-ins for people, think-aloud recording, GEPA itself, any framework adapter other than Next.js.
+Figma prototypes, mobile native, moderated sessions, comparisons between builds, synthetic users as stand-ins for people, think-aloud recording, GEPA itself, framework adapters or plugins: one script tag serves every framework.

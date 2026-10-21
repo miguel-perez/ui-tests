@@ -3,22 +3,26 @@
 import { useEffect, useRef, useState } from 'react'
 import type { ParticipantView } from '../server/view.ts'
 import { entryScreen, messageFor, nextScreen } from './flow.ts'
+import { beginAndHandOff, rememberBypass, withBypass } from './handoff.ts'
 import type { Screen } from './flow.ts'
 import { PlayerScreen } from './screens.tsx'
 
-const ENDPOINT = '/api/ui-tests/'
 const FIXATION_MS = 800
 /** If the picture has not loaded by now the first look is dropped: the stage moves on rather than waiting for ever. */
 const FLASH_LOAD_LIMIT_MS = 5000
 
-/** The participant's own page: consent, the scenario card, and the questions after the task. White-labelled by default. */
-export function Player({ runId }: { runId: string }) {
+/**
+ * The participant's own page: consent, the scenario card, and the questions after the task. White-labelled by default. `endpoint` is
+ * the collector, on this page's own origin.
+ */
+export function Player({ runId, endpoint = '/api/ui-tests/' }: { runId: string; endpoint?: string }) {
   const [view, setView] = useState<ParticipantView>()
   const [screen, setScreen] = useState<Screen>()
   const [answers, setAnswers] = useState<Record<string, unknown>>({})
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
   const token = useRef<string | null>(null)
+  const bypass = useRef<string | undefined>(undefined)
   const flash = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const request = (init?: { method: string; body: string }) => {
@@ -29,11 +33,12 @@ export function Player({ runId }: { runId: string }) {
       if (init) headers.Authorization = `Bearer ${token.current}`
       else query.set('t', token.current)
     }
-    return fetch(`${ENDPOINT}?${query}`, { credentials: 'include', cache: 'no-store', ...init, headers })
+    return fetch(`${endpoint}?${query}`, { credentials: 'include', cache: 'no-store', ...init, headers })
   }
 
   useEffect(() => {
     token.current = new URLSearchParams(window.location.search).get('t')
+    bypass.current = rememberBypass(runId, window.location.search)
     let alive = true
     request()
       .then((response) => (response.ok ? (response.json() as Promise<ParticipantView>) : Promise.reject(new Error(String(response.status)))))
@@ -53,7 +58,7 @@ export function Player({ runId }: { runId: string }) {
   useEffect(() => {
     if (!view || screen?.kind !== 'impression' || screen.phase !== 'fixation') return
     const preload = new Image()
-    preload.src = `${ENDPOINT}?run=${encodeURIComponent(view.run)}&shot=first-look`
+    preload.src = `${endpoint}?run=${encodeURIComponent(view.run)}&shot=first-look`
     const timer = setTimeout(() => setScreen((s) => (s ? nextScreen(view, s, answers) : s)), FIXATION_MS)
     return () => clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -66,9 +71,14 @@ export function Player({ runId }: { runId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, view])
   useEffect(() => () => clearTimeout(flash.current), [])
-  // The first click is taken on the author's own page by the SDK there; this page sends the person to it.
+  // The first click is taken on the author's own page by the bar there; this page hands the person over to it.
+  // Once: a new view on the same screen does not ask for a second code. The button on the screen asks again if this one failed.
+  const handedOff = useRef(false)
   useEffect(() => {
-    if (view && screen?.kind === 'impression' && screen.phase === 'click') window.location.assign(view.goal.start)
+    if (!view || screen?.kind !== 'impression' || screen.phase !== 'click' || handedOff.current) return
+    handedOff.current = true
+    void handoff().catch(() => setError('That did not go through. Check your connection and try again.'))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [screen, view])
 
   /** The screen after `current`; once a goal's last answer is in and the person has a next goal, the view is that goal's, and its card comes next. */
@@ -81,6 +91,14 @@ export function Player({ runId }: { runId: string }) {
     const response = await request({ method: 'POST', body: JSON.stringify(body) })
     if (!response.ok) throw new Error(await response.text())
     return (await response.json()) as ParticipantView
+  }
+
+  /** Sends the person on to the app with a one-time code in the address, which the app's page trades for the bar. */
+  async function handoff() {
+    const response = await request({ method: 'POST', body: JSON.stringify({ action: 'handoff' }) })
+    if (!response.ok) throw new Error(await response.text())
+    const { url } = (await response.json()) as { url: string }
+    window.location.assign(withBypass(url, bypass.current))
   }
 
   async function advance(current: Screen) {
@@ -145,8 +163,7 @@ export function Player({ runId }: { runId: string }) {
     setBusy(true)
     setError(undefined)
     try {
-      if (view.status === 'consented') await send({ action: 'begin' })
-      window.location.assign(view.goal.start)
+      await beginAndHandOff(view, { begin: () => send({ action: 'begin' }), begun: setView, handoff })
     } catch {
       setError('That did not go through. Check your connection and try again.')
       setBusy(false)
@@ -178,7 +195,7 @@ export function Player({ runId }: { runId: string }) {
         clearTimeout(flash.current)
         setScreen({ kind: 'card' })
       }}
-      onOpenPage={() => window.location.assign(view.goal.start)}
+      onOpenPage={() => void handoff().catch(() => setError('That did not go through. Check your connection and try again.'))}
       busy={busy}
       error={error}
     />

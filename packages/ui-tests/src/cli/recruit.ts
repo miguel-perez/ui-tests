@@ -1,4 +1,4 @@
-import { loadConfig } from '../config.ts'
+import { DEFAULT_SERVER_URL, loadConfig } from '../config.ts'
 import { formatFindings, lint, planLines } from '../lint.ts'
 import { StudyLoadError } from '../load.ts'
 import { BYPASS_HEADER, createInvites, reissueInvites, slotCount } from '../runner/invites.ts'
@@ -16,6 +16,9 @@ import type { UiTestsConfig } from '../types.ts'
 import { verifyRun } from '../verify.ts'
 import { loadStudies, withProduct } from './lint.ts'
 import type { Command, Io } from './main.ts'
+import { answersAsServer, ensureServer, ensureServerKnowsRun, ServerUnreachable, startDoorServer } from './ensure-server.ts'
+import { startFrontDoor } from '../server/front-door.ts'
+import { setRunApp } from '../server/origins.ts'
 import { reporterFor } from './outward.ts'
 
 const DEFAULT_POLL_MS = 30_000
@@ -85,6 +88,7 @@ export const recruit: Command = async (args, io) => {
   if (findings.some(f => f.severity === 'error')) { io.stderr.write(`${formatFindings(findings)}\n`); return 1 }
 
   const target = config.target?.url ?? 'http://localhost:3000'
+  const server = (config.server?.url ?? DEFAULT_SERVER_URL).replace(/\/+$/, '')
   // Local only: this machine alone. Nothing leaves it, so the things that would (a tunnel, a result hook for GitHub or a webhook) are off, and a target that is not on this machine is refused.
   const localOnly = args.flags.has('local')
   const hostFlag = args.flags.get('host')
@@ -94,17 +98,27 @@ export const recruit: Command = async (args, io) => {
   if (args.flags.has('tunnel') && typeof hostFlag === 'string') { io.stderr.write('--host and --tunnel cannot be combined: a tunnel has its own address.\n'); return 2 }
   const databaseUrl = io.env.UI_TESTS_DATABASE_URL
   if (localOnly && databaseUrl && !databaseUrl.startsWith('pglite:')) { io.stderr.write('--local keeps the store on this machine: unset UI_TESTS_DATABASE_URL or use pglite:<dir>, not a remote database.\n'); return 2 }
-  let hostBase: string | undefined
+  // With --host, people reach the app and the ui-tests server by that name, on the front door's port: only the name is taken.
+  let hostName: string | undefined
   try {
     if (localOnly && !isLoopbackHost(new URL(target).hostname.replace(/^\[|\]$/g, ''))) { io.stderr.write(`--local needs a target on this machine, not ${target}.\n`); return 2 }
     if (localOnly && new URL(target).protocol !== 'http:') { io.stderr.write(`--local supports http targets on this machine; ${target} is ${new URL(target).protocol.replace(':', '')}. Serve the build over http on localhost.\n`); return 2 }
-    if (typeof hostFlag === 'string') hostBase = linkBaseFor(target, hostFlag)
+    if (typeof hostFlag === 'string') hostName = new URL(/^[a-z][a-z0-9+.-]*:\/\//i.test(hostFlag) ? hostFlag : `http://${hostFlag}`).hostname || undefined
+    if (typeof hostFlag === 'string' && !hostName) throw new Error('no hostname')
   } catch { io.stderr.write(`${typeof hostFlag === 'string' ? `--host ${hostFlag} is not a hostname` : `target is not a URL: ${target}`}\n`); return 2 }
-  const mode = reachabilityOf(hostBase ?? target, { tunnel: args.flags.has('tunnel') })
+  if (hostName && hostName !== hostFlag) io.stderr.write(`--host ${hostFlag}: links are on the front door's own port, so only the name ${hostName} is used.\n`)
+  try {
+    if (localOnly && !isLoopbackHost(new URL(server).hostname.replace(/^\[|\]$/g, ''))) { io.stderr.write(`--local needs the ui-tests server on this machine, not ${server}.\n`); return 2 }
+    if (!URL.canParse(server)) throw new Error('not a URL')
+  } catch { io.stderr.write(`the ui-tests server is not a URL: ${server}\n`); return 2 }
+  // A tunnel or a LAN name reaches the app and the ui-tests server through one front door on this machine.
+  const throughDoor = args.flags.has('tunnel') || hostName !== undefined
+  // The links open the player on the ui-tests server, so it must answer before any run is made. Local only starts one if it can; the front door always starts its own.
+  if (!localOnly && !throughDoor && !(await answersAsServer(server))) { io.stderr.write(`${new ServerUnreachable(server).message}\n`); return 2 }
+  const mode = reachabilityOf(hostName ? `http://${hostName}` : target, { tunnel: args.flags.has('tunnel') })
   const diagnostics = json ? io.stderr : io.stdout
   diagnostics.write(`${planLines(chosen.compiled).join('\n')}\n${chosen.compiled.consent.payout}\n\n`)
   if (localOnly) diagnostics.write('Local only: no tunnel, model, GitHub or webhook call is made. The run, its records and the links stay on this machine.\n\n')
-  else if (hostBase && mode === 'perimeter') diagnostics.write(`Inside the perimeter: links are on ${hostBase}. The collector and the store stay where you run them; nothing leaves unless you export the record.\n\n`)
 
   const commitFlag = args.flags.get('commit')
   const commit = typeof commitFlag === 'string' ? commitFlag : await gitCommit(io.cwd)
@@ -115,7 +129,15 @@ export const recruit: Command = async (args, io) => {
   const bypass = io.env.VERCEL_AUTOMATION_BYPASS_SECRET || undefined
 
   const store = await openStore(io.env)
+  let started: Awaited<ReturnType<typeof ensureServer>> | undefined
+  let doorServer: Awaited<ReturnType<typeof startDoorServer>> | undefined
   try {
+    if (localOnly) {
+      try { started = await ensureServer({ url: server, store, io }) } catch (error) {
+        io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
+        return 2
+      }
+    }
     // A key that already has a run is read back without touching the target, so it still works while the target is down.
     const existing = (await store.listRuns()).find(r => r.key === key)
     if (!existing && !(await (localOnly ? probeLocal(target) : checkReachable(target, deps.fetch)))) { io.stderr.write(`target not reachable: ${target}\n`); return 2 }
@@ -124,34 +146,55 @@ export const recruit: Command = async (args, io) => {
     const onSignal = () => stop.abort()
     let opened: Awaited<ReturnType<typeof openReachableTunnel>> | undefined
     let tunnel: typeof opened
-    const onExit = () => { void (tunnel ?? opened)?.close() }
+    let door: Awaited<ReturnType<typeof startFrontDoor>> | undefined
+    const onExit = () => { void (tunnel ?? opened)?.close(); void door?.close() }
     let tunneling = args.flags.has('tunnel')
     if (tunneling && existing && Date.parse(existing.deadline) <= now().getTime()) {
       io.stderr.write(`Run ${existing.run} is past its deadline; no tunnel opened and no links reissued.\n`)
       tunneling = false
     }
-    // A tunnel is run-scoped: it is opened (and must answer) before any run exists, recorded on the run, and closed at the deadline or when this command ends.
-    if (tunneling) {
-      try { opened = await openReachableTunnel({ tunnel: chooseTunnel(io.env, deps.tunnel), localUrl: target, ...(deps.fetch && { fetch: deps.fetch }), retryMs: deps.pollMs ?? 500 }) } catch (error) {
+    // The front door serves the app and a ui-tests server of this command's own from one origin, and points the app's tag at it, for as
+    // long as this command runs. That server is never one already running: it trusts the address the door names, and only the door reaches it.
+    if (tunneling || hostName) {
+      doorServer = await startDoorServer({ store, io })
+      door = await startFrontDoor({ app: target, server: doorServer.url, ...(hostName && { host: '0.0.0.0' }), ...(bypass && { appHeaders: { [BYPASS_HEADER]: bypass } }) })
+    }
+    // A tunnel is run-scoped: it is opened to the front door (and must answer) before any run exists, recorded on the run, and closed at the deadline or when this command ends.
+    if (tunneling && door) {
+      try { opened = await openReachableTunnel({ tunnel: chooseTunnel(io.env, deps.tunnel), localUrl: door.url, ...(deps.fetch && { fetch: deps.fetch }), retryMs: deps.pollMs ?? 500 }) } catch (error) {
         io.stderr.write(`tunnel: ${error instanceof Error ? error.message : String(error)}\n`)
+        await door.close()
         return 2
       }
-      for (const event of ['SIGINT', 'SIGTERM', 'exit'] as const) process.once(event, event === 'exit' ? onExit : onSignal)
     }
+    if (door) for (const event of ['SIGINT', 'SIGTERM', 'exit'] as const) process.once(event, event === 'exit' ? onExit : onSignal)
+    else if (started?.started) for (const event of ['SIGINT', 'SIGTERM'] as const) process.once(event, onSignal)
+    // Where people open the app and the links: the tunnel's address, the --host name on the door's port, or the target and the server.
+    const doorBase = opened?.url ?? (door && hostName ? linkBaseFor(door.url, hostName) : undefined)
+    if (doorBase && hostName) diagnostics.write(`${mode === 'perimeter' ? 'Inside the perimeter: links' : 'Links'} are on ${doorBase}. Keep this command running while people take part.\n\n`)
     deps.signal?.addEventListener('abort', onSignal, { once: true })
     if (deps.signal?.aborted) stop.abort()
     let created = false
     let run!: RunRow
     try {
       ;({ run, created } = await createRun({
-        store, compiled: chosen.compiled, hooksBundle: chosen.code, target, actor, rehearsal: false, key, commit,
+        store, compiled: chosen.compiled, hooksBundle: chosen.code, target, appUrl: doorBase ?? target, actor, rehearsal: false, key, commit,
         ...(hours !== undefined && { deadlineHours: Number(hours) }),
         reachability: { url: target, reachable: true, checkedAt: new Date().toISOString(), mode, ...(localOnly && { localOnly: true }) },
       }))
+      // A resumed run is opened at the door's address of this time (a quick tunnel's is new each time): it becomes the app's, and its origin is allowed.
+      if (doorBase && !created) run = await setRunApp(store, run.run, doorBase)
+      // A server already running on this machine may read another store: the links would open on a run it never saw.
+      if (started) {
+        try { await ensureServerKnowsRun(started, run.run) } catch (error) {
+          io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
+          return 2
+        }
+      }
       if (opened) tunnel = await recordTunnel({ store, runId: run.run, opened, now })
-      const linkBase = tunnel?.url ?? hostBase ?? target
-      // A resumed run reopens its tunnel at a new address, so slots nobody opened get new links under it.
-      const reissued = tunnel ? await reissueInvites({ store, run, linkBase, ...(bypass && { bypass }) }) : []
+      const linkBase = doorBase ?? server
+      // A resumed run reopens its door at a new address (a new tunnel, or a new port for --host), so slots nobody opened get new links under it.
+      const reissued = doorBase && !created ? await reissueInvites({ store, run, linkBase, ...(bypass && { bypass }) }) : []
       // Invite slots are made up to n, so a run whose setup failed part-way is repaired by running the same command again.
       const made = slotCount(await store.listAttempts(run.run))
       const missing = Math.max(0, run.compiled.sample.n - made)
@@ -161,7 +204,7 @@ export const recruit: Command = async (args, io) => {
       // The first look is a picture of the start page, taken once now and shown to every participant of the run.
       const shot = await attachFirstLook({ store, run, target, screenshotter: deps.screenshotter ?? playwrightScreenshotter({ loopbackOnly: localOnly }), ...(bypass && { headers: { [BYPASS_HEADER]: bypass } }) })
       if (shot.error) io.stderr.write(`${shot.error}\n`)
-      if (!created) io.stderr.write(`Run ${run.run} already exists for key ${key}; ${missing ? `made ${missing} missing invite${missing === 1 ? '' : 's'}` : 'no new invites'}${reissued.length ? `; ${reissued.length} link${reissued.length === 1 ? '' : 's'} reissued under the new tunnel` : ''}.\n`)
+      if (!created) io.stderr.write(`Run ${run.run} already exists for key ${key}; ${missing ? `made ${missing} missing invite${missing === 1 ? '' : 's'}` : 'no new invites'}${reissued.length ? `; ${reissued.length} link${reissued.length === 1 ? '' : 's'} reissued under ${doorBase}` : ''}.\n`)
       const tunnelLine = tunnel ? `Tunnel: ${tunnel.url} (open until ${run.deadline} or until this command ends)\n` : ''
 
       let handle = handleOf(run)
@@ -178,6 +221,13 @@ export const recruit: Command = async (args, io) => {
       if (tunnel && !args.flags.has('wait')) {
         io.stderr.write('The tunnel stays open for the participants. Press Ctrl-C to close it.\n')
         await holdUntil(run.deadline, now, deps.pollMs ?? DEFAULT_POLL_MS, stop.signal)
+      } else if (door && !args.flags.has('wait')) {
+        io.stderr.write('The front door stays open for the participants. Press Ctrl-C to close it.\n')
+        await holdUntil(run.deadline, now, deps.pollMs ?? DEFAULT_POLL_MS, stop.signal)
+      } else if (started?.started && !args.flags.has('wait')) {
+        // The links open the server this command started: it serves them until the deadline, like a tunnel.
+        io.stderr.write('The ui-tests server stays up for the participants. Press Ctrl-C to stop it.\n')
+        await holdUntil(run.deadline, now, deps.pollMs ?? DEFAULT_POLL_MS, stop.signal)
       }
       return code
     } finally {
@@ -185,6 +235,11 @@ export const recruit: Command = async (args, io) => {
       for (const event of ['SIGINT', 'SIGTERM'] as const) process.removeListener(event, onSignal)
       process.removeListener('exit', onExit)
       await (tunnel ?? opened)?.close()
+      await door?.close()
     }
-  } finally { await store.close() }
+  } finally {
+    await doorServer?.close()
+    await started?.close()
+    await store.close()
+  }
 }

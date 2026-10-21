@@ -9,7 +9,10 @@ import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from 
 import { UXLITE_VERSION } from '../measures.ts'
 import { nullTranscriber, type Transcriber } from '../transcriber.ts'
 import { MAX_VIDEO_BYTES, MAX_VIDEO_CHUNKS, MAX_VIDEO_SEGMENTS, VIDEO_CHUNK_BYTES, VIDEO_DECLINED, VIDEO_GAP, VIDEO_KEY, VIDEO_STOPPED, videoChunks, videoPauses } from '../video.ts'
-import { MORE_TIME, effectiveTimeout, isOwnSite, participantView, type ParticipantView } from './view.ts'
+import { MORE_TIME, barView, effectiveTimeout, isOwnSite, participantView, type ParticipantView } from './view.ts'
+import { ATTEMPT_KEY_TTL_MS, HANDOFF_TTL_MS } from './credentials.ts'
+import { handoffUrl } from './handoff.ts'
+import { appUrlOf, originOf, runOrigins } from './origins.ts'
 import type { CompiledGoal } from '../schema/compiled.ts'
 import { GOAL_ORDER, nextGoalOf, placeOf, storedOrder } from '../runner/sequence.ts'
 
@@ -23,6 +26,8 @@ export type CollectorOptions = {
   now?: () => number
   /** Makes text from a spoken answer when the browser did not; without it the audio is kept as it is. */
   transcriber?: Transcriber
+  /** The address the collector is reached at; its origin is the collector's own, for the Origin check and the cookie's `Secure` flag. */
+  publicUrl?: string
 }
 
 /** Most bytes a body may carry. `end` holds a snapshot of up to 2,000,000 characters, which JSON-escaping can nearly double. */
@@ -87,11 +92,24 @@ const message = z.discriminatedUnion('action', [
   /** An open question answered by voice: the audio (base64), and the words when the browser already has them. */
   z.object({ action: z.literal('voice'), question: z.string().max(100), audio: z.string().max(MAX_VOICE_CHARS), contentType: z.string().regex(/^audio\/[a-z0-9.+-]+/i).max(100), transcript: z.string().max(10_000).optional(), typed: z.string().max(10_000).optional() }),
   z.object({ action: z.literal('withdraw') }),
+  /** The person goes on to the app: a one-time code the app's page exchanges for an attempt key. */
+  z.object({ action: z.literal('handoff') }),
 ])
 type Message = z.infer<typeof message>
 
 const headers = { 'Cache-Control': 'no-store' }
 const refuse = (status: number, text: string) => new Response(text, { status, headers })
+
+/** What a page holding only an attempt key may send: the bar's own writes, and of the answers only the first click. */
+const BAR_ACTIONS = new Set(['events', 'replay', 'video', 'video-note', 'video-declined', 'step', 'end', 'more-time', 'answers'])
+function barMay(raw: unknown): boolean {
+  if (typeof raw !== 'object' || raw === null) return false
+  const { action, ...rest } = raw as Record<string, unknown>
+  if (typeof action !== 'string' || !BAR_ACTIONS.has(action)) return false
+  return action !== 'answers' || (Object.keys(rest).length === 1 && rest.firstClick !== undefined)
+}
+
+const exchangeBody = z.object({ code: z.string().max(200) })
 
 const cookieValue = (request: Request, name: string) => new RegExp(`(?:^|;\\s*)${name}=([^;]+)`).exec(request.headers.get('cookie') ?? '')?.[1]
 
@@ -158,8 +176,6 @@ function publicOrigin(request: Request, url: URL): string {
   return `${proto ?? url.protocol.replace(':', '')}://${host ?? url.host}`
 }
 
-const isSecure = (request: Request, url: URL) => publicOrigin(request, url).startsWith('https:')
-
 /** Reads the body while counting bytes; undefined once it passes `limit`, without reading the rest. */
 async function readBody(request: Request, limit: number): Promise<string | undefined> {
   if (!request.body) return ''
@@ -185,7 +201,28 @@ function sameSecret(given: string, secret: string): boolean {
   return a.length === b.length && timingSafeEqual(a, b)
 }
 
-/** Builds the collector: one handler for `GET` (the participant view) and `POST` (the participant's actions). */
+/** Answers a preflight from one of the run's origins: the methods and headers an attempt key needs, never credentials. */
+function preflight(request: Request, origin: string): Response {
+  const allow = new Headers({
+    ...headers,
+    'Access-Control-Allow-Origin': origin,
+    'Access-Control-Allow-Methods': 'GET, POST',
+    'Access-Control-Allow-Headers': 'authorization, content-type',
+    'Access-Control-Max-Age': '600',
+    Vary: 'Origin',
+  })
+  // A page on a public address calling a collector on this machine or network asks first (Private Network Access).
+  if (request.headers.get('access-control-request-private-network') === 'true') allow.set('Access-Control-Allow-Private-Network', 'true')
+  return new Response(null, { status: 204, headers: allow })
+}
+
+/** Where a request comes from: this origin (or no Origin), a page on one of the named run's origins, or anywhere else. */
+type Source = 'same' | 'run' | 'foreign'
+
+/**
+ * Builds the collector: one handler for `GET` (the participant view), `POST` (the participant's actions), `POST exchange` (a handoff
+ * code for an attempt key) and `OPTIONS` (the preflight of the app's page).
+ */
 export function createCollector(options: CollectorOptions): (request: Request) => Promise<Response> {
   const now = options.now ?? Date.now
   let warned = false
@@ -194,49 +231,107 @@ export function createCollector(options: CollectorOptions): (request: Request) =
 
   return async function collector(request: Request): Promise<Response> {
     const url = new URL(request.url)
+    const own = (options.publicUrl && originOf(options.publicUrl)) || publicOrigin(request, url)
+    const origin = request.headers.get('origin')
+    const runId = url.searchParams.get('run')
+    const store = await options.store()
+    const cross = origin !== null && origin !== own
+    // A cross-origin page is answered only when it names a run and is on one of that run's origins.
+    const run = cross && runId ? await store.getRun(runId) : undefined
+    const fromRun = cross && run !== undefined && runOrigins(run).includes(origin)
+    if (request.method === 'OPTIONS') return fromRun ? preflight(request, origin) : refuse(403, 'Invalid origin')
+    if (cross && runId && !fromRun) return refuse(403, 'Invalid origin')
+    const source: Source = !cross ? 'same' : fromRun ? 'run' : 'foreign'
+    const response = await handle(store, request, url, own, source)
+    // Never `Access-Control-Allow-Credentials`: the page's only credential is the attempt key it sends itself.
+    if (fromRun) {
+      response.headers.set('Access-Control-Allow-Origin', origin)
+      response.headers.append('Vary', 'Origin')
+    }
+    return response
+  }
+
+  async function handle(store: RunStore, request: Request, url: URL, own: string, source: Source): Promise<Response> {
+    // The exchange is the tag's, on a page of one of the run's origins: a request with no Origin is not a browser's page, and is refused.
+    if (url.pathname.endsWith('/exchange')) return source === 'foreign' || !request.headers.get('origin') ? refuse(403, 'Invalid origin') : exchange(store, request, url)
     const get = request.method === 'GET'
     if (!get && request.method !== 'POST') return refuse(405, 'Method not allowed')
     const length = Number(request.headers.get('content-length') ?? 0)
     if (length > MAX_BODY_BYTES) return refuse(413, 'Request too large')
 
-    const store = await options.store()
     const bearer = /^Bearer (.+)$/.exec(request.headers.get('authorization') ?? '')?.[1]
     const cookie = cookieValue(request, 'ui-tests-run')
     const resolved = await authorize(store, url, bearer, cookie, get)
     if (!resolved) return refuse(401, 'Unauthorized')
     const wantedRun = url.searchParams.get('run')
     if (wantedRun && wantedRun !== resolved.run.run) return refuse(401, 'Unauthorized')
+    // The app's page holds only an attempt key: the participant's token and cookie never work from it.
+    if (source === 'run' && resolved.via !== 'attempt-key') return refuse(403, 'Invalid origin')
+    // A cross-origin request that names no run gets no CORS answer; only the non-ambient participant token and CLI secret work there.
+    if (source === 'foreign' && (resolved.via === 'attempt-key' || resolved.via === 'cookie')) return refuse(403, 'Invalid origin')
+    const keyed = resolved.via === 'attempt-key'
 
+    if (get && (keyed || url.searchParams.get('view') === 'bar')) return Response.json(barView(resolved.run, resolved.attempt), { headers })
     if (get && url.searchParams.get('shot') === 'first-look') return firstLook(store, resolved.attempt)
     if (get) return respond(resolved.run, resolved.attempt)
 
     // Cookies ride along on cross-site requests, so a write they authorise must come from this origin. Bearer writes (CLI, tests) are not ambient.
-    if (resolved.via === 'cookie' && request.headers.get('origin') !== publicOrigin(request, url)) return refuse(403, 'Invalid origin')
+    if (resolved.via === 'cookie' && request.headers.get('origin') !== own) return refuse(403, 'Invalid origin')
 
     const text = await readBody(request, MAX_BODY_BYTES)
     if (text === undefined) return refuse(413, 'Request too large')
     let raw: unknown
     try { raw = JSON.parse(text) } catch { return refuse(400, 'Body is not JSON') }
+    if (keyed && !barMay(raw)) return refuse(403, 'Not allowed with an attempt key')
+    // Once its attempt is finished, the key still reads the bar's view (so the bar can close) and writes nothing.
+    if (keyed && resolved.attempt.status === 'finished') return refuse(409, 'Attempt is not active')
     const action = (raw as { action?: unknown } | null)?.action
     if (Buffer.byteLength(text) > (action === 'video' ? VIDEO_BYTES : action === 'end' ? END_BYTES : action === 'replay' ? REPLAY_BYTES : BODY_BYTES)) return refuse(413, 'Request too large')
     const parsed = message.safeParse(raw)
     if (!parsed.success) return refuse(400, parsed.error.message)
 
-    return act(store, resolved.run, resolved.attempt, parsed.data, 'token' in resolved ? resolved.token : undefined, isSecure(request, url))
+    return act(store, resolved.run, resolved.attempt, parsed.data, 'token' in resolved ? resolved.token : undefined, own.startsWith('https:'), keyed)
   }
 
-  /** Who is asking: the CLI secret naming an attempt, or a participant token from `?t=` (GET only), then Bearer, then the cookie. */
+  /** Spends a handoff code for an attempt key: the code is the only credential, and it must belong to the run the page names. */
+  async function exchange(store: RunStore, request: Request, url: URL): Promise<Response> {
+    if (request.method !== 'POST') return refuse(405, 'Method not allowed')
+    const text = await readBody(request, 1000)
+    if (text === undefined) return refuse(413, 'Request too large')
+    let raw: unknown
+    try { raw = JSON.parse(text) } catch { return refuse(400, 'Body is not JSON') }
+    const parsed = exchangeBody.safeParse(raw)
+    if (!parsed.success) return refuse(400, parsed.error.message)
+    const found = await store.redeemHandoff(parsed.data.code, new Date(now()).toISOString())
+    if (!found || found.run.run !== url.searchParams.get('run') || found.attempt.status === 'finished') return refuse(401, 'Unauthorized')
+    const expiresAt = now() + ATTEMPT_KEY_TTL_MS
+    const key = await store.createAttemptKey(found.attempt.id, new Date(expiresAt).toISOString())
+    return Response.json({ key, run: found.run.run, attempt: found.attempt.id, expiresAt }, { headers })
+  }
+
+  /**
+   * Who is asking: the CLI secret naming an attempt, or a participant token from `?t=` (GET only), then Bearer, then an attempt key
+   * as Bearer, then the cookie. An attempt key stands for its own attempt only: it never follows the person to their next goal.
+   */
   async function authorize(store: RunStore, url: URL, bearer: string | undefined, cookie: string | undefined, get: boolean) {
     if (bearer && options.cliSecret && sameSecret(bearer, options.cliSecret)) {
       const attempt = await store.getAttempt(url.searchParams.get('attempt') ?? '')
       const run = attempt && (await store.getRun(attempt.runId))
       return run && attempt ? { run, attempt, via: 'cli' as const } : undefined
     }
+    const participant = async (token: string, via: 'query' | 'bearer' | 'cookie') => {
+      const found = await store.authorize(token)
+      return found ? { ...found, attempt: await currentAttempt(store, found.attempt), via, token } : undefined
+    }
     const query = get ? (url.searchParams.get('t') ?? undefined) : undefined
-    const via = query ? ('query' as const) : bearer ? ('bearer' as const) : cookie ? ('cookie' as const) : undefined
-    const token = query ?? bearer ?? cookie
-    const found = token ? await store.authorize(token) : undefined
-    return found && via && token ? { ...found, attempt: await currentAttempt(store, found.attempt), via, token } : undefined
+    if (query) return participant(query, 'query')
+    if (bearer) {
+      const holder = await participant(bearer, 'bearer')
+      if (holder) return holder
+      const keyed = await store.authorizeAttemptKey(bearer, new Date(now()).toISOString())
+      return keyed && keyed.attempt.reason !== 'withdrew' ? { ...keyed, via: 'attempt-key' as const } : undefined
+    }
+    return cookie ? participant(cookie, 'cookie') : undefined
   }
 
   /** The picture of the page for this attempt's first look; only its owner can ask. */
@@ -253,10 +348,14 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     return response
   }
 
-  async function act(store: RunStore, run: RunRow, attempt: AttemptRow, body: Message, token: string | undefined, secure: boolean): Promise<Response> {
+  async function act(store: RunStore, run: RunRow, attempt: AttemptRow, body: Message, token: string | undefined, secure: boolean, keyed: boolean): Promise<Response> {
     const goal = run.compiled.goals[attempt.goalIndex]!
-    // After the last answer of a goal the person is on their next goal's attempt, so the reply is the view of that one.
-    const reload = async (extra?: Headers) => respond(run, await currentAttempt(store, (await store.getAttempt(attempt.id)) ?? attempt), extra)
+    // After the last answer of a goal the person is on their next goal's attempt, so the reply is the view of that one. The app's page,
+    // holding an attempt key, is answered with the bar's view of its own attempt.
+    const reload = async (extra?: Headers) => {
+      const latest = (await store.getAttempt(attempt.id)) ?? attempt
+      return keyed ? Response.json(barView(run, latest), { headers }) : respond(run, await currentAttempt(store, latest), extra)
+    }
     const conflict = (text: string) => refuse(409, text)
     // The first look is coded before the transaction opens, so a model call never holds a connection.
     const coded = body.action === 'answers' && body.impression !== undefined ? await codeImpressionWith(body.impression, run.compiled.purpose, options.model) : undefined
@@ -272,10 +371,8 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         } else if (attempt.status !== 'consented') return conflict('Consent was already given or the attempt moved on')
         // A CLI-secret request has no participant token, so it sets no cookie: the secret never goes into one.
         if (!token) return reload()
-        const flag = secure ? '; Secure' : ''
-        const cookies = new Headers()
-        cookies.append('Set-Cookie', `ui-tests-run=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=7200${flag}`)
-        cookies.append('Set-Cookie', `ui-tests-active=1; Path=/; SameSite=Lax; Max-Age=7200${flag}`)
+        // The run cookie is the player's, sent to the collector's path only; the app's page carries the attempt key instead, never a cookie.
+        const cookies = new Headers({ 'Set-Cookie': `ui-tests-run=${token}; Path=/api/ui-tests/; HttpOnly; SameSite=Lax; Max-Age=7200${secure ? '; Secure' : ''}` })
         return reload(cookies)
       }
       case 'begin': {
@@ -479,6 +576,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
               const moved = await tx.updateAttempt(current.id, { status: 'finished', reason: 'withdrew', ...(!current.endedAt || current.id === attempt.id ? { endedAt: new Date(now()).toISOString() } : {}) }, current.status)
               if (!moved) return 'The attempt moved on; try again'
             }
+            await tx.revokeAttemptKeys(current.id)
             await tx.deleteBlobs(current.id)
             if (current.answers[VIDEO_KEY] !== undefined) {
               const { [VIDEO_KEY]: _video, ...rest } = current.answers
@@ -490,6 +588,16 @@ export function createCollector(options: CollectorOptions): (request: Request) =
           return undefined
         })
         return result ? conflict(result) : reload()
+      }
+      case 'handoff': {
+        // Only the participant's own link hands off; the CLI secret has no person to send anywhere.
+        if (!token) return refuse(403, 'Only the participant hands off')
+        const current = (await store.getAttempt(attempt.id)) ?? attempt
+        // The app is where the task happens, and where the first look's click is taken.
+        if (current.status !== 'active' && !barView(run, current).firstClick) return conflict('Nothing to hand off')
+        const code = await store.createHandoff(current.id, new Date(now() + HANDOFF_TTL_MS).toISOString())
+        const start = typeof current.setupValues.start === 'string' ? current.setupValues.start : goal.start
+        return Response.json({ url: handoffUrl(start, appUrlOf(run), run.run, code) }, { headers })
       }
     }
   }

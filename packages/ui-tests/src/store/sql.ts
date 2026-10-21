@@ -32,4 +32,7 @@ export const postgresMigrations: string[] = [
    CREATE INDEX blobs_attempt ON blobs(attempt_id);
    CREATE TABLE revisions (seq BIGSERIAL PRIMARY KEY, run_id TEXT NOT NULL REFERENCES runs(id), data JSONB NOT NULL);
    CREATE TABLE reservations (seq BIGSERIAL PRIMARY KEY, run_id TEXT NOT NULL REFERENCES runs(id), minor BIGINT NOT NULL, currency TEXT NOT NULL);`,
+  // Tokens have a kind (participant token, handoff code, attempt key) and the last two expire; existing rows are participant tokens.
+  `ALTER TABLE tokens ADD COLUMN kind TEXT NOT NULL DEFAULT 'participant';
+   ALTER TABLE tokens ADD COLUMN expires_at TEXT;`,
 ]

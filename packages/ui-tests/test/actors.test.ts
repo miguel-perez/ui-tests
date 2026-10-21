@@ -12,6 +12,7 @@ import { main, type Io } from '../src/cli/main.ts'
 import { lint } from '../src/lint.ts'
 import { idempotencyKey } from '../src/runner/key.ts'
 import * as api from '../src/index.ts'
+import { stubServer } from './server-stub.ts'
 
 const { getStudies, resetStudies } = api
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
@@ -118,16 +119,19 @@ describe('agent fingerprint and key', () => {
 
 describe('the commands', () => {
   let target: Server, work: string, data: string, url: string
+  let server: Awaited<ReturnType<typeof stubServer>>
   beforeAll(async () => {
     target = createServer((_req, res) => res.end('ok'))
     await new Promise<void>(resolve => target.listen(0, '127.0.0.1', resolve))
     url = `http://127.0.0.1:${(target.address() as AddressInfo).port}`
+    server = await stubServer()
     work = await mkdtemp(join(fixtures, '.tmp-actors-'))
     data = await mkdtemp(join(tmpdir(), 'ui-tests-actors-'))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
-    await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${url}' }, agents: { model: { provider: 'scripted', name: 'fixture' } } }\n`)
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${url}' }, agents: { model: { provider: 'scripted', name: 'fixture' } } }\n`)
   })
   afterAll(async () => {
+    await server.close()
     target.closeAllConnections()
     await new Promise(resolve => target.close(resolve))
     await rm(work, { recursive: true, force: true })

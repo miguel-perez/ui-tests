@@ -37,15 +37,10 @@ export const shown: [string, RegExp][] = [
 /** The names of the old words a text still uses. */
 export const offences = (text: string, words: [string, RegExp][]) => words.filter(([, pattern]) => pattern.test(text)).map(([name]) => name)
 /**
- * Issue #31, item 2: the sources section's copy is the artefact's, every cell, step and caveat as written, and the item wins over this
- * list. These are the artefact's phrases that use a word of the list; each must stay in design/artefacts/sources-section.html word for word.
+ * Issue #31, item 2: the sources section's copy is fixed, every cell, step and caveat as written, and the item wins over this list.
+ * These are its phrases that use a word of the list; each must stay in apps/web/lib/copy.ts word for word.
  */
 export const verbatim = ['Like the panel, under a daily cap you set', 'your own panel account', "each panel's filters", 'a link or a panel run', 'Panel people answer screeners for money.', 'Each attempt labelled with its panel', 'a dead click']
-/**
- * Issue #56: the host section's terminal, as design/artefacts/hosted-section.html draws it, names its last row `panel`; the phrase is
- * taken out before the list is checked and must stay in that artefact word for word (whitespace collapsed).
- */
-export const hostVerbatim = ['panel       no key yet']
 /**
  * Issue #56, item 5: there is no hosted service. ui-tests.com is never "the hosted version", and nothing says it keeps people's
  * recordings or money: the deploy, the bucket and the panel wallet are the author's.

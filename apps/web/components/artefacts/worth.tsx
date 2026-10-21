@@ -6,7 +6,7 @@ import { reckon, tidy, type Given } from '../../lib/worth'
 const defaults = Object.fromEntries(Object.entries(worth.given).map(([key, field]) => [key, field.value])) as Given
 
 /**
- * What a run is worth (design/artefacts/roi-section.html; docs/discovery/roi-research.md; issue #53): the heading in the first five
+ * What a run is worth (docs/discovery/roi-research.md; issue #53): the heading in the first five
  * columns and, in the right seven with no lead, the one sentence, its arithmetic and the two sources. The four given numbers in the
  * arithmetic are fields set as its code, each as wide as what it holds; the derived numbers and the sentence follow every keystroke.
  * Nothing is stored: a reload restores the defaults. No figure and no calculator.

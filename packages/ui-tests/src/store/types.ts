@@ -29,6 +29,10 @@ export type RunRow = RunHandle & {
   hooksBundle: string
   rehearsal: boolean
   target: string
+  /** Where participants open the app: the target, or a tunnel or deployed address when that differs. */
+  appUrl?: string
+  /** The origins the run's pages may call the collector from. */
+  origins?: string[]
   createdAt: string
   /** Tunnels opened for the run, as JSON; shape is owned by the tunnel task. */
   tunnels?: unknown
@@ -114,9 +118,19 @@ export interface RunStore {
   updateRun(id: string, patch: Partial<RunRow>, expectedRevision: number): Promise<boolean>
   /** Creates the attempt and a token, returned once; only its hash is stored. */
   createAttempt(input: NewAttempt): Promise<{ attempt: AttemptRow; token: string }>
-  /** Revokes every token of the attempt, so `authorize` no longer finds them. */
+  /** Revokes every token of the attempt, of every kind, so `authorize` no longer finds them. */
   revokeTokens(attemptId: string): Promise<void>
+  /** Finds the run and attempt of a participant token; handoff codes and attempt keys never match. */
   authorize(token: string): Promise<{ run: RunRow; attempt: AttemptRow } | undefined>
+  /** Issues a single-use code that `redeemHandoff` turns into the attempt's session; returned once, only its hash is stored. */
+  createHandoff(attemptId: string, expiresAt: string): Promise<string>
+  /** Spends the code: deleted as it is read, so a second try, a late one and an unknown code all find nothing. */
+  redeemHandoff(code: string, now: string): Promise<{ run: RunRow; attempt: AttemptRow } | undefined>
+  /** Issues a key a page keeps for the attempt until `expiresAt`; returned once, only its hash is stored. */
+  createAttemptKey(attemptId: string, expiresAt: string): Promise<string>
+  authorizeAttemptKey(key: string, now: string): Promise<{ run: RunRow; attempt: AttemptRow } | undefined>
+  /** Removes the attempt's handoff codes and attempt keys, keeping its participant token. */
+  revokeAttemptKeys(attemptId: string): Promise<void>
   getAttempt(id: string): Promise<AttemptRow | undefined>
   /** The run's attempts in creation order (ties broken by insertion order). */
   listAttempts(runId: string): Promise<AttemptRow[]>

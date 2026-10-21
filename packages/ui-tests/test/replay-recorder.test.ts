@@ -1,7 +1,7 @@
 import { parseHTML } from 'linkedom'
 import { describe, expect, it } from 'vitest'
 import type { RecordedEvent } from '../src/store/types.ts'
-import { BLOCK_SELECTOR, MASK_TEXT_SELECTOR, startReplay, type RrwebRecord } from '../src/next/replay-recorder.ts'
+import { BLOCK_SELECTOR, MASK_TEXT_SELECTOR, startReplay, type RrwebRecord } from '../src/browser/replay-recorder.ts'
 
 const doc = () => parseHTML('<!doctype html><html><body></body></html>').document as unknown as Document
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -28,7 +28,7 @@ describe('startReplay', () => {
     const page = parseHTML('<!doctype html><html><body><div contenteditable="true"><p><b>typed</b></p></div><p>not editable</p></body></html>').document
     expect(page.querySelector('b')!.matches(MASK_TEXT_SELECTOR)).toBe(true)
     expect(page.querySelector('body > p')!.matches(MASK_TEXT_SELECTOR)).toBe(false)
-    expect(BLOCK_SELECTOR).toContain('[data-ui-tests]')
+    expect(BLOCK_SELECTOR).toContain('[data-ui-tests-root]')
     expect(BLOCK_SELECTOR).toContain('password')
     expect(BLOCK_SELECTOR).toContain('cc-')
     f.emit({ timestamp: 42 })

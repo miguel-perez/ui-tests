@@ -19,7 +19,7 @@ An agent run proves that an agent can do the thing against a CLI, an MCP server,
 | mcp | an MCP client connected to the server under test | the scenario text and the server's tools |
 | http | an HTTP client with the API's description | the scenario text and the base URL |
 
-The site shows the three text surfaces, `target: { http }`, `target: { mcp }` and `target: { cli }`, run with `npx ui-tests --actor agent` (agent runs are built: [#72](https://github.com/miguel-perez/ui-tests/issues/72); the model provider is documented, not executed); `target.url` with the web harness is the same contract on a website. A target sits on the study, or on one task to override it, as in the guide's `task('add a member through the API', { target: { http: 'https://api.weekboard.app' } })`.
+The site shows the three text surfaces, `target: { http }`, `target: { mcp }` and `target: { cli }`, run with `npx ui-tests --actor agent` (the model provider is documented, not executed); `target.url` with the web harness is the same contract on a website. A target sits on the study, or on one task to override it, as in the guide's `task('add a member through the API', { target: { http: 'https://api.weekboard.app' } })`.
 
 
 ## The same file, run as an agent

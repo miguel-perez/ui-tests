@@ -72,7 +72,7 @@ function realEmails(text: string) {
 export const rules: Rule[] = [
   {
     id: 'renamed', severity: 'error', source: 'issue #68',
-    reason: 'The authoring API took new names in issue #68; the old ones no longer do anything.',
+    reason: 'Each contract name has an authoring API name (study, task, setup, path, sample, record, firstLook, the users fields); the contract name does nothing in a study.',
     run({ study, sourceText }, emit) {
       const stripped = stripCommentsAndStrings(sourceText)
       const seen = new Set<string>()

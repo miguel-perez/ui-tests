@@ -12,11 +12,9 @@
   --ch-surface: #2c3353; --ch-ink: #e1e2e7; --ch-dim: rgba(225,226,231,.68); --ch-hair: rgba(225,226,231,.16); --ch-accent: #5fe3c0; --ch-accent-ink: #14251f; --ch-rec: #f52a65; --ch-radius: 10px;
   --sans: "Fira Sans", system-ui, sans-serif; --mono: "Fira Code", ui-monospace, Menlo, monospace;
 }
-/* The site's own tokens on top of the block above, which is the light block of design/artefacts/tokens.css verbatim
-   (tests/contrast.test.ts holds them equal). The artefacts carry Tokyo Night as the viewer's dark alternate; the site does not
-   (issue #43). The theme rules are written once, in design/artefacts/README.md. Round four's name for going off your path is
-   the accent. The demo app under test keeps its own light grey (public/demo/weekboard.html, weekboard-light.css), unchanged, so
-   its frames match its screenshots; the participant chrome over it is the inverse with the mint accent (ch-*, player-styles.ts). */
+/* The site's own tokens on top of the block above, whose values and floors tests/contrast.test.ts holds. Going off your path is the
+   accent. The demo app under test keeps its own light grey (host-*), unchanged, so its frames match its screenshots; the participant
+   chrome over it is the inverse with the mint accent (ch-*, player-styles.ts). */
 :root { --path: var(--accent); --host-bg: #e1e2e7; --host-chrome: #eef0f5; --host-line: #c4c8da;
   --radius: 8px; --space-1: 24px; --space-2: 48px; --space-3: 96px; --gutter: 24px; }
 * { box-sizing: border-box; }
@@ -66,7 +64,7 @@ main { position: relative; isolation: isolate; }
 .actions { display: flex; gap: 12px; flex-wrap: wrap; }
 .fineprint { font-size: 14px; color: var(--muted); }
 
-/* The page grid (design/artefacts/README.md, "The page grid, in one place"; docs/design/grid-plan.md): 12 columns, 24px gutters, on
+/* The page grid (tests/e2e/grid.spec.ts): 12 columns, 24px gutters, on
    the 1248px container. A section's heading takes the first five columns and its lead the right seven: one 5fr / 7fr split with one
    gutter, so at 1440 the heading starts at 96 and is 510 wide, and the lead and any right-seven figure start at 630 and are 714 wide.
    A figure takes all twelve columns or the right seven; nothing is centred in a narrower column. */
@@ -84,11 +82,11 @@ main { position: relative; isolation: isolate; }
 .section-head { align-items: baseline; }
 .section-head h2, .section-title { grid-column: 1; }
 .section-head p { grid-column: 2; color: var(--muted); font-size: 18px; max-width: 64ch; text-wrap: pretty; }
-/* One rule for section leads (issue #65, item 3; the host section's since issue #56): 64ch inside the right seven, ending flush with
+/* One rule for section leads: 64ch inside the right seven, ending flush with
    the container's right edge; left-aligned in one column on a phone. */
 .section-head > p { justify-self: end; }
 
-/* The agent section (design/artefacts/agents-section.html): the command under the heading, then three tiles across twelve columns. */
+/* The agent section: the command under the heading, then three tiles across twelve columns. */
 .agents-cmd { margin-top: 14px; font: 400 14px/1.5 var(--font-mono), monospace; color: var(--ink); }
 .agents-prompt { color: var(--muted); margin-right: 8px; }
 .agents-flag { color: var(--green); }
@@ -100,7 +98,7 @@ main { position: relative; isolation: isolate; }
 .agents-tile p { color: var(--muted); font-size: 14.5px; line-height: 1.55; }
 .agents-tile p b { color: var(--ink); font: 500 13px var(--font-mono), monospace; white-space: nowrap; }
 
-/* What a run is worth (design/artefacts/roi-section.html; issue #53): the heading in the five, and in the right seven the sentence, its
+/* What a run is worth (issue #53): the heading in the five, and in the right seven the sentence, its
    arithmetic no wider than it, and the sources. The four given numbers are fields set as the arithmetic's code, dashed underneath and
    as wide as what they hold; the run's time is one unbroken phrase wherever it falls. */
 .worth-claim { display: grid; gap: 14px; min-width: 0; }
@@ -162,8 +160,8 @@ main { position: relative; isolation: isolate; }
 .hero-artefact .terminal-body { font-size: 13px; padding: var(--space-1) 20px; }
 
 
-/* L3 · Compilation (design/artefacts/compile-section.html), on the page grid: the commands across twelve columns, then the six steps
-   as tabs, one open at a time, each a 5/7 pair: the text on the left, the screen on the right; then the whole file across twelve.
+/* L3 · Compilation, on the page grid: the commands across twelve columns, the whole file
+   across twelve, then the six steps as tabs, one open at a time, each a 5/7 pair: the text on the left, the screen on the right.
    The frames are the light Weekboard page; the chrome over it is that page's inverse with its mint accent, at real size. */
 .compile-commands { display: grid; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 .compile-command { padding: 12px 16px; display: grid; grid-template-columns: minmax(0, 22ch) minmax(0, 1fr); gap: 6px var(--gutter); align-items: baseline; }
@@ -273,7 +271,7 @@ main { position: relative; isolation: isolate; }
 .stepper .dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--line); }
 .stepper .dots i.on { background: var(--moment); }
 
-/* L4 · Sources (design/artefacts/sources-section.html): the heading and lead stacked, then a table of the three sources, one row
+/* L4 · Sources: the heading and lead stacked, then a table of the three sources, one row
    open at a time. The open row and its well take the surface token edge to edge (a full-bleed shadow clipped to the row's height,
    so nothing overflows the page); the header sticks on the canvas once scrolled past. Tokens only: the section reads the site's tokens. */
 .src-cols, .src-row { display: grid; grid-template-columns: 28px 3fr 3fr 2fr 2fr 2fr 24px; column-gap: var(--gutter); align-items: center; }
@@ -335,7 +333,7 @@ main { position: relative; isolation: isolate; }
 .wordmark.prolific { --mark: url('/marks/prolific.svg'); aspect-ratio: 1180.3 / 275.9; }
 .wordmark.connect { --mark: url('/marks/connect.webp'); aspect-ratio: 770 / 170; height: 18px; }
 
-/* L2 · WhatComesBack (design/artefacts/what-comes-back.html): three numbered pieces in the order a developer meets them, each a
+/* L2 · WhatComesBack: three numbered pieces in the order a developer meets them, each a
    64ch intro over its artefact, --space-2 between them and no rule (issue #62). GitHub's chrome is drawn in the site's neutrals;
    colour stays on the data. */
 .piece { display: grid; gap: 18px; }
@@ -418,14 +416,14 @@ main { position: relative; isolation: isolate; }
 .pr-impact[data-impact="slowed"] { color: var(--moment); }
 .pr-impact[data-impact="confused"] { color: var(--pause); }
 
-/* L7 · The host section (design/artefacts/hosted-section.html; issue #56): the lead flush to the container's right edge, then two
+/* L7 · The host section (issue #56): the lead flush to the container's right edge, then two
    unnumbered pieces, the terminal and the script tag as white windows across twelve columns. */
 .host-piece .piece-intro h3::before { content: none; }
 .host-window .window-chrome { min-height: 0; padding: 10px 14px; font: 400 12px/1 var(--font-mono), monospace; }
 .host-term, .host-snip { padding: 18px 20px; font: 400 13.5px/1.75 var(--font-mono), monospace; white-space: pre-wrap; overflow-wrap: anywhere; color: var(--ink); }
 .host-snip { padding: 16px 20px; font-size: 14px; line-height: 1.6; }
 .host-term .p { color: var(--muted); } .host-term .a { color: var(--green); } .host-term .u { color: var(--blue); } .host-term .k { color: var(--muted); } .host-term b { font-weight: 500; color: var(--ink); }
-.host-snip .t { color: var(--purple); } .host-snip .at { color: var(--teal); } .host-snip .s { color: var(--green); }
+.host-term .t, .host-snip .t { color: var(--purple); } .host-term .at, .host-snip .at { color: var(--teal); } .host-term .s, .host-snip .s { color: var(--green); }
 
 /* A step: the number and title in the first five columns, sticky; its sentence, what you type and what you see in the right seven. */
 .step { padding-top: var(--space-3); align-items: start; }
@@ -529,5 +527,7 @@ main { position: relative; isolation: isolate; }
 .docs-code { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 12px 12px 12px 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
 .docs-code pre { min-width: 0; overflow-x: auto; font-size: 14px; line-height: 1.6; }
 .docs-result { font-family: var(--font-mono), monospace; }
+.docs-setups { padding-left: 1.25em; list-style: disc; }
+.docs-setups li + li { margin-top: 8px; }
 @media (max-width: 600px) { .docs h1 { font-size: 36px; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; } }

@@ -9,9 +9,9 @@ import { CopyControl } from './copy-control'
 import { Stepped } from './stepped'
 
 /**
- * Compilation (docs/design/site-schema.md; design/artefacts/compile-section.html): what you write, what they see, on the page grid.
- * The heading in five columns and the lead in seven; the three commands as cards; then the six pieces a person meets as tabs, one
- * step visible at a time (`CompileSteps`), and the whole file after them across all twelve. Each step is a 5/7 pair: its number,
+ * Compilation (docs/design/site-schema.md): what you write, what they see, on the page grid.
+ * The heading in five columns and the lead in seven; the three commands as cards; the whole file across all twelve; then the six
+ * pieces a person meets as tabs, one step visible at a time (`CompileSteps`). Each step is a 5/7 pair: its number,
  * name and note on the left; the screen in a constant light frame with the chrome at real size, and what comes back, on the
  * right; no worked-out box (issue #62). No code inside the tabs and nothing sticky (issue #54). The chrome is drawn as the inverse
  * of the light Weekboard page with its mint accent.
@@ -30,6 +30,7 @@ export async function Compilation() {
       </div>)}
     </div>
     {compilation.note && <p className="compile-note"><Prose text={compilation.note} /></p>}
+    <LinesWindow title={inviteFile} legend={`${lines.length} lines`} rows={all} copy={inviteExample} label={inviteFile} figure />
     <CompileSteps label="The screens, one at a time" steps={compilation.pieces.map(piece => ({ n: piece.n, name: piece.tab }))}>
       {compilation.pieces.map(piece => <div className="compile-pair" id={`piece-${piece.id}`} key={piece.id}>
         <div className="compile-left">
@@ -44,7 +45,6 @@ export async function Compilation() {
         </div>
       </div>)}
     </CompileSteps>
-    <LinesWindow title={inviteFile} legend={`${lines.length} lines`} rows={all} copy={inviteExample} label={inviteFile} figure />
   </section>
 }
 

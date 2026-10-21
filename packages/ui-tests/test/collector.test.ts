@@ -85,7 +85,7 @@ describe('view', () => {
     expect(text).not.toContain('/docs/getting-started')
     for (const key of ['"path"', '"expected"', '"purpose"', '"hookText"', '"hooksBundle"', '"derivations"', '"label"']) expect(text).not.toContain(key)
     const view = JSON.parse(text)
-    expect(view).toMatchObject({ run: run.run, status: 'created', hasVerification: true, record: 'events', rehearsal: false, brand: { poweredBy: false } })
+    expect(view).toMatchObject({ run: run.run, status: 'created', hasVerification: true, record: 'events', rehearsal: false, brand: { name: run.compiled.brand.name } })
     expect(view.goal).toMatchObject({ name: 'Reach docs', start: '/', steps: [], timeoutSeconds: run.compiled.goals[0]!.timeout.seconds })
     expect(view.consent).toMatchObject({ purposes: run.compiled.consent.purposes, payout: run.compiled.consent.payout })
     expect(view).not.toHaveProperty('answer')
@@ -130,20 +130,18 @@ describe('answers before consent', () => {
 })
 
 describe('actions', () => {
-  it('consent sets the HttpOnly run cookie and the readable active cookie', async () => {
+  it('consent sets the HttpOnly run cookie and nothing else', async () => {
     const { token } = await start()
     const response = await post(token, { action: 'consent' })
-    const cookies = response.headers.getSetCookie()
-    expect(cookies).toContain(`ui-tests-run=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=7200`)
-    expect(cookies).toContain('ui-tests-active=1; Path=/; SameSite=Lax; Max-Age=7200')
+    expect(response.headers.getSetCookie()).toEqual([`ui-tests-run=${token}; Path=/api/ui-tests/; HttpOnly; SameSite=Lax; Max-Age=7200`])
     expect((await response.json()).status).toBe('consented')
     expect((await store.getAttempt((await store.authorize(token))!.attempt.id))?.purposes).toEqual(run.compiled.consent.purposes)
   })
 
-  it('marks the cookies Secure on https', async () => {
+  it('marks the cookie Secure on https', async () => {
     const { token } = await start()
     const response = await collect(new Request('https://app.test/api/ui-tests', { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify({ action: 'consent' }) }))
-    expect(response.headers.getSetCookie().every((c) => c.endsWith('; Secure'))).toBe(true)
+    expect(response.headers.getSetCookie()).toEqual([expect.stringMatching(/^ui-tests-run=[^;]+; .*; Secure$/)])
   })
 
   it('refuses begin before consent', async () => {

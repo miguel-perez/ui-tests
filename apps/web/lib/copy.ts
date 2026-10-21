@@ -1,3 +1,4 @@
+import { tagFor } from 'ui-tests/tag'
 import { exampleFile, exampleFileName } from './example'
 
 /** Approved D2 copy: every word on the landing page. */
@@ -32,16 +33,16 @@ study('getting started', {
 export const inviteExample = exampleFile
 export const inviteFile = exampleFileName
 /**
- * Compilation (docs/design/site-schema.md; design/artefacts/compile-section.html): each piece a person meets in order, with its
- * note and what comes back, then the file. `tab` is the piece's name on its tab, as the artefact names it. The screens themselves
+ * Compilation (docs/design/site-schema.md): each piece a person meets in order, with its
+ * note and what comes back, then the file. `tab` is the piece's name on its tab. The screens themselves
  * are drawn by the component; no piece carries code of its own (issue #54).
  */
 export const compilation = {
   heading: 'What you write, what they see.',
-  lead: 'Every screen a person meets, in the order they meet it, and what comes back from each, then the whole test that produces them. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.',
+  lead: 'The whole test, then every screen it produces, in the order a person meets them, and what comes back from each. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.',
   commands: [
     { command: 'npm install -D ui-tests', does: 'Adds the package.', strong: '' },
-    { command: 'npx ui-tests init', does: 'Writes a study file and a config, and prints the three lines to mount in your app.', strong: 'a study file' },
+    { command: 'npx ui-tests init', does: 'Writes a study file and a config, and prints the script tag for your app.', strong: 'a study file' },
     { command: 'npx ui-tests', does: 'Runs the whole study on you, in your browser: the consent, the scenario card, your page with the bar, and your own trace. Recruits nobody, costs nothing.', strong: 'on you' },
     { command: 'npx ui-tests recruit', does: 'Runs it with real people: your link, your visitors or a paid panel. Shows the plan and the price, and asks first.', strong: 'real people' },
     { command: 'npx ui-tests check', does: 'In the job that deploys your preview: the same run, with the cap in your config as the yes, and a check on the pull request.', strong: 'a check on the pull request' },
@@ -57,7 +58,7 @@ export const compilation = {
   ],
 }
 /**
- * The run's problems (design/artefacts/run-report-list.html), each as a sentence about the design, where as the page and the element
+ * The run's problems, each as a sentence about the design, where as the page and the element
  * (the short form, and the Playwright locator a developer can paste into a test), the moments that show it (person and second,
  * the first one the moment to watch), the words tied to it and who said them, and the suggested change. Who hit it and how many
  * come from the moments; the rank (impact, then how many people) is computed, so the Share-menu problem, 4 of 5 but slowed,
@@ -72,9 +73,9 @@ export const problems = [
 /** What worked: the last row of the list, with the moment each person did it. */
 export const worked = { title: 'Found Settings, then Members, on their own', page: '/settings', locator: 'tab "Members"', playwright: "getByRole('link', { name: 'Members' })", moments: [[1, 44], [2, 40], [3, 46], [4, 19], [5, 39]] } as const
 /**
- * WhatComesBack (docs/design/site-schema.md; design/artefacts/what-comes-back.html): the landing section "How it works.", with no
+ * WhatComesBack (docs/design/site-schema.md): the landing section "How it works.", with no
  * lead (issue #49). Three numbered pieces in the order a developer meets them: the check in the merge box, its page on GitHub, and
- * the replay (issue #62), one person's minute as a rail with the first problem's moment as a card. The words are the artefact's.
+ * the replay (issue #62), one person's minute as a rail with the first problem's moment as a card.
  */
 export const whatComesBack = {
   heading: 'How it works.',
@@ -98,12 +99,12 @@ export const runFacts = {
   share: 'Share',
 }
 /**
- * Sources (docs/design/site-schema.md; design/artefacts/sources-section.html): where the people come from, verbatim from the artefact.
+ * Sources (docs/design/site-schema.md): where people who represent users come from.
  * One row per source in the order your link, your visitors, a paid panel; each opens to how it works, the caveat and one picture.
  * The caveat is its lead sentence, then the rest. The research is docs/discovery/sources-research.md and sources-desk-research.md.
  */
 export const sources = {
-  heading: 'Where the people come from.',
+  heading: 'Where people who represent users come from.',
   lead: 'Friends are kind and coworkers know too much. Three ways to reach people who are neither, and what each one can and cannot tell you. Open a row to see how it works and what the person sees.',
   columns: ['Source', 'Who', 'Cost', 'Time', 'Good for'],
   how: 'How it works',
@@ -148,7 +149,7 @@ export const sources = {
 } as const
 export const commands = { install: 'npm install -D ui-tests', init: 'npx ui-tests init', run: 'npx ui-tests', people: 'npx ui-tests recruit', ci: 'npx ui-tests check', report: 'npx ui-tests report k2m9' }
 /**
- * The agent section (design/artefacts/agents-section.html; docs/discovery/agent-section-research.md), verbatim: the heading, the
+ * The agent section (docs/discovery/agent-section-research.md): the heading, the
  * command under it, the three-sentence lead, and one tile per interface an agent uses, each its name, its target and one sentence
  * (a word in backticks is set in mono).
  */
@@ -164,7 +165,7 @@ export const agent = {
   command: 'npx ui-tests --actor agent',
 }
 /**
- * What a run is worth (design/artefacts/roi-section.html; docs/discovery/roi-research.md; issue #53), verbatim: the heading, the one
+ * What a run is worth (docs/discovery/roi-research.md; issue #53): the heading, the one
  * sentence and its arithmetic as they read with the four given numbers at their defaults, each field's value and label, and the two
  * sources. The section recomputes the sentence and the arithmetic as the given numbers change (lib/worth.ts).
  */
@@ -184,22 +185,20 @@ export const worth = {
   ],
 }
 /**
- * The host section (design/artefacts/hosted-section.html; docs/discovery/hosting-decision.md; issue #56), verbatim: the heading, the
- * lead, two unnumbered pieces (the command and its terminal as drawn, the line and its script tag) and the closing. There is no hosted
- * service: the deploy is the author's.
+ * The host section (docs/prd/05-integration.md, "Where things run"): the heading, the
+ * lead, two unnumbered pieces (the command and its terminal as drawn, the line and its script tag) and the closing. The server is the
+ * author's, started with `ui-tests serve` or the Docker image; the line is the same tag `init` prints, for the example's address.
  */
+export const hostedServer = 'https://tests.weekboard.example'
 export const hosted = {
-  heading: 'No repo to put it in? One command.',
-  lead: '`npx ui-tests host` puts the collector, the player and the store on a free tier in an account you own, and prints one line to paste on your live site. Then the same test in a form instead of a file. The recordings stay on your box.',
-  command: { name: 'The command', intro: 'Once, from any folder. It creates the deploy, keeps it on the free tier, and prints what to paste. Run it again to update.', tab: ['Terminal', 'Example'] },
-  terminal: `$ npx ui-tests host
-Deploying to your account…
-  collector   https://ui-tests.weekboard.workers.dev
-  player      https://ui-tests.weekboard.workers.dev/t
-  store       weekboard-ui-tests, your bucket, 0 recordings
-  panel       no key yet · add one with ui-tests host --panel prolific`,
-  line: { name: 'The line', intro: 'One script tag, pointing at your deploy. It records only while a run is open and a person has said yes; the rest of the time it is forty lines that do nothing.', tab: ['index.html', 'or your tag manager'] },
-  snippet: '<script src="https://ui-tests.weekboard.workers.dev/s.js" async></script>',
+  heading: 'Your server, one command.',
+  lead: 'The consent, the questions, the collector and the report run on a ui-tests server you start for as long as a study is open: on your laptop, a machine you rent or a free tier. Nobody else runs it, and the recordings stay on your box. `npx ui-tests host`, one command that puts it in an account you own, is not shipped yet.',
+  command: { name: 'The command', intro: 'On any machine with Node 24 or later, with UI_TESTS_PUBLIC_URL set to the address people reach it at. It prints that address and the tag that points there. The Docker image, to be published as ghcr.io/miguel-perez/ui-tests, is built from the repository and runs the same thing.', tab: ['Terminal', 'Example'] },
+  terminal: `$ npx ui-tests serve
+ui-tests server: ${hostedServer}
+<script data-ui-tests="${hostedServer}">…</script>`,
+  line: { name: 'The line', intro: 'One inline script tag in your HTML layout, whatever your app is built with. It does nothing until a person is in an attempt: no request, no change to the page.', tab: ['index.html', 'or your layout'] },
+  snippet: tagFor(hostedServer),
   closing: 'Same test, same report, on a box you own.',
 }
 /** The footer's links (issue #51): the author's site, the licence and the new-issue page; the header already links to GitHub. */

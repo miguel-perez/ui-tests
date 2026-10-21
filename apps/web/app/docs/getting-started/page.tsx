@@ -13,8 +13,8 @@ function Command({ text, label }: { text: string; label: string }) {
 }
 
 /**
- * Getting started: static in both build modes, so it ships in the export with the landing and is the page the landing study's
- * task ends on. Every word is lib/getting-started.ts.
+ * Getting started: static, so it ships in the export with the landing and is the page the landing study's task ends on. Every
+ * word is lib/getting-started.ts.
  */
 export default function GettingStarted() {
   const { title, lead, clone, ci, sharing, accessibility, steps } = gettingStarted
@@ -31,8 +31,13 @@ export default function GettingStarted() {
       {steps.map(step => <li key={step.id} id={step.id}>
         <h2>{step.heading}</h2>
         <p><Prose text={step.text} /></p>
+        {'tag' in step && <>
+          <Command text={step.tag} label="the script tag" />
+          <ul className="docs-setups">{step.setups.map(setup => <li key={setup.name}><b>{setup.name}</b>: <code className="code-inline">{setup.line}</code></li>)}</ul>
+          <p>{step.serve}</p>
+        </>}
         {'command' in step && <Command text={step.command} label={step.command} />}
-        {'lines' in step && <Command text={step.lines.join('\n')} label="the three mount lines" />}
+        {'docker' in step && <Command text={step.docker} label="the Docker command" />}
         {'code' in step && <Command text={step.code} label={step.file} />}
         {'result' in step && <p className="docs-result">{step.result}</p>}
       </li>)}

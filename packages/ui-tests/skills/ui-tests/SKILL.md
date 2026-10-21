@@ -36,7 +36,7 @@ The old names (`context`, `goal`, `beforeEach`, `happyPath`, `catch`, `video: tr
 Run `npx ui-tests lint` (or the `lint` tool) before anything is sent to people. Each finding gives the file and line, the rule, why it exists, and the fix. Fix errors first; a warning is worth reading.
 
 <!-- lint-rules:start -->
-- `renamed` (error): The authoring API took new names in issue #68; the old ones no longer do anything. Source: issue #68.
+- `renamed` (error): Each contract name has an authoring API name (study, task, setup, path, sample, record, firstLook, the users fields); the contract name does nothing in a study. Source: issue #68.
 - `interface-terms` (error): A task name or scenario that names interface parts tells people where to look, so the study cannot show whether they find it. Steps may name them. Source: NN/g task writing.
 - `one-outcome` (error): A task that asks for two outcomes cannot say which one failed. Source: MeasuringU task tips.
 - `outcome-present` (error): Without an outcome, an answer or a time box, nothing says whether the task was done. Source: this contract.
@@ -54,7 +54,7 @@ Run `npx ui-tests lint` (or the `lint` tool) before anything is sent to people. 
 
 ## Running in dev mode
 
-`npx ui-tests` with no command rehearses the first task on you: it prints the plan, checks the target is reachable, runs `setup`, opens the player on your own app, waits for you to press Done, runs `outcome`, and shows what it found and the trace. A rehearsal never counts toward n and never changes a result. Start the target first (`http://localhost:3000` unless the config says otherwise); if it is not reachable the command exits 2 with `target not reachable: {url}` before anything is made. A study file that throws or fails to parse exits 2 with the file and line.
+`npx ui-tests` with no command rehearses the first task on you: it prints the plan, checks the target is reachable, starts the ui-tests server when `server.url` is an http address on this machine (`http://localhost:4300` by default) and none answers there (a server elsewhere must already answer, or it exits 2), runs `setup`, opens the player there, which hands you into your own app with the bar, waits for you to press Done, runs `outcome`, and shows what it found and the trace. A rehearsal never counts toward n and never changes a result. Start the target first (`http://localhost:3000` unless the config says otherwise); if it is not reachable the command exits 2 with `target not reachable: {url}` before anything is made. A study file that throws or fails to parse exits 2 with the file and line.
 
 Other commands, each also a tool: `estimate` gives n and minutes before anything is spent; `recruit` (the `run` tool with `actor: human`) makes a run, prints the invite links and exits, and a repeated key returns the same run; `status <run>` shows the four states (recruitment, collection, verification, payment) and the result; `verify <run>` runs the hooks on the stored snapshots; `report <run>` gives the report in words or the run record with `--json`; `trace <run>` serves the trace on this machine only. Exit codes of `recruit --wait`: 0 none found, 1 problems found, 3 pending or inconclusive, 2 error.
 
@@ -79,4 +79,6 @@ The sentence says what the sample can license. With five people at one in three 
 
 ## Setting up
 
-`npx ui-tests init` writes `ui-tests.config.ts` and an example study, adds `*.ui.test.ts` to Vitest's exclude, and prints the three lines to mount the player in your app. No config is valid and runs against `http://localhost:3000`.
+`npx ui-tests init` writes `ui-tests.config.ts` and an example study, adds `*.ui.test.ts` to Vitest's exclude, and prints the script tag for your app, with one line per common setup (Vite, Astro, Next.js, Rails, plain HTML) on reading the server's address from the environment. The tag goes in the app's HTML layout, whatever it is built with, and does nothing until a person is in an attempt. No config is valid and runs against `http://localhost:3000`, with the ui-tests server at `http://localhost:4300`.
+
+The consent, the questions, the collector and the shared report live on a ui-tests server the author runs while a study is open: `npx ui-tests serve` (`PORT`, default 4300; `UI_TESTS_PUBLIC_URL`, the address people reach it at; `UI_TESTS_DATABASE_URL`, else SQLite under `.ui-tests/`), or a Docker image built from a clone of the repository (`docker build -t ui-tests .`, then `docker run -p 4300:4300 -v ui-tests:/data ui-tests`; it is to be published as `ghcr.io/miguel-perez/ui-tests`). Rehearsal starts one for you. `recruit --tunnel` and `recruit --host` serve the app and a server of their own through one front door on this machine, which points the app's tag at itself. Nobody operates a ui-tests service.

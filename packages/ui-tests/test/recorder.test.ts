@@ -1,7 +1,7 @@
 import { parseHTML } from 'linkedom'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { RecordedEvent } from '../src/store/types.ts'
-import { createRecorder, serializeSnapshot } from '../src/next/recorder.ts'
+import { createRecorder, serializeSnapshot } from '../src/browser/recorder.ts'
 
 const page = (body: string) => parseHTML(`<!doctype html><html><body>${body}</body></html>`)
 const fire = (window: Window, target: Element, type: string) => target.dispatchEvent(new (window as unknown as { Event: typeof Event }).Event(type, { bubbles: true }))
@@ -119,7 +119,7 @@ describe('the recorder across navigation', () => {
 
 describe('serializeSnapshot', () => {
   it('masks input values and leaves out scripts and the bar', () => {
-    const { document } = page('<input type="text" value="jane@example.com"><textarea>private</textarea><script>var x=1</script><div data-ui-tests>bar</div><p>hello</p>')
+    const { document } = page('<input type="text" value="jane@example.com"><textarea>private</textarea><script>var x=1</script><div data-ui-tests-root>bar</div><p>hello</p>')
     const { dom, truncated } = serializeSnapshot(document as unknown as Document)
     expect(dom).toContain('hello')
     expect(dom).not.toContain('jane@example.com')
@@ -139,7 +139,7 @@ describe('serializeSnapshot', () => {
 
 describe('fitSnapshot', () => {
   it('shrinks a snapshot whose JSON passes the byte limit and flags it', async () => {
-    const { fitSnapshot } = await import('../src/next/recorder.ts')
+    const { fitSnapshot } = await import('../src/browser/recorder.ts')
     const fitted = fitSnapshot({ url: '/', dom: '€'.repeat(2_000_000) })
     expect(new TextEncoder().encode(JSON.stringify(fitted)).length).toBeLessThanOrEqual(4_900_000)
     expect(fitted.truncated).toBe(true)

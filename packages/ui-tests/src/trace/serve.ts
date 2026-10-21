@@ -10,13 +10,12 @@ import type { IncomingMessage } from 'node:http'
 import type { RunRow, RunStore } from '../store/types.ts'
 import { buildRecord } from '../record/build.ts'
 import { AgentReport } from '../agents/report.tsx'
-import { mayShow, ReportView } from '../report/view.tsx'
+import { reportDocument } from '../report/document.ts'
+import { mayShow } from '../report/view.tsx'
 import type { ResultHook } from '../runner/progress.ts'
 import { assembleVideo, videoResponse } from '../report/video.ts'
-import { clipAt } from '../video.ts'
 import { buildTrace } from './build.ts'
 import { recordRevision, RevisionRefused, type RevisionRequest } from './revise.ts'
-import { momentLabel } from './reel.ts'
 import { RunList, TraceView } from './view.tsx'
 
 const loopback = new Set(['127.0.0.1', 'localhost', '::1', '[::1]'])
@@ -96,21 +95,16 @@ const html = (node: Parameters<typeof renderToString>[0]) => `<!doctype html>${r
  */
 async function authorReport(store: RunStore, id: string, person: number | undefined, at: string | null): Promise<string | undefined> {
   const record = await buildRecord(store, id)
-  const base = `/runs/${encodeURIComponent(id)}/report`
-  const link = (path: string) => `${path}/`
-  const document = (title: string, body: Parameters<typeof renderToString>[0], script = false) =>
-    html(createElement('html', { lang: 'en' }, createElement('head', null, createElement('meta', { charSet: 'utf-8' }), createElement('meta', { name: 'viewport', content: 'width=device-width, initial-scale=1' }), createElement('title', null, title)), createElement('body', { style: { margin: 0 } }, body, script ? createElement('script', { src: '/replay.js', defer: true }) : null)))
-  if (person === undefined) return document(`Report · ${record.compiled.name}`, createElement(ReportView, { record, base, link }))
-  const attempt = record.attempts[person - 1]
-  if (!attempt) return undefined
-  const item = (await buildTrace(store, id)).attempts[person - 1]
   const startAt = at !== null && at !== '' && Number.isFinite(Number(at)) ? Number(at) : undefined
-  const begun = item?.replay?.length ? (item.replay[0]!.data as { timestamp?: number }).timestamp : undefined
-  const replay = item?.replay && mayShow(attempt) && createElement('div', { 'data-replay': attempt.id },
-    createElement('script', { type: 'application/json', dangerouslySetInnerHTML: { __html: JSON.stringify({ events: item.replay.map((e) => e.data), moments: item.reel.map((m) => ({ start: m.start, end: m.end, label: momentLabel(m) })), ...(startAt !== undefined && { startAt }) }).replace(/</g, '\\u003c') } }))
-  const where = item?.video && startAt !== undefined ? clipAt(item.video, startAt) : undefined
-  const clip = item?.video && mayShow(attempt) && createElement('video', { controls: true, preload: 'none', 'data-clip': '', src: `/runs/${encodeURIComponent(id)}/video/${person}?s=${where?.segment ?? item.video[0]!.startedAt}${where ? `#t=${where.seconds}` : ''}` })
-  return document(`Report · ${record.compiled.name}`, createElement(ReportView, { record, base, attemptIndex: person - 1, link, replay: replay || undefined, ...(clip && { clip }), ...(startAt !== undefined && begun !== undefined && { moment: Math.max(0, startAt - begun) }) }), Boolean(replay))
+  return reportDocument({
+    record,
+    base: `/runs/${encodeURIComponent(id)}/report`,
+    link: (path) => `${path}/`,
+    video: (n, segment) => `/runs/${encodeURIComponent(id)}/video/${n}?s=${segment}`,
+    replayScript: '/replay.js',
+    ...(person !== undefined && { person, trace: await buildTrace(store, id) }),
+    ...(startAt !== undefined && { at: startAt }),
+  })
 }
 
 /**

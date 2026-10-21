@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { expect, test, type Page } from '@playwright/test'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { buildTrace } from '../../packages/ui-tests/src/trace/build.ts'
-import { PRODUCT_URL, createRehearsalRun } from './helpers'
+import { PRODUCT_URL, barOf, createRehearsalRun } from './helpers'
 
 /**
  * The first look at run time (Task 20): a fixation point, a picture of the start page for 500 ms, "What was that page for?" with
@@ -48,7 +48,7 @@ test('shows a fixation point, the picture for 500 ms, the open question, then th
 
   // The real page, with a one-line bar that has no Done and no way out; the first real click is recorded and the person goes back for the card.
   await page.waitForURL(`${PRODUCT_URL}/`)
-  const bar = page.getByRole('region', { name: 'Click where you would start.' })
+  const bar = barOf(page, 'Click where you would start.')
   await expect(bar).toBeVisible()
   await expect(bar.getByRole('button')).toHaveCount(0)
   await page.getByRole('link', { name: 'Get started' }).first().click()
@@ -74,7 +74,7 @@ test('keyboard: Tab to a link and Enter records that element, not a position', a
   await page.waitForURL(`${PRODUCT_URL}/`)
   // The bar is the sign that the first click is being taken; an Enter pressed before the page has mounted it is the page's own, and
   // simply follows the link.
-  await expect(page.getByRole('region', { name: 'Click where you would start.' })).toBeVisible()
+  await expect(barOf(page, 'Click where you would start.')).toBeVisible()
   const link = page.getByRole('link', { name: 'Get started' }).first()
   await link.focus()
   await page.keyboard.press('Enter')

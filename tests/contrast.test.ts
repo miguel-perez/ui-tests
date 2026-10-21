@@ -14,44 +14,36 @@ const contrast = (a: string, b: string) => { const x = luminance(a), y = luminan
 /** The #rrggbb custom properties declared in one block of CSS. */
 const declared = (block: string) => Object.fromEntries([...block.matchAll(/--([\w-]+):\s*(#[\da-f]{6})\b/gi)].map(match => [match[1], match[2].toLowerCase()]))
 
-const file = await readFile('design/artefacts/tokens.css', 'utf8')
-const light = declared(/^:root \{([^}]*)\}/m.exec(file)![1])
-const system = declared(/@media \(prefers-color-scheme: dark\) \{\s*:root:not\(\[data-theme="light"\]\) \{([^}]*)\}/.exec(file)![1])
-const chosen = declared(/^:root\[data-theme="dark"\] \{([^}]*)\}/m.exec(file)![1])
-const themes = { light, dark: chosen }
+/** The site's token block: the first :root rule of globals.css, the only theme the site carries (issue #43). */
+const css = await readFile('apps/web/app/globals.css', 'utf8')
+const tokenBlock = /^:root \{[^}]*\}/m.exec(css)![0]
+const light = declared(tokenBlock)
 
 /** The text tokens: what the site sets type in on its ground and its windows. */
 const text = ['ink', 'muted', 'accent']
 /** The data roles: colour that carries meaning (the moment, stop, nothing happened, reached, words) and the code roles. */
 const data = ['accent', 'moment', 'blue', 'green', 'teal', 'purple', 'cyan', 'red', 'yellow', 'no', 'yes', 'done', 'note', 'pause', 'deviation', 'dead', 'correct', 'incorrect']
 
-describe('the token file (design/artefacts/tokens.css), which the artefacts render in the viewer\'s theme', () => {
-  it('declares the light theme first and the same dark alternate under the system setting and under data-theme', () => {
-    expect(file).toMatch(/^:root \{\s*color-scheme: light;/m)
+describe('the token block of globals.css', () => {
+  it('declares the light theme and names every role', () => {
+    expect(tokenBlock).toMatch(/^:root \{\s*color-scheme: light;/)
     expect(light).toMatchObject({ ink: '#111111', accent: '#4b3ff0', line: '#e2e2e2', canvas: '#f6f6f6', surface: '#ffffff' })
     expect(light).toMatchObject({ moment: '#b84d00', pause: '#8b6100', dead: '#bd1f44', done: '#007852', note: '#7a41af', purple: '#7444b4', green: '#27762f', teal: '#00757c' })
-    expect(system).toEqual(chosen)
-    expect(chosen).toMatchObject({ canvas: '#1a1b26', ink: '#c0caf5', accent: '#7aa2f7', moment: '#ff9e64' })
-    // Every theme names every role, so no role falls back to the other theme's value.
-    for (const name of [...text, ...data, 'canvas', 'surface', 'raised', 'line', 'comment', 'chip-ink', 'focus']) for (const [theme, tokens] of Object.entries(themes)) expect(tokens[name], `${name} in ${theme}`).toMatch(/^#/)
+    for (const name of [...text, ...data, 'canvas', 'surface', 'raised', 'line', 'comment', 'chip-ink', 'focus']) expect(light[name], name).toMatch(/^#/)
   })
 
-  for (const [theme, tokens] of Object.entries(themes)) {
-    it(`keeps every text token at 4.5:1 on the canvas and the surface, and every data role at 4.5:1 on the canvas, in the ${theme} theme`, () => {
-      for (const ground of ['canvas', 'surface']) for (const name of text) expect(contrast(tokens[name], tokens[ground]), `${name} on ${ground}`).toBeGreaterThanOrEqual(4.5)
-      for (const name of data) expect(contrast(tokens[name], tokens.canvas), `${name} on canvas`).toBeGreaterThanOrEqual(4.5)
-      // A filled chip, button or mark carries the chip ink at the same floor.
-      for (const fill of ['accent', 'moment', 'dead', 'done']) expect(contrast(tokens['chip-ink'], tokens[fill]), `chip ink on ${fill}`).toBeGreaterThanOrEqual(4.5)
-      // The focus ring is a non-text mark: 3:1 on both grounds.
-      for (const ground of ['canvas', 'surface']) expect(contrast(tokens.focus, tokens[ground]), `focus on ${ground}`).toBeGreaterThanOrEqual(3)
-    })
-  }
+  it('keeps every text token at 4.5:1 on the canvas and the surface, and every data role at 4.5:1 on the canvas', () => {
+    for (const ground of ['canvas', 'surface']) for (const name of text) expect(contrast(light[name], light[ground]), `${name} on ${ground}`).toBeGreaterThanOrEqual(4.5)
+    for (const name of data) expect(contrast(light[name], light.canvas), `${name} on canvas`).toBeGreaterThanOrEqual(4.5)
+    // A filled chip, button or mark carries the chip ink at the same floor.
+    for (const fill of ['accent', 'moment', 'dead', 'done']) expect(contrast(light['chip-ink'], light[fill]), `chip ink on ${fill}`).toBeGreaterThanOrEqual(4.5)
+    // The focus ring is a non-text mark: 3:1 on both grounds.
+    for (const ground of ['canvas', 'surface']) expect(contrast(light.focus, light[ground]), `focus on ${ground}`).toBeGreaterThanOrEqual(3)
+  })
 
   it('declares the wave accent as the line with a hint of the accent, and keeps ink and muted at 4.5:1 on it as the texture draws it', async () => {
-    // Issue #51: a new token in both files, word for word, mixed from the line and the accent, so it follows them.
-    const declaration = '--wave-accent: color-mix(in oklab, var(--line) 82%, var(--accent));'
-    expect(/^:root \{([^}]*)\}/m.exec(file)![1]).toContain(declaration)
-    expect(await readFile('apps/web/app/globals.css', 'utf8')).toContain(declaration)
+    // Issue #51: mixed from the line and the accent, so it follows them.
+    expect(tokenBlock).toContain('--wave-accent: color-mix(in oklab, var(--line) 82%, var(--accent));')
     const wave = mixOklab(light.line, 0.82, light.accent)
     // A grey with a hint of blue: lighter than the muted text by far, and bluer than the line.
     expect(wave).toBe('#c2c9e9')
@@ -62,30 +54,23 @@ describe('the token file (design/artefacts/tokens.css), which the artefacts rend
     for (const name of ['ink', 'muted']) expect(contrast(light[name], drawn), `${name} on the wave accent as drawn`).toBeGreaterThanOrEqual(4.5)
   })
 
-  it('gives every CLI colour a code role the token file declares in both themes', () => {
-    for (const name of Object.values(roles)) for (const [theme, tokens] of Object.entries(themes)) expect(tokens[name], `${name} in ${theme}`).toMatch(/^#/)
+  it('gives every CLI colour a code role the token block declares', () => {
+    for (const name of Object.values(roles)) expect(light[name], name).toMatch(/^#/)
   })
 })
 
-/** The light block of the token file, word for word: the only theme the site carries (issue #43). */
-const lightBlock = /^:root \{[^}]*\}/m.exec(file)![0]
-
 describe('the site reads the tokens only', () => {
-  it('carries the light block of tokens.css verbatim as the token block of globals.css, and no dark block', async () => {
-    const css = await readFile('apps/web/app/globals.css', 'utf8')
-    expect(css).toContain(lightBlock)
-    // Light only, whatever the system setting: neither dark block, nothing that switches on the system theme or data-theme.
+  it('carries no dark block', () => {
+    // Light only, whatever the system setting: no dark block, nothing that switches on the system theme or data-theme.
     expect(css).not.toContain('color-scheme: dark')
     expect(css).not.toMatch(/prefers-color-scheme|data-theme/)
-    for (const value of [chosen.canvas, chosen.ink, chosen.surface]) expect(css).not.toContain(value)
     // Comment is decoration only (it is below the text floor in the light theme): nothing sets type in it.
     expect(css).not.toMatch(/(?:^|[;{]\s*)color:\s*var\(--comment\)/m)
   })
 
   it('has no literal colour outside the token blocks, except the participant chrome, which is constant over its constant host', async () => {
-    const css = (await readFile('apps/web/app/globals.css', 'utf8')).replace(lightBlock, '')
     const offending: string[] = []
-    for (const [, selector, body] of css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+    for (const [, selector, body] of css.replace(tokenBlock, '').replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
       const name = selector.replace(/^[\s\S]*;/, '').trim()
       // The site's own token rule declares custom properties only.
       if (name === ':root' && body.split(';').every(part => !part.trim() || part.trim().startsWith('--'))) continue

@@ -29,3 +29,16 @@ jobs:
       - run: npm ci
       - name: Validate
         run: npm run validate
+      - name: Docker image
+        run: |
+          docker build -t ui-tests:ci .
+          docker run -d --name ui-tests-ci -p 4300:4300 ui-tests:ci
+          for i in $(seq 1 30); do
+            curl -fsS http://127.0.0.1:4300/healthz && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4300/healthz
+          curl -fsS http://127.0.0.1:4300/ui-tests.js | grep -q 'start(import.meta.url)'
+      - name: Docker logs
+        if: failure()
+        run: docker logs ui-tests-ci || true

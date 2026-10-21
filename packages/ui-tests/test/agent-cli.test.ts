@@ -386,3 +386,32 @@ study('first run', { users: 'developers trying ui-tests for the first time', pur
     } finally { await empty.cleanup() }
   })
 })
+
+describe('ui-tests --actor agent on a web target', () => {
+  it('exits 2 before any run exists when the ui-tests server elsewhere does not answer as one', async () => {
+    const work = await mkdtemp(join(fixtures, '.tmp-agent-web-server-'))
+    const data = await mkdtemp(join(tmpdir(), 'ui-tests-agent-web-server-'))
+    try {
+      await writeFile(join(work, 'web.ui.test.ts'), `import { expect, outcome, study, task } from 'ui-tests'
+study('web', { users: 'People who read the landing page', firstLook: false, actors: ['agent'], target: { url: 'https://app.example.com' } }, () => {
+  task('Open the guide', { path: ['/'], trials: 1 }, () => { outcome(async ({ page }) => { expect(page.url()).toContain('/') }) })
+})
+`)
+      await writeFile(join(work, 'ui-tests.config.ts'), "export default { server: { url: 'https://tests.example.com' }, agents: { model: { provider: 'scripted', name: 'fixture' } } }\n")
+      const asked: string[] = []
+      // The app answers; the address named as the server is some other site, whose collector path is a 404.
+      const fetcher = (async (url: string) => { asked.push(String(url)); return new Response('ok', { status: String(url).includes('/api/ui-tests/') ? 404 : 200 }) }) as unknown as typeof fetch
+      let out = '', err = ''
+      const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data }, deps: { fetch: fetcher, signal: new AbortController().signal } }
+      vitestExpect(await main(['--actor', 'agent', '--commit', 'abc'], io)).toBe(2)
+      vitestExpect(err).toBe('ui-tests server not reachable: https://tests.example.com\n')
+      vitestExpect(asked).toContain('https://tests.example.com/api/ui-tests/')
+      vitestExpect(out).not.toContain('Agent run')
+      const store = await openStore({ UI_TESTS_DATA_DIR: data })
+      try { vitestExpect(await store.listRuns()).toEqual([]) } finally { await store.close() }
+    } finally {
+      await rm(work, { recursive: true, force: true })
+      await rm(data, { recursive: true, force: true })
+    }
+  })
+})

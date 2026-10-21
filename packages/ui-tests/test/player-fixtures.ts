@@ -7,7 +7,7 @@ export function view(overrides: Partial<ParticipantView> = {}): ParticipantView 
     attempt: 'a_01',
     author: 'Acme',
     product: 'Acme Invoices',
-    brand: { poweredBy: false },
+    brand: { name: 'Acme' },
     consent: {
       text: ['Acme will watch your recording to learn where Acme Invoices is hard to use.', 'A model may read the trace of your attempt to help find those places.', 'Your recording is kept for 90 days. If you withdraw, it is deleted.', 'You can stop at any time and still be paid $7.50.'],
       purposes: ['analysis by the author', 'model-assisted analysis of the trace'],

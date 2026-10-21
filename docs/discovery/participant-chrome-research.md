@@ -1,6 +1,6 @@
 # Participant chrome: research and spec
 
-16 October 2026. Builds on [`participant-overlay-research.md`](participant-overlay-research.md), which settled the card contents, the bar controls, the confirmation on Done, give-up, the SEQ wording and consent; none of that is reopened. The brief: the chrome must be modern, effective and white-labelled, and must not share the host page's panel colour.
+16 October 2026. Builds on [`participant-overlay-research.md`](participant-overlay-research.md), which sets the card contents, the bar controls, the confirmation on Done, give-up, the SEQ wording and consent; this spec takes them as given. The brief: the chrome must be modern, effective and white-labelled, and must not share the host page's panel colour.
 
 ## Problems in the current artefacts
 
@@ -8,7 +8,7 @@
 - **Ease question:** says "How easy was that?" and "1 very hard". The settled stem is "Overall, how difficult or easy did you find this task?" with "Very difficult" at 1.
 - **All three:** hard-code Fira and the amber accent, which reads as our brand.
 
-**A PRD conflict to fix.** PRD 06 says the taskbar is "styled as part of the site rather than a third-party overlay". The author has since decided the bar must not share the host's panel colour. The recommendation follows that decision; the PRD sentence should be amended.
+**The bar is distinct from the host.** It never shares the host's panel colour; PRD 06 styles it as a distinct overlay, the inverse of the host page with the author's font and accent.
 
 ## 1. What the field does
 
@@ -99,9 +99,9 @@ Token key. Themeable: A accent, S surface, T text, R radius, F font. Fixed: focu
 4. **Floors the author cannot override.** Focus ring, 44px touch targets, reduced motion, 16px inputs and the recording red. `npm run validate` checks every rendered pair the config produces: text on surface, dim text on surface, button text on accent, accent and hairline on surface, at 4.5:1 for text and 3:1 for non-text, and warns with the failing pair. At runtime the text on the accent flips between black and white, and a `text` or `surface` value that cannot reach the floor falls back to the inverse default.
 5. **Where "ui-tests" appears.** One "Powered by ui-tests" line in the consent screen's footer, only when `poweredBy: true`. Never in the bar, card, questions or recording chip.
 
-### Revision after the author's review
+### One pill
 
-The first build of this spec read as two heavy boxes, and a separate recording chip wrapped and looked bolted on. Amended: the bar is **one** pill, 40px tall and fully rounded, opaque on the inverse surface, bottom **right** by default (the corner least likely to cover primary content), draggable and remembered, hidden while a host input has focus. The recording state is the pill's leading segment behind a hairline: red dot, elapsed time, a pause control, and **no microphone control**, because voice is only captured when the person chooses "Talk instead" on the questions after the task. Then the task summary (one line, truncated, press to reread the card), Done as a small filled pill in the accent, and "I couldn't do this" as plain text. Cooper's "single window and view" and the Vercel idiom both argue for the one surface; the separate chip in the table above is withdrawn.
+Two boxes and a separate recording chip read as heavy and bolted on, and the chip wraps. The bar is **one** pill, 40px tall and fully rounded, opaque on the inverse surface, bottom **right** by default (the corner least likely to cover primary content), draggable and remembered, hidden while a host input has focus. The recording state is the pill's leading segment behind a hairline: red dot, elapsed time, a pause control, and **no microphone control**, because voice is only captured when the person chooses "Talk instead" on the questions after the task. Then the task summary (one line, truncated, press to reread the card), Done as a small filled pill in the accent, and "I couldn't do this" as plain text. Cooper's "single window and view" and the Vercel idiom both argue for the one surface, so the recording state is not a separate chip, whatever the table above lists.
 
 ### Idiom: a compact floating pill, docked as a bottom bar on phones
 

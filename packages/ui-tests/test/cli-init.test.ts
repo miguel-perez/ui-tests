@@ -4,7 +4,9 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { exampleFile } from '../../../apps/web/lib/example.ts'
 import { main, parseArgs, type Io } from '../src/cli/main.ts'
-import { addVitestExclude } from '../src/cli/init.ts'
+import { addVitestExclude, initTag } from '../src/cli/init.ts'
+import { TAG_SETUPS } from '../src/browser/setups.ts'
+import { tagFor } from '../src/browser/tag.ts'
 import { configTemplate } from '../src/templates/config.ts'
 import { exampleTemplate } from '../src/templates/example.ts'
 
@@ -19,16 +21,21 @@ beforeEach(async () => { cwd = await mkdtemp(join(tmpdir(), 'ui-tests-init-')); 
 afterEach(() => rm(cwd, { recursive: true, force: true }))
 
 describe('ui-tests init', () => {
-  it('writes the config and the example, byte-equal to the landing, and prints the three lines to mount', async () => {
+  it('writes the config and the example, byte-equal to the landing, and prints the tag with a line for each setup', async () => {
     await withVitest()
     expect(await run('init')).toBe(0)
     expect(exampleTemplate).toBe(exampleFile)
-    expect(await readFile(join(cwd, 'ui-tests.config.ts'), 'utf8')).toBe(configTemplate)
+    const config = await readFile(join(cwd, 'ui-tests.config.ts'), 'utf8')
+    expect(config).toBe(configTemplate)
+    expect(config).toContain("server: { url: process.env.UI_TESTS_PUBLIC_URL ?? 'http://localhost:4300' }")
     expect(await readFile(join(cwd, 'ui-tests/invite.ui.test.ts'), 'utf8')).toBe(exampleFile)
-    expect(out).toContain("import { UiTests } from 'ui-tests/next'")
-    expect(out).toContain('<UiTests />')
-    expect(out).toContain("app/api/ui-tests/[[...path]]/route.ts:   export { GET, POST } from 'ui-tests/server'")
-    expect(out).toContain("app/ui-tests/[run]/page.tsx:   export { PlayerPage as default } from 'ui-tests/server'")
+    expect(initTag).toBe(tagFor('http://localhost:4300'))
+    expect(out).toContain(`\nAdd this tag to your app's HTML layout:\n  ${initTag}\n\nThe address differs between rehearsal, previews and production. Read it from the environment:\n`)
+    expect(TAG_SETUPS.map(s => s.name)).toEqual(['Vite', 'Astro', 'Next.js', 'Rails', 'Plain HTML'])
+    for (const setup of TAG_SETUPS) expect(out).toContain(`\n  ${setup.name}: ${setup.line}\n`)
+    expect(out.endsWith('\nStart the server with: npx ui-tests serve (rehearsal starts it for you)\n')).toBe(true)
+    // Nothing to mount: no component or route import from the package.
+    expect(out).not.toMatch(/ui-tests\/(?:next|server)\b/)
   })
   it('creates vitest.config.ts with configDefaults.exclude when there is none', async () => {
     await withVitest()

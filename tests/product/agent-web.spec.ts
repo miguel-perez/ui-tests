@@ -6,7 +6,7 @@ import type { AgentModel, AgentStep, ToolCall } from '../../packages/ui-tests/sr
 import { compileStudy } from '../../packages/ui-tests/src/compile.ts'
 import { bundleStudyFile, loadBundle } from '../../packages/ui-tests/src/load.ts'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
-import { PRODUCT_URL } from './helpers'
+import { PRODUCT_URL, SERVER_URL } from './helpers'
 
 /**
  * The web harness (Task 30): an agent uses the landing through the same player and collector a person uses, in a run of its own
@@ -45,9 +45,12 @@ async function setUp() {
     build: { url: PRODUCT_URL, commit: 'e2e' }, actor, compiled, hooksBundle: code, rehearsal: false, target: PRODUCT_URL,
   }).then(made => made.run)
   const [human, agent] = [await make('human'), await make('agent')]
-  const trials = (model: AgentModel) => runTrials({ store, run: agent, study: authored!, goal: compiled.goals[0]!, model, harness: webHarness({ target: PRODUCT_URL, playerUrl: `${PRODUCT_URL}/ui-tests/${agent.run}/` }) })
+  const trials = (model: AgentModel) => runTrials({ store, run: agent, study: authored!, goal: compiled.goals[0]!, model, harness: webHarness({ target: PRODUCT_URL, playerUrl: `${SERVER_URL}/ui-tests/${agent.run}/` }) })
   return { store, human, agent, compiled, trials }
 }
+
+/** An element carrying the tag's or the bar's attribute; the guide shows the tag as text, which is not one. */
+const TAGGED = /<[a-z][^<>]*\sdata-ui-tests/i
 
 test('an agent opens the guide through the player: stored as the agent, verified by the same outcome, and no human run counts it', async () => {
   const { store, human, agent, compiled, trials } = await setUp()
@@ -65,7 +68,7 @@ test('an agent opens the guide through the player: stored as the agent, verified
     // The end state is the snapshot the collector took when the bar's Done was pressed, on the guide.
     const end = await store.getSnapshot(attempts[0]!.id, 'end')
     expect(end?.url).toContain('/docs/getting-started')
-    expect(end?.dom).not.toContain('data-ui-tests')
+    expect(end?.dom).not.toMatch(TAGGED)
     expect((await store.listEvents(attempts[0]!.id)).some(e => e.type === 'click')).toBe(true)
   } finally { await store.close() }
 })
@@ -93,22 +96,22 @@ test('a trial the agent leaves without ending is read from the page it stopped o
     const [attempt] = await store.listAttempts(agent.run)
     const end = await store.getSnapshot(attempt!.id, 'end')
     expect(end?.dom).toContain('<!doctype html>')
-    expect(end?.dom).not.toContain('data-ui-tests')
+    expect(end?.dom).not.toMatch(TAGGED)
   } finally { await store.close() }
 })
 
 test('the agent opens only paths on the product', async () => {
   const { store, agent } = await setUp()
-  const harness = webHarness({ target: PRODUCT_URL, playerUrl: `${PRODUCT_URL}/ui-tests/${agent.run}/` }, { actionTimeoutMs: 2000 })
+  const harness = webHarness({ target: PRODUCT_URL, playerUrl: `${SERVER_URL}/ui-tests/${agent.run}/` }, { actionTimeoutMs: 2000 })
   try {
     const { attempt, token } = await store.createAttempt({ runId: agent.run, participant: 'agent:0:9', goalIndex: 0, rehearsal: false })
     await store.updateAttempt(attempt.id, { status: 'consented' }, 'created')
     await harness.begin!({ id: attempt.id, token })
     for (const path of ['https://example.com/', '//example.com/x', 'docs']) {
       const answer = await harness.call('goto', { path })
-      expect(answer.error, path).toMatch(/^called goto .*, (which is not on|but only paths on) http:\/\/127\.0\.0\.1:3100/)
+      expect(answer.error, path).toMatch(/^called goto .*, (which is not on|but only paths on) http:\/\/127\.0\.0\.1:3000/)
     }
-    expect((await harness.call('goto', { path: '/docs/getting-started' })).output).toContain('url: http://127.0.0.1:3100/docs/getting-started')
+    expect((await harness.call('goto', { path: '/docs/getting-started' })).output).toContain('url: http://127.0.0.1:3000/docs/getting-started')
     expect((await harness.call('click', { ref: 'e9999' })).error).toMatch(/^called click e9999, which failed/)
   } finally { await harness.dispose(); await store.close() }
 })

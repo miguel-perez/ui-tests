@@ -2,13 +2,13 @@ import { it, expect } from 'vitest'
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseHTML } from 'linkedom'
-import { was, shown, unsaid, offences, verbatim, hostVerbatim, hosting } from './vocabulary'
+import { was, shown, unsaid, offences, verbatim, hosting } from './vocabulary'
 
 
 async function files(directory: string): Promise<string[]> {
   const found: string[] = []
   for (const entry of await readdir(directory, { withFileTypes: true })) {
-    if (['node_modules', '.next', '.next-server', '.ui-tests', 'out'].includes(entry.name)) continue
+    if (['node_modules', '.next', '.ui-tests', 'out'].includes(entry.name)) continue
     const path = join(directory, entry.name)
     if (entry.isDirectory()) found.push(...await files(path))
     else if (/\.(tsx?|mjs|css|html|json|md)$/.test(entry.name)) found.push(path)
@@ -18,14 +18,14 @@ async function files(directory: string): Promise<string[]> {
 
 it('finds none of the old words in apps/web or the generated fragment', async () => {
   const found: string[] = []
-  // Issues #38 and #43: globals.css takes the light block of design/artefacts/tokens.css verbatim as its token block, and the item
-  // wins over this list; the block's lines are blanked first (tests/contrast.test.ts holds the block equal), so the line numbers stay true.
-  const tokens = /^:root \{[^}]*\}/m.exec(await readFile('design/artefacts/tokens.css', 'utf8'))![0]
+  // Issues #38 and #43: the token block of globals.css names its roles as written, and the item wins over this list; the block's lines
+  // are blanked first (tests/contrast.test.ts holds its values), so the line numbers stay true.
+  const tokens = /^:root \{[^}]*\}/m.exec(await readFile('apps/web/app/globals.css', 'utf8'))![0]
   for (const file of await files('apps/web')) {
     let text = await readFile(file, 'utf8')
     if (file.endsWith('globals.css')) text = text.replace(tokens, tokens.replace(/[^\n]/g, ''))
     // The sources section's verbatim phrases are taken out first; everything else on the line is still checked.
-    text.split('\n').forEach((line, index) => { const rest = [...verbatim, ...hostVerbatim].reduce((left, phrase) => left.replaceAll(phrase, ''), line.replaceAll("\\'", "'")); for (const name of offences(rest, was)) found.push(`${file}:${index + 1} ${name}`) })
+    text.split('\n').forEach((line, index) => { const rest = verbatim.reduce((left, phrase) => left.replaceAll(phrase, ''), line.replaceAll("\\'", "'")); for (const name of offences(rest, was)) found.push(`${file}:${index + 1} ${name}`) })
   }
   expect(found).toEqual([])
 })
@@ -42,13 +42,9 @@ it('never weighs a run in the words the ROI research rules out, in apps/web or t
   expect(offences(`${worth.heading} ${worth.sentence} ${worth.arithmetic}`, unsaid)).toEqual([])
 })
 
-it('keeps every verbatim exception in the sources and host artefacts, word for word', async () => {
-  // The artefact is a fragment without a body: its words are the markup with the tags taken out.
-  const words = async (file: string) => (await readFile(file, 'utf8')).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')
-  const artefact = await words('design/artefacts/sources-section.html')
-  for (const phrase of verbatim) expect(artefact, phrase).toContain(phrase)
-  const host = await words('design/artefacts/hosted-section.html')
-  for (const phrase of hostVerbatim) expect(host, phrase).toContain(phrase.replace(/\s+/g, ' '))
+it('keeps every verbatim exception in the sources copy, word for word', async () => {
+  const copy = (await readFile('apps/web/lib/copy.ts', 'utf8')).replaceAll("\\'", "'")
+  for (const phrase of verbatim) expect(copy, phrase).toContain(phrase)
 })
 
 it('never calls ui-tests.com a hosted service, in apps/web, the README, docs/design or docs/prd (issue #56)', async () => {

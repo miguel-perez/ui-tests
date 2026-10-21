@@ -82,6 +82,20 @@ jobs:
           node-version: '26.11.0'
       - if: steps.configured.outputs.run == 'true'
         run: npm ci
+      # The server lives only as long as the job. It has no public address of its own: behind the front door the spec starts, its
+      # origin comes from the door's forwarded host.
+      - name: Start the ui-tests server
+        if: steps.configured.outputs.run == 'true'
+        working-directory: apps/web
+        run: |
+          npx ui-tests serve --port 4300 --bind 127.0.0.1 > "$RUNNER_TEMP/ui-tests-serve.log" 2>&1 &
+          for _ in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4300/healthz > /dev/null; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/ui-tests-serve.log"
+          echo "::error::The ui-tests server did not answer /healthz within 30 seconds."
+          exit 1
       - name: Post the check
         if: steps.configured.outputs.run == 'true'
         working-directory: apps/web
@@ -89,3 +103,21 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           PREVIEW_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
         run: npx ui-tests check
+      - name: Install the browser
+        if: steps.configured.outputs.run == 'true'
+        run: npx playwright install --with-deps chromium
+      - name: Prove the preview
+        if: steps.configured.outputs.run == 'true'
+        env:
+          PREVIEW_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+          SERVER_URL: http://127.0.0.1:4300
+        run: npx playwright test -c playwright.preview.config.ts
+      - name: Verify and report the result
+        if: steps.configured.outputs.run == 'true'
+        working-directory: apps/web
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PREVIEW_URL: ${{ github.event.deployment_status.environment_url || github.event.deployment_status.target_url }}
+        run: |
+          npx ui-tests verify "$(cat ../../.ui-tests/preview-run)"
+          npx ui-tests status "$(cat ../../.ui-tests/preview-run)"

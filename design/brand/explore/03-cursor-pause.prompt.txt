@@ -1,1 +1,0 @@
-Minimal flat vector logomark for a developer tool called ui-tests. A single solid black glyph on a plain white background: a mouse pointer arrow with a small pause mark (two short vertical bars) at its tip, suggesting someone who hesitated. Geometric, one colour, no text, no gradients, no shading, centered with generous margin.
