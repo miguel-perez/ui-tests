@@ -65,7 +65,7 @@ Standing text generated per run: who is running the study, what is recorded at t
 
 ## Quality and audience
 
-An attention item once per run, a speeder flag at under half the median goal time, the device and IP hash, and the screener. It is a known-gameable gate and the trace says so.
+An attention item once per run, a speeder flag at under half the median goal time, the device and IP hash (hashed per project, never leaving the adapter's table), and the screener. It is a known-gameable gate and the trace says so.
 
 The screener is derived from the context's `users` object ([`01-dx-contract.md`](01-dx-contract.md), [`screener-research.md`](../discovery/screener-research.md)), in funnel order: panel filters first and never asked (`where`, `language`, `age`, prior participation); the recency gate from `did` and `within`, in plain bands widening from the window ("In the past week", "In the past month", "Earlier this year", "I haven't"); the frequency question from `often`; the role asked broad, then narrow; the `uses` multi-select with a neutral tool and "None of these"; the `not` exclusions mixed among neutral options, always with the standing exclusion of people who work in UX, design, marketing or market research; then the three fit questions from the purpose. Every option carries an accept, reject or may-select label, and every question the field and the rule it came from; the participant sees one question per screen, the words and choices only, nothing preselected. When `users` is the sentence alone, the compiler drafts the facts from it and marks each field inferred; lint prints the draft to paste in, and the trace shows the derived table so a wrong inference is a one-line edit.
 

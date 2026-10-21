@@ -64,7 +64,7 @@ Drop from both: logo walls, stat tiles, testimonials and case-study numbers (non
 
 The "layers" framing (functional, usable, desirable, pleasurable) is the report's reading order in the PRD, not a story a visitor needs. It survives as one sentence ("your tests prove it works; this proves people can use it") and as the structure of the docs page on reading a report. The four-cell grid goes.
 
-The landing built on this marriage is written out in [`landing-content.md`](landing-content.md).
+The landing built on this marriage is written out in [`landing-content.md`](landing-content.md); its content types, components and the needs each section serves are in [`site-schema.md`](site-schema.md).
 
 ## Appendix A: SDK per-site records
 

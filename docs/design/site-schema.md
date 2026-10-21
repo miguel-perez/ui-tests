@@ -30,6 +30,18 @@ The pages are built from content types, each rendered by one component with one 
 
 Landing: Claim; WhatComesBack (how it works); Compilation (what you write, what they see); Sources (where the people come from); Worth (what a run is worth); Agents (the agent section); Host (your server, one command). There is no commands block and no "this page runs this test" code file; the commands are the Compilation's list. Docs: getting started, agents and reachability, each a docs page. Report, on the ui-tests server: the list at `/r/<run>`, each person's attempt at `/r/<run>/p<n>`.
 
+Each landing section answers needs from the opportunity map ([`../discovery/ranked/opportunity-map.md`](../discovery/ranked/opportunity-map.md)):
+
+| Section | Needs |
+| --- | --- |
+| Claim | N2 be shown the problems; N1 a method in an afternoon |
+| WhatComesBack | N5 a stage in the build loop; N2 the moment, replayed; N8 evidence for the room |
+| Compilation | N1 a method with no researcher; N7 what five people can tell |
+| Sources | N3 participants who match; N4 affordable as one person; N6 the build in front of people |
+| Worth | N4 affordable as one person; N8 a case for the team |
+| Agents | N10 prove an agent can use the CLI, MCP server or API |
+| Host | N6 the build in front of people; N9 no procurement |
+
 Every page in the site shell (the landing and the docs pages) has the page's texture behind it and closes with the footer: the wordmark, then "miguel.design", "Open source MIT licence" and "Report a bug or suggest an improvement". The report, the shared report links and the participant player are the ui-tests server's and carry neither.
 
 ### Rules that apply to every component
