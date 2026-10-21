@@ -115,7 +115,12 @@ describe('ui-tests dev mode', () => {
   })
 
   it('reuses a ui-tests server that is already running, and leaves it running', async () => {
-    const running = await stubServer()
+    // A server on the same store: it answers the player page of the run rehearsal makes.
+    const running = await stubServer((req, res) => {
+      if (req.url === '/healthz') res.writeHead(200, { 'Content-Type': 'application/json' }).end('{"ok":true,"name":"ui-tests"}')
+      else if (/^\/ui-tests\/r_\w+\/$/.test(req.url ?? '')) res.writeHead(200, { 'Content-Type': 'text/html' }).end('<!doctype html>')
+      else res.writeHead(404).end('Not found')
+    })
     cleanup.push(() => running.close())
     const dir = await mkdtemp(join(fixtures, '.tmp-cli-dev-reuse-'))
     cleanup.push(() => rm(dir, { recursive: true, force: true }))
@@ -129,6 +134,20 @@ describe('ui-tests dev mode', () => {
     s.controller.abort()
     expect(await done).toBe(0)
     expect((await fetch(`${running.url}/healthz`)).status).toBe(200)
+  })
+
+  it('exits 2 when a running ui-tests server does not know the run, since it reads another store', async () => {
+    // Answers its health check as ui-tests does, and 404 for the run: it was started on another store.
+    const elsewhere = await stubServer()
+    cleanup.push(() => elsewhere.close())
+    const dir = await mkdtemp(join(fixtures, '.tmp-cli-dev-store-'))
+    cleanup.push(() => rm(dir, { recursive: true, force: true }))
+    await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, server: { url: '${elsewhere.url}' } }\n`)
+    const s = session(dir)
+    expect(await main(['--no-open'], s.io)).toBe(2)
+    expect(s.err()).toBe(`ui-tests server at ${elsewhere.url} does not read this project's store: stop it, or point UI_TESTS_DATABASE_URL at the same store\n`)
+    expect(s.out()).not.toContain('"player"')
   })
 
   it('exits 2 when the ui-tests server is neither running nor its to start, before any run exists', async () => {

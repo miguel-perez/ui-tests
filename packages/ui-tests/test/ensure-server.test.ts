@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { ensureServer, ServerUnreachable, startDoorServer } from '../src/cli/ensure-server.ts'
+import { ensureServer, ensureServerKnowsRun, ServerReadsAnotherStore, ServerUnreachable, startDoorServer } from '../src/cli/ensure-server.ts'
 import { startServer } from '../src/server/http.ts'
 import type { Io } from '../src/cli/main.ts'
 import { openStore } from '../src/store/open.ts'
@@ -90,5 +90,22 @@ describe('ensureServer', () => {
     expect(fetcher).toHaveBeenCalledWith(`${url}/healthz`, expect.objectContaining({ signal: expect.any(AbortSignal) }))
     expect(startServer).not.toHaveBeenCalled()
     expect(printed).toBe('')
+  })
+})
+
+describe('ensureServerKnowsRun', () => {
+  it('passes a reused server that answers for the run, and refuses one that reads another store', async () => {
+    const asked: string[] = []
+    const same = await stubServer((req, res) => { asked.push(req.url ?? ''); res.writeHead(req.url === '/ui-tests/r_A/' ? 200 : 404).end() })
+    const other = await stubServer()
+    cleanup.push(() => same.close(), () => other.close())
+    await expect(ensureServerKnowsRun({ url: same.url, started: false }, 'r_A')).resolves.toBeUndefined()
+    expect(asked).toEqual(['/ui-tests/r_A/'])
+    const refused = ensureServerKnowsRun({ url: other.url, started: false }, 'r_A')
+    await expect(refused).rejects.toBeInstanceOf(ServerReadsAnotherStore)
+    await expect(refused).rejects.toThrow(`ui-tests server at ${other.url} does not read this project's store: stop it, or point UI_TESTS_DATABASE_URL at the same store`)
+    // A server this command started reads its store: it is not asked.
+    await expect(ensureServerKnowsRun({ url: other.url, started: true }, 'r_A')).resolves.toBeUndefined()
+    await expect(ensureServerKnowsRun({ url: `http://127.0.0.1:${await freePort()}`, started: false }, 'r_A')).rejects.toBeInstanceOf(ServerUnreachable)
   })
 })

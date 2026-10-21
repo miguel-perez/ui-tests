@@ -16,7 +16,7 @@ import type { UiTestsConfig } from '../types.ts'
 import { verifyRun } from '../verify.ts'
 import { loadStudies, withProduct } from './lint.ts'
 import type { Command, Io } from './main.ts'
-import { answersAsServer, ensureServer, ServerUnreachable, startDoorServer } from './ensure-server.ts'
+import { answersAsServer, ensureServer, ensureServerKnowsRun, ServerUnreachable, startDoorServer } from './ensure-server.ts'
 import { startFrontDoor } from '../server/front-door.ts'
 import { setRunApp } from '../server/origins.ts'
 import { reporterFor } from './outward.ts'
@@ -184,6 +184,13 @@ export const recruit: Command = async (args, io) => {
       }))
       // A resumed run is opened at the door's address of this time (a quick tunnel's is new each time): it becomes the app's, and its origin is allowed.
       if (doorBase && !created) run = await setRunApp(store, run.run, doorBase)
+      // A server already running on this machine may read another store: the links would open on a run it never saw.
+      if (started) {
+        try { await ensureServerKnowsRun(started, run.run) } catch (error) {
+          io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
+          return 2
+        }
+      }
       if (opened) tunnel = await recordTunnel({ store, runId: run.run, opened, now })
       const linkBase = doorBase ?? server
       // A resumed run reopens its door at a new address (a new tunnel, or a new port for --host), so slots nobody opened get new links under it.

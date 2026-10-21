@@ -11,7 +11,7 @@ import type { AttemptRow, RunStore } from '../store/types.ts'
 import { serveTrace } from '../trace/serve.ts'
 import { buildTrace } from '../trace/build.ts'
 import { verifyRun } from '../verify.ts'
-import { ensureServer } from './ensure-server.ts'
+import { ensureServer, ensureServerKnowsRun } from './ensure-server.ts'
 import { loadStudies, withProduct } from './lint.ts'
 import type { Command, Io } from './main.ts'
 import { interrupt, lintFor, openUrl, pause } from './trace.ts'
@@ -99,6 +99,11 @@ export const dev: Command = async (args, io: Io) => {
       key: `rehearsal:${chosen.compiled.id}:${Date.now()}`,
       reachability: { url: target, reachable: true, checkedAt: new Date().toISOString() },
     })
+    // A server already running may read another store: the player would answer 404 for this run.
+    try { await ensureServerKnowsRun(uiServer, run.run) } catch (error) {
+      io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
+      return 2
+    }
     const setupValues = await runSetup(chosen.study, target)
     const { attempt, token } = await store.createAttempt({ runId: run.run, participant: 'rehearsal', goalIndex, rehearsal: true, setupValues })
     const shot = await attachFirstLook({ store, run, target, screenshotter: deps.screenshotter ?? playwrightScreenshotter() })

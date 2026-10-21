@@ -22,7 +22,7 @@ import { checkReachable } from '../runner/setup.ts'
 import type { CompiledGoal } from '../schema/compiled.ts'
 import { openStore } from '../store/open.ts'
 import type { UiTestsConfig } from '../types.ts'
-import { ensureServer, ServerUnreachable } from './ensure-server.ts'
+import { ensureServer, ensureServerKnowsRun, ServerUnreachable } from './ensure-server.ts'
 import { loadStudies, withProduct } from './lint.ts'
 import type { Command, Io } from './main.ts'
 import { reporterFor } from './outward.ts'
@@ -149,6 +149,13 @@ export const agentRun: Command = async (args, io) => {
       }
     }
     const { run, created } = await createRun({ store, compiled: chosen.compiled, hooksBundle: chosen.code, target, key, commit, actor: 'agent', rehearsal: false })
+    // A server already running may read another store: the agent's bar would find no run there.
+    if (uiServer) {
+      try { await ensureServerKnowsRun(uiServer, run.run) } catch (error) {
+        io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
+        return 2
+      }
+    }
     out.write(`Agent run ${run.run} · ${AGENT_HEADING}\n${chosen.compiled.name} · model ${config.agents.model.provider}/${config.agents.model.name} · agent ${fingerprint}\n`)
     const stored = (await store.listAttempts(run.run)).filter(a => a.answers[TRIAL_ANSWER] !== undefined)
     if (!created && stored.length) out.write(`Run ${run.run} already exists for key ${key}; its ${stored.length} stored trial${stored.length === 1 ? ' is' : 's are'} kept. Pass --key to start again.\n`)

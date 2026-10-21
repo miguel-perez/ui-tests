@@ -19,6 +19,47 @@ export class ServerUnreachable extends Error {
   }
 }
 
+/** A ui-tests server answers, but not from the store this command wrote the run to. */
+export class ServerReadsAnotherStore extends Error {
+  constructor(readonly url: string) {
+    super(`ui-tests server at ${url} does not read this project's store: stop it, or point UI_TESTS_DATABASE_URL at the same store`)
+    this.name = 'ServerReadsAnotherStore'
+  }
+}
+
+/** How long the server may take to answer for a run: its first player page builds the player. */
+const RUN_CHECK_TIMEOUT_MS = 60_000
+
+/** The status of a GET, asked over a plain socket as `get` is; undefined on any failure. */
+function statusOf(url: string, timeout: number): Promise<number | undefined> {
+  return new Promise(resolve => {
+    let target: URL
+    try { target = new URL(url) } catch { return resolve(undefined) }
+    const request = target.protocol === 'https:' ? httpsRequest : target.protocol === 'http:' ? httpRequest : undefined
+    if (!request) return resolve(undefined)
+    const req = request(target, { method: 'GET', timeout }, res => { resolve(res.statusCode); res.resume() })
+    req.on('timeout', () => req.destroy())
+    req.on('error', () => resolve(undefined))
+    req.on('close', () => resolve(undefined))
+    req.end()
+  })
+}
+
+/**
+ * Throws `ServerReadsAnotherStore` unless the server knows `run`: its player page answers for it. A server the command started reads
+ * the command's store, so only a reused one is asked; one started elsewhere with another store answers 404 for a run it never saw.
+ */
+export async function ensureServerKnowsRun(server: { url: string; started: boolean }, run: string, fetcher?: typeof fetch): Promise<void> {
+  if (server.started) return
+  const page = `${server.url}/ui-tests/${encodeURIComponent(run)}/`
+  let status: number | undefined
+  if (fetcher) {
+    try { status = (await fetcher(page, { redirect: 'manual', signal: AbortSignal.timeout(RUN_CHECK_TIMEOUT_MS) })).status } catch { status = undefined }
+  } else status = await statusOf(page, RUN_CHECK_TIMEOUT_MS)
+  if (status === undefined) throw new ServerUnreachable(server.url)
+  if (status !== 200) throw new ServerReadsAnotherStore(server.url)
+}
+
 /** The body of a GET, asked over a plain socket rather than `fetch`, so a stubbed or failing `fetch` never decides it; undefined on any failure. */
 function get(url: string): Promise<string | undefined> {
   return new Promise(resolve => {
