@@ -14,6 +14,8 @@ export default defineConfig({
     // The product: the player, the collector and the report on `ui-tests serve`, and the tasks on two apps that carry the tag, this
     // site's static export and a plain HTML page.
     { name: 'product', testDir: './tests/product', testMatch: '**/*.spec.ts', testIgnore: '**/lan.spec.ts', use: { baseURL: 'http://127.0.0.1:3000' } },
+    // A preview as CI proves it, with this site's export on 3000 standing in for the preview: a front door in front of it and the server.
+    { name: 'preview', testDir: './tests/preview' },
     // A participant on this machine's own LAN address, through the front door `recruit --host` opens.
     { name: 'lan', testDir: './tests/product', testMatch: '**/lan.spec.ts' },
   ],
