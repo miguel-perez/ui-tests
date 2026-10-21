@@ -103,7 +103,8 @@ async function throughConsent(page: Page, player: string) {
     await page.waitForURL(`${PRODUCT_URL}/`)
     await page.getByRole('link', { name: 'Get started' }).first().click()
   }
-  await expect(card).toBeVisible()
+  // The first look's click goes through the tag and the server and back to the player; the first test meets them cold.
+  await expect(card).toBeVisible({ timeout: 15_000 })
 }
 
 /** Start task, then the bar on the target. */
