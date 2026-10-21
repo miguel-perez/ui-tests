@@ -6,7 +6,7 @@ Two workflows run it: `.github/workflows/ui-tests-check.yml` (on `deployment_sta
 
 ## Setup (documented, not executed)
 
-1. Repository secrets: `UI_TESTS_DATABASE_URL` (the Neon `postgres://` URL the collector uses), `VERCEL_AUTOMATION_BYPASS_SECRET` (so the runner can reach a protected preview), `UI_TESTS_SHARE_SECRET` (signs the report links in the check).
+1. Repository secrets: `UI_TESTS_DATABASE_URL` (the Neon `postgres://` URL the ui-tests server and the CLI share), `VERCEL_AUTOMATION_BYPASS_SECRET` (so the runner can reach a protected preview), `UI_TESTS_SHARE_SECRET` (signs the report links in the check).
 2. The preview serves nothing of ui-tests: the job starts `ui-tests serve` itself and the preview's tag is rewritten by a front door (below).
 3. The workflows use the job's `GITHUB_TOKEN` with `checks: write` and `pull-requests: write`. A GitHub App with the same two permissions works too: set its installation token as `GITHUB_TOKEN`.
 4. Add the label `ui-test` to a pull request to opt it in (`ci: { on: ['label:ui-test'] }` in `ui-tests.config.ts`).
@@ -25,7 +25,7 @@ Two workflows run it: `.github/workflows/ui-tests-check.yml` (on `deployment_sta
 Each step runs only when the `UI_TESTS_DATABASE_URL` secret is set:
 
 1. `npx ui-tests serve --port 4300 --bind 127.0.0.1` in `apps/web`, in the background, with no public address pinned (behind the front door its origin comes from the door's forwarded host). The step waits up to 30 seconds for `/healthz`. The server must be up before `ui-tests check`, which needs a reachable server to recruit.
-2. `npx ui-tests check`, as before.
+2. `npx ui-tests check`, which makes the run and posts the pending check.
 3. `npx playwright install --with-deps chromium`, then `npx playwright test -c playwright.preview.config.ts` (`tests/preview/preview.spec.ts`). The spec starts a front door in front of the preview and the server, which rewrites the tag's address to its own origin, points the run at the door, and takes a rehearsal attempt (participant `ci-preview`, never counted toward n) through the landing task. It asserts the attempt finished with reason `done` and an `end` snapshot on `/docs/getting-started`, and writes the run id to `.ui-tests/preview-run`. `VERCEL_AUTOMATION_BYPASS_SECRET` reaches a protected preview.
 4. `npx ui-tests verify` and `npx ui-tests status` on that run, with `GITHUB_TOKEN`.
 

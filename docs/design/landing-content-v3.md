@@ -115,7 +115,7 @@ Since the composition round (issue #46) the six screens below are tabs under the
 | Command | Does |
 | --- | --- |
 | `npm install -D ui-tests` | Adds the package. |
-| `npx ui-tests init` | Writes **a study file** and a config, and prints the three lines to mount in your app. |
+| `npx ui-tests init` | Writes **a study file** and a config, and prints the script tag for your app. |
 | `npx ui-tests` | Runs the whole study **on you**, in your browser: the consent, the scenario card, your page with the bar, and your own trace. Recruits nobody, costs nothing. |
 | `npx ui-tests recruit` | Runs it with **real people**: your link, your visitors or a paid panel. Shows the plan and the price, and asks first. |
 | `npx ui-tests check` | In the job that deploys your preview: the same run, with the cap in your config as the yes, and **a check on the pull request**. |

@@ -49,6 +49,9 @@ async function setUp() {
   return { store, human, agent, compiled, trials }
 }
 
+/** An element carrying the tag's or the bar's attribute; the guide shows the tag as text, which is not one. */
+const TAGGED = /<[a-z][^<>]*\sdata-ui-tests/i
+
 test('an agent opens the guide through the player: stored as the agent, verified by the same outcome, and no human run counts it', async () => {
   const { store, human, agent, compiled, trials } = await setUp()
   try {
@@ -65,7 +68,7 @@ test('an agent opens the guide through the player: stored as the agent, verified
     // The end state is the snapshot the collector took when the bar's Done was pressed, on the guide.
     const end = await store.getSnapshot(attempts[0]!.id, 'end')
     expect(end?.url).toContain('/docs/getting-started')
-    expect(end?.dom).not.toContain('data-ui-tests')
+    expect(end?.dom).not.toMatch(TAGGED)
     expect((await store.listEvents(attempts[0]!.id)).some(e => e.type === 'click')).toBe(true)
   } finally { await store.close() }
 })
@@ -93,7 +96,7 @@ test('a trial the agent leaves without ending is read from the page it stopped o
     const [attempt] = await store.listAttempts(agent.run)
     const end = await store.getSnapshot(attempt!.id, 'end')
     expect(end?.dom).toContain('<!doctype html>')
-    expect(end?.dom).not.toContain('data-ui-tests')
+    expect(end?.dom).not.toMatch(TAGGED)
   } finally { await store.close() }
 })
 

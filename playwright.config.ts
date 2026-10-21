@@ -9,7 +9,7 @@ export default defineConfig({
   fullyParallel: false, workers: 1, timeout: 60_000,
   use: { browserName: 'chromium', trace: 'retain-on-failure' },
   projects: [
-    // The landing as it ships: built, then served as plain files.
+    // The landing, built as a static export with its tag pointed at the server below, then served as plain files.
     { name: 'site', testDir: './tests/e2e', use: { baseURL: process.env.SITE_BASE_URL ?? 'http://localhost:3000' } },
     // The product: the player, the collector and the report on `ui-tests serve`, and the tasks on two apps that carry the tag, this
     // site's static export and a plain HTML page.

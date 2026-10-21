@@ -41,7 +41,7 @@ export const compilation = {
   lead: 'Every screen a person meets, in the order they meet it, and what comes back from each, then the whole test that produces them. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.',
   commands: [
     { command: 'npm install -D ui-tests', does: 'Adds the package.', strong: '' },
-    { command: 'npx ui-tests init', does: 'Writes a study file and a config, and prints the three lines to mount in your app.', strong: 'a study file' },
+    { command: 'npx ui-tests init', does: 'Writes a study file and a config, and prints the script tag for your app.', strong: 'a study file' },
     { command: 'npx ui-tests', does: 'Runs the whole study on you, in your browser: the consent, the scenario card, your page with the bar, and your own trace. Recruits nobody, costs nothing.', strong: 'on you' },
     { command: 'npx ui-tests recruit', does: 'Runs it with real people: your link, your visitors or a paid panel. Shows the plan and the price, and asks first.', strong: 'real people' },
     { command: 'npx ui-tests check', does: 'In the job that deploys your preview: the same run, with the cap in your config as the yes, and a check on the pull request.', strong: 'a check on the pull request' },

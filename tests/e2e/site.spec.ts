@@ -660,7 +660,7 @@ test('the run\'s time never breaks across a line, in the sentence or the arithme
   }
 })
 
-for (const width of [1440, 375]) test(`the hero's Get started opens the getting-started page: the commands, the mount lines and the study, accessible and in the site's fonts at ${width}px`, async ({ page }) => {
+for (const width of [1440, 375]) test(`the hero's Get started opens the getting-started page: the commands, the tag, the server and the study, accessible and in the site's fonts at ${width}px`, async ({ page }) => {
   const { gettingStarted } = await import('../../apps/web/lib/getting-started')
   await page.setViewportSize({ width, height: 1000 })
   await withoutTroupe(page)
@@ -674,7 +674,11 @@ for (const width of [1440, 375]) test(`the hero's Get started opens the getting-
   const blocks = await page.locator('.docs-code pre').allInnerTexts()
   for (const step of gettingStarted.steps) {
     if ('command' in step) expect(blocks).toContain(step.command)
-    if ('lines' in step) expect(blocks).toContain(step.lines.join('\n'))
+    if ('tag' in step) {
+      expect(blocks).toContain(step.tag)
+      expect(blocks).toContain(step.docker)
+      expect(await page.locator('.docs-setups li').allInnerTexts()).toEqual(step.setups.map(setup => `${setup.name}: ${setup.line}`))
+    }
     if ('code' in step) expect(blocks).toContain(step.code)
   }
   expect(blocks).toContain(gettingStarted.clone.commands.join('\n'))

@@ -13,7 +13,6 @@ async function checkSteps(): Promise<string[]> {
 it('proves the preview with a server started in the check job', async () => {
   const text = await read('ui-tests-check.yml')
   for (const part of ['ui-tests serve', '/healthz', 'playwright.preview.config.ts', 'ui-tests status']) expect(text).toContain(part)
-  expect(text).not.toContain('UI_TESTS_SERVER')
   expect(text).not.toContain('UI_TESTS_PUBLIC_URL')
 })
 

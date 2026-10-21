@@ -1,11 +1,12 @@
+import { TAG_SETUPS, tagFor } from 'ui-tests/tag'
 import { compilation, example } from './copy'
 
 const [install, init, rehearse] = compilation.commands
 
 /**
- * The getting-started page: from an empty app to a first result, each command as the landing's compile
- * section names it, in the landing's words. The mount lines are the three `npx ui-tests init` prints; the study is the one this
- * site runs on itself (`apps/web/ui-tests/landing.ui.test.ts`).
+ * The getting-started page: from an empty app to a first result, each command as the landing's compile section names it, in the
+ * landing's words. The tag and the line for each setup are the ones `npx ui-tests init` prints; the study is the one this site runs
+ * on itself (`apps/web/ui-tests/landing.ui.test.ts`).
  */
 export const gettingStarted = {
   title: 'Get started',
@@ -21,7 +22,8 @@ export const gettingStarted = {
     text: 'Runs and results live in a database, so a record outlives any one preview. Locally that is a file; for CI and previews use Postgres on Neon. These steps need your own accounts, so nothing here is done for you.',
     steps: [
       'Create a Neon project and a database, and copy its pooled connection string.',
-      'In Vercel, add `UI_TESTS_DATABASE_URL` with that string, and `UI_TESTS_SERVER=1`, to the Preview environment.',
+      'For the length of the study, run `npx ui-tests serve` (or the Docker image) where people can reach it, with `UI_TESTS_DATABASE_URL` set to that string and `UI_TESTS_PUBLIC_URL` set to the address people reach it at.',
+      'In Vercel, set `NEXT_PUBLIC_UI_TESTS_URL` (or your framework\'s variable for the tag\'s address) in the Preview environment to that address, so the preview\'s tag points at the server.',
       'In GitHub, add the same string as the repository secret `UI_TESTS_DATABASE_URL`, and pass it to the workflow that runs your studies.',
     ],
     then: 'For a local try-out without Neon, `UI_TESTS_DATABASE_URL=pglite:memory` runs the same store in memory. The tables are created on first use.',
@@ -46,14 +48,14 @@ export const gettingStarted = {
     { id: 'install', heading: 'Install', text: install.does, command: install.command },
     { id: 'init', heading: 'Write the config and a study', text: init.does, command: init.command },
     {
-      id: 'mount',
-      heading: 'Mount it in your app',
-      text: 'Three lines in a Next.js app: the bar in your root layout, the collector, and the page each person starts on. Without a run on, the bar renders nothing and loads nothing.',
-      lines: [
-        "import { UiTests } from 'ui-tests/next'   and   <UiTests />   in your root layout",
-        "app/api/ui-tests/[[...path]]/route.ts:   export { GET, POST } from 'ui-tests/server'",
-        "app/ui-tests/[run]/page.tsx:   export { PlayerPage as default } from 'ui-tests/server'",
-      ],
+      id: 'tag',
+      heading: 'Add the tag and start the server',
+      text: 'Put this tag in the `<head>` of your app\'s HTML layout, whatever the app is built with. It does nothing until a person is in an attempt: no request, no change to the page. The people taking part reach a ui-tests server you run while the study is open, and rehearsal starts one on this machine for you. The tag\'s address differs between rehearsal, previews and production, so read it from your setup\'s environment:',
+      tag: tagFor('http://localhost:4300'),
+      setups: TAG_SETUPS,
+      serve: 'To run the server yourself, on any machine with Node 24 or later, or as the Docker image with its store on a volume:',
+      command: 'npx ui-tests serve',
+      docker: 'docker run -p 4300:4300 -v ui-tests:/data ghcr.io/miguel-perez/ui-tests',
     },
     {
       id: 'study',

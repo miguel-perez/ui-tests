@@ -10,6 +10,9 @@ export const TAG_SCRIPT = String.raw`(function(){try{var d=document,u=d.currentS
 const ENTITIES: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
 const escape = (value: string) => value.replace(/[&<>"']/g, (c) => ENTITIES[c]!)
 
+/** Where the tag goes in each common setup, for pages that show it as `init` prints it. */
+export { TAG_SETUPS } from './setups.ts'
+
 /** The whole tag for a server's address, ready to paste into a page's `<head>`. */
 export function tagFor(server: string): string {
   return `<script data-ui-tests="${escape(server)}">${TAG_SCRIPT}</script>`

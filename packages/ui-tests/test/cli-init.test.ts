@@ -34,8 +34,8 @@ describe('ui-tests init', () => {
     expect(TAG_SETUPS.map(s => s.name)).toEqual(['Vite', 'Astro', 'Next.js', 'Rails', 'Plain HTML'])
     for (const setup of TAG_SETUPS) expect(out).toContain(`\n  ${setup.name}: ${setup.line}\n`)
     expect(out.endsWith('\nStart the server with: npx ui-tests serve (rehearsal starts it for you)\n')).toBe(true)
-    expect(out).not.toContain('ui-tests/next')
-    expect(out).not.toContain('ui-tests/server')
+    // Nothing to mount: no component or route import from the package.
+    expect(out).not.toMatch(/ui-tests\/(?:next|server)\b/)
   })
   it('creates vitest.config.ts with configDefaults.exclude when there is none', async () => {
     await withVitest()
