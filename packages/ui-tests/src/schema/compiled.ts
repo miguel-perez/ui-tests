@@ -169,4 +169,4 @@ export function readCompiled<T extends { author: string; product: string; brand:
   return { ...study, brand: { ...brand, name: typeof brand.name === 'string' ? brand.name : study.author || study.product } }
 }
 /** A stored run with its study read as this version reads it. */
-export const readRun = <T extends { compiled: CompiledStudy }>(run: T): T => ({ ...run, compiled: readCompiled(run.compiled) })
+export const readRun = <T extends { compiled: CompiledStudy }>(run: T): T => (run.compiled ? { ...run, compiled: readCompiled(run.compiled) } : run)
