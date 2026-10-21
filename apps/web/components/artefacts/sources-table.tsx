@@ -5,7 +5,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react'
 export type SourceRow = { id: string; name: string; cells: ReactNode; well: ReactNode }
 
 /**
- * The sources table's behaviour (design/artefacts/sources-section.html): one row open at a time, none on arrival (issue #49), so the
+ * The sources table's behaviour: one row open at a time, none on arrival (issue #49), so the
  * first click opens one; a click
  * outside the open well, or Escape, closes it. The column header sticks to the top once scrolled past and reads as stuck.
  */

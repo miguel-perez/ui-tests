@@ -4,7 +4,7 @@ import { Children, useEffect, useRef, useState, type KeyboardEvent, type ReactNo
 const hashed = /^#step([1-9])$/
 
 /**
- * The compile section's steps, one at a time (design/artefacts/compile-section.html): a tab strip, 1 Consent to 6 After the task,
+ * The compile section's steps, one at a time: a tab strip, 1 Consent to 6 After the task,
  * then the open step, then previous and next, as one figure of the section (issue #51). Arrow keys, Home and End move between the tabs; each step has a plain hash, #step1
  * to #step6, that opens it on load and when a link changes the hash. The steps not open leave the layout and are inert, so the
  * step area takes each step's own height at every width (issue #54). On a phone the strip scrolls sideways.

@@ -1,1 +1,0 @@
-Recreate this exact ui monogram logomark as clean flat vector: keep the letterforms, weights and proportions exactly as in the reference. Refine the arrow into a crisp, geometric cursor pointer with straight edges and a tail, slightly smaller than in the reference, aligned with the stem of the i. Single solid black on plain white, no gradients, no shading, centered.

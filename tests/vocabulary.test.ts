@@ -18,9 +18,9 @@ async function files(directory: string): Promise<string[]> {
 
 it('finds none of the old words in apps/web or the generated fragment', async () => {
   const found: string[] = []
-  // Issues #38 and #43: globals.css takes the light block of design/artefacts/tokens.css verbatim as its token block, and the item
-  // wins over this list; the block's lines are blanked first (tests/contrast.test.ts holds the block equal), so the line numbers stay true.
-  const tokens = /^:root \{[^}]*\}/m.exec(await readFile('design/artefacts/tokens.css', 'utf8'))![0]
+  // Issues #38 and #43: the token block of globals.css names its roles as written, and the item wins over this list; the block's lines
+  // are blanked first (tests/contrast.test.ts holds its values), so the line numbers stay true.
+  const tokens = /^:root \{[^}]*\}/m.exec(await readFile('apps/web/app/globals.css', 'utf8'))![0]
   for (const file of await files('apps/web')) {
     let text = await readFile(file, 'utf8')
     if (file.endsWith('globals.css')) text = text.replace(tokens, tokens.replace(/[^\n]/g, ''))
@@ -42,11 +42,9 @@ it('never weighs a run in the words the ROI research rules out, in apps/web or t
   expect(offences(`${worth.heading} ${worth.sentence} ${worth.arithmetic}`, unsaid)).toEqual([])
 })
 
-it('keeps every verbatim exception in the sources artefact, word for word', async () => {
-  // The artefact is a fragment without a body: its words are the markup with the tags taken out.
-  const words = async (file: string) => (await readFile(file, 'utf8')).replace(/<[^>]+>/g, '').replace(/\s+/g, ' ')
-  const artefact = await words('design/artefacts/sources-section.html')
-  for (const phrase of verbatim) expect(artefact, phrase).toContain(phrase)
+it('keeps every verbatim exception in the sources copy, word for word', async () => {
+  const copy = (await readFile('apps/web/lib/copy.ts', 'utf8')).replaceAll("\\'", "'")
+  for (const phrase of verbatim) expect(copy, phrase).toContain(phrase)
 })
 
 it('never calls ui-tests.com a hosted service, in apps/web, the README, docs/design or docs/prd (issue #56)', async () => {

@@ -53,11 +53,11 @@ function Piece({ piece, children }: { piece: Piece; children: ReactNode }) {
   return <section className="piece" id={piece.id} aria-labelledby={`${piece.id}-h`}><Intro piece={piece} />{children}</section>
 }
 
-/** Where a second falls on the rail, as a share of the attempt, to one decimal (the artefact's positions). */
+/** Where a second falls on the rail, as a share of the attempt, to one decimal. */
 const along = (second: number, total: number) => `${Math.round(second / total * 1000) / 10}%`
 
 /**
- * The replay (issue #62; design/artefacts/what-comes-back.html, "The replay"): an illustration, nothing to press. The intro and one
+ * The replay (issue #62): an illustration, nothing to press. The intro and one
  * compact moment card on the 5/7 split: the clip's still at the moment, what the person did, what they said and the smallest change.
  * Under them, across twelve columns, the attempt as a rail: a hollow dot at each recorded event at its second, and the moments that
  * got in the way as larger dots filled in their impact's colour, with their time and word. The events and moments are the attempt's.
@@ -95,7 +95,7 @@ function Replay() {
 }
 
 /**
- * WhatComesBack (docs/design/site-schema.md; design/artefacts/what-comes-back.html): the landing section "How it works." (issue #49;
+ * WhatComesBack (docs/design/site-schema.md): the landing section "How it works." (issue #49;
  * "What comes back." in issue #46; the replay round, issue #62). On the page grid: the heading in five columns and no lead, then three
  * numbered pieces with no rule between them, in the order a developer meets them: the check in the merge box with a neutral mark and
  * its page on GitHub, each across all twelve columns, and the replay. The report as the list stays at /r/<run>, which the check page

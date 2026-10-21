@@ -1,5 +1,5 @@
 /**
- * The participant chrome (docs/discovery/participant-chrome-research.md, design/artefacts/player-chrome.html): the inverse of
+ * The participant chrome (docs/discovery/participant-chrome-research.md): the inverse of
  * the host page, opaque, with a hairline and a soft shadow, the host's font and the one accent the author sets. On a light site
  * the chrome is dark, on a dark site it is light, so it never takes the colour of a surface on the page under test and needs no logo.
  */
@@ -56,7 +56,7 @@ export function chromeTheme({ hostInk, hostBackground, accent, accentInk, font }
   while (dimAlpha < 1 && contrast(over(ink, dimAlpha, surface), surface) < floors.text) dimAlpha = Math.round((dimAlpha + .04) * 100) / 100
   const chosen = parseColour(accent)
   const tone = chosen && contrast(chosen, surface) >= floors.nonText ? chosen : ink
-  // The ink on the accent: the author's own when it reads, else the accent's deep shade (as the artefacts' #14251f on mint), else the best of the chrome's two colours, black and white.
+  // The ink on the accent: the author's own when it reads, else the accent's deep shade (as #14251f on mint), else the best of the chrome's two colours, black and white.
   const own = parseColour(accentInk), deep = tone.map(value => Math.round(value * .17)) as Rgb
   const onAccent = own && tone === chosen && contrast(own, tone) >= floors.text ? own : contrast(deep, tone) >= floors.text ? deep
     : [surface, ink, [0, 0, 0] as Rgb, [255, 255, 255] as Rgb].reduce((best, candidate) => contrast(candidate, tone) > contrast(best, tone) ? candidate : best)
@@ -74,7 +74,7 @@ export function chromeTheme({ hostInk, hostBackground, accent, accentInk, font }
 export function chromeVars(theme: ChromeTheme) {
   return Object.fromEntries(Object.entries(theme).map(([name, value]) => [`--uit-${name.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}`, value])) as Record<string, string>
 }
-/** Weekboard, the demo app under test: its light ink and canvas, its font, the mint accent its author sets and the accent ink the artefacts draw on it (`--ch-accent-ink`). */
+/** Weekboard, the demo app under test: its light ink and canvas, its font, the mint accent its author sets and the accent ink on it (`--ch-accent-ink`). */
 export const weekboardChrome: ChromeInput = { hostInk: '#2c3353', hostBackground: '#e1e2e7', accent: '#5fe3c0', accentInk: '#14251f', font: '"Fira Sans", sans-serif' }
 
 const defaults = Object.entries(chromeVars(chromeTheme(weekboardChrome))).map(([name, value]) => `${name}: ${value};`).join(' ')

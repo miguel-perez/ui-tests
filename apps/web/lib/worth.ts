@@ -1,6 +1,6 @@
 /**
- * What a run is worth (design/artefacts/roi-section.html; docs/discovery/roi-research.md; issue #53), as a model: the four given
- * numbers as typed, and the arithmetic the section shows from them. Parsing and formatting are the artefact's script's: anything
+ * What a run is worth (docs/discovery/roi-research.md; issue #53), as a model: the four given numbers as typed, and the
+ * arithmetic the section shows from them. Parsing and formatting: anything
  * that is not a positive number counts as 0, the share stops at 100, whole dollars, hours to two places, minutes under 90 and
  * hours to one place above. Each step divides by the figure shown before it, so "$60 ÷ $93 = 0.65 h" reads true. Nothing is stored.
  */
@@ -29,7 +29,7 @@ export function reckon(given: Given) {
   return { price: format(price), wage: format(wage), rate: format(rate), hours: format(time, 2), time: duration(time) }
 }
 
-/** On leaving a field, a number is written back in the artefact's format (135980 becomes 135,980); anything else stays as typed. */
+/** On leaving a field, a number is written back with its thousands separated (135980 becomes 135,980); anything else stays as typed. */
 export function tidy(raw: string, field: keyof Given) {
   const value = parse(raw, field)
   return value ? format(value, Math.min(2, (String(value).split('.')[1] ?? '').length)) : raw

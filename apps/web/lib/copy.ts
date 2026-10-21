@@ -33,8 +33,8 @@ study('getting started', {
 export const inviteExample = exampleFile
 export const inviteFile = exampleFileName
 /**
- * Compilation (docs/design/site-schema.md; design/artefacts/compile-section.html): each piece a person meets in order, with its
- * note and what comes back, then the file. `tab` is the piece's name on its tab, as the artefact names it. The screens themselves
+ * Compilation (docs/design/site-schema.md): each piece a person meets in order, with its
+ * note and what comes back, then the file. `tab` is the piece's name on its tab. The screens themselves
  * are drawn by the component; no piece carries code of its own (issue #54).
  */
 export const compilation = {
@@ -58,7 +58,7 @@ export const compilation = {
   ],
 }
 /**
- * The run's problems (design/artefacts/run-report-list.html), each as a sentence about the design, where as the page and the element
+ * The run's problems, each as a sentence about the design, where as the page and the element
  * (the short form, and the Playwright locator a developer can paste into a test), the moments that show it (person and second,
  * the first one the moment to watch), the words tied to it and who said them, and the suggested change. Who hit it and how many
  * come from the moments; the rank (impact, then how many people) is computed, so the Share-menu problem, 4 of 5 but slowed,
@@ -73,9 +73,9 @@ export const problems = [
 /** What worked: the last row of the list, with the moment each person did it. */
 export const worked = { title: 'Found Settings, then Members, on their own', page: '/settings', locator: 'tab "Members"', playwright: "getByRole('link', { name: 'Members' })", moments: [[1, 44], [2, 40], [3, 46], [4, 19], [5, 39]] } as const
 /**
- * WhatComesBack (docs/design/site-schema.md; design/artefacts/what-comes-back.html): the landing section "How it works.", with no
+ * WhatComesBack (docs/design/site-schema.md): the landing section "How it works.", with no
  * lead (issue #49). Three numbered pieces in the order a developer meets them: the check in the merge box, its page on GitHub, and
- * the replay (issue #62), one person's minute as a rail with the first problem's moment as a card. The words are the artefact's.
+ * the replay (issue #62), one person's minute as a rail with the first problem's moment as a card.
  */
 export const whatComesBack = {
   heading: 'How it works.',
@@ -99,7 +99,7 @@ export const runFacts = {
   share: 'Share',
 }
 /**
- * Sources (docs/design/site-schema.md; design/artefacts/sources-section.html): where people who represent users come from, verbatim from the artefact.
+ * Sources (docs/design/site-schema.md): where people who represent users come from.
  * One row per source in the order your link, your visitors, a paid panel; each opens to how it works, the caveat and one picture.
  * The caveat is its lead sentence, then the rest. The research is docs/discovery/sources-research.md and sources-desk-research.md.
  */
@@ -149,7 +149,7 @@ export const sources = {
 } as const
 export const commands = { install: 'npm install -D ui-tests', init: 'npx ui-tests init', run: 'npx ui-tests', people: 'npx ui-tests recruit', ci: 'npx ui-tests check', report: 'npx ui-tests report k2m9' }
 /**
- * The agent section (design/artefacts/agents-section.html; docs/discovery/agent-section-research.md), verbatim: the heading, the
+ * The agent section (docs/discovery/agent-section-research.md): the heading, the
  * command under it, the three-sentence lead, and one tile per interface an agent uses, each its name, its target and one sentence
  * (a word in backticks is set in mono).
  */
@@ -165,7 +165,7 @@ export const agent = {
   command: 'npx ui-tests --actor agent',
 }
 /**
- * What a run is worth (design/artefacts/roi-section.html; docs/discovery/roi-research.md; issue #53), verbatim: the heading, the one
+ * What a run is worth (docs/discovery/roi-research.md; issue #53): the heading, the one
  * sentence and its arithmetic as they read with the four given numbers at their defaults, each field's value and label, and the two
  * sources. The section recomputes the sentence and the arithmetic as the given numbers change (lib/worth.ts).
  */
@@ -185,7 +185,7 @@ export const worth = {
   ],
 }
 /**
- * The host section (design/artefacts/hosted-section.html; docs/prd/05-integration.md, "Where things run"), verbatim: the heading, the
+ * The host section (docs/prd/05-integration.md, "Where things run"): the heading, the
  * lead, two unnumbered pieces (the command and its terminal as drawn, the line and its script tag) and the closing. The server is the
  * author's, started with `ui-tests serve` or the Docker image; the line is the same tag `init` prints, for the example's address.
  */

@@ -1,7 +1,7 @@
 import { test, expect, type Page } from '@playwright/test'
 
 /**
- * No rules anywhere on the page (design/artefacts/README.md, "The page grid, in one place"; issue #62, item 2). Every element wider
+ * No rules anywhere on the page (issue #62, item 2). Every element wider
  * than 500px on the landing, at 1440 and 375, is walked: none outside a drawn surface may show a top or bottom border, be
  * an `hr`, or be a filled strip 1 to 2px tall, nor may its ::before or ::after. At 375 the column is 343px, so nothing is 500 wide:
  * there the walk takes every element wider than 300px, the width of a rule across the column. Hairlines stay inside the drawn surfaces

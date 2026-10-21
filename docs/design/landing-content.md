@@ -2,7 +2,7 @@
 
 The page written out in reading order, one block at a time. One example run (inviting a colleague to a board in a freshly launched app) carries through every block so the visitor follows a single story. The artefacts are invented content in the product's real formats; each frame carries the label "Example run" once. Each block is preceded by a note, in italics, of the question the visitor is asking at that point; the note is for the designer and is not page copy.
 
-**The page.** Seven sections, in this order: the promise (block 1); how it works (block 2: the check, its page on GitHub and the replay); what you write, what they see (block 3, its six screens one at a time as tabs); where the people come from (block 4); what a run is worth; the agent section; the host section. Every section sits on one grid ([`../../design/artefacts/README.md`](../../design/artefacts/README.md#the-page-grid-in-one-place)), and each section's words are its artefact's in [`../../design/artefacts/`](../../design/artefacts/), verbatim.
+**The page.** Seven sections, in this order: the promise (block 1); how it works (block 2: the check, its page on GitHub and the replay); what you write, what they see (block 3, its six screens one at a time as tabs); where the people come from (block 4); what a run is worth; the agent section; the host section. Every section sits on one grid: 12 columns, 24px gutters, on the 1248px container.
 
 ---
 
@@ -65,7 +65,7 @@ Reached the goal: 4 of 5.
 
 *What do I actually get, and would I know what to do with it.*
 
-From [`../../design/artefacts/what-comes-back.html`](../../design/artefacts/what-comes-back.html); the words below are the artefact's, verbatim. The one-person attempt view is not on the landing: it is the page `/r/k2m9/p<n>` behind each name in the report's people line. Frame label: Example run.
+The one-person attempt view is not on the landing: it is the page `/r/k2m9/p<n>` behind each name in the report's people line. Frame label: Example run.
 
 **Heading.** How it works. No lead; the three pieces have no rule between them.
 
@@ -89,7 +89,7 @@ Blocked kept them from the goal · Slowed cost them time · Confused did somethi
 
 3. **The replay.** Every problem in the report comes with the moment it happened: the person's minute as a rail, the moments that got in the way as stops, and at each stop the clip, what they did, what they said afterwards, and the smallest change that would have fixed it.
 
-The report as the list is at `/r/k2m9` (`design/artefacts/run-report-list.html`), which the check page's links open; the landing shows the replay. An illustration with nothing to press. The card: Person 3's screen at 00:58, "00:58 → 01:04". "Person 3 · 00:58 · Confused". "Pressed Add, saw nothing change, pressed it again." "I wasn't sure the first Add did anything, so I pressed it again." Smallest change: On press, change the button to "Invited sam@acme.example" and disable it. The rail: the attempt's thirteen events at 00:00, 00:03, 00:05, 00:12, 00:19, 00:23, 00:27, 00:36, 00:41, 00:46, 00:58, 01:01 and 01:03; the moments 00:03 Slowed, 00:23 Confused and 00:58 Confused; the ends "00:00 Started on /board" and "01:03 Pressed Done · reached the goal, with two invitations".
+The report as the list is at `/r/k2m9`, which the check page's links open; the landing shows the replay. An illustration with nothing to press. The card: Person 3's screen at 00:58, "00:58 → 01:04". "Person 3 · 00:58 · Confused". "Pressed Add, saw nothing change, pressed it again." "I wasn't sure the first Add did anything, so I pressed it again." Smallest change: On press, change the button to "Invited sam@acme.example" and disable it. The rail: the attempt's thirteen events at 00:00, 00:03, 00:05, 00:12, 00:19, 00:23, 00:27, 00:36, 00:41, 00:46, 00:58, 01:01 and 01:03; the moments 00:03 Slowed, 00:23 Confused and 00:58 Confused; the ends "00:00 Started on /board" and "01:03 Pressed Done · reached the goal, with two invitations".
 
 ---
 
@@ -220,7 +220,7 @@ When they press Done, the `outcome` asks your app what happened, whatever page t
 
 *I don't know anyone who isn't a friend.*
 
-From [`../../design/artefacts/sources-section.html`](../../design/artefacts/sources-section.html); the copy below is the artefact's, verbatim. The research is [`../discovery/sources-research.md`](../discovery/sources-research.md) and [`../discovery/sources-desk-research.md`](../discovery/sources-desk-research.md).
+The research is [`../discovery/sources-research.md`](../discovery/sources-research.md) and [`../discovery/sources-desk-research.md`](../discovery/sources-desk-research.md).
 
 **Heading.** Where people who represent users come from.
 
@@ -246,7 +246,7 @@ No row is open on arrival; the first click opens one. One row is open at a time;
 
 *Is it worth paying for?*
 
-From [`../../design/artefacts/roi-section.html`](../../design/artefacts/roi-section.html) and [`../discovery/roi-research.md`](../discovery/roi-research.md); the words are the artefact's, verbatim. The smallest section on the page: no figure and no calculator, the heading in the first five columns and the rest in the right seven. It weighs the price in a developer's hours, never as an ROI figure, the rule of ten, "studies show", "doubles conversion" or "saves money".
+The research is [`../discovery/roi-research.md`](../discovery/roi-research.md). The smallest section on the page: no figure and no calculator, the heading in the first five columns and the rest in the right seven. It weighs the price in a developer's hours, never as an ROI figure, the rule of ten, "studies show", "doubles conversion" or "saves money".
 
 **Heading.** What a run is worth.
 
@@ -264,7 +264,7 @@ The four given numbers, $135,980 (US median pay for software developers, a year)
 
 *Does this only work for screens?*
 
-From [`../../design/artefacts/agents-section.html`](../../design/artefacts/agents-section.html) and [`../discovery/agent-section-research.md`](../discovery/agent-section-research.md); the words are the artefact's, verbatim. No terminal, no code block, no result line; the agent check keeps its name `ui-tests (agent)` in the package, and the landing does not show it.
+The research is [`../discovery/agent-section-research.md`](../discovery/agent-section-research.md). No terminal, no code block, no result line; the agent check keeps its name `ui-tests (agent)` in the package, and the landing does not show it.
 
 **Heading.** Agents use some interfaces, too.
 
@@ -284,7 +284,7 @@ From [`../../design/artefacts/agents-section.html`](../../design/artefacts/agent
 
 *I have no repository, or nowhere to run it. Can I still use it?*
 
-From [`../../design/artefacts/hosted-section.html`](../../design/artefacts/hosted-section.html); the words are the artefact's, verbatim. The no-repo path is in [`../prd/05-integration.md`](../prd/05-integration.md#where-things-run). Two pieces, unnumbered; no dashboard.
+The no-repo path is in [`../prd/05-integration.md`](../prd/05-integration.md#where-things-run). Two pieces, unnumbered; no dashboard.
 
 **Heading.** Your server, one command.
 

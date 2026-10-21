@@ -72,7 +72,7 @@ The image is built from the [`Dockerfile`](Dockerfile) at the root. It is not on
 | [`docs/prd/`](docs/prd/README.md) | The product requirements, one file per area |
 | [`docs/story-map.md`](docs/story-map.md) | Release order |
 | [`docs/discovery/`](docs/discovery) | The research the page and the PRD rest on |
-| [`docs/design/`](docs/design), [`design/`](design) | The page's content plans, artefacts, brand and captures |
+| [`docs/design/`](docs/design), [`design/brand/`](design/brand) | The page's content plans and schema, and the logo |
 | [`factory/`](factory/README.md) | The delivery automation, vendored from `miguel-perez/archon-factory` |
 
 ## Running the product

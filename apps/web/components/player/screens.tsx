@@ -8,7 +8,7 @@ import { invitation } from './invitation.ts'
 /**
  * Two of the participant's screens, drawn in the sources section: the join sheet a person sees when they open your link, and the
  * invitation a visitor sees on your live site. Built to docs/discovery/participant-overlay-research.md in the chrome of
- * docs/discovery/participant-chrome-research.md and design/artefacts/player-chrome.html. Illustrations: nothing here records.
+ * docs/discovery/participant-chrome-research.md. Illustrations: nothing here records.
  */
 
 /** The player's stylesheet, hoisted once into the document head by React however many surfaces render it. */
@@ -30,7 +30,7 @@ export function useChrome(host?: ChromeInput, accent?: string) {
 }
 
 /**
- * The join screen: the first thing a person sees when they open your link (design/artefacts/sources-section.html, the link's picture).
+ * The join screen: the first thing a person sees when they open your link (the sources section's picture for the link).
  * Who asked and for how long, what the attempt is, that the site is tested and not them, what is recorded, then Start. The screener
  * comes next ("A few questions about you first"), then the consent. The screen video line shows only when the run records it.
  */

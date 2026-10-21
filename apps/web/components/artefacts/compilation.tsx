@@ -9,7 +9,7 @@ import { CopyControl } from './copy-control'
 import { Stepped } from './stepped'
 
 /**
- * Compilation (docs/design/site-schema.md; design/artefacts/compile-section.html): what you write, what they see, on the page grid.
+ * Compilation (docs/design/site-schema.md): what you write, what they see, on the page grid.
  * The heading in five columns and the lead in seven; the three commands as cards; the whole file across all twelve; then the six
  * pieces a person meets as tabs, one step visible at a time (`CompileSteps`). Each step is a 5/7 pair: its number,
  * name and note on the left; the screen in a constant light frame with the chrome at real size, and what comes back, on the

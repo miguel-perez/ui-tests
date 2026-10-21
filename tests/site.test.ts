@@ -21,45 +21,26 @@ it("keeps the example run's five attempts, the board and the replay's still, wit
   expect(p3.blockers?.map(b => [b.n, b.impact, b.from, b.to])).toEqual([[1, 'confused', 58, 63], [2, 'slowed', 3, 19], [3, 'confused', 23, 36]])
 })
 
-it('carries the derived card text on the landing and in the artefact, and no old bar label', async () => {
+it('carries the derived card text on the landing, and no old bar label', async () => {
   const { landing } = await import('../apps/web/lib/copy')
-  const derived = "You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.example."
-  expect(landing.scenario).toBe(derived)
-  for (const file of ['design/artefacts/scenario-card.html']) {
-    const text = await readFile(file, 'utf8')
-    expect(text, file).toContain(derived)
-    expect(text, file).not.toContain('Imagine you want to invite a colleague')
-  }
+  expect(landing.scenario).toBe("You plan the week on this board and want your colleague Sam to plan it with you. Invite Sam to the board. Sam's email is sam@acme.example.")
+  expect(await readFile('apps/web/lib/copy.ts', 'utf8')).not.toContain('Imagine you want to invite a colleague')
 })
 
-it('shows the study file, verbatim, in the artefact and the landing copy, and each step\'s text as the artefact has it', async () => {
+it('shows the study file, verbatim, in the landing copy, and names the steps 1 Consent to 6 After the task', async () => {
   const { exampleFile } = await import('../apps/web/lib/example')
   const { inviteExample, inviteFile, compilation } = await import('../apps/web/lib/copy')
-  const { parseHTML } = await import('linkedom')
-  const artefact = parseHTML(await readFile('design/artefacts/compile-section.html', 'utf8')).document
-  expect([...artefact.querySelectorAll('#code li .src')].map(line => line.textContent!.replace(/^ $/, '')).join('\n')).toBe(exampleFile)
   expect(inviteExample).toBe(exampleFile)
   expect(inviteFile).toBe('ui-tests/invite.ui.test.ts')
-  // Issue #54: the whole file comes after the steps' previous and next row, and no step carries code of its own.
-  const pieces = [...artefact.querySelectorAll('li.pair')]
-  expect(artefact.querySelector('.stepnav')!.nextElementSibling!.matches('section.whole-top.after-steps')).toBe(true)
-  expect(artefact.querySelectorAll('.pair .excerpt, .pair .window, .pair .lines-note, .pair pre').length).toBe(0)
-  expect(artefact.querySelector('#rows')!.textContent).not.toContain('After Done')
-  // Issue #62, item 4: step 2 keeps its text, its screen and its "Comes back" line, and loses the worked-out box, its CSS and its copy.
-  expect(artefact.querySelectorAll('.pair .check, .pair dl.res').length).toBe(0)
-  expect(artefact.querySelector('#rows')!.textContent).not.toMatch(/Worked out on your side|Chance of seeing a 1-in-3 problem/)
-  expect(await readFile('design/artefacts/compile-section.html', 'utf8')).not.toMatch(/^\.check\b/m)
-  const step2 = pieces.find(p => p.getAttribute('data-name') === 'Screener')!
-  expect([!!step2.querySelector('.intro .from'), !!step2.querySelector('.frame'), !!step2.querySelector('.back-line')]).toEqual([true, true, true])
+  // Issues #54 and #62, item 4: no step carries code, a worked-out box or a check of its own; each keeps its text and its "Comes back" line.
   expect('sample' in compilation).toBe(false)
   expect(await readFile('apps/web/app/globals.css', 'utf8')).not.toContain('.compile-check')
   expect(compilation.pieces.every(p => !('lines' in p) && !('fields' in p))).toBe(true)
   expect('check' in compilation).toBe(false)
-  // Each step's text, against the artefact, in participant order.
-  expect(compilation.pieces.map(p => p.notes.join(' ').replaceAll('`', ''))).toEqual(pieces.map(p => [...p.querySelectorAll('.intro .from')].map(from => from.textContent).join(' ').replace("the ones that gave up", "the ones that ended with I couldn't do this")))
-  expect(compilation.pieces.map(p => p.returns)).toEqual(pieces.map(p => p.querySelector('.back-line')!.textContent!.replace(/^Comes back/, '')))
-  // Issue #46, item 3: the tabs carry the names the artefact gives its steps, 1 Consent to 6 After the task.
-  expect(compilation.pieces.map(p => p.tab)).toEqual(pieces.map(p => p.getAttribute('data-name')))
+  expect(JSON.stringify(compilation.pieces)).not.toMatch(/After Done|Worked out on your side|Chance of seeing a 1-in-3 problem/)
+  expect(compilation.pieces.every(p => p.notes.length > 0 && p.returns.length > 0)).toBe(true)
+  // Issue #46, item 3: the tabs, in participant order.
+  expect(compilation.pieces.map(p => p.tab)).toEqual(['Consent', 'Screener', 'First look', 'Scenario card', 'Your page, with the bar', 'After the task'])
 })
 
 it('carries the contract changes in the PRDs and the taskbar sentence in PRD 06', async () => {
@@ -80,20 +61,9 @@ it('licenses the code under MIT to miguel.design, with no personal name, and say
   for (const text of [licence, shell]) expect(text).not.toMatch(/Miguel|Pérez|Perez/)
 })
 
-it('holds the host section to its artefact word for word: the server\'s command, what it prints, and the tag init prints', async () => {
+it('starts the host section\'s server with the command it shows and prints the tag init prints', async () => {
   const { hosted, hostedServer } = await import('../apps/web/lib/copy')
   const { tagFor } = await import('../packages/ui-tests/src/browser/tag')
-  const { parseHTML } = await import('linkedom')
-  const artefact = parseHTML(await readFile('design/artefacts/hosted-section.html', 'utf8')).document
-  const text = (selector: string) => [...artefact.querySelectorAll(selector)].map(node => node.textContent!)
-  expect(text('.head h1')).toEqual([hosted.heading])
-  expect(text('.head p')).toEqual([hosted.lead.replaceAll('`', '')])
-  expect(text('.intro h2')).toEqual([hosted.command.name, hosted.line.name])
-  expect(text('.intro p')).toEqual([hosted.command.intro, hosted.line.intro])
-  expect(text('.tab span')).toEqual([...hosted.command.tab, ...hosted.line.tab])
-  expect(text('.term')).toEqual([hosted.terminal])
-  expect(text('.snip')).toEqual([hosted.snippet])
-  expect(text('.closing')).toEqual([hosted.closing])
   // One way in: the line is the tag init prints, for the example's server, and the terminal starts that server.
   expect(hosted.snippet).toBe(tagFor(hostedServer))
   expect(hosted.terminal.split('\n')).toEqual(['$ npx ui-tests serve', `ui-tests server: ${hostedServer}`, `<script data-ui-tests="${hostedServer}">…</script>`])
