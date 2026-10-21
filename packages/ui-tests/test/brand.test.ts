@@ -62,9 +62,36 @@ describe('the brand', () => {
   })
 
   it('shows no ui-tests marks anywhere a participant looks', async () => {
-    const v = view({ brand, answer: { question: 'Which plan?', choices: ['A', 'B'] } })
-    const screens: Screen[] = [{ kind: 'consent' }, { kind: 'card' }, { kind: 'ease' }, { kind: 'difficulty' }, { kind: 'confidence' }, { kind: 'uxlite', item: 1 }, { kind: 'comment' }, { kind: 'thanks' }, { kind: 'withdrawn' }, { kind: 'answer' }]
+    const v = view({
+      brand,
+      status: 'consented',
+      screener: [{ id: 's0', text: 'How often do you send invoices?', options: ['Weekly', 'Monthly'], multi: false }, { id: 's1', text: 'What tool do you use now?', options: [], multi: false, open: true }],
+      practice: true,
+      impression: { page: '/invoices', flashMs: 5000, question: 'What is this page for?', asked: true, click: true },
+      goal: { ...view().goal, steps: ['Open invoices', 'Send the invoice'] },
+      answer: { question: 'Which plan?', choices: ['A', 'B'] },
+    })
+    // Every kind of screen the flow can show, keyed by kind so a new kind in flow.ts does not compile until it is listed here.
+    const every: { [K in Screen['kind']]: Extract<Screen, { kind: K }>[] } = {
+      consent: [{ kind: 'consent' }],
+      screener: [{ kind: 'screener', index: 0 }, { kind: 'screener', index: 1 }],
+      practice: [{ kind: 'practice' }],
+      impression: (['fixation', 'flash', 'question', 'click'] as const).map((phase) => ({ kind: 'impression', phase })),
+      card: [{ kind: 'card' }],
+      step: [{ kind: 'step', index: 0 }, { kind: 'step', index: 1 }],
+      answer: [{ kind: 'answer' }],
+      ease: [{ kind: 'ease' }],
+      difficulty: [{ kind: 'difficulty' }],
+      confidence: [{ kind: 'confidence' }],
+      uxlite: [{ kind: 'uxlite', item: 0 }, { kind: 'uxlite', item: 1 }],
+      comment: [{ kind: 'comment' }],
+      thanks: [{ kind: 'thanks' }],
+      withdrawn: [{ kind: 'withdrawn' }],
+    }
+    const screens: Screen[] = Object.values(every).flat()
     const pages = screens.map((screen) => renderToStaticMarkup(createElement(PlayerScreen, { view: v, screen, answers: {}, onAnswer: () => {}, onNext: () => {}, onStart: () => {}, onWithdraw: () => {} })))
+    // Each screen shows its own content, not only the frame: the scan below reads what the person meets on it.
+    for (const [index, screen] of screens.entries()) expect(text(pages[index]!).replace(/\s/g, ''), JSON.stringify(screen)).not.toBe(text(renderToStaticMarkup(createElement(PlayerScreen, { view: v, screen: { kind: 'screener', index: 9 }, answers: {}, onAnswer: () => {}, onNext: () => {}, onStart: () => {}, onWithdraw: () => {} }))).replace(/\s/g, ''))
     expect(pages[0]).toContain('<img src="https://acme.test/l.svg" alt="Acme"')
     const theme = chromeTheme()
     const bar = renderToStaticMarkup(createElement(Taskbar, { view: { goal: { name: 'Send an invoice', scenario: 'You owe Dana.' }, brand }, theme, offerMoreTime: true, busy: false, onEnd: () => {}, onMoreTime: () => {} }))
@@ -78,8 +105,8 @@ describe('the brand', () => {
     const record = await buildRecord(store, run.run)
     const report = reportDocument({ record, link: (path) => path, replayScript: '/ui-tests/assets/replay-abc.js' })!
     for (const page of [...pages, bar, first, shell, report]) {
-      // What a person or their screen reader meets: the text, the title, and the words in aria-label, title and alt. Addresses are not read.
-      const words = [...page.matchAll(/\s(?:aria-label|title|alt)="([^"]*)"/g)].map((m) => m[1]).join(' ')
+      // What a person or their screen reader meets: the text, the title, and every attribute's text. Addresses are not read.
+      const words = [...page.matchAll(/\s([\w:-]+)="([^"]*)"/g)].filter(([, name]) => !['src', 'href', 'srcset', 'action'].includes(name!)).map((m) => m[2]).join(' ')
       const read = `${text(page.replace(/<script[\s\S]*?<\/script>/g, '').replace(/<title>([\s\S]*?)<\/title>/, ' $1 '))} ${words}`.toLowerCase()
       expect(read).not.toContain('ui-tests')
       expect(read).not.toContain('powered by')
