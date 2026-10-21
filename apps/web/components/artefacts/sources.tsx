@@ -50,7 +50,7 @@ function Cell({ k, value, note }: { k: string; value: string; note?: string }) {
 }
 
 /**
- * Sources (docs/design/site-schema.md; design/artefacts/sources-section.html): where the people come from. The heading in five
+ * Sources (docs/design/site-schema.md; design/artefacts/sources-section.html): where people who represent users come from. The heading in five
  * columns and the lead in seven, then a table of the three sources (Source, Who, Cost, Time, Good for), one row open at a time; the open row and its well
  * take the surface token edge to edge. The well is 5/7: how it works and the caveat under the name column, the picture on the right.
  */

@@ -101,7 +101,7 @@ The six screens below are tabs under the commands, one step open at a time (1 Co
 
 **Heading.** What you write, what they see.
 
-**Lead.** Every screen a person meets, in the order they meet it, and what comes back from each, then the whole test that produces them. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.
+**Lead.** The whole test, then every screen it produces, in the order a person meets them, and what comes back from each. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.
 
 **Commands.** One stacked list by what each costs: the command on the left (22ch) and what it does on the right, one row each; at phone width each row stacks. Nothing under it.
 
@@ -216,13 +216,13 @@ When they press Done, the `outcome` asks your app what happened, whatever page t
 
 ---
 
-## 4. Where the people come from
+## 4. Where people who represent users come from
 
 *I don't know anyone who isn't a friend.*
 
 From [`../../design/artefacts/sources-section.html`](../../design/artefacts/sources-section.html); the copy below is the artefact's, verbatim. The research is [`../discovery/sources-research.md`](../discovery/sources-research.md) and [`../discovery/sources-desk-research.md`](../discovery/sources-desk-research.md).
 
-**Heading.** Where the people come from.
+**Heading.** Where people who represent users come from.
 
 **Lead.** Friends are kind and coworkers know too much. Three ways to reach people who are neither, and what each one can and cannot tell you. Open a row to see how it works and what the person sees.
 

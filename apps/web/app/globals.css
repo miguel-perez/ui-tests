@@ -161,8 +161,8 @@ main { position: relative; isolation: isolate; }
 .hero-artefact .terminal-body { font-size: 13px; padding: var(--space-1) 20px; }
 
 
-/* L3 · Compilation (design/artefacts/compile-section.html), on the page grid: the commands across twelve columns, then the six steps
-   as tabs, one open at a time, each a 5/7 pair: the text on the left, the screen on the right; then the whole file across twelve.
+/* L3 · Compilation (design/artefacts/compile-section.html), on the page grid: the commands across twelve columns, the whole file
+   across twelve, then the six steps as tabs, one open at a time, each a 5/7 pair: the text on the left, the screen on the right.
    The frames are the light Weekboard page; the chrome over it is that page's inverse with its mint accent, at real size. */
 .compile-commands { display: grid; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); }
 .compile-command { padding: 12px 16px; display: grid; grid-template-columns: minmax(0, 22ch) minmax(0, 1fr); gap: 6px var(--gutter); align-items: baseline; }

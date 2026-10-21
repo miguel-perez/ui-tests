@@ -39,7 +39,7 @@ export const inviteFile = exampleFileName
  */
 export const compilation = {
   heading: 'What you write, what they see.',
-  lead: 'Every screen a person meets, in the order they meet it, and what comes back from each, then the whole test that produces them. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.',
+  lead: 'The whole test, then every screen it produces, in the order a person meets them, and what comes back from each. The path you expect and the check you wrote stay on your side, so nothing you wrote can lead them.',
   commands: [
     { command: 'npm install -D ui-tests', does: 'Adds the package.', strong: '' },
     { command: 'npx ui-tests init', does: 'Writes a study file and a config, and prints the script tag for your app.', strong: 'a study file' },
@@ -99,12 +99,12 @@ export const runFacts = {
   share: 'Share',
 }
 /**
- * Sources (docs/design/site-schema.md; design/artefacts/sources-section.html): where the people come from, verbatim from the artefact.
+ * Sources (docs/design/site-schema.md; design/artefacts/sources-section.html): where people who represent users come from, verbatim from the artefact.
  * One row per source in the order your link, your visitors, a paid panel; each opens to how it works, the caveat and one picture.
  * The caveat is its lead sentence, then the rest. The research is docs/discovery/sources-research.md and sources-desk-research.md.
  */
 export const sources = {
-  heading: 'Where the people come from.',
+  heading: 'Where people who represent users come from.',
   lead: 'Friends are kind and coworkers know too much. Three ways to reach people who are neither, and what each one can and cannot tell you. Open a row to see how it works and what the person sees.',
   columns: ['Source', 'Who', 'Cost', 'Time', 'Good for'],
   how: 'How it works',

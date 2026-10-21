@@ -103,7 +103,7 @@ for (const width of [1440, 375]) {
         await expect(page.locator('[data-artefact="run-report"], .run-report')).toHaveCount(0)
         await expect(page.locator('[data-artefact="attempt-view"], [data-artefact="pull-request"], section[aria-labelledby="pull-request"]')).toHaveCount(0)
         await expect(page.getByRole('heading', { name: 'In the pull request.' })).toHaveCount(0)
-        // The page order: hero, what comes back, what you write, where the people come from, what a run is worth (issue #53), the agent
+        // The page order: hero, what comes back, what you write, where people who represent users come from, what a run is worth (issue #53), the agent
         // section, the host section.
         expect(await page.locator('main section[aria-labelledby]').evaluateAll(nodes => nodes.filter(node => !node.parentElement?.closest('section')).map(node => node.getAttribute('aria-labelledby')))).toEqual(['promise', 'comes-back', 'what-you-write', 'people', 'worth', 'agents', 'hosted'])
         // Issue #53, item 3: nothing on the page weighs the run in the words the research rules out.
@@ -297,7 +297,7 @@ test('the waves move visibly but slowly, grey with a blue centre, and stay light
   await expect(page.locator('.site-header .wordmark')).toHaveCSS('display', 'flex')
 })
 
-for (const width of [1440, 375]) test(`what you write, what they see: the commands, one step at a time by tab, key and hash, each at its own height with no code, then the file, stepped frames of one height, no console errors at ${width}px`, async ({ page }) => {
+for (const width of [1440, 375]) test(`what you write, what they see: the commands, one step at a time by tab, key and hash, each at its own height with no code, the file before them, stepped frames of one height, no console errors at ${width}px`, async ({ page }) => {
   const errors: string[] = []
   page.on('console', message => { if (message.type() === 'error') errors.push(message.text()) })
   page.on('pageerror', error => errors.push(error.message))
@@ -317,14 +317,15 @@ for (const width of [1440, 375]) test(`what you write, what they see: the comman
   expect(commands.every(row => width === 1440 ? row.side : row.below)).toBe(true)
   await expect(section.locator('.compile-note')).toHaveCount(0)
   expect(await page.locator('body').innerText()).not.toContain('ui-tests run')
-  // Issue #54: the whole file, as init writes it, in the site's highlighter, after the steps' previous and next row, across all
-  // twelve columns with --space-2 above it; the only code window in the section.
+  // The whole file, as init writes it, in the site's highlighter, between the commands and the steps' tab strip, across all twelve
+  // columns with --space-2 on each side; the only code window in the section.
   await expect(section.locator('.lines-window')).toHaveCount(1)
   const file = section.locator('.lines-window')
   expect((await file.locator('li code').allInnerTexts()).join('\n')).toBe(inviteExample)
-  expect(await file.evaluate(node => node.previousElementSibling?.classList.contains('compile-stepper') && !node.nextElementSibling)).toBe(true)
+  expect(await file.evaluate(node => node.previousElementSibling?.classList.contains('compile-commands') && node.nextElementSibling?.classList.contains('compile-stepper'))).toBe(true)
   const [stepper, fileBox, commandsBox] = await Promise.all([section.locator('.compile-stepper').boundingBox(), file.boundingBox(), section.locator('.compile-commands').boundingBox()])
-  expect(Math.round(fileBox!.y - (stepper!.y + stepper!.height))).toBe(width === 1440 ? 48 : 36)
+  expect(Math.round(fileBox!.y - (commandsBox!.y + commandsBox!.height))).toBe(width === 1440 ? 48 : 36)
+  expect(Math.round(stepper!.y - (fileBox!.y + fileBox!.height))).toBe(width === 1440 ? 48 : 36)
   expect([Math.round(fileBox!.x), Math.round(fileBox!.width)]).toEqual([Math.round(commandsBox!.x), Math.round(commandsBox!.width)])
   // Issue #46, item 3: a tab strip, 1 Consent to 6 After the task, and one step visible at a time.
   const tabs = section.getByRole('tab')

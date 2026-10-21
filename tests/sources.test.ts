@@ -3,7 +3,7 @@ import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { parseHTML } from 'linkedom'
 
-/** Issue #31: where the people come from. */
+/** Issue #31: where people who represent users come from. */
 const artefact = async () => parseHTML(`<html><body>${await readFile('design/artefacts/sources-section.html', 'utf8')}</body></html>`).document
 const text = (node: Element | null | undefined) => (node?.textContent ?? '').replace(/\s+/g, ' ').trim()
 const plain = (value: string) => value.replaceAll('`', '')
