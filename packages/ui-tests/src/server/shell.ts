@@ -21,7 +21,7 @@ export function playerShell(input: { runId: string; brand: CompiledBrand; script
     '<meta charset="utf-8">',
     '<meta name="viewport" content="width=device-width, initial-scale=1">',
     '<meta name="robots" content="noindex, nofollow">',
-    `<title>${escapeHtml(brand.name)}</title>`,
+    `<title>${escapeHtml(brand.name ?? '')}</title>`,
     ...(font ? [`<link rel="stylesheet" href="${escapeHtml(font)}">`] : []),
     // The values cannot hold `<`, so they cannot close the style element; entities would not be read inside it.
     `<style>${variables.length ? `:root{${variables.join(';')}}` : ''}body{margin:0}</style>`,

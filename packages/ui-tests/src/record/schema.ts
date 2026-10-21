@@ -1,6 +1,6 @@
 import { z } from 'zod'
 import { numberedRevisionSchema } from '../revisions.ts'
-import { compiledGoalSchema, compiledStudySchema } from '../schema/compiled.ts'
+import { compiledBrandSchema, compiledGoalSchema, compiledStudySchema } from '../schema/compiled.ts'
 
 export const RUN_RECORD_SCHEMA_ID = 'https://ui-tests.com/schemas/run-record.v1.json' as const
 
@@ -16,7 +16,9 @@ const verification = hookResult.extend({
 
 /** The compiled study as the record carries it: the expected answer of a validation question stays with the author. */
 const recordedGoal = compiledGoalSchema.extend({ answer: z.object({ question: z.string(), choices: z.array(z.string()) }).optional() })
-const recordedStudy = compiledStudySchema.extend({ goals: z.array(recordedGoal) })
+/** A v1 record written before the brand carried a name has `{ accent?, poweredBy }`: it still validates, and a record built now has the name. */
+const recordedBrand = compiledBrandSchema.extend({ name: z.string().optional(), poweredBy: z.boolean().optional() })
+const recordedStudy = compiledStudySchema.extend({ goals: z.array(recordedGoal), brand: recordedBrand })
 
 const handle = z.object({
   run: z.string(),

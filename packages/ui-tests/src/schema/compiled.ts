@@ -157,3 +157,16 @@ export const compiledStudySchema = z.object({
   derivations: z.array(z.object({ field: z.string(), rule: z.string(), source: z.string() })),
 })
 export type CompiledStudy = z.infer<typeof compiledStudySchema>
+
+/**
+ * A stored study as this version reads it. Runs compiled before the brand carried a name stored `{ accent?, poweredBy }`: the name is
+ * filled as compileStudy fills it (the author, else the product) and `poweredBy` is dropped, since participants never see our name.
+ */
+export function readCompiled<T extends { author: string; product: string; brand: unknown }>(study: T): T {
+  const stored = study.brand as (Partial<CompiledBrand> & { poweredBy?: unknown }) | undefined
+  if (!stored || (typeof stored.name === 'string' && !('poweredBy' in stored))) return study
+  const { poweredBy: _dropped, ...brand } = stored
+  return { ...study, brand: { ...brand, name: typeof brand.name === 'string' ? brand.name : study.author || study.product } }
+}
+/** A stored run with its study read as this version reads it. */
+export const readRun = <T extends { compiled: CompiledStudy }>(run: T): T => ({ ...run, compiled: readCompiled(run.compiled) })

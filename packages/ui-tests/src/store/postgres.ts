@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import { newId, newRunId, newToken } from '../ids.ts'
+import { readRun } from '../schema/compiled.ts'
 import { postgresMigrations, type SqlClient } from './sql.ts'
 import type {
   AttemptRow, AttemptStatus, Money, NewAttempt, NewRun, RecordedEvent, Revision, RunRow, RunStore, Snapshot, SnapshotKey,
@@ -67,7 +68,7 @@ export class PostgresStore implements RunStore {
   }
 
   private runRow(row: Row | undefined): RunRow | undefined {
-    return row ? (row.data as RunRow) : undefined
+    return row ? readRun(row.data as RunRow) : undefined
   }
 
   private attemptRow(row: Row | undefined): AttemptRow | undefined {

@@ -3,6 +3,7 @@ import { mkdirSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import path from 'node:path'
 import { newId, newRunId, newToken } from '../ids.ts'
+import { readRun } from '../schema/compiled.ts'
 import { sqliteMigrations } from './migrations.ts'
 import type {
   AttemptRow, AttemptStatus, Money, NewAttempt, NewRun, RecordedEvent, Revision, RunRow, RunStore, Snapshot, SnapshotKey,
@@ -91,7 +92,7 @@ export class SqliteStore implements RunStore {
   }
 
   private runRow(row: Row | undefined): RunRow | undefined {
-    return row ? (JSON.parse(row.data as string) as RunRow) : undefined
+    return row ? readRun(JSON.parse(row.data as string) as RunRow) : undefined
   }
 
   private attemptRow(row: Row | undefined): AttemptRow | undefined {

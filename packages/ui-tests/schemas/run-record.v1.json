@@ -591,11 +591,11 @@
                 "family"
               ],
               "additionalProperties": false
+            },
+            "poweredBy": {
+              "type": "boolean"
             }
           },
-          "required": [
-            "name"
-          ],
           "additionalProperties": false
         },
         "goals": {

@@ -5,9 +5,13 @@ import { bundleStudyFile, loadBundle } from '../src/load.ts'
 import { signPath } from '../src/report/sign.ts'
 import { createParticipant } from '../src/runner/invites.ts'
 import { createHandler, type ServerOptions } from '../src/server/handler.ts'
+import { buildRecord } from '../src/record/build.ts'
+import { reportDocument } from '../src/report/document.ts'
+import { pgliteClient } from '../src/store/drivers.ts'
+import { PostgresStore } from '../src/store/postgres.ts'
 import { SqliteStore } from '../src/store/sqlite.ts'
 import type { CompiledStudy } from '../src/schema/compiled.ts'
-import type { RunRow } from '../src/store/types.ts'
+import type { RunRow, RunStore } from '../src/store/types.ts'
 import { newRun } from './store-conformance.ts'
 
 const file = join(import.meta.dirname, 'fixtures', 'verify.ui.test.ts')
@@ -140,4 +144,30 @@ describe('ui-tests serve', () => {
     expect((await begin('http://10.0.0.2:4300')).status).toBe(403)
     expect((await begin('https://tests.example.com')).status).toBe(200)
   })
+})
+
+describe('a run stored before the brand carried a name', () => {
+  // The brand as runs stored it then: an accent and whether to show our name, and no name of the author's.
+  const before = () => ({ ...compiled, author: 'Acme Labs', brand: { accent: '#0a7d4f', poweredBy: true } }) as unknown as CompiledStudy
+
+  for (const [name, open] of [['sqlite', async () => new SqliteStore(':memory:')], ['postgres (pglite)', async () => new PostgresStore(await pgliteClient())]] as const) {
+    it(`still builds its record, its player, its report and its view (${name})`, async () => {
+      const old: RunStore = await open()
+      const { run: stored } = await old.createRun(newRun('old', { compiled: before(), target: 'http://app.test' }))
+      const read = await old.getRun(stored.run)
+      expect(read!.compiled.brand).toEqual({ accent: '#0a7d4f', name: 'Acme Labs' })
+      const record = await buildRecord(old, stored.run)
+      expect(record.compiled.brand).toEqual({ accent: '#0a7d4f', name: 'Acme Labs' })
+      expect(reportDocument({ record, link: (path) => path, replayScript: '/r.js' })).toContain('Acme Labs')
+      const handle = createHandler({ store: async () => old, shareSecret: SECRET })
+      const page = await handle(new Request(`${server}/ui-tests/${stored.run}/`))
+      expect(page.status).toBe(200)
+      expect(await page.text()).toContain('<title>Acme Labs</title>')
+      const { token } = await createParticipant(old, { run: read!, participant: 'invite-1' })
+      const view = await handle(new Request(`${server}/api/ui-tests/`, { headers: { Authorization: `Bearer ${token}` } }))
+      expect(view.status).toBe(200)
+      expect((await view.json()).brand).toEqual({ accent: '#0a7d4f', name: 'Acme Labs' })
+      await old.close()
+    }, 60_000)
+  }
 })
