@@ -32,7 +32,7 @@ describe('what the page says', () => {
     const page = '<html><head><meta name="description" content="Send invoices and get paid on time."></head></html>'
     const asked: string[] = []
     const fetched = (async (url: string) => { asked.push(url); return new Response(page) }) as unknown as typeof fetch
-    const needs = { says: '/', decoys: {} }
+    const needs = { says: '/', decoys: {}, distractors: {} }
     const { entry, notDrafted } = await draftSnapshot({ needs, groups: [], product: 'Acme', did: 'sent an invoice', pageUrl: 'http://site.test/', fetch: fetched })
     expect(asked).toEqual(['http://site.test/'])
     expect(entry.says).toEqual({ from: '/', value: 'Send invoices and get paid on time.', source: 'meta description' })

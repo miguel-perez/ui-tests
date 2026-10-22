@@ -2,12 +2,12 @@ import { agentConfigOf, agentFingerprint } from './agents/config.ts'
 import { StudyLoadError } from './load.ts'
 import type { AuthoredStudy, AuthoredTask } from './authoring.ts'
 import { consentText } from './derive/consent.ts'
-import { distractors, shuffleChoices } from './derive/distractors.ts'
+import { isWrongAnswer, neighbours, repeated, shuffleChoices } from './derive/distractors.ts'
 import { deriveBrand } from './derive/brand.ts'
 import { deriveImpression, type SaysSource } from './derive/impression.ts'
 import { areFromDid, toSecondPerson } from './derive/person.ts'
 import { ASSISTIVE, ASSISTIVE_QUESTION, deriveScreener, draftInputs, readUsers, resolveGroups } from './derive/screener.ts'
-import { current, snapshotState, type DraftNeeds, type SnapshotState, type StudySnapshot } from './derive/snapshot.ts'
+import { current, distractorEntry, snapshotState, type DraftNeeds, type SnapshotState, type StudySnapshot } from './derive/snapshot.ts'
 import { scenarioTemplate } from './derive/scenario.ts'
 import { detectionChance, sampleSentence, sampleSize } from './derive/sample.ts'
 import { goalTimeout } from './derive/timeout.ts'
@@ -21,7 +21,7 @@ export { sampleSize, detectionChance } from './derive/sample.ts'
 export { goalTimeout } from './derive/timeout.ts'
 export { validateUsers, contextId } from './derive/users.ts'
 export { scenarioTemplate, fillScenario } from './derive/scenario.ts'
-export { distractors, shuffleChoices } from './derive/distractors.ts'
+export { neighbours, shuffleChoices } from './derive/distractors.ts'
 export { consentText, payoutLine } from './derive/consent.ts'
 export { deriveImpression, pageSays } from './derive/impression.ts'
 export { deriveScreener, screenResult, optionOrder, NONE_OF_THESE } from './derive/screener.ts'
@@ -87,7 +87,7 @@ function compile(study: AuthoredStudy, config: UiTestsConfig, snapshot: StudySna
   const did = fields.did ?? fields.groups?.find(g => g.did)?.did
 
   // What was drafted is read from the snapshot while it was drafted from what the study says now; until then it is drafted here.
-  const needs: DraftNeeds = { decoys: {} }
+  const needs: DraftNeeds = { decoys: {}, distractors: {} }
   if (fields.are === undefined && did) needs.are = did
   const are = fields.are ?? current(snapshot?.are, did) ?? areFromDid(did ?? '')
   derive('users.are', fields.are !== undefined ? 'as authored' : 'did with the person shifted ("people who …"), as the snapshot holds it', 'users.did, snapshot')
@@ -135,7 +135,26 @@ function compile(study: AuthoredStudy, config: UiTestsConfig, snapshot: StudySna
   const primary = primaryOf(study.tasks)
   derive('goals[].primary', 'the task marked primary, else the only task with an outcome, else the first', 'task.primary, task.outcome')
 
-  const answerPool = study.tasks.flatMap(t => t.answer ? [t.answer.expected] : [])
+  // A task question's distractors: as the author wrote them, else from the snapshot while drafted from its expected answer, else a
+  // count's neighbours. Nothing generic pads them; a question with none drafted yet shows its answer alone in a draft.
+  const wrongAnswers = (task: AuthoredTask, answer: NonNullable<AuthoredTask['answer']>): string[] => {
+    if (answer.distractors) {
+      // Written distractors with no wrong answer among them would ask a question with one choice; nothing drafts them, so it is an error.
+      if (!answer.distractors.some(d => isWrongAnswer(d, answer.expected))) throw new Error(`task "${task.name}": participant.answer(${JSON.stringify(answer.question)}) has no distractors other than its expected answer; write the wrong answers, or leave distractors out for ui-tests lint -u to draft them`)
+      // A blank one, or the right answer again in other case, would reach a participant as a choice of its own.
+      const bad = answer.distractors.filter(d => !isWrongAnswer(d, answer.expected))
+      if (bad.length) throw new Error(`task "${task.name}": participant.answer(${JSON.stringify(answer.question)}) has distractors that are blank or its expected answer ${JSON.stringify(answer.expected)}: ${bad.map(d => JSON.stringify(d)).join(', ')}; remove them`)
+      // Two that differ only in case or surrounding spaces would show the same choice twice.
+      const twice = repeated(answer.distractors)
+      if (twice.length) throw new Error(`task "${task.name}": participant.answer(${JSON.stringify(answer.question)}) has distractors that repeat another: ${twice.map(d => JSON.stringify(d)).join(', ')}; remove them`)
+      return answer.distractors
+    }
+    // The snapshot holds distractors by question, drafted from one expected answer: the same question expecting another would read the wrong entry.
+    const other = needs.distractors[answer.question]
+    if (other !== undefined && other !== answer.expected) throw new Error(`task "${task.name}" asks ${JSON.stringify(answer.question)} expecting ${JSON.stringify(answer.expected)}, and an earlier task asks it expecting ${JSON.stringify(other)}; word the questions apart, or write distractors on one`)
+    needs.distractors[answer.question] = answer.expected
+    return current(distractorEntry(snapshot, answer.question, answer.expected), answer.expected) ?? neighbours(answer.expected) ?? []
+  }
   const goals: CompiledGoal[] = study.tasks.map((task, index) => {
     const { path, start, minutes, scenario } = task.options
     const hasOutcome = task.outcomes.length > 0
@@ -159,7 +178,7 @@ function compile(study: AuthoredStudy, config: UiTestsConfig, snapshot: StudySna
       scenario: scenario ? { text: scenario, pinned: true } : { text: scenarioTemplate({ are, purpose: purposeToYou, goal: task.name, values: {} }), pinned: false },
       steps: task.steps.map(s => ({ name: s.name, hasCheck: Boolean(s.check) })),
       ...(path && { path }),
-      ...(task.answer && { answer: { question: task.answer.question, choices: shuffleChoices(task.answer.expected, task.answer.distractors ?? distractors(task.answer.expected, answerPool, `${id}:${index}`), `${id}:${index}`), expected: task.answer.expected } }),
+      ...(task.answer && { answer: { question: task.answer.question, choices: shuffleChoices(task.answer.expected, wrongAnswers(task, task.answer), `${id}:${index}`), expected: task.answer.expected } }),
       hasOutcome,
       timeout,
       ...(minutes !== undefined && { minutes }),
@@ -217,7 +236,7 @@ function compile(study: AuthoredStudy, config: UiTestsConfig, snapshot: StudySna
   ]
   derive('questions', 'the two UX-Lite items on five points ((response - 1) x 25, wording uxlite-2024), then the open question, asked once after all goals, with the product name', 'config.product')
   derive('consent', 'retention 90 days; the third purpose only when config consent.workflows is true; the payout line from config participants.link.amount', 'config.consent, config.participants')
-  derive('goals[].answer.choices', 'the expected answer among its distractors (authored, else generated), shuffled by the study id and task index', 'task.answer')
+  derive('goals[].answer.choices', "the expected answer among its distractors: as authored, else drafted into the snapshot by lint -u (a count's neighbours, else the model) and reviewed; shuffled by the study id and task index", 'task.answer, snapshot')
 
   const snapshotGroups = resolved.map(g => ({ name: g.name, quota: g.quota, source: g.source }))
   // An agent is not screened and takes no first look: a study only agents take needs no snapshot.

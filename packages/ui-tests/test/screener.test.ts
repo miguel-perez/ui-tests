@@ -376,6 +376,61 @@ describe('lint -u and the snapshot', () => {
     expect(lintOut).toContain('Screener: 4 screens before consent (draft: the snapshot is missing or out of date; ui-tests lint -u drafts it)')
   })
 
+  const answersStudy = `import { study, task, participant } from 'ui-tests'
+study('s', { users: { did: 'planned a week with a team' }, purpose: 'plan the week' }, () => {
+  task('find the plan', { path: ['/'] }, () => { participant.answer('Which plan was shown?', { expected: 'Team' }) })
+  task('count the invitations', { path: ['/'] }, () => { participant.answer('How many people did you invite?', { expected: '3' }) })
+  task('name the year', { path: ['/'] }, () => { participant.answer('Which year was the plan made in?', { expected: '2024', distractors: ['2023'] }) })
+})`
+
+  it("names each question whose distractors it could not draft with no model, pads none, and drafts a count's neighbours for review", async () => {
+    await writeFile(join(dir, 'a.ui.test.ts'), answersStudy)
+    const result = await run(['lint', '-u'], { fetch: page })
+    expect(result.out).toContain(`could not draft distractors of "Which plan was shown?": no model is configured: set model: { provider: 'anthropic', name } in ui-tests.config.ts; write it into a.ui.test.ts.screener.snap`)
+    expect(result.out).not.toContain('could not draft distractors of "How many people did you invite?"')
+    const entry = (await readSnapshotFile(join(dir, 'a.ui.test.ts.screener.snap')))!.studies.s!
+    // Authored distractors are the author's own: nothing is drafted for them.
+    expect(entry.distractors).toEqual({
+      'Which plan was shown?': { from: 'Team', value: null, source: 'not drafted' },
+      'How many people did you invite?': { from: '3', value: ['2', '4', '5'], source: 'neighbours of a count' },
+    })
+    // Lint names the question while it is missing, and shows every task's choices for review.
+    const lintOut = (await run(['lint'])).out
+    expect(lintOut).toContain('distractors of "Which plan was shown?" is not drafted yet')
+    expect(lintOut).toContain('Task 1 asks "Which plan was shown?": Team (expected); no distractors yet, ui-tests lint -u drafts them')
+    expect(lintOut).toMatch(/Task 2 asks "How many people did you invite\?": [\d, ()a-z]*3 \(expected\)/)
+    expect(lintOut).toMatch(/Task 3 asks "Which year was the plan made in\?": [\d, ()a-z]*2023/)
+    expect((await run(['recruit', '--local'])).err).toContain('distractors of "Which plan was shown?" is not drafted yet')
+  })
+
+  it("drafts a text answer's distractors with the model, without the right answer, and keeps them while the answer is the same", async () => {
+    await writeFile(join(dir, 'a.ui.test.ts'), answersStudy)
+    const asked: string[] = []
+    const model = { complete: async (prompt: string) => { asked.push(prompt); return /yes or no/.test(prompt) ? 'no' : '["Solo", "team", "SOLO", "Business", "Enterprise", "Solo", "Agency"]' } }
+    expect((await run(['lint', '-u'], { model, fetch: page })).code).toBe(0)
+    const file = join(dir, 'a.ui.test.ts.screener.snap')
+    const entry = (await readSnapshotFile(file))!.studies.s!
+    expect(entry.distractors!['Which plan was shown?']).toEqual({ from: 'Team', value: ['Solo', 'Business', 'Enterprise'], source: 'model' })
+    const prompt = asked.find(p => p.includes('Which plan was shown?'))!
+    expect(prompt).toContain('"Team"')
+    expect(prompt).toContain('Acme')
+    expect(asked.filter(p => p.includes('How many people did you invite?'))).toEqual([])
+    expect((await run(['lint'])).out).not.toContain('screener-snapshot')
+    // The author edits a distractor: updating again keeps it and asks nothing; a new expected answer is out of date until drafted again.
+    await writeFile(file, (await readFile(file, 'utf8')).replace('"Enterprise"', '"Agency"'))
+    const before = asked.length
+    await run(['lint', '-u'], { model, fetch: page })
+    expect(asked).toHaveLength(before)
+    expect((await readSnapshotFile(file))!.studies.s!.distractors!['Which plan was shown?']!.value).toEqual(['Solo', 'Business', 'Agency'])
+    // An emptied list would ask a question with one choice: lint says it is not drafted, and updating drafts it again.
+    await writeFile(file, (await readFile(file, 'utf8')).replace('["Solo", "Business", "Agency"]', '[]'))
+    expect((await run(['lint'])).out).toContain('distractors of "Which plan was shown?" is not drafted yet')
+    await run(['lint', '-u'], { model, fetch: page })
+    expect((await readSnapshotFile(file))!.studies.s!.distractors!['Which plan was shown?']!.value).toEqual(['Solo', 'Business', 'Enterprise'])
+    await writeFile(join(dir, 'a.ui.test.ts'), answersStudy.replace("expected: 'Team'", "expected: 'Business'"))
+    expect((await run(['lint'])).out).toContain('distractors of "Which plan was shown?" was drafted from something the study no longer says')
+  })
+
   it('lets a rehearsal run on a draft, and labels its screens as drafts', async () => {
     const { compiled } = compileSource(usersStudy("{ did: 'planned a week with a team' }"))
     expect(compiled.draft).toBe(true)
