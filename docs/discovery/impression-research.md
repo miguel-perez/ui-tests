@@ -1,6 +1,6 @@
-# What an impression stage can and cannot claim
+# What a first look can and cannot claim
 
-Primary-source briefing collected by a research subagent. Used by the impression stage in [`../prd/02-study-and-verdict.md`](../prd/02-study-and-verdict.md).
+Primary-source briefing collected by a research subagent, then revised for issue [#81](https://github.com/miguel-perez/ui-tests/issues/81). Used by the first look in [`../prd/02-study-and-verdict.md`](../prd/02-study-and-verdict.md). The first sections are background: they explain why the earlier design, a 500 ms flash followed by "What was that page for?", was removed.
 
 ## First click
 
@@ -24,14 +24,24 @@ Lab only. Iten et al. 2018 (n = 120): appeal predicted willingness to stay in br
 
 ## What the stage may claim
 
-- The appeal item is reliable and predicts the attitude participants bring into the task, through a halo. It is a covariate, not an outcome.
-- The comprehension question says whether the headline and hero carry the primary purpose, and nothing deeper.
+- The tour's answer says whether the page gets across what it is, whose it is, what you can do there and what it is for, part by part against what the page should say, and nothing deeper.
 - The first click on the real page predicts navigation success weakly on a live page (about 78% versus 70%) and strongly when the task is pure findability; expect ±10% noise.
 
 ## What it may not claim
 
-That appeal predicts task success, post-use SEQ or SUS, or conversion. That a passed five-second test means the page works. That first-click aggregates generalise beyond the one framed task.
+That a first look predicts task success, that appeal predicts task success, post-use SEQ or SUS, or conversion. That a passed five-second test means the page works. That first-click aggregates generalise beyond the one framed task.
 
-## The cheapest honest design
+## Why the flash was removed
 
-One unmoderated session per participant, in order: 500 ms flash, one appeal item on a 1 to 9 scale, one open "what is this site for?", one first click on the live page for an unprimed task, then the full task. Report the stage as a covariate beside the issues, never inside the counts. Thirty to fifty participants per design for a first-click split; five to ten for qualitative comprehension.
+The earlier stage mixed two methods and measured neither. A 500 ms flash is Lindgaard's thin slice, which is valid for appeal; "What was that page for?" is the five-second test's question, and purpose identification still improves between 5 and 10 seconds (Gronier 2016; Kuric et al. 2024), so half a second measures it badly. It coded answers against the study's `purpose`, which is what the author wants people to do, not what the page says. Without a model it fell back to a word-overlap rule, and that rule rewarded repeating the purpose the screener had just shown. The thin-slice appeal measure is not kept as an option: appeal is a halo and a covariate (above), and the question the stage exists for is comprehension.
+
+## The design: the home page tour
+
+The usability method in the design corpus is Krug's home page tour, done in every session: an untimed look at the page, "tell me what you make of it … whose site it is, what you can do here, and what it's for … don't click on anything yet" (*Rocket Surgery Made Easy*), and the first look must start cold: avoid discussing the site beforehand, so it shows whether people can figure out what it is from a standing start (*Don't Make Me Think*).
+
+- **The page.** The live start page (`firstLook.page`, else the primary task's start), with no time limit. The person can scroll; nothing is clickable. There is no picture and no flash.
+- **The prompt.** One open prompt in four parts: what it is, whose it is, what you can do there, what it is for. Typed, or spoken with "Talk instead".
+- **What it is coded against.** `firstLook.says`, what the page should get across: written by the author, or read from the start page's `<h1>`, meta description or og:description, and reviewed in the study's snapshot. Never the `purpose`, and nothing before the first look shows the purpose.
+- **The codes.** Per part: identified it, identified who it is from, named an action, named its purpose. The configured model codes them; without one, or when its reply does not parse, the answer is left uncoded and listed for the author, who can code it in the trace. Nothing guesses.
+- **Where it goes.** Beside the issues, never inside the counts or the sentence. Five to ten people are enough for qualitative comprehension.
+- **First click.** Each task's first click is read on its own start page, against its own goal and path, from the task's own events; it predicts navigation success weakly on a live page (about 78% versus 70%) and strongly when the task is pure findability.

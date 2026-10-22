@@ -5,6 +5,7 @@ import { canRead } from '../consumers.ts'
 import type { CSSProperties, ReactNode } from 'react'
 import { topThree } from '../issues.ts'
 import type { RunRecord } from '../record/schema.ts'
+import { firstLookLines, groupLines } from '../record/summary.ts'
 
 type Attempt = RunRecord['attempts'][number]
 type Issue = RunRecord['issues'][number]
@@ -80,7 +81,6 @@ function ending(attempt: Attempt): string {
 
 const FIRST_LOOK: Record<Attempt['firstLook'], string> = {
   asked: 'asked',
-  'never asked': 'never asked: the picture of the page could not be taken, so no question was put',
   off: 'not part of this study',
   pending: 'not reached yet',
 }
@@ -115,7 +115,7 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
       </p>
       <h1>{compiled.name}</h1>
       <p className="uit-dim">
-        {compiled.author ? `By ${compiled.author} · ` : ''}{compiled.product} · {record.actor === 'agent' ? 'capability test, not usability' : plural(compiled.sample.n, 'person', 'people')}
+        {compiled.author ? `By ${compiled.author} · ` : ''}{compiled.product} · {record.actor === 'agent' ? 'capability test, not usability' : `${plural(compiled.sample.n, 'person', 'people')}${(compiled.groups ?? []).length > 1 ? ` (${compiled.groups.map((g) => `${g.name} ${g.quota}`).join(', ')})` : ''}`}
       </p>
     </header>
   )
@@ -145,6 +145,7 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
           {attempt.timings.onGoalMs !== undefined && <><dt>Time on the task</dt><dd>{seconds(attempt.timings.onGoalMs)}</dd></>}
           {typeof ease === 'number' && !withheld && <><dt>Ease</dt><dd>{ease} of 7</dd></>}
           <dt>First look</dt><dd>{FIRST_LOOK[attempt.firstLook]}</dd>
+          {attempt.group !== null && record.groups.length > 1 && <><dt>Group</dt><dd>{attempt.group}</dd></>}
           <dt>Pages visited</dt><dd>{attempt.path.length ? attempt.path.join(' → ') : 'none recorded'}</dd>
           {attempt.rehearsal && <><dt>Kind</dt><dd>rehearsal; not counted</dd></>}
         </dl>
@@ -166,8 +167,10 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
         ? [`${goalMeasure.effectiveness.reached} of ${goalMeasure.effectiveness.n} ${goalMeasure.effectiveness.n === 1 ? 'person' : 'people'} reached the outcome of “${goal.name}”.`]
         : []
     }),
-    ...(impression.named > 0 ? [`${impression.named} of ${impression.denominator} named the purpose of the first page.`] : []),
-    ...(impression.firstClickOnPath.onPath > 0 ? [`${impression.firstClickOnPath.onPath} of ${impression.firstClickOnPath.of} first clicks were on the expected route.`] : []),
+    ...compiled.goals.flatMap((goal) => {
+      const clicks = measures.byGoal[String(goal.index)]?.firstClick
+      return clicks && clicks.onPath > 0 ? [`${clicks.onPath} of ${clicks.of} first clicks on “${goal.name}” were on the expected route.`] : []
+    }),
     ...record.issues.filter((issue) => issue.recovered.length > 0).map((issue) => `${plural(issue.recovered.length, 'person', 'people')} still reached the outcome after: ${issue.title}`),
   ]
   const top = new Set(compiled.goals.flatMap((goal) => topThree(record.issues, goal.index)))
@@ -183,14 +186,11 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
       {compiled.sample.sentence !== record.sentence && <p className="uit-dim">{compiled.sample.sentence}</p>}
 
       <section aria-labelledby="uit-first">
-        <h2 id="uit-first">Fit and first look</h2>
-        <p>{record.fit.summary}</p>
-        {compiled.impression.on || impression.neverAsked > 0 ? (
+        <h2 id="uit-first">Who took part, and the first look</h2>
+        {groupLines(record).map((line) => <p key={line}>{line}</p>)}
+        {compiled.impression.on ? (
           <>
-            <p>{compiled.impression.question} {impression.denominator > 0
-              ? `${impression.named} named the purpose, ${impression.didNot} did not name it, ${impression.noAnswer} gave no answer.`
-              : 'Nobody has answered yet.'}</p>
-            {impression.neverAsked > 0 && <p>Never asked of {plural(impression.neverAsked, 'person', 'people')}: the picture of the page could not be taken, so no question was put. This is not the same as no answer.</p>}
+            {firstLookLines(record).length ? firstLookLines(record).map((line) => <p key={line}>{line}</p>) : <p>Nobody has answered the first look yet.</p>}
             <p className="uit-dim">{impression.limits}</p>
           </>
         ) : <p className="uit-dim">The study has no first look.</p>}
@@ -199,7 +199,7 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
       <section aria-labelledby="uit-measures">
         <h2 id="uit-measures">Measures</h2>
         <table>
-          <caption className="uit-dim">Effectiveness, efficiency and satisfaction for each task, and the fit of the people</caption>
+          <caption className="uit-dim">Effectiveness, efficiency and satisfaction for each task</caption>
           <thead><tr><th scope="col">Task</th><th scope="col">Effectiveness</th><th scope="col">Efficiency</th><th scope="col">Satisfaction</th></tr></thead>
           <tbody>
             {compiled.goals.map((goal) => {
@@ -219,7 +219,6 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
         </table>
         <p>
           Satisfaction with {compiled.product}: {measures.satisfaction.uxLite.mean !== undefined ? `${measures.satisfaction.uxLite.mean} of 100 from ${plural(measures.satisfaction.uxLite.n, 'person', 'people')}` : 'no ratings yet'}.
-          {' '}Fit: {measures.fit.summary.mean !== undefined ? `${measures.fit.summary.mean} of ${measures.fit.summary.outOf} from ${plural(measures.fit.summary.n, 'person', 'people')}` : 'nobody screened yet'}.
         </p>
         {reached.length === 0 && <p className="uit-dim">No task has been measured yet.</p>}
       </section>

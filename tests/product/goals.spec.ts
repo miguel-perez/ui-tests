@@ -44,6 +44,9 @@ test.describe('a two-goal study', () => {
       await expect(heading(page)).not.toHaveText(title)
     }
     await page.getByRole('button', { name: 'I agree and continue' }).click()
+    // Assistive technology is asked once, after consent, and is optional: Continue with nothing chosen.
+    await expect(heading(page)).toHaveText('Do you use any assistive technology? You can skip this.')
+    await next(page).click()
     await expect(heading(page)).toHaveText('A quick practice')
     await page.getByRole('button', { name: 'Continue' }).click()
 

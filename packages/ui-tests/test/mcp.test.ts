@@ -10,10 +10,10 @@ import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest
 import { main, type Io } from '../src/cli/main.ts'
 import { readableRecord } from '../src/consumers.ts'
 import { createMcpServer } from '../src/mcp/server.ts'
-import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { openStore } from '../src/store/open.ts'
 import type { RunRecord } from '../src/record/schema.ts'
 import { stubServer } from './server-stub.ts'
+import { draftSnapshots } from './snapshots.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 let target: Server
@@ -32,6 +32,7 @@ beforeAll(async () => {
   data = await mkdtemp(join(tmpdir(), 'ui-tests-mcp-'))
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
   await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${url}' } }\n`)
+  await draftSnapshots(work)
 })
 afterAll(async () => {
   await server.close()
@@ -42,7 +43,7 @@ afterAll(async () => {
 })
 afterEach(async () => { while (cleanup.length) await cleanup.pop()!() })
 
-const io = (): Io => ({ stdout: { write: () => true }, stderr: { write: () => true }, cwd: work, env: { UI_TESTS_DATA_DIR: data }, deps: { pollMs: 1, screenshotter: stubScreenshotter(new Uint8Array([0])) } })
+const io = (): Io => ({ stdout: { write: () => true }, stderr: { write: () => true }, cwd: work, env: { UI_TESTS_DATA_DIR: data }, deps: { pollMs: 1 } })
 
 async function connect() {
   const server = createMcpServer(io())
@@ -95,7 +96,7 @@ describe('the MCP server', () => {
     expect(`${lint.text}\n`).toBe((await cli('lint', '--json')).out)
     const estimate = await call('estimate', {})
     expect(`${estimate.text}\n`).toBe((await cli('estimate', '--json')).out)
-    expect(estimate.json()).toEqual({ n: 5, minutes: 3 })
+    expect(estimate.json()).toEqual({ n: 5, minutes: 3, groups: [{ name: 'everyone', quota: 5 }] })
   })
 
   it('reports a study that fails to load as a tool error', async () => {
@@ -153,9 +154,9 @@ describe('the MCP server', () => {
     await store.updateAttempt(attempt.id, {
       status: 'finished', reason: 'done', purposes: ['analysis by the author'], startedAt: new Date(0).toISOString(), endedAt: new Date(5000).toISOString(),
       answers: {
-        screener: { 'screener.today': 'secret-screener' },
-        screenerResult: { matches: true, outside: [], fit: { total: 5 } },
-        impression: { text: 'secret-first-look', code: 'did not name it', codedBy: 'rule', firstClick: null, firstClickReason: 'off the target' },
+        screener: { 'screener.role': 'secret-screener' },
+        screenerResult: { group: 'everyone', criteria: { role: { value: 'Developer', met: true } }, order: { 'screener.role': ['Developer'] } },
+        impression: { looked: true, text: 'secret-first-look', parts: { what: true, who: false, action: false, purpose: true }, codedBy: 'model' },
         'goal0.ease': 3, 'goal0.difficulty': 'secret-voice-transcript', 'goal0.difficulty.voice': 'blob-1',
         'Which plan was shown?': 'secret-typed-answer', useful: 4, easy: 5, uxliteVersion: 'v1', anything: 'secret-comment', moreTime: true,
       },
@@ -166,8 +167,8 @@ describe('the MCP server', () => {
     for (const text of [JSON.stringify(report), JSON.stringify(traced)]) expect(text).not.toMatch(/secret-/)
     const closed = report.attempts.find((a: { participant: string }) => a.participant === 'closed')
     expect(closed.answers).toEqual({
-      screenerResult: { matches: true, outside: [], fit: { total: 5 } },
-      impression: { code: 'did not name it', codedBy: 'rule', firstClick: null, firstClickReason: 'off the target' },
+      screenerResult: { group: 'everyone', criteria: { role: { value: 'Developer', met: true } }, order: { 'screener.role': ['Developer'] } },
+      impression: { looked: true, parts: { what: true, who: false, action: false, purpose: true }, codedBy: 'model' },
       'goal0.ease': 3, useful: 4, easy: 5, uxliteVersion: 'v1', moreTime: true,
     })
     expect(closed.verification).toMatchObject({ status: 'incorrect', answer: { status: 'incorrect' } })
@@ -202,7 +203,7 @@ describe('the MCP server', () => {
     const { tools } = await client.listTools()
     expect(tools).toHaveLength(7)
     const estimate = await client.callTool({ name: 'estimate', arguments: {} }) as { content: { text: string }[] }
-    expect(JSON.parse(estimate.content[0]!.text)).toEqual({ n: 5, minutes: 3 })
+    expect(JSON.parse(estimate.content[0]!.text)).toEqual({ n: 5, minutes: 3, groups: [{ name: 'everyone', quota: 5 }] })
   }, 30_000)
 
   it('exits by itself when the client closes stdin after a trace call', async () => {

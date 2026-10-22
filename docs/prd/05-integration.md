@@ -55,8 +55,8 @@ The tunnel fits a run watched for a few hours. A longer or unattended run needs 
 ```json
 {
   "run": "r_01J…",
-  "key": "abc123:developers-who-ship-ui…find-out-whether…:human",
-  "context": { "users": "developers who ship UI and have no researcher", "purpose": "find out whether people can use what I built, without a researcher", "id": "developers-who-ship-ui…find-out-whether…" },
+  "key": "abc123:people-who-shipped-a-user-interface…find-out-whether…:human",
+  "context": { "users": { "are": "people who shipped a user interface they built themselves", "did": "shipped a user interface you built yourself", "role": ["Developer", "Designer", "Founder"] }, "purpose": "find out whether people can use what I built, without a researcher", "id": "people-who-shipped-a-user-interface…find-out-whether…" },
   "build": { "url": "https://ui-tests-git-abc.vercel.app", "commit": "abc123" },
   "actor": "human",
   "states": {
@@ -74,7 +74,7 @@ Completion is observable three ways: poll `ui-tests status`, a webhook the store
 
 ## The run record
 
-`ui-tests report --json` writes one file per run with the compiled context, every derived field and its source rule, attempts with their consented purposes and source restrictions, measures, the ranked `issues[]` with participants, impact, words, access conditions and moment references, the impression stage results, the fit of the sample, measures named effectiveness, efficiency, satisfaction and fit, money, quality flags, revisions, and the sentence. Its JSON Schema is published and versioned; the schema id is in the file. It is the only artifact a consumer needs.
+`ui-tests report --json` writes one file per run with the compiled context, every derived field and its source rule, attempts with their consented purposes and source restrictions, measures, the ranked `issues[]` with participants, impact, words, access conditions and moment references, the first look's coded parts and the answers left uncoded, the groups with their n, detection sentence and issues, measures named effectiveness, efficiency and satisfaction, money, quality flags, revisions, and the sentence. Its JSON Schema is published and versioned; the schema id is in the file. It is the only artifact a consumer needs.
 
 ## GitHub
 
@@ -94,7 +94,7 @@ ISO 9241-210 conformance is about an organisation's process, and its Annex B che
 
 | Clause | What the record shows |
 | --- | --- |
-| 5.3 user involvement | Who was involved, selected how, with the screener and the fit of the sample to the stated users |
+| 5.3 user involvement | Who was involved, selected how: the screener, the groups and their quotas, and each person's group and criterion values |
 | 5.4 user-centred evaluation drives and refines the design | Runs against successive builds, with revisions and the issues acted on |
 | 7.2 context of use specified | `users`, `purpose`, `environment`, and the recorded device, browser and assistive technology per participant |
 | 7.3 user requirements | Goals with outcomes as measurable criteria |

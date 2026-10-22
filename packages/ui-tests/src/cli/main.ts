@@ -1,6 +1,6 @@
 import type { LocalPackage } from '../agents/pack.ts'
 import type { GitHubClient } from '../github/types.ts'
-import type { Screenshotter } from '../runner/screenshot.ts'
+import type { TextModel } from '../model.ts'
 import type { Tunnel } from '../tunnel/types.ts'
 import { check } from './check.ts'
 import { dev } from './dev.ts'
@@ -21,8 +21,8 @@ export type CliDeps = {
   openUrl?: (url: string) => void | Promise<void>
   /** Takes a screenshot of a page; the default drives Chromium, tests pass a stub. */
   screenshot?: (url: string) => Promise<Uint8Array | undefined>
-  /** Takes the first-look picture of the start page when a run is made; the default drives Chromium, tests pass a stub. */
-  screenshotter?: Screenshotter
+  /** The model `lint -u` drafts the screener with; the default is the author's own, from `ANTHROPIC_API_KEY`. */
+  model?: TextModel
   /** Ends a command that otherwise runs until Ctrl-C. */
   signal?: AbortSignal
   pollMs?: number
@@ -76,7 +76,8 @@ Commands:
   init              write ui-tests.config.ts, an example study and the Vitest exclude, and print the script tag for your app
   estimate          how many people and how many minutes each, before anything is spent (--out <file> also writes the JSON)
   mcp               serve lint, estimate, run, status, verify, report and trace as MCP tools over stdio
-  lint [files...]   check studies against the rules and show what a run would do (--out <file> also writes the JSON)
+  lint [files...]   check studies against the rules and show what a run would do (-u drafts or updates each study's
+                    screener snapshot, <study file>.screener.snap; --out <file> also writes the JSON)
   host              deploy the collector, the player and the store to your own account
   serve             serve the collector, the player, the report and the tag's script while a study is open
                     (--port <n>, --bind <addr>; UI_TESTS_PUBLIC_URL is the address people reach it at)
@@ -87,7 +88,7 @@ Options:
 `
 
 const commandUsage: Record<string, string> = {
-  lint: 'Usage: ui-tests lint [files...] [--json] [--out <file>]\n\nChecks each study against the rules, prints what a run would do, and exits 1 on an error finding or 2 when a file cannot load. --out writes the JSON to a file as well.\n',
+  lint: 'Usage: ui-tests lint [files...] [-u] [--json] [--out <file>]\n\nChecks each study against the rules, prints what a run would do, and exits 1 on an error finding or 2 when a file cannot load. -u drafts or updates each study\'s screener snapshot (<study file>.screener.snap) with your model (ANTHROPIC_API_KEY) and names what it could not draft. --out writes the JSON to a file as well.\n',
 }
 
 const defaultIo = (): Io => ({ stdout: process.stdout, stderr: process.stderr, cwd: process.cwd(), env: process.env })
@@ -105,6 +106,7 @@ export function parseArgs(argv: string[]): Args {
   const valued = valueFlags[command] ?? []
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i]
+    if (arg === '-u') { flags.set('update', true); continue }
     if (!arg.startsWith('--')) { positionals.push(arg); continue }
     const [name, ...value] = arg.slice(2).split('=')
     if (value.length) flags.set(name, value.join('='))

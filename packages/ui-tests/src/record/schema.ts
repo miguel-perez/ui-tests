@@ -37,8 +37,8 @@ const handle = z.object({
   revision: z.number(),
 })
 
-/** "asked": the answer is stored (its code may be "no answer"); "never asked": the picture could not be taken, so no question was put; "off": the study has no first look; "pending": not reached yet. */
-export const firstLookStates = ['asked', 'never asked', 'off', 'pending'] as const
+/** "asked": the answer is stored (it may be empty); "off": the study has no first look; "pending": not reached yet. */
+export const firstLookStates = ['asked', 'off', 'pending'] as const
 
 const attempt = z.object({
   id: z.string(),
@@ -58,6 +58,8 @@ const attempt = z.object({
   timings: z.object({ startedAt: z.string().optional(), endedAt: z.string().optional(), onGoalMs: z.number().optional() }),
   path: z.array(z.string()),
   firstLook: z.enum(firstLookStates),
+  /** The group the screener placed this person in; null when they met no group's criteria or were not screened. */
+  group: z.string().nullable(),
   answers: z.record(z.string(), z.unknown()),
   environment: z.record(z.string(), z.string()),
   flags: z.array(z.string()),
@@ -68,6 +70,18 @@ const goalMeasures = z.object({
   effectiveness: z.object({ reached: z.number(), n: z.number(), unknown: z.number() }),
   efficiency: z.object({ medianAllMs: z.number().optional(), medianVerifiedMs: z.number().optional(), deviations: z.number() }),
   satisfaction: z.object({ ease: z.array(z.number()), confidence: z.array(z.number()) }),
+  /** The task's first click on its own start page: how many went along the task's path and how many did not, of the clicks on a task with a path. */
+  firstClick: z.object({ onPath: z.number(), offPath: z.number(), of: z.number() }),
+})
+
+/** One group as the report reads it: its quota, how many of its people count, the detection sentence for that many, whether it filled, and the issues its people met. */
+const groupResult = z.object({
+  name: z.string(),
+  quota: z.number(),
+  n: z.number(),
+  filled: z.boolean(),
+  sentence: z.string(),
+  issues: z.array(z.string()),
 })
 
 const issue = z.object({
@@ -121,17 +135,26 @@ export const runRecordSchema = z
         useful: z.object({ scores: z.array(z.number()), mean: z.number().optional() }),
         easy: z.object({ scores: z.array(z.number()), mean: z.number().optional() }),
       }) }),
-      fit: z.object({ scores: z.array(z.number()), summary: z.object({ n: z.number(), mean: z.number().optional(), outOf: z.number() }) }),
     }),
+    /**
+     * The first look, reported beside the issues and never counted in them: of the people who answered, how many got each part across
+     * (coded by the model or the author), how many gave no answer, and the answers nobody has coded yet, with why.
+     */
     impression: z.object({
-      named: z.number(), didNot: z.number(), noAnswer: z.number(),
-      /** People the first look was put to. People it was never asked of are in `neverAsked`, not here. */
-      neverAsked: z.number(),
-      denominator: z.number(),
-      firstClickOnPath: z.object({ onPath: z.number(), offPath: z.number(), of: z.number() }),
+      answered: z.number(),
+      coded: z.number(),
+      parts: z.object({ what: z.number(), who: z.number(), action: z.number(), purpose: z.number() }),
+      noAnswer: z.number(),
+      uncoded: z.array(z.object({ attempt: z.string(), reason: z.string() })),
       limits: z.string(),
     }),
-    fit: z.object({ screened: z.number(), matched: z.number(), summary: z.string() }),
+    /** Each group sampled on its own; one group, `everyone`, when the study does not split its people. */
+    groups: z.array(groupResult),
+    /**
+     * Who the screener saw: how many answered it, how many it placed in no group, and each criterion with how many fell outside it.
+     * Nothing is filtered on a link; this is how the people who came differ from the people described.
+     */
+    screened: z.object({ n: z.number(), noGroup: z.number(), outside: z.array(z.object({ criterion: z.string(), count: z.number() })) }),
     issues: z.array(issue),
     money,
     quality: z.object({

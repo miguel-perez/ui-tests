@@ -31,8 +31,10 @@ export const estimate: Command = async (args, io) => {
   if (!candidates.length) { io.stderr.write(`No study admits the ${actor} actor${typeof wanted === 'string' ? `: "${wanted}"` : ''}\n`); return 2 }
   if (candidates.length > 1) { io.stderr.write(`${candidates.length} studies; pass --study <name>:\n${candidates.map(l => `  ${l.compiled.name}`).join('\n')}\n`); return 2 }
   const { compiled } = candidates[0]
-  const result = { n: compiled.sample.n, minutes: minutesOf(compiled.goals.reduce((sum, g) => sum + g.timeout.seconds, 0)) }
+  const result = { n: compiled.sample.n, minutes: minutesOf(compiled.goals.reduce((sum, g) => sum + g.timeout.seconds, 0)), groups: compiled.groups }
   await writeOut(args, io, result)
-  io.stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : `${result.n} people, up to ${result.minutes} minutes each. ${compiled.sample.sentence}\n`)
+  // Each group is sampled to its own quota, so a second group is a second set of people: the estimate names each.
+  const byGroup = compiled.groups.length > 1 ? ` ${compiled.groups.map(g => `${g.name}: ${g.quota}`).join(', ')}.` : ''
+  io.stdout.write(json ? `${JSON.stringify(result, null, 2)}\n` : `${result.n} people, up to ${result.minutes} minutes each.${byGroup} ${compiled.sample.sentence}\n`)
   return 0
 }

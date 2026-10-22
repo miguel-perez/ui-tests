@@ -8,7 +8,8 @@ export default defineConfig({
   author: 'ui-tests',
   // A pull request is tested when it carries this label.
   ci: { on: ['label:ui-test'] },
-  // The agent study (ui-tests/cli-first-run.ui.test.ts) runs on this model with `npx ui-tests --actor agent`; the json reporter writes its report.
   reporters: ['default', 'json'],
-  agents: { model: { provider: 'anthropic', name: 'claude-opus-5-5' } },
+  // The one model: the agent study (ui-tests/cli-first-run.ui.test.ts) runs on it with `npx ui-tests --actor agent`, `npx ui-tests lint -u`
+  // drafts the screener snapshot with it, and the server codes the first look with it. The key stays in ANTHROPIC_API_KEY.
+  model: { provider: 'anthropic', name: 'claude-opus-5-5' },
 })

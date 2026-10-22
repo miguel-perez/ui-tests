@@ -1,4 +1,4 @@
-import { copyFile, mkdtemp, rm, writeFile } from 'node:fs/promises'
+import { copyFile, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
 import { createServer, type IncomingHttpHeaders, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -8,10 +8,10 @@ import { SqliteStore } from '../src/store/sqlite.ts'
 import { main, type CliDeps, type Io } from '../src/cli/main.ts'
 import { idempotencyKey } from '../src/runner/key.ts'
 import { refreshRun } from '../src/runner/progress.ts'
-import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { openStore } from '../src/store/open.ts'
 import type { HookResult, RunRow, RunStore } from '../src/store/types.ts'
 import { stubServer } from './server-stub.ts'
+import { draftSnapshots } from './snapshots.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 let target: Server
@@ -41,6 +41,7 @@ beforeAll(async () => {
   data = await mkdtemp(join(tmpdir(), 'ui-tests-recruit-'))
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
   await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' } }\n`)
+  await draftSnapshots(work)
 })
 afterAll(async () => {
   await server.close()
@@ -54,7 +55,7 @@ afterEach(async () => { while (cleanup.length) await cleanup.pop()!() })
 function session(env: Record<string, string> = {}, deps: CliDeps = {}, cwd = work) {
   let out = ''
   let err = ''
-  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { pollMs: 1, screenshotter: stubScreenshotter(new Uint8Array([0])), ...deps } }
+  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { pollMs: 1, ...deps } }
   return { io, out: () => out, err: () => err }
 }
 async function recruit(argv: string[], env: Record<string, string> = {}, deps: CliDeps = {}) {
@@ -159,6 +160,7 @@ describe('ui-tests recruit', () => {
     cleanup.push(() => rm(dir, { recursive: true, force: true }))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
     await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${url}' } }\n`)
+    await draftSnapshots(dir)
     const empty = await mkdtemp(join(tmpdir(), 'ui-tests-recruit-empty-'))
     cleanup.push(() => rm(empty, { recursive: true, force: true }))
     const s = session({ UI_TESTS_DATA_DIR: empty }, {}, dir)
@@ -174,6 +176,7 @@ describe('ui-tests recruit', () => {
     cleanup.push(() => rm(dir, { recursive: true, force: true }))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
     await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${down.url}' }, target: { url: '${targetUrl}' } }\n`)
+    await draftSnapshots(dir)
     const empty = await mkdtemp(join(tmpdir(), 'ui-tests-recruit-empty-'))
     cleanup.push(() => rm(empty, { recursive: true, force: true }))
     const s = session({ UI_TESTS_DATA_DIR: empty }, {}, dir)
@@ -356,6 +359,7 @@ describe('recruit plan, repair and state', () => {
     cleanup.push(() => rm(dir, { recursive: true, force: true }))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
     await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' }, participants: { sources: ['link'], link: { amount: 750 } } }\n`)
+    await draftSnapshots(dir)
     const s = session({}, {}, dir)
     expect(await main(['recruit', '--key', 'paid-key'], s.io)).toBe(0)
     expect(s.out()).toContain('You can stop at any time and still be paid $7.50.')
@@ -374,6 +378,7 @@ study('flaky', { users: 'People who read docs', purpose: 'find the docs' }, () =
 })
 `)
     await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' } }\n`)
+    await draftSnapshots(dir)
     const first = session({}, {}, dir)
     boomAfter = 3
     const code = await main(['recruit', '--json', '--key', 'flaky-key'], first.io)
@@ -412,6 +417,7 @@ study('one', { users: 'People who read docs' }, () => { task('Go', () => { outco
 study('two', { users: 'People who write docs' }, () => { task('Go', () => { outcome(async () => {}) }) })
 `)
     await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' } }\n`)
+    await draftSnapshots(dir)
     const s = session({}, {}, dir)
     expect(await main(['recruit'], s.io)).toBe(2)
     expect(s.err()).toMatch(/--study[\s\S]*one[\s\S]*two/)
@@ -429,22 +435,38 @@ study('two', { users: 'People who write docs' }, () => { task('Go', () => { outc
   })
 })
 
-describe('recruit takes the first-look picture', () => {
-  it('captures the first-look page once and gives every invite its picture', async () => {
+describe('recruit and the screener snapshot', () => {
+  it('refuses, naming the snapshot, until it is current; then makes the run, with no picture of the page', async () => {
     const dir = await mkdtemp(join(fixtures, '.tmp-recruit-look-'))
     cleanup.push(() => rm(dir, { recursive: true, force: true }))
-    await writeFile(join(dir, 'look.ui.test.ts'), `import { study, task } from 'ui-tests'\nstudy('look', { users: { are: 'People who read docs', did: 'read documentation', within: '3 months' }, purpose: 'find the docs', firstLook: { page: '/landing' } }, () => { task('Read', { path: ['/', '/docs'], minutes: 2 }, () => {}) })\n`)
+    await writeFile(join(dir, 'look.ui.test.ts'), `import { study, task } from 'ui-tests'\nstudy('look', { users: { did: 'read documentation', within: '3 months' }, purpose: 'find the docs', firstLook: { page: '/landing' } }, () => { task('Read', { path: ['/', '/docs'], minutes: 2 }, () => {}) })\n`)
     await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' } }\n`)
-    const urls: string[] = []
-    const s = session({}, { screenshotter: stubScreenshotter(new Uint8Array([7]), urls) }, dir)
-    const code = await main(['recruit', '--json'], s.io)
-    expect(s.err()).not.toContain('first look skipped')
-    expect(code).toBe(0)
-    expect(urls).toEqual([`${targetUrl}/landing`])
+    const missing = session({}, {}, dir)
+    expect(await main(['recruit', '--json'], missing.io)).toBe(1)
+    expect(missing.err()).toContain('look.ui.test.ts.screener.snap: the screener snapshot of "look" is missing')
+    await draftSnapshots(dir)
+    // The study changes: the snapshot no longer matches it.
+    await writeFile(join(dir, 'look.ui.test.ts'), (await readFile(join(dir, 'look.ui.test.ts'), 'utf8')).replace("within: '3 months'", "within: '1 month'"))
+    const stale = session({}, {}, dir)
+    expect(await main(['recruit', '--json'], stale.io)).toBe(1)
+    expect(stale.err()).toContain('is out of date (the screens changed)')
+    await draftSnapshots(dir)
+    const s = session({}, {}, dir)
+    expect(await main(['recruit', '--json'], s.io)).toBe(0)
     const made = await store()
     const run = (await made.listRuns()).find(r => r.compiled.name === 'look')
+    expect(run!.compiled).toMatchObject({ draft: false, impression: { on: true, page: '/landing', says: 'A page for tests.', source: 'meta description' } })
     const attempts = await made.listAttempts(run!.run)
     expect(attempts.length).toBe(run!.compiled.sample.n)
-    expect(attempts.every(a => typeof a.answers.firstLookShot === 'string')).toBe(true)
+  })
+
+  it('needs no snapshot for an agent run', async () => {
+    const dir = await mkdtemp(join(fixtures, '.tmp-recruit-agent-'))
+    cleanup.push(() => rm(dir, { recursive: true, force: true }))
+    await writeFile(join(dir, 'agent.ui.test.ts'), `import { study, task } from 'ui-tests'\nstudy('agent', { users: 'Agents', actors: ['agent'], target: { cli: 'npx ui-tests' } }, () => { task('Run', { minutes: 2 }, () => {}) })\n`)
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' }, model: { provider: 'scripted', name: 'fixture' } }\n`)
+    const s = session({}, {}, dir)
+    await main(['recruit', '--json', '--actor', 'agent'], s.io)
+    expect(s.err()).not.toContain('screener snapshot')
   })
 })

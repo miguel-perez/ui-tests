@@ -1,13 +1,15 @@
 import type { AuthoredStudy, AuthoredTask } from './authoring.ts'
 import { CARD_FOOTER } from './copy.ts'
 import { inferUsers, printUsersDraft } from './derive/infer-users.ts'
+import { exclusionsOf, MAX_SCREENS, readUsers, resolveGroups, roleConflicts, rolesOf, excludedAreas } from './derive/screener.ts'
+import type { SnapshotState } from './derive/snapshot.ts'
 import { validateUsers } from './derive/users.ts'
 import type { CompiledStudy } from './schema/compiled.ts'
 import type { Hook, UiTestsConfig } from './types.ts'
 
 export type Severity = 'error' | 'warning'
 export type Emit = (finding: { message: string; severity?: Severity; fix?: string; line?: number }) => void
-export type RuleContext = { study: AuthoredStudy; compiled: CompiledStudy; sourceText: string; config: UiTestsConfig; actor?: 'human' | 'agent' }
+export type RuleContext = { study: AuthoredStudy; compiled: CompiledStudy; sourceText: string; config: UiTestsConfig; actor?: 'human' | 'agent'; snapshot?: SnapshotState & { file: string } }
 /** One lint rule: its id, default severity, why it exists, where the advice comes from, and the check. */
 export type Rule = { id: string; severity: Severity; reason: string; source: string; run(context: RuleContext, emit: Emit): void }
 
@@ -51,7 +53,7 @@ const renames: { old: string; pattern: RegExp; fix: string }[] = [
   { old: 'catch', pattern: /(?<![\w$.])catch\s*:/g, fix: 'sample' },
   { old: 'video: true', pattern: /(?<![\w$.])video\s*:\s*true\b/g, fix: "record: 'video'" },
   { old: 'impression', pattern: /(?<![\w$.])impression\s*:/g, fix: 'firstLook' },
-  { old: 'screen', pattern: /(?<![\w$.])screen\s*:/g, fix: 'fields under users (are, did, within, often, role, uses, not, where, language, age)' },
+  { old: 'screen', pattern: /(?<![\w$.])screen\s*:/g, fix: 'fields under users (did, within, often, role, uses, not, groups, are, insiders, professionals, where, language, age)' },
 ]
 const legacyKey: Record<string, string> = { video: 'video: true' }
 
@@ -76,9 +78,11 @@ export const rules: Rule[] = [
     run({ study, sourceText }, emit) {
       const stripped = stripCommentsAndStrings(sourceText)
       const seen = new Set<string>()
+      // A name the study's own options place more precisely (a task-level impression moves to the study) is said once, from there.
+      const moved = new Set(study.legacy.map(entry => /^.*?: "(.+?)" is now "(.+)"$/.exec(entry)).filter(m => m && renames.some(r => r.old === (legacyKey[m[1]] ?? m[1]) && r.fix !== m[2])).map(m => legacyKey[m![1]] ?? m![1]))
       for (const { old, pattern, fix } of renames) {
         const match = new RegExp(pattern.source, pattern.flags).exec(stripped)
-        if (!match) continue
+        if (!match || moved.has(old)) continue
         seen.add(old)
         emit({ message: `"${old.replace(/\($/, '')}" is now "${fix.replace(/\($/, '')}"`, fix, line: lineOf(stripped, match.index) })
       }
@@ -183,6 +187,7 @@ export const rules: Rule[] = [
     run({ study }, emit) {
       for (const { field, message } of validateUsers(study.options.users).errors) emit({ message: `${field}: ${message}`, line: study.line })
       if ('screen' in study.options) emit({ message: 'a separate "screen" key is now fields under users', fix: 'move did, within, often, role, uses, not, where, language and age into users', line: study.line })
+      if (typeof study.options.firstLook === 'object' && study.options.firstLook.page !== undefined && !study.options.firstLook.page.startsWith('/')) emit({ message: `firstLook.page "${study.options.firstLook.page}" is not a path on the target`, fix: 'name the page by its path, such as "/"', line: study.line })
     },
   },
   {
@@ -231,4 +236,100 @@ export const rules: Rule[] = [
       if (kinds.size) emit({ message: `study "${study.name}" lists human and targets ${[...kinds].join(', ')}: a human terminal harness is a planned omission`, fix: "set actors: ['agent'], or point target at a url", line: study.line })
     },
   },
+  {
+    id: 'one-group', severity: 'warning', source: 'Sauro, Quantifying the User Experience; Krug, Rocket Surgery Made Easy',
+    reason: 'People in different roles may meet different problems; sampled together, five of one role can stand for all of them, and the detection sentence assumes one group.',
+    run({ study, compiled }, emit) {
+      if (!compiled.actors.includes('human')) return
+      const { fields } = readUsers(study.options.users)
+      if (Array.isArray(fields.role) && fields.role.length > 1) emit({ message: `role ${JSON.stringify(fields.role)} is treated as one group; write role: { … } with counts to sample them separately`, fix: `role: { ${fields.role.map(r => `${JSON.stringify(r)}: 3`).join(', ')} }`, line: study.line })
+    },
+  },
+  {
+    id: 'not-covered', severity: 'warning', source: 'Krug, Rocket Surgery Made Easy; Nielsen, Prioritizing Web Usability',
+    reason: 'People who work on or have tested the product, and people whose work is judging products, are excluded by default; the same exclusion twice reads as a trap.',
+    run({ study, compiled }, emit) {
+      if (!compiled.actors.includes('human')) return
+      const { dropped } = exclusionsOf(study.options.users, resolveGroups(study.options.users, compiled.sample.n), compiled.product)
+      for (const { item, by } of dropped) emit({ message: `not "${item}" is already covered by the ${by} exclusion, so it is dropped`, fix: `remove "${item}" from not`, line: study.line })
+    },
+  },
+  {
+    id: 'professionals-conflict', severity: 'error', source: 'Nielsen, Prioritizing Web Usability; Krug, Rocket Surgery Made Easy',
+    reason: 'People who judge products for a living are left out because they rarely stand for mainstream users; when the study is for them, leaving them out rejects the people it accepts.',
+    run({ study, compiled }, emit) {
+      const { fields } = readUsers(study.options.users)
+      if (fields.professionals !== 'exclude') return
+      const roles = [...new Set(resolveGroups(study.options.users, compiled.sample.n).flatMap(g => rolesOf(g.criteria.role)))]
+      for (const [role, area] of roleConflicts(excludedAreas('exclude', roles), roles)) {
+        emit({ message: `professionals: 'exclude' rejects people who work in ${area}, and role accepts "${role}"`, fix: "remove professionals: 'exclude'; by default the areas a role accepts are not excluded", line: study.line })
+      }
+    },
+  },
+  {
+    id: 'screens-before-consent', severity: 'error', source: 'Goal-Directed Design (the ideal screener is short)',
+    reason: 'Every screen before consent is asked of people who have agreed to nothing yet; a short screener quickly finds who fits.',
+    run({ study, compiled }, emit) {
+      if (compiled.screener.length > MAX_SCREENS) emit({ message: `the screener has ${compiled.screener.length} screens before consent, more than ${MAX_SCREENS}`, fix: 'drop a field from users, or split the groups into separate studies', line: study.line })
+    },
+  },
+  {
+    id: 'purpose-leak', severity: 'error', source: "Krug, Don't Make Me Think (the first look starts cold); PRD 02",
+    reason: 'The first look shows whether people can tell what the page is for from a standing start; a word of the purpose shown before it gives the answer away.',
+    run({ study, compiled }, emit) {
+      if (!compiled.purpose || !compiled.actors.includes('human')) return
+      const groups = resolveGroups(study.options.users, compiled.sample.n)
+      // The purpose itself is never shown before the first look.
+      for (const text of beforeFirstLook(compiled)) {
+        if (text.toLowerCase().includes(compiled.purpose.toLowerCase())) emit({ message: `"${text}" is shown before the first look and says the purpose`, fix: 'reword it so the purpose is not said', line: study.line })
+      }
+      // What was drafted (the decoys) may not say a word of the purpose that the start page does not say itself, nor the author's own criteria.
+      const allowed = contentWords([compiled.impression.says ?? '', compiled.product, ...groups.flatMap(g => [g.criteria.did ?? '', ...rolesOf(g.criteria.role), ...(g.criteria.uses ?? []), ...(g.criteria.not ?? [])])].join(' '))
+      const wanted = [...contentWords(compiled.purpose)].filter(w => !allowed.has(w))
+      const written = new Set(groups.flatMap(g => [...rolesOf(g.criteria.role), ...(g.criteria.uses ?? []), ...(g.criteria.not ?? [])]).map(t => t.toLowerCase()))
+      const drafted = compiled.screener.flatMap(q => q.options.filter(o => !o.exclusion && o.rule !== 'accept' && o.label !== 'None of these' && !written.has(o.label.toLowerCase()) && q.criterion !== 'recency' && q.criterion !== 'often').map(o => o.label))
+      for (const text of drafted) {
+        const said = contentWords(text)
+        const leaked = wanted.filter(w => said.has(w))
+        if (leaked.length) emit({ message: `the decoy "${text}" is shown before the first look and says "${leaked.join('", "')}" from the purpose`, fix: 'reword the decoy in the snapshot', line: study.line })
+      }
+    },
+  },
+  {
+    id: 'screener-snapshot', severity: 'warning', source: 'Goal-Directed Design; Portigal, Interviewing Users (review the screener before recruiting)',
+    reason: 'What ui-tests drafts (the decoys, who the users are, the purpose said to "you", what the page says) is reviewed before anyone is recruited; recruit and check refuse until the snapshot is current.',
+    run({ study, compiled, snapshot }, emit) {
+      if (!snapshot || snapshot.state === 'current' || !compiled.actors.includes('human')) return
+      emit({ message: `${snapshot.file} is ${snapshot.state}: ${snapshot.reasons.join('; ')}`, fix: `run ui-tests lint -u, review ${snapshot.file} and commit it`, line: study.line })
+    },
+  },
 ]
+
+const STOP = new Set((
+  'a an and are as at be been but by can could do does for from had has have he her his how i if in into is it its me my of on or our she so some that the their them they this to up was we were what when where which who whom why will with would you your ' +
+  'about just like really very also than then there these those want out whether without within more most any all each one other own same not no yes'
+).split(' '))
+/** Lower-case words without the little ones, with -ing, -ed, -er, -s and a final e taken off, so "builder" and "built" are told apart but "researcher" meets "research". */
+export function contentWords(text: string): Set<string> {
+  const out = new Set<string>()
+  for (const raw of text.toLowerCase().match(/[a-z]+/g) ?? []) {
+    if (STOP.has(raw) || raw.length < 3) continue
+    let w = raw
+    if (w.length > 5 && w.endsWith('ing')) w = w.slice(0, -3)
+    else if (w.length > 4 && w.endsWith('ed')) w = w.slice(0, -2)
+    else if (w.length > 5 && w.endsWith('er')) w = w.slice(0, -2)
+    else if (w.length > 3 && w.endsWith('s') && !w.endsWith('ss')) w = w.slice(0, -1)
+    if (w.length > 3 && w.endsWith('e')) w = w.slice(0, -1)
+    out.add(w)
+  }
+  return out
+}
+
+/** Every string a participant reads before the first look: the screener's questions and options, the consent, and the assistive question. */
+export function beforeFirstLook(compiled: CompiledStudy): string[] {
+  return [
+    ...compiled.screener.flatMap(q => [q.text, ...q.options.map(o => o.label)]),
+    ...compiled.consent.text,
+    compiled.assistive.text, ...compiled.assistive.options,
+  ]
+}

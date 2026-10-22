@@ -27,7 +27,7 @@ export default function Agents() {
     </section>
     <section aria-labelledby="run-it">
       <h2 id="run-it">Run it</h2>
-      <p><Prose text="Set the agent under `agents` in `ui-tests.config.ts`, point a study at `target: { cli }`, `target: { mcp }` or `target: { http }`, and list `actors: ['agent']`. The `anthropic` provider needs `ANTHROPIC_API_KEY` in the environment; without it the command stops before it makes a run." /></p>
+      <p><Prose text="Set the model with `model: { provider, name }` in `ui-tests.config.ts` (its prompt, tools and budgets under `agents`), point a study at `target: { cli }`, `target: { mcp }` or `target: { http }`, and list `actors: ['agent']`. The `anthropic` provider needs `ANTHROPIC_API_KEY` in the environment; without it the command stops before it makes a run." /></p>
       <p><a href="/docs/getting-started/">Back to getting started</a></p>
     </section>
   </main></SiteShell>

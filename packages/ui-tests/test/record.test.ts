@@ -37,18 +37,18 @@ beforeAll(async () => {
     verification: { status: 'correct', steps: [] },
     answers: {
       'goal0.ease': 6, 'goal0.confidence': 5, useful: 5, easy: 4,
-      screener: { 'screener.today': 'a private spreadsheet' }, firstLookShot: 'blob_1', 'goal0.difficulty.voice': 'blob_2',
-      screenerResult: { matches: true, outside: [], fit: { recency: 3, solving: 1, importance: 2, total: 6 } },
-      impression: { text: 'a tool for invites', code: 'named the purpose', codedBy: 'rule', firstClick: { target: 'a#docs', url: 'http://t.test/docs/getting-started', onPath: true, at: 900 } },
+      screener: { 'screener.recency': 'In the past week' }, 'goal0.difficulty.voice': 'blob_2',
+      screenerResult: { group: 'everyone', criteria: { recency: { value: 'In the past week', met: true } }, order: { 'screener.recency': ['In the past week'] } },
+      impression: { looked: true, text: 'a tool for invites', parts: { what: true, who: false, action: true, purpose: false }, codedBy: 'model' },
     },
   })
-  await store.appendEvents(first.id, [{ type: 'url', at: 0, url: 'http://t.test/', seq: 1 }, { type: 'url', at: 500, url: 'http://t.test/docs/getting-started', seq: 2 }])
+  await store.appendEvents(first.id, [{ type: 'url', at: 0, url: 'http://t.test/', seq: 1 }, { type: 'click', at: 400, url: 'http://t.test/', target: 'a#docs', seq: 3 }, { type: 'url', at: 500, url: 'http://t.test/docs/getting-started', seq: 2 }])
 
   const second = (await store.createAttempt({ runId, participant: 'p_2', goalIndex: 5, rehearsal: false })).attempt
   await store.updateAttempt(second.id, {
     status: 'finished', reason: 'done', purposes: compiled.consent.purposes, startedAt: new Date(0).toISOString(), endedAt: new Date(40_000).toISOString(),
     verification: { status: 'incorrect', reason: 'The answer differs from the expected one', diff: { expected: 'Team', actual: 'Solo' }, steps: [], answer: { status: 'incorrect', diff: { expected: 'Team', actual: 'Solo' } } },
-    answers: { 'Which plan was shown?': 'Solo', firstLookSkipped: 'the page could not be pictured' },
+    answers: { 'Which plan was shown?': 'Solo', impression: { looked: true, text: '   ', parts: null, uncoded: 'no answer' } },
   })
   // An invite slot nobody has opened.
   await store.createAttempt({ runId, participant: 'p_3', goalIndex: 1, rehearsal: false })
@@ -128,15 +128,15 @@ describe('run record', () => {
     expect(b!.verification!.diff).toEqual({ actual: 'Solo' })
   })
 
-  it('tells a first look never asked from one without an answer', async () => {
+  it('counts a first look with no answer apart from the coded ones, and never in the issues', async () => {
     const record = await buildRecord(store, runId)
-    expect(record.attempts[1]).toMatchObject({ firstLook: 'never asked' })
-    expect(record.attempts[1]!.answers).toHaveProperty('firstLookSkipped')
-    expect(record.impression).toMatchObject({ named: 1, didNot: 0, noAnswer: 0, neverAsked: 1, denominator: 1, firstClickOnPath: { onPath: 1, offPath: 0, of: 1 } })
-    expect(record.impression.limits).toContain('not a measure')
+    expect(record.attempts[1]).toMatchObject({ firstLook: 'asked' })
+    expect(record.impression).toMatchObject({ answered: 1, coded: 1, noAnswer: 1, uncoded: [] })
+    expect(record.impression.limits).toContain('never counted in the issues')
+    expect(record.issues.every(issue => !JSON.stringify(issue).includes('a tool for invites'))).toBe(true)
   })
 
-  it('names effectiveness, efficiency, satisfaction and fit', async () => {
+  it('names effectiveness, efficiency and satisfaction, the group and the first click of a task', async () => {
     const record = await buildRecord(store, runId)
     expect(record.measures.byGoal['0']).toMatchObject({
       effectiveness: { reached: 1, n: 1, unknown: 0 },
@@ -146,8 +146,11 @@ describe('run record', () => {
     expect(record.measures.byGoal['5']).toMatchObject({ effectiveness: { reached: 0, n: 1 }, efficiency: { medianAllMs: 40_000 } })
     expect(record.measures.byGoal['5']!.efficiency.medianVerifiedMs).toBeUndefined()
     expect(record.measures.satisfaction.uxLite).toEqual({ n: 1, scores: [87.5], mean: 87.5, useful: { scores: [100], mean: 100 }, easy: { scores: [75], mean: 75 } })
-    expect(record.measures.fit).toEqual({ scores: [6], summary: { n: 1, mean: 6, outOf: 7 } })
-    expect(record.fit).toMatchObject({ screened: 1, matched: 1 })
+    expect(record.measures.byGoal['0']!.firstClick).toEqual({ onPath: 1, offPath: 0, of: 1 })
+    expect(record.screened).toEqual({ n: 1, noGroup: 0, outside: [] })
+    expect(record.groups).toEqual([{ name: 'everyone', quota: compiled.sample.n, n: 2, filled: compiled.sample.n <= 2, sentence: 'Two people give a 56% chance of seeing any problem that hits at least one person in three.', issues: record.issues.map(i => i.id) }])
+    expect(record.attempts[0]).toMatchObject({ group: 'everyone', firstLook: 'asked' })
+    expect(record.impression).toMatchObject({ answered: 1, coded: 1, parts: { what: 1, who: 0, action: 1, purpose: 0 }, noAnswer: 1, uncoded: [] })
     expect(record.recruitment.link).toMatchObject({ invited: 3, screened: 1, started: 2, finished: 2, paid: 0 })
     expect(record.money).toEqual({ estimate: 0, reserved: 0, paid: 0, truedUp: 0, currency: 'USD' })
     expect(record.revisions).toEqual([{ at: '2026-10-19T10:00:00.000Z', author: 'ana', note: '1. Task 1 wording: “Reworded the scenario”' }])

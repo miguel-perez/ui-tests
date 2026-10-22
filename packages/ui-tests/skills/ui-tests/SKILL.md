@@ -12,7 +12,7 @@ A study is a file, `*.ui.test.ts`, that says who the users are and what each of 
 ```ts
 import { study, setup, task, outcome, expect } from 'ui-tests'
 
-study('invite flow', { users: { are: 'people who plan work with a team in a shared tool' }, purpose: 'plan the week together' }, () => {
+study('invite flow', { users: { did: 'used a shared tool to plan work with a team', uses: ['Trello', 'Asana'] }, purpose: 'plan the week together' }, () => {
   setup(async ({ request }) => ({ start: '/board', email: 'sam@acme.example' }))
   task('invite a colleague', { path: ['/board', '/settings/members'], timeLimit: '3 min' }, () => {
     outcome(async ({ request, setup }) => {
@@ -23,9 +23,10 @@ study('invite flow', { users: { are: 'people who plan work with a team in a shar
 })
 ```
 
-- `study(name, options, fn)`: `users` (a sentence, or `{ are, did, within, often, role, uses, not, where, language, age }` with `are` required), `purpose`, `environment`, `sample: { affecting, confidence }` (default one in three, 85 percent: five people), `record: 'video'`, `firstLook`, `independent`, `actors` (default `['human']`), `target`.
+- `study(name, options, fn)`: `users` (a sentence, or `{ did, within, often, role, uses, not, groups, are, insiders, professionals, where, language, age }` with `did` required: what people did, in the past tense, about the category and never the product; `role: ['A', 'B']` is one group, `role: { A: 3, B: 2 }` is one group per role with its quota), `purpose`, `environment`, `sample: { affecting, confidence }` (default one in three, 85 percent: five people), `record: 'video'`, `firstLook` (`false`, or `{ page, says }`: the start page toured before the task and what it should get across), `independent`, `actors` (default `['human']`), `target`.
+- The screener's decoys, the derived `are`, the purpose said to "you", what the page says and the quotas live in `<study file>.screener.snap`, next to the study. `npx ui-tests lint -u` drafts it with your model (`ANTHROPIC_API_KEY`) and names what it could not draft; review it and commit it. `recruit` and `check` refuse until it is current.
 - `setup(async ({ request }) => ({ start, ...values }))`: runs once for each invitation against the target; `start` is where the person lands, the other values reach `outcome` as `setup`.
-- `task(name, { path, timeLimit, firstLook, start, minutes, primary, scenario, trials, reliability, target }, fn)`: one thing a person is trying to do, written as a situation and a result, never as the clicks. `path` is the route you expect and decides nothing. A `task` inside a `task` is a step.
+- `task(name, { path, timeLimit, start, minutes, primary, scenario, trials, reliability, target }, fn)`: one thing a person is trying to do, written as a situation and a result, never as the clicks. `path` is the route you expect and decides nothing. A `task` inside a `task` is a step.
 - `outcome(async ({ request, setup, page, workspace }) => ...)`: reads the state of the app after the person says they are done, whatever page they ended on. It uses `expect`, and it is what decides whether the task was reached.
 - `expect`: the assertions an `outcome` makes. `participant.answer(question, { expected, distractors })` asks a question with a known answer when the result cannot be read from the app.
 
@@ -50,6 +51,12 @@ Run `npx ui-tests lint` (or the `lint` tool) before anything is sent to people. 
 - `users-did` (warning): People are screened on what they did, not on what they say they are; without a behaviour the screener cannot ask when they last did it. Source: this contract.
 - `fixture-synthetic` (warning): A real-looking address in a scenario may reach a real person; use a .example or .test address. Source: PRD 06 Privacy.
 - `actor-admitted` (error): A run has one actor, and only the actors a study lists may take it; a terminal, an MCP server or an HTTP API is not something a human harness drives yet. Source: this contract.
+- `one-group` (warning): People in different roles may meet different problems; sampled together, five of one role can stand for all of them, and the detection sentence assumes one group. Source: Sauro, Quantifying the User Experience; Krug, Rocket Surgery Made Easy.
+- `not-covered` (warning): People who work on or have tested the product, and people whose work is judging products, are excluded by default; the same exclusion twice reads as a trap. Source: Krug, Rocket Surgery Made Easy; Nielsen, Prioritizing Web Usability.
+- `professionals-conflict` (error): People who judge products for a living are left out because they rarely stand for mainstream users; when the study is for them, leaving them out rejects the people it accepts. Source: Nielsen, Prioritizing Web Usability; Krug, Rocket Surgery Made Easy.
+- `screens-before-consent` (error): Every screen before consent is asked of people who have agreed to nothing yet; a short screener quickly finds who fits. Source: Goal-Directed Design (the ideal screener is short).
+- `purpose-leak` (error): The first look shows whether people can tell what the page is for from a standing start; a word of the purpose shown before it gives the answer away. Source: Krug, Don't Make Me Think (the first look starts cold); PRD 02.
+- `screener-snapshot` (warning): What ui-tests drafts (the decoys, who the users are, the purpose said to "you", what the page says) is reviewed before anyone is recruited; recruit and check refuse until the snapshot is current. Source: Goal-Directed Design; Portigal, Interviewing Users (review the screener before recruiting).
 <!-- lint-rules:end -->
 
 ## Running in dev mode

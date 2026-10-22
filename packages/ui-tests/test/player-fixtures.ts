@@ -14,6 +14,7 @@ export function view(overrides: Partial<ParticipantView> = {}): ParticipantView 
       payout: 'You can stop at any time and still be paid $7.50.',
     },
     screener: [],
+    draft: false,
     practice: false,
     minutes: 4,
     goal: { index: 0, name: 'Send an invoice', scenario: 'You owe Dana 40 dollars. Send her an invoice.', start: '/invoices', steps: [], timeoutSeconds: 180 },

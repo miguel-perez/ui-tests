@@ -94,5 +94,6 @@ export const init: Command = async (_args, io) => {
   io.stdout.write(`\nAdd this tag to your app's HTML layout:\n  ${initTag}\n\nThe address differs between rehearsal, previews and production. Read it from the environment:\n`)
   io.stdout.write(TAG_SETUPS.map(setup => `  ${setup.name}: ${setup.line}\n`).join(''))
   io.stdout.write('\nStart the server with: npx ui-tests serve (rehearsal starts it for you)\n')
+  io.stdout.write('Before you recruit anyone, draft the screener with: npx ui-tests lint -u (set model in ui-tests.config.ts; review <study file>.screener.snap and commit it)\n')
   return failed ? 1 : 0
 }

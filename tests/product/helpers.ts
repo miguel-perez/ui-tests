@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 import { bundleStudyFile, loadBundle } from '../../packages/ui-tests/src/load.ts'
 import { compileStudy } from '../../packages/ui-tests/src/compile.ts'
-import { attachFirstLook, stubScreenshotter } from '../../packages/ui-tests/src/runner/screenshot.ts'
+
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { createParticipant } from '../../packages/ui-tests/src/runner/invites.ts'
 
@@ -44,9 +44,8 @@ export async function createLinkRun(file: string, options: RunOptions = {}): Pro
   return createRun(file, false, options)
 }
 
-/** A link run's options: `shot` is the picture the first look shows, standing in for a screenshot of the start page. */
+/** A run's options. */
 export type RunOptions = {
-  shot?: Uint8Array
   /** The name the questions use for the product, as the config's `product` sets it. */
   product?: string
   /** The app the run tests: its target and where participants open it. */
@@ -77,7 +76,7 @@ async function createRun(file: string, rehearsal: boolean, options: RunOptions =
     const { token } = rehearsal
       ? await store.createAttempt({ runId: run.run, participant: 'p_e2e', goalIndex: 0, rehearsal })
       : await createParticipant(store, { run, participant: 'p_e2e' })
-    if (options.shot) await attachFirstLook({ store, run, target: app, screenshotter: stubScreenshotter(options.shot) })
+
     return { runId: run.run, token, playerUrl: `${options.player ?? SERVER_URL}/ui-tests/${run.run}/?t=${encodeURIComponent(token)}` }
   } finally {
     await store.close()

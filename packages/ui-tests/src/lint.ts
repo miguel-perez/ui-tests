@@ -1,13 +1,11 @@
-import type { AuthoredStudy } from './authoring.ts'
 import type { CompiledStudy } from './schema/compiled.ts'
-import type { UiTestsConfig } from './types.ts'
 import { recordingMultiplier } from './derive/incentive.ts'
-import { rules, type Severity } from './lint-rules.ts'
+import { rules, type RuleContext, type Severity } from './lint-rules.ts'
 
 export type LintFinding = { rule: string; severity: Severity; message: string; reason: string; source: string; fix?: string; file: string; line: number }
 
 /** Checks a study against every rule; each finding carries the rule's reason and where the advice comes from. */
-export function lint(input: { study: AuthoredStudy; compiled: CompiledStudy; sourceText: string; config: UiTestsConfig; actor?: 'human' | 'agent' }): LintFinding[] {
+export function lint(input: RuleContext): LintFinding[] {
   const findings: LintFinding[] = []
   for (const rule of rules) {
     rule.run(input, ({ message, severity, fix, line }) => findings.push({
@@ -35,8 +33,10 @@ export function planLines(compiled: CompiledStudy): string[] {
     `People: ${compiled.users.are}`,
     ...(compiled.purpose ? [`Purpose: ${compiled.purpose}`] : []),
     `Sample: ${compiled.sample.n} people. ${compiled.sample.sentence}`,
+    ...(compiled.groups.length > 1 ? [`Groups: ${compiled.groups.map(g => `${g.name} ${g.quota}`).join(', ')}, each reported on its own`] : []),
     ...compiled.goals.map(g => `Task ${g.index + 1}: ${g.name} (up to ${minutesOf(g.timeout.seconds)})`),
-    `First look: ${compiled.impression.on ? `on, at ${compiled.impression.page}` : 'off'}`,
+    ...(compiled.actors.includes('human') ? [`Screener: ${compiled.screener.length} ${compiled.screener.length === 1 ? 'screen' : 'screens'} before consent${compiled.draft ? ' (draft: the snapshot is missing or out of date; ui-tests lint -u drafts it)' : ''}`] : []),
+    `First look: ${compiled.impression.on ? `a tour of ${compiled.impression.page}, coded against ${compiled.impression.says === null ? 'what the page says (not read yet)' : `"${compiled.impression.says}" (${compiled.impression.source})`}` : 'off'}`,
     recording,
   ]
 }

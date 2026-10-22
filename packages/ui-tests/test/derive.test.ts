@@ -7,7 +7,7 @@ import { CARD_FOOTER, START_TASK } from '../src/copy.ts'
 import { consentText, payoutLine } from '../src/derive/consent.ts'
 import { distractors, shuffleChoices } from '../src/derive/distractors.ts'
 import { fillScenario, scenarioTemplate } from '../src/derive/scenario.ts'
-import { nullModel } from '../src/model.ts'
+import { NO_MODEL, textModelFor } from '../src/model.ts'
 
 const { getStudies, resetStudies, study, task, setup, participant, outcome } = api
 function evaluate(source: string) {
@@ -87,7 +87,7 @@ describe('consent', () => {
 describe('impression', () => {
   it('is on for the Weekboard example at its page', () => {
     evaluate(exampleFile)
-    expect(compileStudy(getStudies()[0], { product: 'Weekboard' }).impression).toMatchObject({ on: true, page: '/', flashMs: 500, question: 'What was that page for?' })
+    expect(compileStudy(getStudies()[0], { product: 'Weekboard' }).impression).toMatchObject({ on: true, page: '/', prompt: "What do you make of that page? Say what it is, whose it is, what you can do there, and what it's for.", parts: ['what', 'who', 'action', 'purpose'] })
   })
   it('is off after setup without firstLook, naming setup', () => {
     study('s', { users: 'people' }, () => { setup(async () => ({ start: '/b' })); task('a') })
@@ -103,9 +103,14 @@ describe('impression', () => {
 })
 
 describe('copy and model', () => {
-  it('holds the card words and no model by default', () => {
+  it('holds the card words, and a model only when the author has a key', () => {
     expect(CARD_FOOTER).toBe("When you think you've finished, press Done. If you get stuck, press I couldn't do this.")
     expect(START_TASK).toBe('Start task')
-    expect(nullModel).toBeUndefined()
+    // One place for the model: the config's `model`; the key stays in the environment, and nothing stands in for either.
+    expect(textModelFor(undefined, { ANTHROPIC_API_KEY: 'key' })).toEqual({ missing: NO_MODEL })
+    expect(NO_MODEL).toContain("set model: { provider: 'anthropic', name } in ui-tests.config.ts")
+    expect(textModelFor({ provider: 'anthropic', name: 'claude-sonnet-5-5' }, {})).toEqual({ missing: 'model is set in ui-tests.config.ts but ANTHROPIC_API_KEY is not in the environment' })
+    expect(textModelFor({ provider: 'scripted', name: 'fixture' }, { ANTHROPIC_API_KEY: 'key' })).toHaveProperty('missing')
+    expect(textModelFor({ provider: 'anthropic', name: 'claude-sonnet-5-5' }, { ANTHROPIC_API_KEY: 'key' })).toHaveProperty('model')
   })
 })

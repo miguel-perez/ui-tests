@@ -44,7 +44,7 @@ async function play(run: RunRow, goalIndex: number, ease: number) {
       const shown = view.screener[screen.index]!
       const options = run.compiled.screener.find((q) => q.id === shown.id)!.options
       const label = (options.find((o) => o.rule === 'accept') ?? options.find((o) => o.rule === 'may-select'))?.label
-      answers[shown.id] = shown.open ? 'by hand' : shown.multi ? [label] : label
+      answers[shown.id] = shown.multi ? [label] : label
     }
     if (screen.kind === 'answer') answers[answerKey(view)] = view.answer!.choices[0]
     if (screen.kind === 'ease') answers[`goal${goalIndex}.ease`] = ease
@@ -83,7 +83,7 @@ describe('the player against the collector', () => {
 
   it('takes a screener before consent and still finishes', async () => {
     const compiled = structuredClone(compileStudy(studies[0], {}))
-    compiled.screener = [{ id: 'role', text: 'What is your role?', multi: false, field: 'role', rule: 'accept designers', options: [{ label: 'Designer', rule: 'accept' }, { label: 'Engineer', rule: 'accept' }] }]
+    compiled.screener = [{ id: 'role', text: 'What is your role?', multi: false, ordered: false, criterion: 'role', field: 'role', rule: 'accept designers', options: [{ label: 'Designer', rule: 'accept' }, { label: 'Engineer', rule: 'accept' }] }]
     const run = (await store.createRun(newRun('k2', { compiled, hooksBundle: code }))).run
     const { attempt, seen } = await play(run, 0, 6)
     expect(seen.slice(0, 2)).toEqual(['screener', 'consent'])

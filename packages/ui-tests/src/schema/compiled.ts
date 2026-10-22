@@ -23,38 +23,51 @@ export const compiledQuestionSchema = z.object({
 export type CompiledQuestion = z.infer<typeof compiledQuestionSchema>
 
 /**
- * One screener question with the rule of each option. The rules and `field` stay on the author's side: `participantView` copies the
- * labels only.
+ * One screener question with the rule of each option. The rules, groups and `field` stay on the author's side: `participantView` copies
+ * the labels only, in the order this participant sees them. `ordered` options (a scale) keep their order; the rest are shuffled.
  */
 export const screenerQuestionSchema = z.object({
   id: z.string(),
   text: z.string(),
-  options: z.array(z.object({ label: z.string(), rule: z.enum(['accept', 'reject', 'may-select']) })),
+  options: z.array(z.object({
+    label: z.string(),
+    rule: z.enum(['accept', 'reject', 'may-select']),
+    /** The groups this option accepts for; all of them when absent. */
+    groups: z.array(z.string()).optional(),
+    /** On the exclusions question: which exclusion the option is. */
+    exclusion: z.enum(['insider', 'professional', 'author']).optional(),
+  })),
   multi: z.boolean(),
-  /** Where the question comes from: a `users` field, `purpose`, or `environment`. */
+  ordered: z.boolean(),
+  criterion: z.enum(['recency', 'often', 'role', 'uses', 'not']),
+  /** Where the question comes from: a `users` field. */
   field: z.string(),
   /** How the question is read, in words. */
   rule: z.string(),
+  /** The groups the question screens for, when not all of them. */
+  groups: z.array(z.string()).optional(),
   /** Read from a `users` sentence rather than written by the author. */
   inferred: z.boolean().optional(),
-  /** A free-text question: no options. */
-  open: z.boolean().optional(),
 })
 export type CompiledScreenerQuestion = z.infer<typeof screenerQuestionSchema>
 
 /**
- * The first look at the start page: whether it runs (`on`), which page, the fixed timing and words, and `reason`
- * saying why it is on or off. The fixed fields are present either way.
+ * The first look, a home page tour: whether it runs (`on`), which page, the open prompt, the parts an answer is coded on, what the page
+ * says (`says`, coded against; never the purpose) and where that came from, and `reason` saying why it is on or off.
  */
 export const compiledImpressionSchema = z.object({
   on: z.boolean(),
   page: z.string().optional(),
-  flashMs: z.literal(500),
-  question: z.string(),
-  codes: z.array(z.string()),
+  prompt: z.string(),
+  parts: z.array(z.enum(['what', 'who', 'action', 'purpose'])),
+  says: z.string().nullable(),
+  source: z.enum(['h1', 'meta description', 'og:description', 'author']).nullable(),
   reason: z.string(),
 })
 export type CompiledImpression = z.infer<typeof compiledImpressionSchema>
+
+/** A group of people sampled on its own, and how many it needs. One group, `everyone`, when the study does not split its people. */
+export const compiledGroupSchema = z.object({ name: z.string(), quota: z.number() })
 
 /**
  * What the participant is asked to agree to. `purposes` names what is agreed to; `text` is what is shown.
@@ -71,8 +84,10 @@ export const compiledConsentSchema = z.object({
 })
 export type CompiledConsent = z.infer<typeof compiledConsentSchema>
 
+export const modelConfigSchema = z.object({ provider: z.enum(['anthropic', 'scripted']), name: z.string(), version: z.string().optional() })
+
 export const agentConfigSchema = z.object({
-  model: z.object({ provider: z.enum(['anthropic', 'scripted']), name: z.string(), version: z.string().optional() }),
+  model: modelConfigSchema,
   system: z.string().optional(),
   tools: z.array(z.string()).optional(),
   permissions: z.object({ network: z.boolean().optional(), write: z.boolean().optional() }).optional(),
@@ -106,14 +121,21 @@ export const compiledGoalSchema = z.object({
 })
 export type CompiledGoal = z.infer<typeof compiledGoalSchema>
 
-const usersSchema = z.object({
-  are: z.string(),
+const criteriaShape = {
   did: z.string().optional(),
   within: z.string().optional(),
   often: z.string().optional(),
-  role: z.union([z.string(), z.array(z.string())]).optional(),
+  role: z.union([z.array(z.string()), z.record(z.string(), z.number())]).optional(),
   uses: z.array(z.string()).optional(),
   not: z.array(z.string()).optional(),
+}
+/** The users as written, with `are` filled: written, or derived from `did` (the snapshot holds the derived one). */
+const usersSchema = z.object({
+  are: z.string(),
+  ...criteriaShape,
+  groups: z.array(z.object({ name: z.string(), quota: z.number().optional(), ...criteriaShape })).optional(),
+  insiders: z.enum(['exclude', 'include']).optional(),
+  professionals: z.enum(['exclude', 'include']).optional(),
   where: z.union([z.string(), z.array(z.string())]).optional(),
   language: z.string().optional(),
   age: z.union([z.string(), z.object({ min: z.number().optional(), max: z.number().optional() })]).optional(),
@@ -145,9 +167,20 @@ export const compiledStudySchema = z.object({
   independent: z.boolean().optional(),
   /** The agent configuration pinned into the run, with its fingerprint; present when the study admits the agent actor. */
   agents: z.object({ config: agentConfigSchema, fingerprint: z.string() }).optional(),
+  /** The config's `model`, pinned into the run: the server codes the first look with it, through its own `ANTHROPIC_API_KEY`. */
+  model: modelConfigSchema.optional(),
   sample: z.object({ affecting: z.number(), confidence: z.number(), n: z.number(), sentence: z.string() }),
   impression: compiledImpressionSchema,
+  /** The groups sampled, with their quotas; `sample.n` is their total. */
+  groups: z.array(compiledGroupSchema),
+  /** The screens before consent, at most five. */
   screener: z.array(screenerQuestionSchema),
+  /** Asked after consent, optional, and filters nobody: the assistive technology a person uses. */
+  assistive: z.object({ id: z.string(), text: z.string(), options: z.array(z.string()) }),
+  /** The purpose as said to the participant, in the second person; only the scenario card says it, after the first look. */
+  purposeToYou: z.string(),
+  /** The screener and the first look come from a snapshot that is missing or out of date: a rehearsal shows them as drafts. */
+  draft: z.boolean(),
   /** Whether link participants see the practice screen before the first look. */
   practice: z.boolean(),
   brand: compiledBrandSchema,
@@ -162,7 +195,18 @@ export type CompiledStudy = z.infer<typeof compiledStudySchema>
  * A stored study as this version reads it. Runs compiled before the brand carried a name stored `{ accent?, poweredBy }`: the name is
  * filled as compileStudy fills it (the author, else the product) and `poweredBy` is dropped, since participants never see our name.
  */
-export function readCompiled<T extends { author: string; product: string; brand: unknown }>(study: T): T {
+export function readCompiled<T extends { author: string; product: string; brand: unknown }>(input: T): T {
+  // A run compiled before groups and the tour has one group of everyone and no first look left to ask; its other answers read as stored.
+  const old = input as unknown as Partial<CompiledStudy> & { sample?: { n: number } }
+  const study = (old.groups || !old.impression || 'prompt' in old.impression ? input : {
+    ...input,
+    groups: [{ name: 'everyone', quota: old.sample?.n ?? 0 }],
+    assistive: { id: 'assistive', text: '', options: [] },
+    purposeToYou: old.purpose ?? '',
+    draft: false,
+    screener: [],
+    impression: { on: false, prompt: '', parts: [], says: null, source: null, reason: 'off: compiled before the first look was a tour' },
+  }) as T
   const stored = study.brand as (Partial<CompiledBrand> & { poweredBy?: unknown }) | undefined
   if (!stored || (typeof stored.name === 'string' && !('poweredBy' in stored))) return study
   const { poweredBy: _dropped, ...brand } = stored

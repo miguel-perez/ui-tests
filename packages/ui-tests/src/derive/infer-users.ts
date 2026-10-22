@@ -11,7 +11,7 @@ const clause = /\b(?:who|that|which)\s+(.+)$/i
  * ("in the last month") is how recently. `inferred` names the fields that were read from the sentence; empty when it holds no behaviour.
  * `are` stays the whole sentence so the study's id and wording do not change when the draft is pasted in.
  */
-export function inferUsers(sentence: string): { users: Fields; inferred: string[] } {
+export function inferUsers(sentence: string): { users: Fields & { are: string }; inferred: string[] } {
   const are = sentence.trim()
   let rest = are.replace(/[.!?]+$/, '')
   let within: string | undefined
@@ -32,11 +32,11 @@ const list = (items: string[]) => `[${items.map(quote).join(', ')}]`
 
 /** The object form of `users` as TypeScript to paste into the study file. */
 export function printUsersDraft(users: Fields): string {
-  const parts: string[] = [`are: ${quote(users.are)}`]
+  const parts: string[] = users.are !== undefined ? [`are: ${quote(users.are)}`] : []
   if (users.did !== undefined) parts.push(`did: ${quote(users.did)}`)
   if (users.within !== undefined) parts.push(`within: ${quote(users.within)}`)
   if (users.often !== undefined) parts.push(`often: ${quote(users.often)}`)
-  if (users.role !== undefined) parts.push(`role: ${Array.isArray(users.role) ? list(users.role) : quote(users.role)}`)
+  if (users.role !== undefined) parts.push(`role: ${Array.isArray(users.role) ? list(users.role) : `{ ${Object.entries(users.role).map(([r, n]) => `${quote(r)}: ${n}`).join(', ')} }`}`)
   if (users.uses) parts.push(`uses: ${list(users.uses)}`)
   if (users.not) parts.push(`not: ${list(users.not)}`)
   return `users: { ${parts.join(', ')} }`

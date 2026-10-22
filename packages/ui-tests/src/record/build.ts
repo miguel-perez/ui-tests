@@ -2,7 +2,9 @@ import { applyRevisions } from '../revisions.ts'
 import { clusterIssues, retitleWithModel } from '../issues.ts'
 import { medians, uxLite } from '../measures.ts'
 import type { TextModel } from '../model.ts'
-import { FIRST_LOOK_SHOT, FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
+import type { ScreenerResult } from '../derive/screener.ts'
+import { TOUR_PARTS } from '../derive/tour.ts'
+import { sampleSentence } from '../derive/sample.ts'
 import { countedInResult, handleOf, resultComplete } from '../runner/progress.ts'
 import { placeOf, storedOrder } from '../runner/sequence.ts'
 import type { AttemptRow, HookResult, RunStore, Verification } from '../store/types.ts'
@@ -13,9 +15,8 @@ import { withoutTypedAnswer } from '../consumers.ts'
 import { AGENT_EVIDENCE_STATEMENT, clauseEvidence, EVIDENCE_STATEMENT } from './clauses.ts'
 import { RUN_RECORD_SCHEMA_ID, runRecordSchema, type RunRecord } from './schema.ts'
 
-const FIT_OUT_OF = 7
 const LIMITS =
-  'The first look is a 500 ms flash and one open answer, coded by a rule or a model from the words given. It shows whether people name the purpose from the first screen; it is a signal from the people who answered, not a measure of how well the page is remembered or understood.'
+  'The first look is a home page tour: the start page, for as long as the person liked, without clicking, then one open answer coded part by part against what the page says about itself. It shows what people made of the page from a standing start; it is a signal from the people who answered, never counted in the issues.'
 
 const mean = (values: number[]) => (values.length ? Math.round((values.reduce((a, b) => a + b, 0) / values.length) * 100) / 100 : undefined)
 const numbers = (values: unknown[]) => values.filter((v): v is number => typeof v === 'number')
@@ -24,7 +25,7 @@ const numbers = (values: unknown[]) => values.filter((v): v is number => typeof 
 function exportedAnswers(answers: Record<string, unknown>): Record<string, unknown> {
   const kept: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(answers)) {
-    if (key === 'screener' || key === FIRST_LOOK_SHOT || key.endsWith('.voice') || key === TRIAL_ANSWER || key === TRANSCRIPT_ANSWER || key === VIDEO_KEY) continue
+    if (key === 'screener' || key.endsWith('.voice') || key === TRIAL_ANSWER || key === TRANSCRIPT_ANSWER || key === VIDEO_KEY) continue
     kept[key] = value
   }
   return kept
@@ -43,11 +44,12 @@ function exportedVerification(v: Verification | undefined, asksQuestion: boolean
   return withdrew ? withoutTypedAnswer(exported)! : exported
 }
 
-function firstLookOf(on: boolean, attempt: AttemptRow, item: TraceAttempt): RunRecord['attempts'][number]['firstLook'] {
-  if (typeof attempt.answers[FIRST_LOOK_SKIPPED] === 'string') return 'never asked'
+function firstLookOf(on: boolean, item: TraceAttempt): RunRecord['attempts'][number]['firstLook'] {
   if (item.impression) return 'asked'
   return on ? 'pending' : 'off'
 }
+
+const groupOf = (attempt: AttemptRow) => (attempt.answers.screenerResult as ScreenerResult | undefined)?.group ?? null
 
 type StoredTrial = { index: number; state: TrialState; claimedDone: boolean; stoppedBy?: string; infrastructure?: string; cost: { tokens: number; calls: number; wallMs: number } }
 
@@ -89,7 +91,10 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
 
   // The first look is asked once, before a person's first goal: their later goals' attempts carry what it was for them.
   const firstLooks = new Map<string, RunRecord['attempts'][number]['firstLook']>()
-  for (const item of trace.attempts) if (placeOf(compiled, item.attempt).position === 0 || !storedOrder(item.attempt)) firstLooks.set(item.attempt.participant, firstLookOf(compiled.impression.on, item.attempt, item))
+  for (const item of trace.attempts) if (placeOf(compiled, item.attempt).position === 0 || !storedOrder(item.attempt)) firstLooks.set(item.attempt.participant, firstLookOf(compiled.impression.on, item))
+  // A person is screened once, before their first goal: their later goals' attempts are in the same group.
+  const groups = new Map<string, string | null>()
+  for (const item of trace.attempts) if (item.screener) groups.set(item.attempt.participant, item.screener.group)
   const attempts: RunRecord['attempts'] = trace.attempts.map(item => {
     const { attempt } = item
     const goal = compiled.goals[attempt.goalIndex]
@@ -107,7 +112,8 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
       verification: exportedVerification(attempt.verification, goal?.answer !== undefined, attempt.reason === 'withdrew'),
       timings: { ...(attempt.startedAt && { startedAt: attempt.startedAt }), ...(attempt.endedAt && { endedAt: attempt.endedAt }), ...item.timings },
       path: item.path,
-      firstLook: storedOrder(attempt) && placeOf(compiled, attempt).position > 0 ? (firstLooks.get(attempt.participant) ?? 'pending') : firstLookOf(compiled.impression.on, attempt, item),
+      firstLook: storedOrder(attempt) && placeOf(compiled, attempt).position > 0 ? (firstLooks.get(attempt.participant) ?? 'pending') : firstLookOf(compiled.impression.on, item),
+      group: groups.get(attempt.participant) ?? groupOf(attempt),
       // A withdrawn person's words are not exported; what is kept of them is the verdict.
       answers: attempt.reason === 'withdrew' ? {} : exportedAnswers(attempt.answers),
       environment: attempt.environment ?? {},
@@ -121,6 +127,7 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
     const mine = trace.attempts.filter(t => t.attempt.goalIndex === goal.index && countedInResult(t.attempt, complete))
     const timed = mine.map(t => ({ ...(t.timings.onGoalMs !== undefined && { durationMs: t.timings.onGoalMs }), verified: t.attempt.verification?.status === 'correct' }))
     const { allMs, verifiedMs } = medians(timed)
+    const clicks = mine.flatMap(t => (t.firstClick && t.firstClick.onPath !== null ? [t.firstClick.onPath] : []))
     byGoal[String(goal.index)] = {
       effectiveness: {
         reached: mine.filter(t => t.attempt.verification?.status === 'correct').length,
@@ -136,6 +143,7 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
         ease: numbers(mine.map(t => t.attempt.answers[`goal${goal.index}.ease`])),
         confidence: numbers(mine.map(t => t.attempt.answers[`goal${goal.index}.confidence`])),
       },
+      firstClick: { onPath: clicks.filter(Boolean).length, offPath: clicks.filter(c => !c).length, of: clicks.length },
     }
   }
 
@@ -148,15 +156,31 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
   const scores = rated.map(r => r.score)
   const usefulScores = rated.map(r => r.useful)
   const easyScores = rated.map(r => r.easy)
-  const screened = live.filter(t => t.screener)
-  const fitTotals = screened.map(t => t.screener!.fit.total)
-  const matched = screened.filter(t => t.screener!.matches).length
+  // The screener is read per person: their first attempt carries what it made of them.
+  const people = new Map<string, TraceAttempt>()
+  for (const t of live) if (t.screener && !people.has(t.attempt.participant)) people.set(t.attempt.participant, t)
+  const screened = [...people.values()]
+  const criteria = [...new Set(screened.flatMap(t => Object.keys(t.screener!.criteria)))]
+  const outside = criteria.map(criterion => ({ criterion, count: screened.filter(t => t.screener!.criteria[criterion]?.met === false).length })).filter(c => c.count > 0)
+
+  // Each group is counted and read on its own; one group counts everyone, as a study that does not split its people always has.
+  const one = compiled.groups.length <= 1
+  const groupResults = compiled.groups.map(group => {
+    const members = new Set(trace.attempts.filter(t => one || (groups.get(t.attempt.participant) ?? groupOf(t.attempt)) === group.name).map(t => t.attempt.participant))
+    const counted = new Set(trace.attempts.filter(t => members.has(t.attempt.participant) && countedInResult(t.attempt, complete)).map(t => t.attempt.participant)).size
+    return {
+      name: group.name,
+      quota: group.quota,
+      n: counted,
+      filled: counted >= group.quota,
+      sentence: counted ? sampleSentence(counted, compiled.sample.affecting) : `Nobody in ${group.name} has finished yet.`,
+      issues: issues.filter(issue => issue.participants.some(p => members.has(p))).map(issue => issue.id),
+    }
+  })
 
   const asked = live.filter(t => t.impression)
-  const clicks = asked.flatMap(t => (t.impression!.firstClick && t.impression!.firstClick.onPath !== null ? [t.impression!.firstClick.onPath] : []))
-  const named = asked.filter(t => t.impression!.code === 'named the purpose').length
-  const didNot = asked.filter(t => t.impression!.code === 'did not name it').length
-  const noAnswer = asked.filter(t => t.impression!.code === 'no answer').length
+  const answered = asked.filter(t => t.impression!.text.trim())
+  const coded = answered.filter(t => t.impression!.parts)
 
   const real = trace.attempts.filter(t => !t.attempt.rehearsal)
   // The funnel counts people: a person has one attempt for each goal they reached, and is finished once their last attempt is.
@@ -190,22 +214,17 @@ export async function buildRecord(store: RunStore, runId: string, options: { mod
           easy: { scores: easyScores, ...(mean(easyScores) !== undefined && { mean: mean(easyScores) }) },
         },
       },
-      fit: { scores: fitTotals, summary: { n: fitTotals.length, ...(mean(fitTotals) !== undefined && { mean: mean(fitTotals) }), outOf: FIT_OUT_OF } },
     },
     impression: {
-      named, didNot, noAnswer,
-      neverAsked: live.filter(t => typeof t.attempt.answers[FIRST_LOOK_SKIPPED] === 'string').length,
-      denominator: asked.length,
-      firstClickOnPath: { onPath: clicks.filter(Boolean).length, offPath: clicks.filter(c => !c).length, of: clicks.length },
+      answered: answered.length,
+      coded: coded.length,
+      parts: Object.fromEntries(TOUR_PARTS.map(part => [part, coded.filter(t => t.impression!.parts![part]).length])) as Record<(typeof TOUR_PARTS)[number], number>,
+      noAnswer: asked.length - answered.length,
+      uncoded: answered.filter(t => !t.impression!.parts).map(t => ({ attempt: t.attempt.id, reason: t.impression!.uncoded ?? 'not coded yet' })),
       limits: LIMITS,
     },
-    fit: {
-      screened: screened.length,
-      matched,
-      summary: screened.length
-        ? `${matched} of ${screened.length} screened ${screened.length === 1 ? 'person matched' : 'people matched'} the stated users; mean fit to the purpose ${mean(fitTotals)} of ${FIT_OUT_OF}.`
-        : 'No one answered the screener.',
-    },
+    groups: groupResults,
+    screened: { n: screened.length, noGroup: screened.filter(t => t.screener!.group === null).length, outside },
     // A trace of an agent says nothing about usability: no problem is clustered from it.
     issues: run.actor === 'agent' ? [] : issues,
     money: { estimate: 0, reserved: 0, paid: 0, truedUp: 0, currency: options.currency ?? 'USD' },

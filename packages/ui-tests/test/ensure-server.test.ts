@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { ensureServer, ensureServerKnowsRun, ServerReadsAnotherStore, ServerUnreachable, startDoorServer } from '../src/cli/ensure-server.ts'
+import { ensureServer, ensureServerKnowsRun, LOCAL_NO_MODEL, ServerReadsAnotherStore, ServerUnreachable, startDoorServer } from '../src/cli/ensure-server.ts'
 import { startServer } from '../src/server/http.ts'
 import type { Io } from '../src/cli/main.ts'
 import { openStore } from '../src/store/open.ts'
@@ -59,6 +59,22 @@ describe('ensureServer', () => {
     const again = await ensureServer({ url, store, io: io() })
     expect(again.started).toBe(true)
     await again.close()
+  })
+
+  it('starts a local-only server with no model and no key, so the first look is never sent to a model', async () => {
+    const url = `http://127.0.0.1:${await freePort()}`
+    const withKey: Io = { ...io(), env: { ANTHROPIC_API_KEY: 'sk-test' } }
+    const local = await ensureServer({ url, store, io: withKey, localOnly: true })
+    cleanup.push(() => local.close())
+    const options = vi.mocked(startServer).mock.calls.at(-1)![0]
+    expect(options).toMatchObject({ noModel: LOCAL_NO_MODEL })
+    expect(options).not.toHaveProperty('env')
+    await local.close()
+    cleanup.pop()
+    const other = await ensureServer({ url, store, io: withKey })
+    cleanup.push(() => other.close())
+    expect(vi.mocked(startServer).mock.calls.at(-1)![0]).toMatchObject({ env: { ANTHROPIC_API_KEY: 'sk-test' } })
+    expect(vi.mocked(startServer).mock.calls.at(-1)![0]).not.toHaveProperty('noModel')
   })
 
   it('starts a server of its own for a front door: loopback, any free port, no public address', async () => {

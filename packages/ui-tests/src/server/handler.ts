@@ -1,4 +1,5 @@
 import type { RunStore } from '../store/types.ts'
+import type { TextModel } from '../model.ts'
 import type { Transcriber } from '../transcriber.ts'
 import { getBundles } from './bundles.ts'
 import { createCollector } from './collector.ts'
@@ -15,6 +16,12 @@ export type ServerOptions = {
   /** Signs shared reports and their videos; without it there are none. */
   shareSecret?: string
   transcriber?: Transcriber
+  /** Codes the first look's answers in place of the run's own model; for tests. */
+  model?: TextModel
+  /** The server's environment, where the key for the run's model is read. */
+  env?: Record<string, string | undefined>
+  /** Why this server never calls a model; the first look's answers are kept uncoded with this reason. */
+  noModel?: string
   /** The clock in epoch milliseconds; replaced in tests. */
   now?: () => number
 }
@@ -46,6 +53,9 @@ export function createHandler(options: ServerOptions): (request: Request) => Pro
     ...(options.publicUrl && { publicUrl: options.publicUrl }),
     ...(options.cliSecret && { cliSecret: options.cliSecret }),
     ...(options.transcriber && { transcriber: options.transcriber }),
+    ...(options.model && { model: options.model }),
+    ...(options.env && { env: options.env }),
+    ...(options.noModel && { noModel: options.noModel }),
     ...(options.now && { now: options.now }),
   })
 

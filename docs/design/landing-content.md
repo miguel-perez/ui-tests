@@ -124,11 +124,12 @@ study('invite flow', {
     did: 'used a shared tool to plan work with a team',
     within: '3 months',
     uses: ['Trello', 'Asana', 'Notion', 'Linear'],
-    not: ['has used Weekboard'],
+    not: ['I have used Weekboard'],
   },
   purpose: 'plan the week together without emailing screenshots around',
   sample: { affecting: 1 / 3, confidence: 0.85 }, // five people
   record: 'video',
+  firstLook: { page: '/' }, // the start comes from setup, behind a sign-in: tour the public home page
 }, () => {
   // Each attempt gets its own signed-in board. A .example address is never delivered.
   setup(async ({ request }) => {
@@ -138,7 +139,6 @@ study('invite flow', {
   task('invite a colleague', {
     path: ['/board', '/settings/members'],
     timeLimit: '3 min',
-    firstLook: { page: '/' },
   }, () => {
     outcome(async ({ request, setup }) => {
       const invitations = await (await request.get(`/api/test/boards/${setup.board}/invitations`)).json()
@@ -164,23 +164,23 @@ study('invite flow', {
 
 **Subtitle.** the sample
 
-**Note.** Six questions, one per screen; press Next to see them all. The first three come from `users`: `did` and `within` become a recency question with bands, `uses` a multi-select with one decoy, `not` an item among neutral ones, so nobody can tell what disqualifies. The last three come from `purpose`: when they last needed it, how they do it today, how much it matters. Write `users` as the sentence alone and the first three are drafted from it.
+**Note.** Three questions, one per screen, before consent; press Next to see them all. Each comes from `users`: `did` and `within` become a recency question with bands on both sides of the window, `uses` a list among other planning tools, and the exclusions sit among other statements about work, so nobody can tell what disqualifies. The other tools and statements are drafted for this study by your model into a snapshot file you review, written by `npx ui-tests lint -u`; nothing generic stands in. The options come in a different order for each person, and nothing here mentions the `purpose`.
 
-The `sample` line sets how many, for the whole study: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. From the paid panel five people cost from $60, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
+The `sample` line sets how many, for the whole study: one in three at 85% confidence means five people, enough to see any problem that hits one person in three with an 87% chance. Leave it out and that is the default. Groups that behave differently are sampled apart, `role: { Developer: 3, Designer: 2 }`, and reported per group. From the paid panel five people cost from $60, under a cap you set before it starts. The paid panel and your visitors are the only things you pay for; your own link costs nothing.
 
-**Screens.** Six, one per screen, each with Next. "A few questions first · n of 6". (1) When did you last use a shared tool to plan work with a team? In the past week · In the past month · In the past 3 months · Longer ago, or never. (2) Which of these do you use to plan work? Pick all that apply. Trello · Asana · Notion · Linear · Basecamp · None of these. (3) Which of these have you done? Pick all that apply. Managed a team of more than five · Used Weekboard · Taken a course on planning or project management · None of these. (4) When did you last need to plan a week with other people? This week · This month · Earlier this year · I don't. (5) How do you do it today? A shared document or spreadsheet · A planning tool · Chat and email · In my head. (6) How much does it matter to you to get this right? A lot: it costs me time every week · Some · Not much.
+**Screens.** Three, one per screen, each with Next. "A few questions first · n of 3". (1) When did you last use a shared tool to plan work with a team? In the past week · Between a week and a month ago · Between a month and 3 months ago · Between 3 months and a year ago · More than a year ago · Never. (2) Which of these do you use? Pick all that apply. Jira · Trello · Monday.com · Asana · Notion · Basecamp · Linear · None of these. (3) Do any of these apply to you? Pick all that apply. I work remotely most days · I work on Weekboard, or have taken part in a test of it · I lead a team · I work in UX, design, marketing or market research · I have used Weekboard · I work in a team of more than ten people · None of these.
 
-**Comes back.** screened 20 · matched 5 · who took part: 3 of 5 had the need this month · how they do it today, in their words
+**Comes back.** screened 20 · per person: their group, recency band, tools and what left them out · the option order each saw
 
 ### 3. First look
 
 **Subtitle.** on for public pages
 
-**Note.** A page is flashed for 500 ms, then one open question. It is the page the task starts on when that page is public, and off when the start is behind a sign-in, as Weekboard's board is; `firstLook: { page }` names the public page where the purpose lives, here the home page. The answers are read against the `purpose`, which the person never sees, and you can re-read any of them. Then the page comes back for one click.
+**Note.** A look around the live page, for as long as they like: they can scroll, but nothing is clickable yet. Then one open question: what it is, whose it is, what they can do there and what it is for. It is the page the task starts on when that page is public, and off when the start is behind a sign-in, as Weekboard's board is; `firstLook: { page }` names the public page where the purpose lives, here the home page. Each answer is coded part by part against what the page says, its first heading unless you write `says`, never against the `purpose`, which the person never sees. Without a model the answers are listed for you to read.
 
-**Screen.** Over the flashed page: "You saw a page for half a second". "What was that page for?" [ In your own words. There is no right answer. ] Talk instead · [ Next ]
+**Screen.** After the look around the page: "You've had a look at the page". "What do you make of that page? Say what it is, whose it is, what you can do there, and what it's for." [ In your own words. There is no right answer. ] Talk instead · [ Next ]
 
-**Comes back.** named the purpose: 4 of 5, with their words · first click on your path: 3 of 5
+**Comes back.** said what it is: 5 of 5 · whose it is: 4 of 5 · what you can do there: 3 of 5 · what it's for: 4 of 5 · with their words
 
 ### 4. Scenario card
 

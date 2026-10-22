@@ -1,7 +1,29 @@
 import type { APIRequestContext } from 'playwright-core'
 
-/** Who the study is for: a plain description, or the screening fields (`are` is required). */
-export type Users = string | { are: string; did?: string; within?: string; often?: string; role?: string | string[]; uses?: string[]; not?: string[]; where?: string | string[]; language?: string; age?: string | { min?: number; max?: number } }
+/** How often a behaviour is done, for the frequency question. */
+export type Often = 'daily' | 'weekly' | 'monthly' | 'yearly'
+/**
+ * What screens a person: what they did (`did`, past tense, about the category and never the product) and how recently (`within`), how
+ * often, their role, the tools they use and who they are not. `role` as a list is one group; as `{ role: quota }` it is one group per role.
+ */
+export type Criteria = { did?: string; within?: string; often?: Often; role?: string[] | Record<string, number>; uses?: string[]; not?: string[] }
+/** A group sampled on its own, with its quota (3 unless written). Only for groups that differ in more than one field. */
+export type Group = { name: string; quota?: number } & Criteria
+/**
+ * Who the study is for: a plain sentence, or the screening fields. `did` is required in the object form; `are` is derived from it unless
+ * written. `insiders` and `professionals` override the default exclusions; `where`, `language` and `age` filter a panel and are never asked.
+ */
+export type Users = string | (Criteria & {
+  are?: string
+  groups?: Group[]
+  insiders?: 'exclude' | 'include'
+  professionals?: 'exclude' | 'include'
+  where?: string | string[]
+  language?: string
+  age?: string | { min?: number; max?: number }
+})
+/** The first look: the start page toured before the task. `page` defaults to the primary task's start; `says` to the page's description. */
+export type FirstLook = false | { page?: string; says?: string }
 /** Where the product under test runs. `description` is what an agent is told about it, such as an API's description. */
 export type Target = { url?: string; cli?: string; mcp?: string; http?: string; description?: string }
 /** What a hook can read of the stored end state of an attempt. */
@@ -24,7 +46,7 @@ export type StudyOptions = {
   environment?: string
   sample?: { affecting: number; confidence: number }
   record?: 'video'
-  firstLook?: false | { page: string }
+  firstLook?: FirstLook
   independent?: boolean
   actors?: string[]
   target?: Target
@@ -34,7 +56,6 @@ export type StudyOptions = {
 export type TaskOptions = {
   path?: string[]
   timeLimit?: string
-  firstLook?: false | { page: string }
   start?: string
   minutes?: number
   primary?: boolean
@@ -44,8 +65,8 @@ export type TaskOptions = {
   target?: Target
   [legacy: string]: unknown
 }
-export type { AgentConfig } from './agents/config.ts'
-import type { AgentConfig } from './agents/config.ts'
+export type { AgentConfig, AgentSettings, ModelConfig } from './agents/config.ts'
+import type { AgentSettings, ModelConfig } from './agents/config.ts'
 /** The shape of `ui-tests.config.ts`; every key is optional. */
 export type UiTestsConfig = {
   target?: Target
@@ -56,7 +77,13 @@ export type UiTestsConfig = {
   ci?: { on?: string[] }
   reporters?: ('default' | 'github-actions' | 'json')[]
   actor?: 'human' | 'agent'
-  agents?: AgentConfig
+  /**
+   * The one model of the project: the agent of an agent run, and what drafts the screener snapshot (`ui-tests lint -u`) and codes the
+   * first look. Its key stays in the environment (`ANTHROPIC_API_KEY`).
+   */
+  model?: ModelConfig
+  /** The agent's prompt, tools, permissions and budgets; its model is `model`. */
+  agents?: AgentSettings
   product?: string
   author?: string
   /** What participants see instead of ours: the name, logo, colours and font of the author. The name defaults to `author`, then `product`. */

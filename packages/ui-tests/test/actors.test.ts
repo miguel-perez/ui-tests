@@ -13,6 +13,7 @@ import { lint } from '../src/lint.ts'
 import { idempotencyKey } from '../src/runner/key.ts'
 import * as api from '../src/index.ts'
 import { stubServer } from './server-stub.ts'
+import { draftSnapshots } from './snapshots.ts'
 
 const { getStudies, resetStudies } = api
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
@@ -80,9 +81,11 @@ describe('actors, targets and trials', () => {
   })
 
   it('pins the agent configuration and fingerprints it', () => {
+    // The one model of the config, with the agent's own settings, is the agent pinned into the run.
     const agents: AgentConfig = { model: { provider: 'scripted', name: 'fixture' }, tools: ['shell'] }
-    const { compiled } = run(cliFirstRun(), { product: 'x', agents })
+    const { compiled } = run(cliFirstRun(), { product: 'x', model: agents.model, agents: { tools: ['shell'] } })
     expect(compiled.agents).toEqual({ config: agents, fingerprint: agentFingerprint(agents) })
+    expect(compiled.model).toEqual(agents.model)
     expect(compiledStudySchema.parse(JSON.parse(JSON.stringify(compiled)))).toEqual(compiled)
   })
 
@@ -128,7 +131,8 @@ describe('the commands', () => {
     work = await mkdtemp(join(fixtures, '.tmp-actors-'))
     data = await mkdtemp(join(tmpdir(), 'ui-tests-actors-'))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
-    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${url}' }, agents: { model: { provider: 'scripted', name: 'fixture' } } }\n`)
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${url}' }, model: { provider: 'scripted', name: 'fixture' } }\n`)
+    await draftSnapshots(work)
   })
   afterAll(async () => {
     await server.close()

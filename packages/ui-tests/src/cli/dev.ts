@@ -1,9 +1,9 @@
+import { basename } from 'node:path'
 import { DEFAULT_SERVER_URL, loadConfig } from '../config.ts'
 import { agentRun } from './agent-run.ts'
 import { formatFindings, lint, planLines } from '../lint.ts'
 import { StudyLoadError } from '../load.ts'
 import { createRun } from '../runner/create-run.ts'
-import { attachFirstLook, playwrightScreenshotter } from '../runner/screenshot.ts'
 import { checkReachable, runSetup } from '../runner/setup.ts'
 import type { UiTestsConfig } from '../types.ts'
 import { openStore } from '../store/open.ts'
@@ -77,7 +77,8 @@ export const dev: Command = async (args, io: Io) => {
   const goalIndex = typeof taskName === 'string' ? chosen.compiled.goals.findIndex(g => g.name === taskName) : 0
   if (goalIndex < 0) { io.stderr.write(`No task named "${taskName as string}" in "${chosen.compiled.name}"\n`); return 2 }
 
-  const findings = lint({ study: chosen.study, compiled: chosen.compiled, sourceText: chosen.sourceText, config, actor })
+  // A rehearsal runs with a missing or out-of-date snapshot: the screens are drafts, and the plan and the player say so.
+  const findings = lint({ study: chosen.study, compiled: chosen.compiled, sourceText: chosen.sourceText, config, actor, snapshot: { ...chosen.snapshot, file: basename(chosen.snapshotFile) } })
   io.stdout.write(`${planLines(chosen.compiled).join('\n')}\n`)
   if (findings.some(f => f.severity === 'error')) {
     io.stdout.write(`\n${formatFindings(findings)}\n`)
@@ -106,8 +107,6 @@ export const dev: Command = async (args, io: Io) => {
     }
     const setupValues = await runSetup(chosen.study, target)
     const { attempt, token } = await store.createAttempt({ runId: run.run, participant: 'rehearsal', goalIndex, rehearsal: true, setupValues })
-    const shot = await attachFirstLook({ store, run, target, screenshotter: deps.screenshotter ?? playwrightScreenshotter() })
-    if (shot.error) io.stderr.write(`${shot.error}\n`)
     const player = `${uiServer.url}/ui-tests/${run.run}/?t=${token}`
     if (args.flags.has('no-open')) io.stdout.write(`${JSON.stringify({ player })}\n`)
     else {

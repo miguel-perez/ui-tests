@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import type { BarView } from '../server/view.ts'
-import { FIRST_CLICK_PROMPT } from '../player/copy.ts'
+import { TOUR_DONE, TOUR_PROMPT_BAR } from '../player/copy.ts'
 import { chromeVars } from './theme.ts'
 import type { ChromeTheme } from './theme.ts'
 
@@ -177,13 +177,15 @@ export function Taskbar({ view, theme, offerMoreTime, busy, step, onEnd, onStep,
 }
 
 /** The bar while the first click is taken: one line, no Done and no way out of the task, since the task has not begun. */
-export function FirstClickBar({ theme, brand }: { theme: ChromeTheme; brand: BarView['brand'] }) {
+/** The bar while the first look's page is toured: nothing on the page can be clicked, scrolling works, and one button ends the look. */
+export function TourBar({ theme, brand, busy, onDone }: { theme: ChromeTheme; brand: BarView['brand']; busy: boolean; onDone: () => void }) {
   return (
-    <div className="uit-bar" role="region" aria-label={FIRST_CLICK_PROMPT} style={chromeVars(theme)}>
+    <div className="uit-bar" role="region" aria-label={TOUR_PROMPT_BAR} style={chromeVars(theme)}>
       <style>{css}</style>
       <div className="uit-pill">
         {brand.logo && <img className="uit-logo" src={brand.logo} alt={brand.name} />}
-        <span className="uit-question">{FIRST_CLICK_PROMPT}</span>
+        <span className="uit-question">{TOUR_PROMPT_BAR}</span>
+        <button type="button" className="uit-primary" disabled={busy} onClick={onDone}>{TOUR_DONE}</button>
       </div>
     </div>
   )

@@ -1,0 +1,49 @@
+{
+  "version": 1,
+  "studies": {
+    "minutes fixture": {
+      "decoys": {
+        "not": { "from": ["I work on localhost, or have taken part in a test of it", "I work in UX, design, marketing or market research"], "value": ["I read the news online every day", "I work in sales or customer support", "I shop online most weeks"], "source": "author" }
+      },
+      "groups": [
+        { "name": "everyone", "quota": 5, "source": "sample" }
+      ],
+      "screens": [
+        {
+          "id": "screener.recency",
+          "text": "When did you last read a landing page?",
+          "options": [
+            { "label": "In the past week", "rule": "accept" },
+            { "label": "Between a week and a month ago", "rule": "accept" },
+            { "label": "Between a month and 3 months ago", "rule": "accept" },
+            { "label": "Between 3 months and a year ago", "rule": "reject" },
+            { "label": "More than a year ago", "rule": "reject" },
+            { "label": "Never", "rule": "reject" }
+          ],
+          "multi": false,
+          "ordered": true,
+          "criterion": "recency",
+          "field": "did",
+          "rule": "accept the bands inside 3 months"
+        },
+        {
+          "id": "screener.not",
+          "text": "Do any of these apply to you?",
+          "options": [
+            { "label": "I work on localhost, or have taken part in a test of it", "rule": "reject", "exclusion": "insider" },
+            { "label": "I work in UX, design, marketing or market research", "rule": "reject", "exclusion": "professional" },
+            { "label": "I read the news online every day", "rule": "may-select" },
+            { "label": "I work in sales or customer support", "rule": "may-select" },
+            { "label": "I shop online most weeks", "rule": "may-select" },
+            { "label": "None of these", "rule": "may-select" }
+          ],
+          "multi": true,
+          "ordered": false,
+          "criterion": "not",
+          "field": "not",
+          "rule": "reject any of the exclusions; the rest are free to pick"
+        }
+      ]
+    }
+  }
+}

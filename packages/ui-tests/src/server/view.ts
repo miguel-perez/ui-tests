@@ -1,6 +1,6 @@
 import { fillScenario, scenarioTemplate } from '../derive/scenario.ts'
 import type { CompiledBrand, CompiledQuestion } from '../schema/compiled.ts'
-import { FIRST_LOOK_SHOT } from '../runner/screenshot.ts'
+import { optionOrder, type ScreenerResult } from '../derive/screener.ts'
 import type { AttemptRow, AttemptStatus, RunRow } from '../store/types.ts'
 import { placeOf } from '../runner/sequence.ts'
 
@@ -12,17 +12,23 @@ export type ParticipantView = {
   product: string
   brand: CompiledBrand
   consent: { text: string[]; purposes: string[]; payout: string }
-  screener: { id: string; text: string; options: string[]; multi: boolean; open?: boolean }[]
+  /** The screens before consent, each with its options in the order this person sees them. */
+  screener: { id: string; text: string; options: string[]; multi: boolean }[]
+  /** Asked once after consent, before the practice; optional. Absent once answered, and for a rehearsal or an agent. */
+  assistive?: { id: string; text: string; options: string[] }
+  /** A rehearsal of a study whose screener snapshot is missing or out of date: its screens are drafts, and say so. */
+  draft: boolean
   practice: boolean
   /** About how long the whole study takes; the consent screen says so. */
   minutes: number
-  /** Present only when the first look is on and a picture of the page was taken: the picture is served by the collector, never fetched from the page itself. */
+  /**
+   * The first look, a home page tour, until it is answered: the page is toured live on the author's own site, with nothing clickable,
+   * for as long as the person likes, then the one open prompt. Present only on the person's first goal.
+   */
   impression?: {
-    page: string; flashMs: number; question: string
-    /** The open question was answered; what remains is the click. */
-    asked: boolean
-    /** The first click happens on the author's own site: the player opens the start page and the SDK takes the click. */
-    click: boolean
+    page: string; prompt: string
+    /** The person has had their look at the page; what remains is the prompt. */
+    looked: boolean
   }
   goal: {
     index: number
@@ -42,16 +48,16 @@ export type ParticipantView = {
   rehearsal: boolean
 }
 
-/** Whether `page` is on the target's own site, so the SDK can be there to take a first click; any other public URL is only flashed. */
-export function isOwnSite(page: string, target: string): boolean {
-  try { return new URL(page, target).origin === new URL(target).origin } catch { return false }
-}
-
 /** The key in `attempt.answers` under which the participant asked for more time; the time limit grows by half, once. */
 export const MORE_TIME = 'moreTime'
 
-/** The first look is over once its first click, or the reason there was none, is stored. */
-const firstLookDone = (attempt: AttemptRow) => (attempt.answers.impression as { firstClick?: unknown } | undefined)?.firstClick !== undefined
+/** The first look's answer as stored: the look, then the words. */
+const toured = (attempt: AttemptRow) => attempt.answers.impression as { looked?: unknown; text?: unknown } | undefined
+
+/** The order this person sees each screener question's options in: as stored with their answers, else shuffled for them by their attempt. */
+export function screenerOrder(run: RunRow, attempt: AttemptRow): Record<string, string[]> {
+  return (attempt.answers.screenerResult as ScreenerResult | undefined)?.order ?? optionOrder(run.compiled.screener, attempt.id)
+}
 
 /** The limit in seconds after any extra time was granted. */
 export function effectiveTimeout(base: number, attempt: AttemptRow): number {
@@ -68,12 +74,13 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
   const values = attempt.setupValues
   const scenario = goal.scenario.pinned
     ? fillScenario(goal.scenario.text, values)
-    : scenarioTemplate({ are: study.users.are, purpose: study.purpose, goal: goal.name, values })
+    : scenarioTemplate({ are: study.users.are, purpose: study.purposeToYou, goal: goal.name, values })
   const startValue = values.start
   // The study's own questions come once, after the last goal this person does: the declared last, or the last of their own order.
   const sequence = placeOf(study, attempt)
   const last = sequence.position === sequence.of - 1
   const impression = study.impression
+  const first = sequence.position === 0
   const rehearsal = attempt.rehearsal || run.rehearsal
   // An agent is not screened and does not practise: it is put through the task, and it consented when its attempt was made.
   const asked = !rehearsal && run.actor !== 'agent'
@@ -84,13 +91,15 @@ export function participantView(run: RunRow, attempt: AttemptRow): ParticipantVi
     product: study.product,
     brand: study.brand,
     consent: { text: study.consent.text, purposes: study.consent.purposes, payout: study.consent.payout },
-    // Only link participants are screened and practise; a rehearsal is the author taking their own study.
-    screener: !asked ? [] : study.screener.map((q) => ({ id: q.id, text: q.text, options: q.options.map((o) => o.label), multi: q.multi, ...(q.open && { open: true }) })),
+    // Only link participants are screened and practise; a rehearsal is the author taking their own study. Each sees their own order.
+    screener: !asked ? [] : (() => { const order = screenerOrder(run, attempt); return study.screener.map((q) => ({ id: q.id, text: q.text, options: order[q.id] ?? q.options.map((o) => o.label), multi: q.multi })) })(),
+    ...(asked && first && attempt.answers[study.assistive.id] === undefined && { assistive: { id: study.assistive.id, text: study.assistive.text, options: study.assistive.options } }),
+    draft: rehearsal && study.draft,
     // The practice comes once, before the first goal.
-    practice: study.practice && asked && sequence.position === 0,
+    practice: study.practice && asked && first,
     minutes: Math.max(1, study.goals.reduce((sum, g) => sum + (g.minutes ?? Math.ceil(g.timeout.seconds / 60)), 0)),
-    ...(impression.on && attempt.answers[FIRST_LOOK_SHOT] !== undefined && !firstLookDone(attempt) && {
-      impression: { page: impression.page ?? goal.start, flashMs: impression.flashMs, question: impression.question, asked: typeof (attempt.answers.impression as { text?: unknown } | undefined)?.text === 'string', click: isOwnSite(impression.page ?? goal.start, run.target) },
+    ...(impression.on && run.actor !== 'agent' && first && typeof toured(attempt)?.text !== 'string' && {
+      impression: { page: impression.page ?? goal.start, prompt: impression.prompt, looked: toured(attempt)?.looked === true },
     }),
     goal: {
       index: goal.index,
@@ -121,8 +130,8 @@ export type BarView = {
   goal: { name: string; scenario: string; steps: string[]; timeoutSeconds: number }
   record: 'events' | 'video'
   brand: CompiledBrand
-  /** The bar is there to take the first click on the author's own site: the question was answered and the click is pending. */
-  firstClick: boolean
+  /** The bar is there for the first look: the page is toured with nothing clickable until the person says they have had a look. */
+  tour: boolean
   rehearsal: boolean
 }
 
@@ -136,7 +145,7 @@ export function barView(run: RunRow, attempt: AttemptRow): BarView {
     goal: { name: view.goal.name, scenario: view.goal.scenario, steps: view.goal.steps, timeoutSeconds: view.goal.timeoutSeconds },
     record: view.record,
     brand: view.brand,
-    firstClick: Boolean(view.status === 'consented' && view.impression?.asked && view.impression.click),
+    tour: Boolean(view.status === 'consented' && view.impression && !view.impression.looked),
     rehearsal: view.rehearsal,
   }
 }

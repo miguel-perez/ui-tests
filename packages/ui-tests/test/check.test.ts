@@ -1,4 +1,4 @@
-import { mkdtemp, rm, writeFile, copyFile } from 'node:fs/promises'
+import { mkdtemp, readFile, rm, writeFile, copyFile } from 'node:fs/promises'
 import { createServer, type Server } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
@@ -12,10 +12,10 @@ import { restGitHub } from '../src/github/rest.ts'
 import { SIGNATURE_HEADER, verifySignature } from '../src/notify/webhook.ts'
 import { buildRecord } from '../src/record/build.ts'
 import { refreshRun } from '../src/runner/progress.ts'
-import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { openStore } from '../src/store/open.ts'
 import type { RunRow, RunStore } from '../src/store/types.ts'
 import { stubServer } from './server-stub.ts'
+import { draftSnapshots } from './snapshots.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 
@@ -96,6 +96,7 @@ beforeAll(async () => {
   data = await mkdtemp(join(tmpdir(), 'ui-tests-check-'))
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
   await writeConfig()
+  await draftSnapshots(work)
 })
 afterAll(async () => {
   await server.close()
@@ -118,7 +119,7 @@ const pullRequest = (number: number, sha: string, labels: string[]) => ({ pull_r
 function session(env: Record<string, string>, deps: CliDeps) {
   let out = ''
   let err = ''
-  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, GITHUB_TOKEN: 'tok', ...env }, deps: { pollMs: 1, webhookBackoffMs: 1, screenshotter: stubScreenshotter(new Uint8Array([0])), ...deps } }
+  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, GITHUB_TOKEN: 'tok', ...env }, deps: { pollMs: 1, webhookBackoffMs: 1, ...deps } }
   return { io, out: () => out, err: () => err }
 }
 async function run(argv: string[], github: ReturnType<typeof fakeGitHub>, env: Record<string, string> = {}) {
@@ -140,6 +141,20 @@ async function finishAll(s: RunStore, row: RunRow, verdicts: ('correct' | 'incor
 const checkCalls = (g: ReturnType<typeof fakeGitHub>, call: string) => g.calls.filter(c => c.call === call)
 
 describe('ui-tests check', () => {
+  it('exits non-zero naming the snapshot while it is missing, and makes no run and no check', async () => {
+    const snapshot = join(work, 'dev.ui.test.ts.screener.snap')
+    const kept = await readFile(snapshot, 'utf8')
+    await rm(snapshot)
+    cleanup.push(() => writeFile(snapshot, kept))
+    const github = fakeGitHub()
+    const before = (await (await store()).listRuns()).length
+    const result = await run(['check'], github, { GITHUB_EVENT_PATH: await event('nosnap', pullRequest(990, 'sha-990', ['ui-test'])) })
+    expect(result.code).toBe(1)
+    expect(result.err).toContain('dev.ui.test.ts.screener.snap: the screener snapshot of "dev fixture" is missing')
+    expect((await (await store()).listRuns()).length).toBe(before)
+    expect(github.calls.filter(c => c.call === 'createCheck')).toEqual([])
+  })
+
   it('creates nothing for a pull request without the label', async () => {
     const github = fakeGitHub()
     const path = await event('unlabelled', pullRequest(101, 'sha101', ['bug']))
@@ -313,6 +328,7 @@ describe('a failing delivery is retried by the next one', () => {
     const row = (await s.listRuns()).find(r => r.key.startsWith('pr-110:'))!
     await finishAll(s, row, ['incorrect', 'correct', 'correct', 'correct', 'correct'])
     await writeFile(join(work, 'ui-tests.config.ts'), 'export default {')
+    await draftSnapshots(work)
     const broken = await run(['status', row.run], github)
     expect(broken.code).toBe(2)
     expect(broken.err).toContain('cannot tell GitHub or the webhook')

@@ -1,61 +1,99 @@
 import { join } from 'node:path'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
-import { compileStudy } from '../src/compile.ts'
-import { codeImpression, codeImpressionWith } from '../src/derive/code-impression.ts'
+import * as api from '../src/index.ts'
+import { compileStudy, compileWithSnapshot } from '../src/compile.ts'
+import { codeTour } from '../src/derive/code-impression.ts'
+import { draftSnapshot } from '../src/derive/draft.ts'
+import { pageSays } from '../src/derive/impression.ts'
 import { bundleStudyFile, loadBundle } from '../src/load.ts'
-import { FIRST_LOOK_SKIPPED, attachFirstLook, stubScreenshotter } from '../src/runner/screenshot.ts'
 import { createCollector } from '../src/server/collector.ts'
-import { participantView } from '../src/server/view.ts'
+import { barView, participantView } from '../src/server/view.ts'
 import { SqliteStore } from '../src/store/sqlite.ts'
 import type { RunRow } from '../src/store/types.ts'
 import { buildTrace } from '../src/trace/build.ts'
+import { buildRecord } from '../src/record/build.ts'
 import { entryScreen, messageFor, nextScreen } from '../src/player/flow.ts'
 import { view } from './player-fixtures.ts'
 import { newRun } from './store-conformance.ts'
+import { GOAL_ORDER } from '../src/runner/sequence.ts'
 
-const purpose = 'see whether people can use what you built'
+const says = 'Send invoices and get paid on time. Free for freelancers.'
+const model = (reply: string, seen: string[] = []) => ({ complete: async (prompt: string) => { seen.push(prompt); return reply } })
 
-describe('codeImpression', () => {
-  it('names the purpose when the answer shares two content words', async () => {
-    expect(await codeImpression('to see if people can use what I built', purpose)).toBe('named the purpose')
+describe('what the page says', () => {
+  it('is the first heading, else the meta description, else og:description, with its source', () => {
+    expect(pageSays('<html><head><meta name="description" content="Send invoices."><meta property="og:description" content="og"></head><body><h1>Invoices,\n made simple</h1></body></html>')).toEqual({ says: 'Invoices, made simple', source: 'h1' })
+    expect(pageSays('<html><head><meta name="description" content=" Send invoices. "><meta property="og:description" content="og"></head><body><p>x</p></body></html>')).toEqual({ says: 'Send invoices.', source: 'meta description' })
+    expect(pageSays('<html><head><meta property="og:description" content="Invoices for freelancers"></head><body></body></html>')).toEqual({ says: 'Invoices for freelancers', source: 'og:description' })
+    expect(pageSays('<html><body><p>nothing</p></body></html>')).toBeUndefined()
   })
-  it('names it on 40% of the purpose even with one shared word', async () => {
-    // Purpose content words: invoice, send. One shared is 50%, under 2 words.
-    expect(await codeImpression('a place for invoices', 'send invoice')).toBe('named the purpose')
-    // One of five is 20%: not enough.
-    expect(await codeImpression('a place for invoices', 'send an invoice to a client quickly')).toBe('did not name it')
+
+  it('is read from the start page into the snapshot by lint -u, never from the purpose, and named when it cannot be', async () => {
+    const page = '<html><head><meta name="description" content="Send invoices and get paid on time."></head></html>'
+    const asked: string[] = []
+    const fetched = (async (url: string) => { asked.push(url); return new Response(page) }) as unknown as typeof fetch
+    const needs = { says: '/', decoys: {} }
+    const { entry, notDrafted } = await draftSnapshot({ needs, groups: [], product: 'Acme', did: 'sent an invoice', pageUrl: 'http://site.test/', fetch: fetched })
+    expect(asked).toEqual(['http://site.test/'])
+    expect(entry.says).toEqual({ from: '/', value: 'Send invoices and get paid on time.', source: 'meta description' })
+    expect(notDrafted).toEqual([])
+    const down = (async () => { throw new Error('refused') }) as unknown as typeof fetch
+    const missing = await draftSnapshot({ needs, groups: [], product: 'Acme', did: 'sent an invoice', pageUrl: 'http://site.test/', fetch: down })
+    expect(missing.entry.says).toEqual({ from: '/', value: null, source: 'not drafted' })
+    expect(missing.notDrafted).toEqual([{ item: 'firstLook.says', reason: 'http://site.test/ could not be read: refused' }])
   })
-  it('does not name it for an unrelated answer', async () => {
-    expect(await codeImpression('a blog', purpose)).toBe('did not name it')
-  })
-  it('is no answer for empty or blank text', async () => {
-    expect(await codeImpression('', purpose)).toBe('no answer')
-    expect(await codeImpression('   \n', purpose)).toBe('no answer')
-  })
-  it('lets a model code it, and falls back to the rule when the model is unclear', async () => {
-    expect(await codeImpressionWith('a blog', purpose, { complete: async () => '"named the purpose"' })).toEqual({ code: 'named the purpose', codedBy: 'model' })
-    expect(await codeImpressionWith('a blog', purpose, { complete: async () => 'hmm' })).toEqual({ code: 'did not name it', codedBy: 'rule' })
-    expect(await codeImpressionWith('a blog', purpose, { complete: async () => { throw new Error('down') } })).toEqual({ code: 'did not name it', codedBy: 'rule' })
+
+  it('compiles from the snapshot, or as written in firstLook.says, and is null until either', () => {
+    const { study, resetStudies, getStudies, task, outcome } = api
+    resetStudies()
+    study('s', { users: { did: 'sent an invoice' }, purpose: 'get paid for my work' }, () => { task('send', { path: ['/'] }, () => outcome(async () => {})) })
+    const authored = getStudies()[0]!
+    expect(compileStudy(authored, {}).impression).toMatchObject({ on: true, page: '/', says: null, source: null })
+    expect(compileStudy(authored, {}, { decoys: {}, groups: [], screens: [], says: { from: '/', value: says, source: 'og:description' } }).impression).toMatchObject({ says, source: 'og:description' })
+    // Drafted for another page, it no longer holds.
+    expect(compileStudy(authored, {}, { decoys: {}, groups: [], screens: [], says: { from: '/old', value: says, source: 'h1' } }).impression.says).toBeNull()
+    resetStudies()
+    study('s', { users: { did: 'sent an invoice' }, purpose: 'get paid for my work', firstLook: { says: 'Invoices for freelancers' } }, () => { task('send', { path: ['/'] }, () => outcome(async () => {})) })
+    const written = compileWithSnapshot(getStudies()[0]!, {})
+    expect(written.compiled.impression).toMatchObject({ says: 'Invoices for freelancers', source: 'author' })
+    expect(written.needs.says).toBeUndefined()
+    // Never the purpose.
+    expect(written.compiled.impression.says).not.toContain('paid')
   })
 })
 
-describe('the stage in the flow', () => {
-  const v = (click: boolean, asked = false) => view({ impression: { page: '/', flashMs: 500, question: 'What was that page for?', asked, click } })
-  it('goes fixation, flash, question, then the real page for the click, then the card', () => {
-    expect(nextScreen(v(true), { kind: 'impression', phase: 'fixation' }, {})).toEqual({ kind: 'impression', phase: 'flash' })
-    expect(nextScreen(v(true), { kind: 'impression', phase: 'flash' }, {})).toEqual({ kind: 'impression', phase: 'question' })
-    expect(nextScreen(v(true), { kind: 'impression', phase: 'question' }, {})).toEqual({ kind: 'impression', phase: 'click' })
-    expect(nextScreen(v(true), { kind: 'impression', phase: 'click' }, {})).toEqual({ kind: 'card' })
+describe('coding the answer, part by part, against what the page says', () => {
+  it('codes each part with the model, and gives it what the page says, not the purpose', async () => {
+    const seen: string[] = []
+    const coded = await codeTour('an invoicing tool by Acme, where you send invoices', says, model('{"what": true, "who": true, "action": true, "purpose": false}', seen))
+    expect(coded).toEqual({ parts: { what: true, who: true, action: true, purpose: false }, codedBy: 'model' })
+    expect(seen[0]).toContain(says)
+    expect(seen[0]).toContain('<answer>')
   })
-  it('ends with the question when the page is not on the target', () => {
-    expect(nextScreen(v(false), { kind: 'impression', phase: 'question' }, {})).toEqual({ kind: 'card' })
+
+  it('leaves the answer uncoded, with why, without a model, on a reply that does not parse, or when the model fails; never by a rule', async () => {
+    expect(await codeTour('an invoicing tool', says)).toEqual({ parts: null, uncoded: 'no model is configured' })
+    expect(await codeTour('an invoicing tool', says, model('yes, mostly'))).toEqual({ parts: null, uncoded: 'the model reply was not the four parts' })
+    expect(await codeTour('an invoicing tool', says, model('{"what": true}'))).toEqual({ parts: null, uncoded: 'the model reply was not the four parts' })
+    expect(await codeTour('an invoicing tool', says, { complete: async () => { throw new Error('down') } })).toEqual({ parts: null, uncoded: 'the model did not answer: down' })
+    expect(await codeTour('   ', says, model('{}'))).toEqual({ parts: null, uncoded: 'no answer' })
+    expect(await codeTour('an invoicing tool', null, model('{}'))).toEqual({ parts: null, uncoded: 'the study has no firstLook.says to code against' })
   })
-  it('resumes at the click when the question was answered and the click was not', () => {
-    expect(entryScreen({ ...v(true, true), status: 'consented' })).toEqual({ kind: 'impression', phase: 'click' })
+})
+
+describe('the tour in the flow', () => {
+  const v = (looked: boolean) => view({ status: 'consented', impression: { page: '/', prompt: 'What do you make of that page?', looked } })
+  it('goes from the look on the live page to the prompt, then the card', () => {
+    expect(nextScreen(v(false), { kind: 'impression', phase: 'look' }, {})).toEqual({ kind: 'impression', phase: 'question' })
+    expect(nextScreen(v(true), { kind: 'impression', phase: 'question' }, {})).toEqual({ kind: 'card' })
   })
-  it('sends the answer after the question and nothing from the other phases', () => {
+  it('resumes at the prompt once the page was looked at', () => {
+    expect(entryScreen(v(true))).toEqual({ kind: 'impression', phase: 'question' })
+    expect(entryScreen(v(false))).toEqual({ kind: 'impression', phase: 'look' })
+  })
+  it('sends the answer after the prompt and nothing from the look, which the bar ends', () => {
     expect(messageFor(v(true), { kind: 'impression', phase: 'question' }, { impression: 'a tool' })).toEqual({ action: 'answers', impression: 'a tool' })
-    for (const phase of ['fixation', 'flash', 'click'] as const) expect(messageFor(v(true), { kind: 'impression', phase }, {})).toBeUndefined()
+    expect(messageFor(v(false), { kind: 'impression', phase: 'look' }, {})).toBeUndefined()
   })
 })
 
@@ -65,9 +103,7 @@ let studies: Awaited<ReturnType<typeof loadBundle>>
 let store: SqliteStore
 let run: RunRow
 let collect: (request: Request) => Promise<Response>
-let path: string[]
 const endpoint = 'http://app.test/api/ui-tests'
-const png = new Uint8Array([137, 80, 78, 71, 1, 2, 3])
 
 beforeAll(async () => {
   code = (await bundleStudyFile(file)).code
@@ -76,132 +112,147 @@ beforeAll(async () => {
 beforeEach(async () => {
   store = new SqliteStore(':memory:')
   collect = createCollector({ store: async () => store, cliSecret: 'cli-secret' })
-  const compiled = compileStudy(studies[0], {})
-  path = compiled.goals[0]!.path ?? []
-  run = (await store.createRun(newRun('k', { compiled: { ...compiled, purpose, impression: { ...compiled.impression, on: true, page: '/landing' } }, hooksBundle: code }))).run
+  const compiled = compileStudy(studies[0]!, {})
+  run = (await store.createRun(newRun('k', { compiled: { ...compiled, impression: { ...compiled.impression, on: true, page: '/landing', says } }, hooksBundle: code }))).run
 })
 const post = (token: string, body: unknown) => collect(new Request(endpoint, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: JSON.stringify(body) }))
 
-describe('the picture', () => {
-  it('is taken once from the first-look page and given to every unstarted attempt', async () => {
-    const seen: string[] = []
-    const a = await store.createAttempt({ runId: run.run, participant: 'p1', goalIndex: 0, rehearsal: false })
-    const b = await store.createAttempt({ runId: run.run, participant: 'p2', goalIndex: 0, rehearsal: false })
-    expect(await attachFirstLook({ store, run, target: 'http://site.test', screenshotter: stubScreenshotter(png, seen) })).toEqual({})
-    expect(seen).toEqual(['http://site.test/landing'])
-    for (const made of [a, b]) expect(participantView(run, (await store.getAttempt(made.attempt.id))!).impression).toMatchObject({ page: '/landing', flashMs: 500, question: 'What was that page for?' })
-    // Asking again takes no second picture.
-    await attachFirstLook({ store, run, target: 'http://site.test', screenshotter: stubScreenshotter(png, seen) })
-    expect(seen).toHaveLength(1)
-  })
-
-  it('leaves the stage out of the view when none could be taken', async () => {
-    const made = await store.createAttempt({ runId: run.run, participant: 'p1', goalIndex: 0, rehearsal: false })
-    const result = await attachFirstLook({ store, run, target: 'http://site.test', screenshotter: { capture: async () => { throw new Error('no browser') } } })
-    expect(result.error).toContain('no browser')
-    expect(participantView(run, (await store.getAttempt(made.attempt.id))!).impression).toBeUndefined()
-  })
-
-  it('is served to its own attempt only, and 404 without one', async () => {
-    const mine = await store.createAttempt({ runId: run.run, participant: 'p1', goalIndex: 0, rehearsal: false })
-    const other = await store.createAttempt({ runId: run.run, participant: 'p2', goalIndex: 0, rehearsal: false })
-    await attachFirstLook({ store, run, target: 'http://site.test', screenshotter: stubScreenshotter(png) })
-    await store.updateAttempt(other.attempt.id, { answers: {} })
-    const ok = await collect(new Request(`${endpoint}?shot=first-look`, { headers: { Authorization: `Bearer ${mine.token}` } }))
-    expect(ok.status).toBe(200)
-    expect(ok.headers.get('content-type')).toBe('image/png')
-    expect(new Uint8Array(await ok.arrayBuffer())).toEqual(png)
-    expect((await collect(new Request(`${endpoint}?shot=first-look`, { headers: { Authorization: `Bearer ${other.token}` } }))).status).toBe(404)
-    expect((await collect(new Request(`${endpoint}?shot=first-look`))).status).toBe(401)
-  })
-})
-
-describe('the answer and the click', () => {
-  const click = { target: 'a.cta', url: 'http://site.test/docs/getting-started/', at: 1 }
-  async function consented() {
-    const made = await store.createAttempt({ runId: run.run, participant: 'p1', goalIndex: 0, rehearsal: false })
+describe('the tour on the server', () => {
+  async function consented(participant = 'p1') {
+    const made = await store.createAttempt({ runId: run.run, participant, goalIndex: 0, rehearsal: false })
     expect((await post(made.token, { action: 'consent' })).status).toBe(200)
     return made
   }
   const impressionOf = async (id: string) => (await store.getAttempt(id))!.answers.impression
 
-  it('stores the coded answer, then the first click beside it with onPath, and shows both in the trace', async () => {
+  it('shows the live start page, untimed, then the four-part prompt: no picture, no flash and no time limit in the view', async () => {
     const { attempt, token } = await consented()
-    expect((await post(token, { action: 'answers', firstClick: click })).status).toBe(409)
-    expect((await post(token, { action: 'answers', impression: 'to see if people can use what I built' })).status).toBe(200)
-    expect((await post(token, { action: 'answers', firstClick: click })).status).toBe(200)
-    const stored = await impressionOf(attempt.id)
-    expect(stored).toMatchObject({ text: 'to see if people can use what I built', code: 'named the purpose', codedBy: 'rule', firstClick: { target: 'a.cta', url: click.url, at: 1 } })
-    expect((stored as { firstClick: { onPath: unknown } }).firstClick.onPath).toBe(path.includes('/docs/getting-started') ? true : path.length ? false : null)
-    expect((await buildTrace(store, run.run)).attempts[0]!.impression).toEqual(stored)
+    const shown = async () => participantView(run, (await store.getAttempt(attempt.id))!)
+    expect((await shown()).impression).toEqual({ page: '/landing', prompt: "What do you make of that page? Say what it is, whose it is, what you can do there, and what it's for.", looked: false })
+    expect(barView(run, (await store.getAttempt(attempt.id))!).tour).toBe(true)
+    expect((await post(token, { action: 'answers', looked: true })).status).toBe(200)
+    expect((await shown()).impression).toMatchObject({ looked: true })
+    expect(barView(run, (await store.getAttempt(attempt.id))!).tour).toBe(false)
+    await post(token, { action: 'answers', impression: 'an invoicing tool' })
+    expect((await shown()).impression).toBeUndefined()
   })
 
-  it('is onPath when the click led to a page on the path, not when it led elsewhere or stayed on the start, and null without a path', async () => {
-    const { token, attempt } = await consented()
-    await post(token, { action: 'answers', impression: 'x' })
-    await post(token, { action: 'answers', firstClick: { target: 'a', url: 'http://site.test/elsewhere', at: 1 } })
-    expect(((await impressionOf(attempt.id)) as { firstClick: { onPath: unknown } }).firstClick.onPath).toBe(path.length ? false : null)
-  })
-
-  it('keeps the click when the answer is sent again, and keeps the first of two clicks', async () => {
+  it('stores the answer uncoded without a model, lists it in the record, and lets the author code it', async () => {
     const { attempt, token } = await consented()
-    await post(token, { action: 'answers', impression: 'first words' })
-    await post(token, { action: 'answers', firstClick: click })
-    expect((await post(token, { action: 'answers', impression: 'other words' })).status).toBe(200)
-    expect((await post(token, { action: 'answers', firstClick: { ...click, target: 'b' } })).status).toBe(200)
-    expect(await impressionOf(attempt.id)).toMatchObject({ text: 'first words', firstClick: { target: 'a.cta' } })
+    await post(token, { action: 'answers', looked: true })
+    await post(token, { action: 'answers', impression: 'an invoicing tool' })
+    expect(await impressionOf(attempt.id)).toEqual({ looked: true, text: 'an invoicing tool', parts: null, uncoded: 'no model is configured' })
+    expect((await buildTrace(store, run.run)).attempts[0]!.impression).toEqual({ text: 'an invoicing tool', parts: null, uncoded: 'no model is configured' })
+    expect((await buildRecord(store, run.run)).impression.uncoded).toEqual([{ attempt: attempt.id, reason: 'no model is configured' }])
   })
 
-  it('records no click, with the reason, when the first-look page is not on the target', async () => {
-    run = (await store.createRun(newRun('k2', { compiled: { ...run.compiled, impression: { ...run.compiled.impression, page: 'https://github.com/acme/app#readme' } }, hooksBundle: code }))).run
-    const made = await store.createAttempt({ runId: run.run, participant: 'p1', goalIndex: 0, rehearsal: false })
-    await post(made.token, { action: 'consent' })
-    await post(made.token, { action: 'answers', impression: 'a readme' })
-    expect(await impressionOf(made.attempt.id)).toMatchObject({ text: 'a readme', firstClick: null, firstClickReason: expect.stringContaining('not on the target') })
-  })
-
-  it('codes an empty answer as no answer', async () => {
-    const { attempt, token } = await consented()
-    await post(token, { action: 'answers', impression: '' })
-    expect(await impressionOf(attempt.id)).toMatchObject({ text: '', code: 'no answer' })
-  })
-
-  it('leaves the view with the click still to take after the answer, and without the stage once the click is stored', async () => {
-    const made = await store.createAttempt({ runId: run.run, participant: 'p1', goalIndex: 0, rehearsal: false })
-    await attachFirstLook({ store, run, target: 'http://site.test', screenshotter: stubScreenshotter(png) })
-    const { attempt, token } = made
-    expect((await post(token, { action: 'consent' })).status).toBe(200)
-    const shown = async () => participantView(run, (await store.getAttempt(attempt.id))!).impression
-    expect(await shown()).toMatchObject({ asked: false, click: true })
-    await post(token, { action: 'answers', impression: 'x' })
-    expect(await shown()).toMatchObject({ asked: true, click: true })
-    await post(token, { action: 'answers', firstClick: click })
-    expect(await shown()).toBeUndefined()
-  })
-})
-
-describe('when the picture cannot be taken', () => {
-  it('says so on each attempt and in the trace, so never asked is not no answer', async () => {
-    await store.createAttempt({ runId: run.run, participant: 'p1', goalIndex: 0, rehearsal: false })
-    await attachFirstLook({ store, run, target: 'http://site.test', screenshotter: { capture: async () => { throw new Error('no browser') } } })
-    const [traced] = (await buildTrace(store, run.run)).attempts
-    expect(traced!.firstLookSkipped).toBe('no browser')
-    expect(traced!.impression).toBeUndefined()
-    // A later run of recruit that can take it clears the mark.
-    await attachFirstLook({ store, run, target: 'http://site.test', screenshotter: stubScreenshotter(png) })
-    const [again] = (await buildTrace(store, run.run)).attempts
-    expect(again!.firstLookSkipped).toBeUndefined()
-    expect(again!.attempt.answers[FIRST_LOOK_SKIPPED]).toBeUndefined()
-  })
-})
-
-describe('the page of the picture', () => {
-  it('is firstLook.page, else the primary task start, as the participant view says', async () => {
-    const goals = run.compiled.goals.map((g, i) => i === 0 ? { ...g, start: '/start-here', primary: true } : { ...g, primary: false })
-    const bare = (await store.createRun(newRun('k3', { compiled: { ...run.compiled, goals, impression: { ...run.compiled.impression, page: undefined } }, hooksBundle: code }))).run
-    await store.createAttempt({ runId: bare.run, participant: 'p1', goalIndex: 0, rehearsal: false })
+  it('codes the answer per part with a model, against the study\'s says', async () => {
     const seen: string[] = []
-    await attachFirstLook({ store, run: bare, target: 'http://site.test', screenshotter: stubScreenshotter(png, seen) })
-    expect(seen).toEqual(['http://site.test/start-here'])
+    collect = createCollector({ store: async () => store, model: model('{"what": true, "who": false, "action": true, "purpose": true}', seen) })
+    const { attempt, token } = await consented()
+    await post(token, { action: 'answers', looked: true })
+    await post(token, { action: 'answers', impression: 'a place to send invoices' })
+    expect(await impressionOf(attempt.id)).toEqual({ looked: true, text: 'a place to send invoices', parts: { what: true, who: false, action: true, purpose: true }, codedBy: 'model' })
+    expect(seen[0]).toContain(says)
+    expect((await buildRecord(store, run.run)).impression).toMatchObject({ answered: 1, coded: 1, parts: { what: 1, who: 0, action: 1, purpose: 1 } })
+  })
+
+  it('codes with the model the run pins from the config, through the server\'s own key, and says which is missing', async () => {
+    const pinned = (await store.createRun(newRun('pinned', { compiled: { ...run.compiled, model: { provider: 'anthropic', name: 'claude-sonnet-5-5' } }, hooksBundle: code }))).run
+    collect = createCollector({ store: async () => store, env: {} })
+    const made = await store.createAttempt({ runId: pinned.run, participant: 'p1', goalIndex: 0, rehearsal: false })
+    await post(made.token, { action: 'consent' })
+    await post(made.token, { action: 'answers', looked: true })
+    await post(made.token, { action: 'answers', impression: 'an invoicing tool' })
+    expect(await impressionOf(made.attempt.id)).toMatchObject({ parts: null, uncoded: 'model is set in ui-tests.config.ts but ANTHROPIC_API_KEY is not in the environment' })
+    // A server that promises no model call (a local-only run) keeps the answer uncoded, with that reason.
+    collect = createCollector({ store: async () => store, noModel: 'a local-only run makes no model call' })
+    const local = await store.createAttempt({ runId: pinned.run, participant: 'p2', goalIndex: 0, rehearsal: false })
+    await post(local.token, { action: 'consent' })
+    await post(local.token, { action: 'answers', looked: true })
+    await post(local.token, { action: 'answers', impression: 'an invoicing tool' })
+    expect(await impressionOf(local.attempt.id)).toMatchObject({ parts: null, uncoded: 'a local-only run makes no model call' })
+  })
+
+  it('never calls the model for a local-only run, even on a server that was already running with one', async () => {
+    const seen: string[] = []
+    collect = createCollector({ store: async () => store, model: model('{"what": true, "who": true, "action": true, "purpose": true}', seen) })
+    const local = (await store.createRun(newRun('local', { compiled: run.compiled, hooksBundle: code, reachability: { url: 'http://localhost:3000', reachable: true, checkedAt: new Date(0).toISOString(), mode: 'link', localOnly: true } }))).run
+    const made = await store.createAttempt({ runId: local.run, participant: 'p1', goalIndex: 0, rehearsal: false })
+    await post(made.token, { action: 'consent' })
+    await post(made.token, { action: 'answers', looked: true })
+    await post(made.token, { action: 'answers', impression: 'an invoicing tool' })
+    expect(seen).toHaveLength(0)
+    expect(await impressionOf(made.attempt.id)).toMatchObject({ text: 'an invoicing tool', parts: null, uncoded: 'a local-only run makes no model call' })
+  })
+
+  it('takes a spoken answer to the prompt, codes its words, and keeps the audio', async () => {
+    const { attempt, token } = await consented()
+    await post(token, { action: 'answers', looked: true })
+    expect((await post(token, { action: 'voice', question: 'impression', audio: 'AAAA', contentType: 'audio/webm', transcript: 'it is for invoices' })).status).toBe(200)
+    const answers = (await store.getAttempt(attempt.id))!.answers
+    expect(answers.impression).toMatchObject({ looked: true, text: 'it is for invoices', parts: null })
+    expect(typeof answers['impression.voice']).toBe('string')
+  })
+
+  it('calls the model only while the first look is waiting for its answer, typed or spoken', async () => {
+    const seen: string[] = []
+    collect = createCollector({ store: async () => store, model: model('{"what": true, "who": true, "action": true, "purpose": true}', seen) })
+    const { attempt, token } = await consented()
+    expect((await post(token, { action: 'answers', impression: 'too soon' })).status).toBe(409)
+    expect((await post(token, { action: 'voice', question: 'impression', audio: 'AAAA', contentType: 'audio/webm', transcript: 'too soon' })).status).toBe(409)
+    expect(seen).toHaveLength(0)
+    await post(token, { action: 'answers', looked: true })
+    await post(token, { action: 'answers', impression: 'first words' })
+    expect(seen).toHaveLength(1)
+    expect((await post(token, { action: 'answers', impression: 'again' })).status).toBe(200)
+    expect((await post(token, { action: 'voice', question: 'impression', audio: 'AAAA', contentType: 'audio/webm', transcript: 'again' })).status).toBe(409)
+    expect(seen).toHaveLength(1)
+    expect(await impressionOf(attempt.id)).toMatchObject({ text: 'first words' })
+  })
+
+  it('takes the answer once, and only after the look', async () => {
+    const { attempt, token } = await consented()
+    expect((await post(token, { action: 'answers', impression: 'too soon' })).status).toBe(409)
+    await post(token, { action: 'answers', looked: true })
+    await post(token, { action: 'answers', impression: 'first words' })
+    expect((await post(token, { action: 'answers', impression: 'other words' })).status).toBe(200)
+    expect(await impressionOf(attempt.id)).toMatchObject({ text: 'first words' })
+  })
+
+  it('is asked once per person, before their first goal only', async () => {
+    const compiled = run.compiled
+    const second = (await store.createRun(newRun('two', { compiled: { ...compiled, goals: compiled.goals.slice(0, 2) }, hooksBundle: code }))).run
+    const later = await store.createAttempt({ runId: second.run, participant: 'p', goalIndex: 1, rehearsal: false })
+    await store.updateAttempt(later.attempt.id, { status: 'consented', answers: { [GOAL_ORDER]: [0, 1] } })
+    expect(participantView(second, (await store.getAttempt(later.attempt.id))!).impression).toBeUndefined()
+  })
+})
+
+describe('each task\'s first click', () => {
+  it('is read from that task\'s own events, on its own start page, against its own path', async () => {
+    const made = await store.createAttempt({ runId: run.run, participant: 'p1', goalIndex: 0, rehearsal: false })
+    await store.updateAttempt(made.attempt.id, { status: 'finished', reason: 'done', startedAt: new Date(0).toISOString(), endedAt: new Date(9_000).toISOString(), verification: { status: 'correct', steps: [] } })
+    const path = run.compiled.goals[0]!.path!
+    await store.appendEvents(made.attempt.id, [
+      { type: 'url', at: 0, url: `http://site.test${path[0]}`, seq: 1 },
+      { type: 'click', at: 1000, url: `http://site.test${path[0]}`, target: 'a.cta', seq: 2 },
+      { type: 'url', at: 1100, url: `http://site.test${path[1]}`, seq: 3 },
+    ])
+    expect((await buildTrace(store, run.run)).attempts[0]!.firstClick).toEqual({ target: 'a.cta', url: `http://site.test${path[1]}`, onPath: true, at: 1000 })
+    expect((await buildRecord(store, run.run)).measures.byGoal['0']!.firstClick).toEqual({ onPath: 1, offPath: 0, of: 1 })
+  })
+
+  it('takes only the address its own click led to, not one a later click led to', async () => {
+    const made = await store.createAttempt({ runId: run.run, participant: 'p1', goalIndex: 0, rehearsal: false })
+    await store.updateAttempt(made.attempt.id, { status: 'finished', reason: 'done', startedAt: new Date(0).toISOString(), endedAt: new Date(9_000).toISOString(), verification: { status: 'correct', steps: [] } })
+    const path = run.compiled.goals[0]!.path!
+    await store.appendEvents(made.attempt.id, [
+      { type: 'url', at: 0, url: `http://site.test${path[0]}`, seq: 1 },
+      { type: 'click', at: 1000, url: `http://site.test${path[0]}`, target: 'p.text', seq: 2 },
+      { type: 'click', at: 2000, url: `http://site.test${path[0]}`, target: 'a.cta', seq: 3 },
+      { type: 'url', at: 2100, url: `http://site.test${path[1]}`, seq: 4 },
+    ])
+    expect((await buildTrace(store, run.run)).attempts[0]!.firstClick).toEqual({ target: 'p.text', url: `http://site.test${path[0]}`, onPath: false, at: 1000 })
   })
 })

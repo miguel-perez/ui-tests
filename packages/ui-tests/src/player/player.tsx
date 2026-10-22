@@ -1,15 +1,12 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { GROUP_FULL } from '../copy.ts'
 import type { ParticipantView } from '../server/view.ts'
 import { entryScreen, messageFor, nextScreen } from './flow.ts'
 import { beginAndHandOff, rememberBypass, withBypass } from './handoff.ts'
 import type { Screen } from './flow.ts'
 import { PlayerScreen } from './screens.tsx'
-
-const FIXATION_MS = 800
-/** If the picture has not loaded by now the first look is dropped: the stage moves on rather than waiting for ever. */
-const FLASH_LOAD_LIMIT_MS = 5000
 
 /**
  * The participant's own page: consent, the scenario card, and the questions after the task. White-labelled by default. `endpoint` is
@@ -23,7 +20,6 @@ export function Player({ runId, endpoint = '/api/ui-tests/' }: { runId: string; 
   const [error, setError] = useState<string>()
   const token = useRef<string | null>(null)
   const bypass = useRef<string | undefined>(undefined)
-  const flash = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const request = (init?: { method: string; body: string }) => {
     const query = new URLSearchParams({ run: runId })
@@ -45,41 +41,15 @@ export function Player({ runId, endpoint = '/api/ui-tests/' }: { runId: string; 
       .then((next) => {
         if (!alive) return
         setView(next)
-        // Back from the first click on the author's own page: the first look is over, so the card follows rather than the practice screen.
+        // Back from the tour of the author's own page: the prompt follows, or the card once it is answered, never the practice again.
         const back = new URLSearchParams(window.location.search).get('after') === 'first-look'
-        setScreen(back && next.status === 'consented' ? { kind: 'card' } : entryScreen(next))
+        setScreen(back && next.status === 'consented' && !next.impression ? { kind: 'card' } : entryScreen(next))
       })
       .catch(() => { if (alive) setError('This link is not valid any more.') })
     return () => { alive = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [runId])
 
-  // The first look: a fixation mark (the picture loads behind it), then the picture for a moment.
-  useEffect(() => {
-    if (!view || screen?.kind !== 'impression' || screen.phase !== 'fixation') return
-    const preload = new Image()
-    preload.src = `${endpoint}?run=${encodeURIComponent(view.run)}&shot=first-look`
-    const timer = setTimeout(() => setScreen((s) => (s ? nextScreen(view, s, answers) : s)), FIXATION_MS)
-    return () => clearTimeout(timer)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen, view])
-  useEffect(() => {
-    if (!view || screen?.kind !== 'impression' || screen.phase !== 'flash') return
-    // A first look with no picture to show is dropped whole: the card comes next, with no question and no click. Leaving the phase cancels this.
-    const limit = setTimeout(() => { clearTimeout(flash.current); setScreen({ kind: 'card' }) }, FLASH_LOAD_LIMIT_MS)
-    return () => clearTimeout(limit)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen, view])
-  useEffect(() => () => clearTimeout(flash.current), [])
-  // The first click is taken on the author's own page by the bar there; this page hands the person over to it.
-  // Once: a new view on the same screen does not ask for a second code. The button on the screen asks again if this one failed.
-  const handedOff = useRef(false)
-  useEffect(() => {
-    if (!view || screen?.kind !== 'impression' || screen.phase !== 'click' || handedOff.current) return
-    handedOff.current = true
-    void handoff().catch(() => setError('That did not go through. Check your connection and try again.'))
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [screen, view])
 
   /** The screen after `current`; once a goal's last answer is in and the person has a next goal, the view is that goal's, and its card comes next. */
   function following(before: ParticipantView, updated: ParticipantView | undefined, current: Screen): Screen {
@@ -115,8 +85,10 @@ export function Player({ runId, endpoint = '/api/ui-tests/' }: { runId: string; 
         window.history.replaceState(null, '', window.location.pathname)
       }
       setScreen(following(view, updated, current))
-    } catch {
-      setError('That did not go through. Check your connection and try again.')
+    } catch (error) {
+      // A person whose group is already full is thanked, not asked to try again.
+      if (current.kind === 'consent' && error instanceof Error && error.message === GROUP_FULL) setScreen({ kind: 'full' })
+      else setError('That did not go through. Check your connection and try again.')
     } finally {
       setBusy(false)
     }
@@ -183,18 +155,6 @@ export function Player({ runId, endpoint = '/api/ui-tests/' }: { runId: string; 
       onStart={() => void start()}
       onWithdraw={() => void withdraw()}
       onVoice={(id, blob, typed) => void voice(screen, id, blob, typed)}
-      onFlashLoaded={() => {
-        clearTimeout(flash.current)
-        performance.mark('first-look:flash-start')
-        flash.current = setTimeout(() => {
-          performance.mark('first-look:flash-end')
-          setScreen((s) => (s?.kind === 'impression' && s.phase === 'flash' ? nextScreen(view, s, answers) : s))
-        }, view.impression?.flashMs ?? 500)
-      }}
-      onFlashFailed={() => {
-        clearTimeout(flash.current)
-        setScreen({ kind: 'card' })
-      }}
       onOpenPage={() => void handoff().catch(() => setError('That did not go through. Check your connection and try again.'))}
       busy={busy}
       error={error}

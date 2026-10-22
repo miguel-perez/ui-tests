@@ -40,6 +40,26 @@ export function resultFigures(attempts: (Countable & { goalIndex: number; verifi
   return { attempted: counted.length, reached: with_('correct'), failed: with_('incorrect'), unknown: with_('unknown') }
 }
 
+/** A group's own figures: its name and quota, and its people's attempts read by the same rule as the run's. */
+export type GroupFigures = ResultFigures & { name: string; quota: number }
+
+/**
+ * The result figures of each group of a study that samples several, read from its own people only (a person's group is what the screener
+ * made of them, carried by any of their attempts); undefined for a study of one group, which reads as one.
+ */
+export function groupFigures(
+  attempts: (Countable & { goalIndex: number; participant: string; answers: Record<string, unknown>; verification?: { status: string } | null })[],
+  groups: { name: string; quota: number }[], primary: number, complete: boolean,
+): GroupFigures[] | undefined {
+  if (groups.length <= 1) return undefined
+  const groupOf = new Map<string, string>()
+  for (const a of attempts) {
+    const group = (a.answers.screenerResult as { group?: unknown } | undefined)?.group
+    if (typeof group === 'string') groupOf.set(a.participant, group)
+  }
+  return groups.map(g => ({ name: g.name, quota: g.quota, ...resultFigures(attempts.filter(a => groupOf.get(a.participant) === g.name), primary, complete) }))
+}
+
 /**
  * Brings a run's states and result in line with its attempts and the deadline. Only attempts that are not rehearsals, passed the
  * link screener (which asks and filters nobody; they began), were not withdrawn or disconnected, and were verified count toward n. A rehearsal never changes the result.

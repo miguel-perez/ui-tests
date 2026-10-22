@@ -1,116 +1,80 @@
-import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
 import { buildTrace } from '../../packages/ui-tests/src/trace/build.ts'
 import { PRODUCT_URL, barOf, createRehearsalRun } from './helpers'
 
 /**
- * The first look at run time (Task 20): a fixation point, a picture of the start page for 500 ms, "What was that page for?" with
- * nothing about the purpose on screen, then the real page for one click, taken by the SDK on the author's own site. The picture is taken by the runner (a stub here) and
- * served by the collector; the participant's page never loads the page itself.
+ * The first look at run time, a home page tour (issue #81): the start page live on the author's own site, untimed, where the person
+ * can scroll and nothing can be clicked, then one open prompt, "What do you make of that page? …", with nothing about the purpose on
+ * screen. No picture is taken and no page is framed.
  */
 
 const fixture = (name: string) => join(import.meta.dirname, 'fixtures', name)
-const shot = new Uint8Array(readFileSync(fixture('first-look.png')))
+const TOURING = "Have a look around. Scroll if you like; don't click anything yet."
 
 test.use({ reducedMotion: 'reduce' })
 
-/** The marks the player leaves around the flash, read back from the page. */
-const flashSpan = (page: Page) => page.evaluate(() => {
-  const at = (name: string) => performance.getEntriesByName(name)[0]?.startTime
-  return { start: at('first-look:flash-start'), end: at('first-look:flash-end') }
-})
-
-test('shows a fixation point, the picture for 500 ms, the open question, then the picture for one click', async ({ page }) => {
-  const { playerUrl, runId } = await createRehearsalRun(fixture('first-look.ui.test.ts'), { shot })
+test('tours the live start page with nothing clickable, then asks the four-part prompt, then the card', async ({ page }) => {
+  const { playerUrl, runId } = await createRehearsalRun(fixture('first-look.ui.test.ts'))
   const framed: string[] = []
   page.on('frameattached', frame => framed.push(frame.url()))
   await page.goto(playerUrl)
   await page.getByRole('button', { name: 'I agree and continue' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Get ready' })).toBeAttached()
-  await expect(page.locator('.pl-fix')).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Before your task, have a look at a page' })).toBeVisible()
+  await expect(page.locator('body')).not.toContainText(/plan the week/i)
+  await page.getByRole('button', { name: 'Open the page' }).click()
 
-  const question = page.getByRole('heading', { name: 'What was that page for?' })
-  await expect(question).toBeVisible()
-  const { start, end } = await flashSpan(page)
-  // The marks are the player's own: the picture loaded, stayed for the flash, and was taken away.
-  expect(start).toBeDefined()
-  expect(end).toBeDefined()
-  expect(Math.abs((end! - start!) - 500)).toBeLessThan(100)
+  // The real page, with a bar that says what to do and one button; a click on the page goes nowhere, and scrolling still works.
+  await page.waitForURL(`${PRODUCT_URL}/`)
+  const bar = barOf(page, TOURING)
+  await expect(bar).toBeVisible()
+  await expect(bar.getByRole('button')).toHaveCount(1)
+  await page.getByRole('link', { name: 'Get started' }).first().click()
+  await page.waitForTimeout(300)
+  expect(page.url()).toBe(`${PRODUCT_URL}/`)
+  await page.mouse.wheel(0, 600)
+  await expect.poll(() => page.evaluate(() => window.scrollY)).toBeGreaterThan(0)
+  await bar.getByRole('button', { name: "I've had a look" }).click()
 
-  // Nothing about the purpose is on screen while the question is asked.
+  await page.waitForURL(/\/ui-tests\/[^/]+\/\?after=first-look/)
+  await expect(page.getByRole('heading', { name: "What do you make of that page? Say what it is, whose it is, what you can do there, and what it's for." })).toBeVisible()
   await expect(page.locator('body')).not.toContainText(/plan the week/i)
   await expect(page.locator('img')).toHaveCount(0)
-  await page.getByRole('textbox').fill('To plan the week together with a team')
+  await page.getByRole('textbox').fill('A site for testing what you built with real people')
   await page.getByRole('button', { name: 'Continue' }).click()
-
-  // The real page, with a one-line bar that has no Done and no way out; the first real click is recorded and the person goes back for the card.
-  await page.waitForURL(`${PRODUCT_URL}/`)
-  const bar = barOf(page, 'Click where you would start.')
-  await expect(bar).toBeVisible()
-  await expect(bar.getByRole('button')).toHaveCount(0)
-  await page.getByRole('link', { name: 'Get started' }).first().click()
-  await page.waitForURL(/\/ui-tests\/[^/]+\/\?after=first-look/)
   await expect(page.getByRole('heading', { name: 'Your task' })).toBeVisible()
   expect(framed).toEqual([])
 
   const store = await openStore()
   try {
     const [stored] = (await buildTrace(store, runId)).attempts
-    expect(stored!.impression).toMatchObject({ text: 'To plan the week together with a team', code: 'named the purpose', codedBy: 'rule' })
-    expect(stored!.impression!.firstClick).toMatchObject({ onPath: true, url: `${PRODUCT_URL}/docs/getting-started/` })
-    expect(stored!.impression!.firstClick!.target).toMatch(/a/)
+    // The server runs without a model here: the answer is kept uncoded, for the author to code in the trace.
+    expect(stored!.impression).toEqual({ text: 'A site for testing what you built with real people', parts: null, uncoded: 'no model is configured' })
   } finally { await store.close() }
 })
 
-test('keyboard: Tab to a link and Enter records that element, not a position', async ({ page }) => {
-  const { playerUrl, runId } = await createRehearsalRun(fixture('first-look.ui.test.ts'), { shot })
-  await page.goto(playerUrl)
-  await page.getByRole('button', { name: 'I agree and continue' }).click()
-  await page.getByRole('textbox').fill('A planner')
-  await page.getByRole('button', { name: 'Continue' }).click()
-  await page.waitForURL(`${PRODUCT_URL}/`)
-  // The bar is the sign that the first click is being taken; an Enter pressed before the page has mounted it is the page's own, and
-  // simply follows the link.
-  await expect(barOf(page, 'Click where you would start.')).toBeVisible()
-  const link = page.getByRole('link', { name: 'Get started' }).first()
-  await link.focus()
-  await page.keyboard.press('Enter')
-  await expect(page.getByRole('heading', { name: 'Your task' })).toBeVisible()
-  const store = await openStore()
-  try {
-    const click = (await buildTrace(store, runId)).attempts[0]!.impression!.firstClick
-    expect(click).toMatchObject({ onPath: true })
-    expect(Object.keys(click!).sort()).toEqual(['at', 'onPath', 'target', 'url'])
-  } finally { await store.close() }
-})
-
-test('a first look on a page that is not the target ends with the question, and no click is recorded', async ({ page }) => {
-  const { playerUrl, runId } = await createRehearsalRun(fixture('readme-first-look.ui.test.ts'), { shot })
-  await page.goto(playerUrl)
-  await page.getByRole('button', { name: 'I agree and continue' }).click()
-  await page.getByRole('textbox').fill('A readme')
-  await page.getByRole('button', { name: 'Continue' }).click()
-  await expect(page.getByRole('heading', { name: 'Your task' })).toBeVisible()
-  const store = await openStore()
-  try {
-    expect((await buildTrace(store, runId)).attempts[0]!.impression).toMatchObject({ text: 'A readme', firstClick: null, firstClickReason: expect.stringContaining('not on the target') })
-  } finally { await store.close() }
-})
-
-test('is skipped when firstLook is false', async ({ page }) => {
-  const { playerUrl } = await createRehearsalRun(fixture('no-first-look.ui.test.ts'), { shot })
-  await page.goto(playerUrl)
-  await page.getByRole('button', { name: 'I agree and continue' }).click()
-  await expect(page.getByRole('heading', { name: 'Your task' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'What was that page for?' })).toHaveCount(0)
-})
-
-test('is skipped when no picture of the page could be taken', async ({ page }) => {
+test('keyboard: Enter on a link while touring does nothing, and the bar\'s button ends the look', async ({ page }) => {
   const { playerUrl } = await createRehearsalRun(fixture('first-look.ui.test.ts'))
   await page.goto(playerUrl)
   await page.getByRole('button', { name: 'I agree and continue' }).click()
+  await page.getByRole('button', { name: 'Open the page' }).click()
+  await page.waitForURL(`${PRODUCT_URL}/`)
+  await expect(barOf(page, TOURING)).toBeVisible()
+  const link = page.getByRole('link', { name: 'Get started' }).first()
+  await link.focus()
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(300)
+  expect(page.url()).toBe(`${PRODUCT_URL}/`)
+  await barOf(page, TOURING).getByRole('button', { name: "I've had a look" }).press('Enter')
+  await expect(page.getByRole('heading', { name: /What do you make of that page/ })).toBeVisible()
+})
+
+test('is skipped when firstLook is false', async ({ page }) => {
+  const { playerUrl } = await createRehearsalRun(fixture('no-first-look.ui.test.ts'))
+  await page.goto(playerUrl)
+  await page.getByRole('button', { name: 'I agree and continue' }).click()
   await expect(page.getByRole('heading', { name: 'Your task' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Before your task, have a look at a page' })).toHaveCount(0)
 })

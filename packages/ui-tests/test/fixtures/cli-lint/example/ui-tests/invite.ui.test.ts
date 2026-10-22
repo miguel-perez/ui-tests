@@ -6,11 +6,12 @@ study('invite flow', {
     did: 'used a shared tool to plan work with a team',
     within: '3 months',
     uses: ['Trello', 'Asana', 'Notion', 'Linear'],
-    not: ['has used Weekboard'],
+    not: ['I have used Weekboard'],
   },
   purpose: 'plan the week together without emailing screenshots around',
   sample: { affecting: 1 / 3, confidence: 0.85 }, // five people
   record: 'video',
+  firstLook: { page: '/' }, // the start comes from setup, behind a sign-in: tour the public home page
 }, () => {
   // Each attempt gets its own signed-in board. A .example address is never delivered.
   setup(async ({ request }) => {
@@ -20,7 +21,6 @@ study('invite flow', {
   task('invite a colleague', {
     path: ['/board', '/settings/members'],
     timeLimit: '3 min',
-    firstLook: { page: '/' },
   }, () => {
     outcome(async ({ request, setup }) => {
       const invitations = await (await request.get(`/api/test/boards/${setup.board}/invitations`)).json()

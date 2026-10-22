@@ -1,6 +1,7 @@
 import { request as httpRequest } from 'node:http'
 import { request as httpsRequest } from 'node:https'
 import { isLoopbackHost } from '../runner/hosts.ts'
+import { LOCAL_NO_MODEL } from '../copy.ts'
 import { startServer } from '../server/http.ts'
 import type { RunStore } from '../store/types.ts'
 import { moduleTranscriber } from '../transcriber.ts'
@@ -94,10 +95,13 @@ export async function answersAsServer(url: string, fetcher?: typeof fetch): Prom
   try { return (JSON.parse(body ?? '') as { name?: unknown } | null)?.name === 'ui-tests' } catch { return false }
 }
 
-/** What a server the CLI starts runs with: the command's store, and the transcriber and secrets of its environment. */
-const serverOptions = (store: RunStore, env: Io['env']) => ({
+export { LOCAL_NO_MODEL }
+
+/** What a server the CLI starts runs with: the command's store, and the transcriber and secrets of its environment; no model when local only. */
+const serverOptions = (store: RunStore, env: Io['env'], localOnly = false) => ({
   store: async () => store,
   transcriber: moduleTranscriber(() => env.UI_TESTS_TRANSCRIBER),
+  ...(localOnly ? { noModel: LOCAL_NO_MODEL } : { env }),
   ...(env.UI_TESTS_CLI_SECRET && { cliSecret: env.UI_TESTS_CLI_SECRET }),
   ...(env.UI_TESTS_SHARE_SECRET && { shareSecret: env.UI_TESTS_SHARE_SECRET }),
 })
@@ -116,7 +120,7 @@ export const startDoorServer = (input: { store: RunStore; io: Io }): Promise<{ u
  * `bind` (loopback by default), and `close` stops it. Anything else throws `ServerUnreachable`: a server elsewhere is never started
  * for you, and a port another service holds is never taken.
  */
-export async function ensureServer(input: { url: string; store: RunStore; io: Io; bind?: string; fetch?: typeof fetch }): Promise<{ url: string; started: boolean; close(): Promise<void> }> {
+export async function ensureServer(input: { url: string; store: RunStore; io: Io; bind?: string; fetch?: typeof fetch; localOnly?: boolean }): Promise<{ url: string; started: boolean; close(): Promise<void> }> {
   const url = input.url.replace(/\/+$/, '')
   if (await answersAsServer(url, input.fetch)) return { url, started: false, close: async () => {} }
   let address: URL
@@ -124,7 +128,7 @@ export async function ensureServer(input: { url: string; store: RunStore; io: Io
   if (address.protocol !== 'http:' || !isLoopbackHost(address.hostname.replace(/^\[|\]$/g, ''))) throw new ServerUnreachable(url)
   let server: Awaited<ReturnType<typeof startServer>>
   try {
-    server = await startServer({ ...serverOptions(input.store, input.io.env), port: Number(address.port || 80), host: input.bind ?? '127.0.0.1', publicUrl: url })
+    server = await startServer({ ...serverOptions(input.store, input.io.env, input.localOnly), port: Number(address.port || 80), host: input.bind ?? '127.0.0.1', publicUrl: url })
   } catch { throw new ServerUnreachable(url) }
   input.io.stderr.write(`Started the ui-tests server on ${url}\n`)
   return { url, started: true, close: () => server.close() }

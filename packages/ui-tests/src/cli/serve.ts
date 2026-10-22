@@ -74,6 +74,7 @@ export const serve: Command = async (args, io) => {
       port,
       host: bindFlag ?? '0.0.0.0',
       transcriber: moduleTranscriber(() => env.UI_TESTS_TRANSCRIBER),
+      env,
       ...(publicUrl && { publicUrl }),
       ...(env.UI_TESTS_CLI_SECRET && { cliSecret: env.UI_TESTS_CLI_SECRET }),
       ...(env.UI_TESTS_SHARE_SECRET && { shareSecret: env.UI_TESTS_SHARE_SECRET }),

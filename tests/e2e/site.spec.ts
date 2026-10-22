@@ -389,7 +389,7 @@ for (const width of [1440, 375]) test(`what you write, what they see: the comman
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true)
   }
   // The stepped frames keep one height through every step, by the sheet's own Next and by the control under the frame.
-  for (const [id, count, step] of [['screener', 6, 2], ['after', 5, 6]] as const) {
+  for (const [id, count, step] of [['screener', 3, 2], ['after', 5, 6]] as const) {
     await tabs.nth(step - 1).click()
     const row = section.locator(`#piece-${id}`), frame = row.locator('.compile-frame'), stepper = row.locator('.stepper')
     // The tab's panel finishes switching before the frame is measured; on a slow runner it can lag the click.

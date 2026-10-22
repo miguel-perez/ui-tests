@@ -1,8 +1,8 @@
 import type { ScreenerResult } from '../derive/screener.ts'
+import type { TourCode } from '../derive/code-impression.ts'
 import { fillScenario } from '../derive/scenario.ts'
-import { sampleSentence, sentence } from '../derive/sentence.ts'
-import { FIRST_LOOK_SKIPPED } from '../runner/screenshot.ts'
-import { resultComplete, resultFigures } from '../runner/progress.ts'
+import { sentence } from '../derive/sentence.ts'
+import { groupFigures, resultComplete, resultFigures } from '../runner/progress.ts'
 import { primaryGoalIndex } from '../runner/sequence.ts'
 import { videoSegments, type VideoSegments } from '../video.ts'
 import { highlightReel, type ReelMoment } from './reel.ts'
@@ -12,14 +12,14 @@ import { attemptSignals, type Signal } from '../signals.ts'
 import { inForce, numbered, type NumberedRevision, type Revision } from '../revisions.ts'
 import type { AttemptRow, RecordedEvent, RunRow, RunStore, Verification } from '../store/types.ts'
 
-export type ImpressionResult = {
-  text: string
-  code: 'named the purpose' | 'did not name it' | 'no answer'
-  codedBy: 'rule' | 'model' | 'author'
-  /** The first real click: the element, the address it led to, whether that is on the task's path (null: the task has no path), and when. Null when no click was asked, with the reason beside it. */
-  firstClick?: { target: string; url: string; onPath: boolean | null; at: number } | null
-  firstClickReason?: string
-}
+/**
+ * What a person made of the start page on the first look: their words, and each part coded against what the page says (what it is, who
+ * it is from, an action, its purpose) by the model or the author; `parts` is null and `uncoded` says why when nobody has coded it yet.
+ */
+export type ImpressionResult = { text: string; parts: TourCode | null; codedBy?: 'model' | 'author'; uncoded?: string }
+
+/** The first click of a task, on its own start page: the element, the address it led to, whether that is on the task's path (null: the task has no path), and when. */
+export type FirstClick = { target: string; url: string; onPath: boolean | null; at: number }
 
 export type TraceAttempt = {
   attempt: AttemptRow
@@ -41,12 +41,12 @@ export type TraceAttempt = {
   snapshotUrl?: string
   verification?: Verification
   signals: Signal[]
-  /** What the screener made of this person: whether they match the users, which rules they fell outside, and how well they fit the purpose. Absent when none was asked. */
+  /** What the screener made of this person: their group, each criterion's value and whether it was met, and the option order they saw. Absent when none was asked. */
   screener?: ScreenerResult
-  /** What the person said the page was for, how that was coded, and where they first clicked. Absent when the first look was off or unanswered. */
+  /** What the person made of the start page on the first look, and how it was coded. Absent when the first look was off or unanswered. */
   impression?: ImpressionResult
-  /** Why the first look was not asked of this person (its picture could not be taken). Absent when it was asked, or is off. */
-  firstLookSkipped?: string
+  /** The task's first click, on its own start page. Absent when nobody clicked. */
+  firstClick?: FirstClick
   timings: { onGoalMs?: number }
 }
 
@@ -68,18 +68,41 @@ export type Trace = {
 /** The screener's reading of a person, as the collector stored it with their answers. */
 function screenerOf(attempt: AttemptRow): ScreenerResult | undefined {
   const stored = attempt.answers.screenerResult as ScreenerResult | undefined
-  return stored && typeof stored.matches === 'boolean' ? stored : undefined
+  return stored && typeof stored === 'object' && 'criteria' in stored ? stored : undefined
 }
 
-/** The first look's answer as the collector stored it with its code. */
-function impressionOf(attempt: AttemptRow, recoded: Map<string, ImpressionResult['code']>): ImpressionResult | undefined {
-  const stored = attempt.answers.impression as ImpressionResult | undefined
-  if (!stored || typeof stored !== 'object' || typeof stored.code !== 'string') return undefined
-  const code = recoded.get(attempt.id)
-  return code ? { ...stored, code, codedBy: 'author' } : stored
+/** The first look's answer as the collector stored it, with the author's own coding in place of the model's. */
+function impressionOf(attempt: AttemptRow, recoded: Map<string, TourCode>): ImpressionResult | undefined {
+  const stored = attempt.answers.impression as (ImpressionResult & { looked?: boolean }) | undefined
+  if (!stored || typeof stored !== 'object' || typeof stored.text !== 'string') return undefined
+  const parts = recoded.get(attempt.id)
+  const { text, uncoded, codedBy } = stored
+  if (parts) return { text, parts, codedBy: 'author' }
+  return { text, parts: stored.parts ?? null, ...(codedBy && { codedBy }), ...(uncoded && !stored.parts && { uncoded }) }
 }
 
 const pathOf = (url: string) => new URL(url, 'http://placeholder').pathname.replace(/(.)\/$/, '$1')
+
+/**
+ * The task's first click on its own start page, and whether the address it led to is on the task's path: the page the next address
+ * event names, else the page it was made on. Null when the task has no path; a click that stays on the start of a path that goes on
+ * has not moved along it.
+ */
+export function firstClickOf(events: RecordedEvent[], path: string[] | undefined, start: string): FirstClick | undefined {
+  const index = events.findIndex(e => e.type === 'click')
+  const click = events[index]
+  if (!click) return undefined
+  // Only an address before the next click is this click's: a later one was led to by another click.
+  const after = events.slice(index + 1)
+  const next = after.findIndex(e => e.type === 'click')
+  const led = (next < 0 ? after : after.slice(0, next)).find(e => e.type === 'url')?.url ?? click.url
+  let onPath: boolean | null = null
+  if (path) {
+    const there = pathOf(led)
+    onPath = path.length > 1 && there === pathOf(start) ? false : path.some(p => pathOf(p) === there)
+  }
+  return { target: click.target ?? '', url: led, onPath, at: click.at }
+}
 
 function visited(events: RecordedEvent[]): string[] {
   const pages: string[] = []
@@ -99,8 +122,8 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
   const rows = await store.listAttempts(runId)
   const revisions = await store.listRevisions(runId)
   const inEffect = inForce(revisions)
-  const recoded = new Map<string, ImpressionResult['code']>()
-  for (const { revision } of inEffect) if (revision.kind === 'code-impression') recoded.set(revision.attempt, revision.code)
+  const recoded = new Map<string, TourCode>()
+  for (const { revision } of inEffect) if (revision.kind === 'code-impression') recoded.set(revision.attempt, revision.parts)
   const attempts: TraceAttempt[] = []
   for (const attempt of rows) {
     const goal = compiled.goals[attempt.goalIndex]
@@ -113,6 +136,7 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
     const started = attempt.startedAt ? Date.parse(attempt.startedAt) : undefined
     const ended = attempt.endedAt ? Date.parse(attempt.endedAt) : undefined
     const signals = goal ? attemptSignals({ attempt, events, goal, ...(verification && { verification }) }) : []
+    const firstClick = goal ? firstClickOf(events, goal.path, typeof attempt.setupValues.start === 'string' ? attempt.setupValues.start : goal.start) : undefined
     attempts.push({
       attempt,
       events,
@@ -125,7 +149,7 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
       ...(verification && { verification }),
       ...(screenerOf(attempt) && { screener: screenerOf(attempt)! }),
       ...(impressionOf(attempt, recoded) && { impression: impressionOf(attempt, recoded)! }),
-      ...(typeof attempt.answers[FIRST_LOOK_SKIPPED] === 'string' && { firstLookSkipped: attempt.answers[FIRST_LOOK_SKIPPED] as string }),
+      ...(firstClick && { firstClick }),
       signals,
       reel: highlightReel({ events: everything, signals, words: [] }),
       timings: { ...(started !== undefined && ended !== undefined && { onGoalMs: ended - started }) },
@@ -134,6 +158,8 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
   // The same figures as the check title: the primary goal's attempts counted in the result, by the one counting rule.
   const primary = compiled.goals[primaryGoalIndex(compiled)]
   const figures = resultFigures(rows, primaryGoalIndex(compiled), resultComplete(run))
+  // A study of several groups says its result per group, of each group's own people and quota.
+  const groups = groupFigures(rows, compiled.groups ?? [], primaryGoalIndex(compiled), resultComplete(run))
   const first = compiled.goals[0]
   const firstAttempt = rows.find(a => a.goalIndex === 0)
   return {
@@ -147,8 +173,8 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
     revisions: numbered(revisions),
     attempts,
     lint,
-    sentence: sentence({ n: compiled.sample.n, affecting: compiled.sample.affecting, shape: primary?.shape ?? 'goal-only', ...figures, result: run.result, rehearsal: run.rehearsal, goal: (primary?.name ?? '').toLowerCase() }),
-    sampleSentence: sampleSentence(compiled.sample.n, compiled.sample.affecting),
+    sentence: sentence({ n: compiled.sample.n, affecting: compiled.sample.affecting, shape: primary?.shape ?? 'goal-only', ...figures, result: run.result, rehearsal: run.rehearsal, goal: (primary?.name ?? '').toLowerCase(), ...(groups && { groups }) }),
+    sampleSentence: compiled.sample.sentence,
     actor: run.actor,
   }
 }

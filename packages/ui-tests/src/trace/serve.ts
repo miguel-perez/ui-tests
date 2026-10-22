@@ -81,7 +81,7 @@ function requestFrom(form: URLSearchParams, attemptIds: string[]): RevisionReque
     }
     case 'scenario': return { kind, goalIndex, text: text(form, 'text')! }
     case 'promote-path': return { kind, goalIndex, path: (form.get('path') ?? '').split('\n').map(p => p.trim()).filter(Boolean) }
-    case 'code-impression': return { kind, attempt: attempt!, code: text(form, 'code') as 'no answer' }
+    case 'code-impression': return { kind, attempt: attempt!, parts: { what: form.has('what'), who: form.has('who'), action: form.has('action'), purpose: form.has('purpose') } }
     case 'undo': return { kind, revision: whole(text(form, 'revision')) }
     default: throw new RevisionRefused('Unknown revision')
   }

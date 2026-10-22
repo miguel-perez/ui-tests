@@ -38,9 +38,15 @@ export const PRACTICE_NOT_YET = 'Not yet'
 export const PRACTICE_DONE_NOTE = 'That is what Done does: it asks once, then moves on to a few questions.'
 export const PRACTICE_STUCK_NOTE = "That is what I couldn't do this does: it ends the task at once, and it is always fine to press it."
 
-/** The first look's last phase: the author's own page opens for one click. Says nothing of what the page is for. */
-export const FIRST_CLICK_TITLE = 'Where would you click first?'
-export const FIRST_CLICK_BODY = 'The page is opening. Click where you would start.'
+/** The first look, a home page tour: the author's own page opens, untimed, with nothing clickable. Says nothing of what the page is for. */
+export const TOUR_TITLE = 'Before your task, have a look at a page'
+export const TOUR_BODY = "Take as long as you like. You can scroll, but don't click anything yet. When you have seen enough, press I've had a look."
 export const OPEN_PAGE = 'Open the page'
-/** The one line the bar shows on the page while the first click is taken. */
-export const FIRST_CLICK_PROMPT = 'Click where you would start.'
+/** What the bar says on the page while it is toured, and the button that ends the look. */
+export const TOUR_PROMPT_BAR = "Have a look around. Scroll if you like; don't click anything yet."
+export const TOUR_DONE = "I've had a look"
+/** Said on every screen of a rehearsal whose screener snapshot is missing or out of date. */
+export const DRAFT = 'Draft: these screens come from a screener snapshot that is missing or out of date. Update it, review it and commit it before anyone is recruited.'
+/** Said to a person whose group already has all the people it needs. */
+export const FULL_TITLE = 'Thank you'
+export const FULL_BODY = 'This study already has all the people it needs like you. Nothing more is needed from you. You can close this page.'

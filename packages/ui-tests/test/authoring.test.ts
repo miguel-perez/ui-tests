@@ -24,7 +24,8 @@ describe('authoring', () => {
     expect(invite.name).toBe('invite a colleague')
     expect(invite.options.path).toEqual(['/board', '/settings/members'])
     expect(invite.options.timeLimit).toBe('3 min')
-    expect(invite.options.firstLook).toEqual({ page: '/' })
+    expect(invite.options.firstLook).toBeUndefined()
+    expect(first.options.firstLook).toEqual({ page: '/' })
     expect(invite.outcomes).toHaveLength(1)
     expect(first.legacy).toEqual([])
   })
@@ -72,7 +73,8 @@ describe('authoring', () => {
     expect(getStudies()[0].legacy).toEqual([
       'study "s": "video" is now "record: \'video\'"',
       'task "t": "happyPath" is now "path"',
-      'task "t": "impression" is now "firstLook"',
+      // On a task, the first look moves to the study, so the message names where it goes.
+      'task "t": "impression" is now "firstLook on the study"',
     ])
   })
 

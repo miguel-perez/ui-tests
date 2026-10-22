@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "studies": {
+    "getting started": {
+      "are": { "from": "shipped a user interface you built yourself", "value": "people who shipped a user interface they built themselves", "source": "did, person shifted" },
+      "purpose": { "from": "find out whether people can use what I built, without a researcher", "value": "find out whether people can use what you built, without a researcher", "source": "purpose, person shifted" },
+      "says": { "from": "/", "value": "See where people get stuck on what you just shipped.", "source": "h1" },
+      "language": { "from": "/", "value": "en", "source": "html lang" },
+      "decoys": {
+        "role": { "from": ["Developer", "Designer", "Founder"], "value": ["Data analyst", "QA engineer", "Technical writer", "Sales engineer"], "source": "author" },
+        "not": { "from": ["I work on ui-tests, or have taken part in a test of it", "I work in UX, marketing or market research"], "value": ["I work in sales or customer support", "I work in finance or operations", "I work in teaching or training"], "source": "author" }
+      },
+      "groups": [
+        { "name": "everyone", "quota": 5, "source": "sample" }
+      ],
+      "screens": [
+        {
+          "id": "screener.recency",
+          "text": "When did you last ship a user interface you built yourself?",
+          "options": [
+            { "label": "In the past week", "rule": "accept" },
+            { "label": "Between a week and a month ago", "rule": "accept" },
+            { "label": "Between a month and 3 months ago", "rule": "accept" },
+            { "label": "Between 3 months and a year ago", "rule": "reject" },
+            { "label": "More than a year ago", "rule": "reject" },
+            { "label": "Never", "rule": "reject" }
+          ],
+          "multi": false,
+          "ordered": true,
+          "criterion": "recency",
+          "field": "did",
+          "rule": "accept the bands inside 3 months"
+        },
+        {
+          "id": "screener.role",
+          "text": "Which of these is closest to your role?",
+          "options": [
+            { "label": "Developer", "rule": "accept" },
+            { "label": "Designer", "rule": "accept" },
+            { "label": "Founder", "rule": "accept" },
+            { "label": "Data analyst", "rule": "reject" },
+            { "label": "QA engineer", "rule": "reject" },
+            { "label": "Technical writer", "rule": "reject" },
+            { "label": "Sales engineer", "rule": "reject" },
+            { "label": "None of these", "rule": "reject" }
+          ],
+          "multi": false,
+          "ordered": false,
+          "criterion": "role",
+          "field": "role",
+          "rule": "accept \"Developer\" or \"Designer\" or \"Founder\""
+        },
+        {
+          "id": "screener.not",
+          "text": "Do any of these apply to you?",
+          "options": [
+            { "label": "I work on ui-tests, or have taken part in a test of it", "rule": "reject", "exclusion": "insider" },
+            { "label": "I work in UX, marketing or market research", "rule": "reject", "exclusion": "professional" },
+            { "label": "I work in sales or customer support", "rule": "may-select" },
+            { "label": "I work in finance or operations", "rule": "may-select" },
+            { "label": "I work in teaching or training", "rule": "may-select" },
+            { "label": "None of these", "rule": "may-select" }
+          ],
+          "multi": true,
+          "ordered": false,
+          "criterion": "not",
+          "field": "not",
+          "rule": "reject any of the exclusions; the rest are free to pick"
+        }
+      ]
+    }
+  }
+}

@@ -50,30 +50,30 @@ test.describe('a link participant, keyboard only, from the screener to the thank
     const seen: string[] = []
     await page.goto(playerUrl)
 
-    // The screener first, one question per screen; the last three are the environment.
-    const answered: Record<string, string> = {}
+    // The screener first, one question per screen, at most five; browser and device are never asked.
     for (let guard = 0; guard < 20; guard++) {
       await expect(heading(page)).toBeVisible()
       const title = await heading(page).innerText()
       if (title === 'Before you start') break
       seen.push(title)
       await axe(page)
-      if (await page.locator('textarea').count()) {
-        await tabTo(page, page.locator('textarea'))
-        await page.keyboard.type('A shared spreadsheet')
-      } else if (title === 'Which browser do you usually use?') { await choose(page, 1); answered.browser = 'Safari' }
-      else if (title === 'Which device do you usually use?') { await choose(page, 1); answered.device = 'Phone' }
-      else if (title === 'Do you use any assistive technology?') { await choose(page, 0); answered.assistive = 'Screen reader' }
-      else await choose(page, 0)
+      await choose(page, 0)
       await submit(page)
       await expect(heading(page)).not.toHaveText(title)
     }
-    expect(seen.slice(-3)).toEqual(['Which browser do you usually use?', 'Which device do you usually use?', 'Do you use any assistive technology?'])
+    expect(seen.length).toBeLessThanOrEqual(5)
+    expect(seen.join(' ')).not.toMatch(/browser|device|assistive/i)
 
-    // Consent, then practice, then the card (no first look: the study turns it off).
+    // Consent, then the assistive technology (optional, after consent), then practice, then the card (no first look: the study turns it off).
     await expect(heading(page)).toHaveText('Before you start')
     await axe(page)
     await submit(page, 'I agree and continue')
+    await expect(heading(page)).toHaveText('Do you use any assistive technology? You can skip this.')
+    await axe(page)
+    await choose(page, 0)
+    await submit(page, 'Continue')
+    // Browser and device come from the browser's user agent.
+    const answered = { browser: 'Chrome', device: 'Laptop or desktop', assistive: 'Screen reader' }
     await expect(heading(page)).toHaveText('A quick practice')
     await axe(page)
     await submit(page, 'Continue')
