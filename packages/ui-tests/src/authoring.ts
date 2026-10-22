@@ -10,8 +10,8 @@ let activeTask: AuthoredTask | undefined
 
 /** Old option names and the new name each one is replaced by; lint reports these. */
 const legacyOptions: Record<string, string> = { happyPath: 'path', catch: 'sample', impression: 'firstLook', screen: 'users', video: "record: 'video'" }
-/** Task options that moved to the study: there is one first look per study. */
-const taskOnlyLegacy: Record<string, string> = { firstLook: 'firstLook on the study' }
+/** On a task, the old names and the first look itself moved to the study: there is one first look per study. */
+const taskLegacy: Record<string, string> = { ...legacyOptions, impression: 'firstLook on the study', firstLook: 'firstLook on the study' }
 
 /** Finds the authoring call site: the first stack frame outside this module, as file and line. */
 function site(): { file: string; line: number } {
@@ -55,7 +55,7 @@ export function task(name: string, optionsOrFnOrCheck?: TaskOptions | (() => voi
   const options = typeof optionsOrFnOrCheck === 'object' ? optionsOrFnOrCheck : {}
   const entry: AuthoredTask = { name, options, steps: [], outcomes: [], line }
   activeStudy.tasks.push(entry)
-  activeStudy.legacy.push(...legacyIn(options, `task "${name}"`), ...legacyIn(options, `task "${name}"`, taskOnlyLegacy))
+  activeStudy.legacy.push(...legacyIn(options, `task "${name}"`, taskLegacy))
   const body = typeof optionsOrFnOrCheck === 'function' ? optionsOrFnOrCheck as () => void : fn
   activeTask = entry
   try { body?.() } finally { activeTask = undefined }

@@ -110,7 +110,13 @@ function compile(study: AuthoredStudy, config: UiTestsConfig, snapshot: StudySna
   derive('sample.n', resolved.length > 1
     ? `the groups' quotas added up (${resolved.map(g => `${g.name} ${g.quota}, ${g.source}`).join('; ')})`
     : `smallest n with 1 - (1 - ${sampleOptions.affecting})^n >= ${sampleOptions.confidence}${study.options.sample ? '' : ' (default sample)'}`, 'sample, users.role, users.groups')
-  derive('sample.sentence', `${Math.round(detectionChance(sampleOptions.affecting, perGroup) * 100)}% chance that ${perGroup} people include one the problem hits`, 'sample.affecting, sample.n')
+  // Each group is read on its own, so the chance is said per group, of its own quota; one group says it of everyone.
+  const sampleText = groups.length > 1
+    ? groups.map(g => `${g.name}: ${sampleSentence(g.quota, sampleOptions.affecting)}`).join(' ')
+    : sampleSentence(n, sampleOptions.affecting)
+  derive('sample.sentence', groups.length > 1
+    ? `per group, of its own quota (${groups.map(g => `${g.name}: ${Math.round(detectionChance(sampleOptions.affecting, g.quota) * 100)}% chance that ${g.quota} people include one the problem hits`).join('; ')})`
+    : `${Math.round(detectionChance(sampleOptions.affecting, n) * 100)}% chance that ${n} people include one the problem hits`, 'sample.affecting, sample.n, groups')
   derive('groups', resolved.length > 1 ? 'one group per role of role: { role: quota }, or per entry of groups (3 each unless written); each is reported on its own' : 'one group: everyone the screener accepts', 'users.role, users.groups')
 
   const record = study.options.record ?? 'events'
@@ -234,7 +240,7 @@ function compile(study: AuthoredStudy, config: UiTestsConfig, snapshot: StudySna
     ...(actors.includes('agent') && agentConfigOf(config) && { agents: { config: agentConfigOf(config)!, fingerprint: agentFingerprint(agentConfigOf(config)) } }),
     // The model that codes the first look on the server, pinned like the agent; its key stays on the server.
     ...(config.model && { model: config.model }),
-    sample: { affecting: sampleOptions.affecting, confidence: sampleOptions.confidence, n, sentence: sampleSentence(n, sampleOptions.affecting) },
+    sample: { affecting: sampleOptions.affecting, confidence: sampleOptions.confidence, n, sentence: sampleText },
     impression,
     groups,
     screener,

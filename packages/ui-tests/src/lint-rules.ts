@@ -78,9 +78,11 @@ export const rules: Rule[] = [
     run({ study, sourceText }, emit) {
       const stripped = stripCommentsAndStrings(sourceText)
       const seen = new Set<string>()
+      // A name the study's own options place more precisely (a task-level impression moves to the study) is said once, from there.
+      const moved = new Set(study.legacy.map(entry => /^.*?: "(.+?)" is now "(.+)"$/.exec(entry)).filter(m => m && renames.some(r => r.old === (legacyKey[m[1]] ?? m[1]) && r.fix !== m[2])).map(m => legacyKey[m![1]] ?? m![1]))
       for (const { old, pattern, fix } of renames) {
         const match = new RegExp(pattern.source, pattern.flags).exec(stripped)
-        if (!match) continue
+        if (!match || moved.has(old)) continue
         seen.add(old)
         emit({ message: `"${old.replace(/\($/, '')}" is now "${fix.replace(/\($/, '')}"`, fix, line: lineOf(stripped, match.index) })
       }

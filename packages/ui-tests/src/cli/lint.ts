@@ -75,7 +75,7 @@ async function updateSnapshots(loaded: LoadedStudy[], config: UiTestsConfig, io:
       const page = item.compiled.impression.on ? item.compiled.impression.page : undefined
       const { entry, notDrafted: missed } = await draftSnapshot({
         needs: item.needs, groups: item.groups, ...(item.entry && { previous: item.entry }), product: item.compiled.product, did: toThirdPerson(did),
-        ...(page && item.needs.says !== undefined && { pageUrl: new URL(page, config.target?.url ?? 'http://localhost:3000').toString() }),
+        ...(page && (item.needs.says !== undefined || item.needs.language !== undefined) && { pageUrl: new URL(page, config.target?.url ?? 'http://localhost:3000').toString() }),
         ...('model' in configured ? { model: configured.model } : { noModel: configured.missing }), ...(io.deps?.fetch && { fetch: io.deps.fetch }),
       })
       // The screens come from the drafts: compile with them, then keep what compiling rendered.

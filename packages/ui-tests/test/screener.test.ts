@@ -158,6 +158,10 @@ describe('what the author writes', () => {
     const two = compileSource(usersStudy("{ did: 'planned a week', role: { Developer: 3, Designer: 2 } }"))
     expect(two.compiled.groups).toEqual([{ name: 'Developer', quota: 3 }, { name: 'Designer', quota: 2 }])
     expect(two.compiled.sample.n).toBe(5)
+    // Each group is read on its own: the detection sentence is said per group, of its own quota, never of the pooled five.
+    expect(one.compiled.sample.sentence).toBe('Five people give an 87% chance of seeing any problem that hits at least one person in three.')
+    expect(two.compiled.sample.sentence).toBe('Developer: Three people give a 70% chance of seeing any problem that hits at least one person in three. Designer: Two people give a 56% chance of seeing any problem that hits at least one person in three.')
+    expect(two.compiled.derivations.find(d => d.field === 'sample.sentence')!.rule).toBe('per group, of its own quota (Developer: 70% chance that 3 people include one the problem hits; Designer: 56% chance that 2 people include one the problem hits)')
     expect(two.findings.some(f => f.rule === 'one-group')).toBe(false)
     expect(two.compiled.screener.find(q => q.criterion === 'role')!.options.filter(o => o.rule === 'accept')).toEqual([
       { label: 'Developer', rule: 'accept', groups: ['Developer'] }, { label: 'Designer', rule: 'accept', groups: ['Designer'] },
@@ -186,6 +190,14 @@ study('s', { users: { did: 'planned a week' }, purpose: 'plan the week' }, () =>
   task('plan', { path: ['/'], firstLook: { page: '/' } }, () => { outcome(async () => {}) })
 })`
     expect(compileSource(source).findings.find(f => f.rule === 'renamed')!.message).toContain('"firstLook" is now "firstLook on the study"')
+  })
+
+  it('sends a task-level impression straight to the study firstLook, in one message', () => {
+    const source = `import { study, task, outcome } from 'ui-tests'
+study('s', { users: { did: 'planned a week' }, purpose: 'plan the week' }, () => {
+  task('plan', { path: ['/'], impression: { page: '/' } }, () => { outcome(async () => {}) })
+})`
+    expect(compileSource(source).findings.filter(f => f.rule === 'renamed').map(f => f.message)).toEqual(['task "plan": "impression" is now "firstLook on the study"'])
   })
 })
 
@@ -261,6 +273,15 @@ describe('quotas per group', () => {
     expect(row.environment).toEqual({ browser: 'Safari', device: 'Phone' })
   })
 
+  it('gives the last place of a group to one person when two consent at once', async () => {
+    const { store, person } = await setup()
+    const [a, b] = [await person('Designer'), await person('Designer')]
+    const statuses = (await Promise.all([a.send({ action: 'consent' }), b.send({ action: 'consent' })])).map(r => r.status).sort()
+    expect(statuses).toEqual([200, 409])
+    const consented = await Promise.all([a, b].map(async p => (await store.getAttempt(p.attempt.id))!.status))
+    expect(consented.filter(s => s === 'consented')).toHaveLength(1)
+  })
+
   it('reports n, the detection sentence and the issues per group, and says when a group did not fill', async () => {
     const { store, run, person } = await setup()
     for (const [role, verdict] of [['Developer', 'correct'], ['Developer', 'incorrect'], ['Designer', 'correct']] as const) {
@@ -327,6 +348,14 @@ describe('lint -u and the snapshot', () => {
     expect(asked).toHaveLength(3)
     expect((await readSnapshotFile(file))!.studies.s!.decoys.role!.value).toEqual(['Scheduler', 'Data analyst'])
     expect((await run(['lint'])).out).not.toContain('screener-snapshot')
+  })
+
+  it('reads the language from the start page when says is written', async () => {
+    await writeFile(join(dir, 'a.ui.test.ts'), usersStudy("{ did: 'planned a week with a team', role: ['Planner', 'Manager'], uses: ['Trello'] }", ", firstLook: { says: 'Plan your week' }"))
+    await run(['lint', '-u'], { fetch: page })
+    const entry = (await readSnapshotFile(join(dir, 'a.ui.test.ts.screener.snap')))!.studies.s!
+    expect(entry.says).toBeUndefined()
+    expect(entry.language).toEqual({ from: '/', value: 'en-GB', source: 'html lang' })
   })
 
   it('makes recruit and check exit non-zero naming the snapshot while it is missing or out of date, and rehearsal labels the screens as drafts', async () => {

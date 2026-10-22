@@ -74,7 +74,7 @@ Completion is observable three ways: poll `ui-tests status`, a webhook the store
 
 ## The run record
 
-`ui-tests report --json` writes one file per run with the compiled context, every derived field and its source rule, attempts with their consented purposes and source restrictions, measures, the ranked `issues[]` with participants, impact, words, access conditions and moment references, the first look's coded parts and the answers left uncoded, the groups with their n, detection sentence and issues, measures named effectiveness, efficiency, satisfaction and fit, money, quality flags, revisions, and the sentence. Its JSON Schema is published and versioned; the schema id is in the file. It is the only artifact a consumer needs.
+`ui-tests report --json` writes one file per run with the compiled context, every derived field and its source rule, attempts with their consented purposes and source restrictions, measures, the ranked `issues[]` with participants, impact, words, access conditions and moment references, the first look's coded parts and the answers left uncoded, the groups with their n, detection sentence and issues, measures named effectiveness, efficiency and satisfaction, money, quality flags, revisions, and the sentence. Its JSON Schema is published and versioned; the schema id is in the file. It is the only artifact a consumer needs.
 
 ## GitHub
 

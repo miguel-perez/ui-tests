@@ -165,6 +165,13 @@ describe('the tour on the server', () => {
     await post(made.token, { action: 'answers', looked: true })
     await post(made.token, { action: 'answers', impression: 'an invoicing tool' })
     expect(await impressionOf(made.attempt.id)).toMatchObject({ parts: null, uncoded: 'model is set in ui-tests.config.ts but ANTHROPIC_API_KEY is not in the environment' })
+    // A server that promises no model call (a local-only run) keeps the answer uncoded, with that reason.
+    collect = createCollector({ store: async () => store, noModel: 'a local-only run makes no model call' })
+    const local = await store.createAttempt({ runId: pinned.run, participant: 'p2', goalIndex: 0, rehearsal: false })
+    await post(local.token, { action: 'consent' })
+    await post(local.token, { action: 'answers', looked: true })
+    await post(local.token, { action: 'answers', impression: 'an invoicing tool' })
+    expect(await impressionOf(local.attempt.id)).toMatchObject({ parts: null, uncoded: 'a local-only run makes no model call' })
   })
 
   it('takes a spoken answer to the prompt, codes its words, and keeps the audio', async () => {
@@ -174,6 +181,22 @@ describe('the tour on the server', () => {
     const answers = (await store.getAttempt(attempt.id))!.answers
     expect(answers.impression).toMatchObject({ looked: true, text: 'it is for invoices', parts: null })
     expect(typeof answers['impression.voice']).toBe('string')
+  })
+
+  it('calls the model only while the first look is waiting for its answer, typed or spoken', async () => {
+    const seen: string[] = []
+    collect = createCollector({ store: async () => store, model: model('{"what": true, "who": true, "action": true, "purpose": true}', seen) })
+    const { attempt, token } = await consented()
+    expect((await post(token, { action: 'answers', impression: 'too soon' })).status).toBe(409)
+    expect((await post(token, { action: 'voice', question: 'impression', audio: 'AAAA', contentType: 'audio/webm', transcript: 'too soon' })).status).toBe(409)
+    expect(seen).toHaveLength(0)
+    await post(token, { action: 'answers', looked: true })
+    await post(token, { action: 'answers', impression: 'first words' })
+    expect(seen).toHaveLength(1)
+    expect((await post(token, { action: 'answers', impression: 'again' })).status).toBe(200)
+    expect((await post(token, { action: 'voice', question: 'impression', audio: 'AAAA', contentType: 'audio/webm', transcript: 'again' })).status).toBe(409)
+    expect(seen).toHaveLength(1)
+    expect(await impressionOf(attempt.id)).toMatchObject({ text: 'first words' })
   })
 
   it('takes the answer once, and only after the look', async () => {

@@ -23,6 +23,8 @@ export type CollectorOptions = {
   model?: TextModel
   /** Where the server's `ANTHROPIC_API_KEY` is read, for the model the run pins; without a model the answer is kept uncoded, for the author to code. */
   env?: Record<string, string | undefined>
+  /** Why this server never calls a model (a local-only run promises none): the first look's answers are kept uncoded with this reason. */
+  noModel?: string
   /** The clock in epoch milliseconds; replaced in tests. */
   now?: () => number
   /** Makes text from a spoken answer when the browser did not; without it the audio is kept as it is. */
@@ -137,6 +139,16 @@ async function groupFull(store: RunStore, run: RunRow, attempt: AttemptRow): Pro
   return taken.size >= quota
 }
 
+/**
+ * Whether the first look is waiting for its answer: consented (a spoken answer only then; a typed one at any status between consent
+ * and the end), looked at, and not answered yet. Checked before the model is called, and again in the transaction that stores it.
+ */
+function tourWaiting(attempt: AttemptRow | undefined, consentedOnly: boolean): boolean {
+  if (!attempt || (consentedOnly ? attempt.status !== 'consented' : attempt.status === 'created' || attempt.status === 'finished')) return false
+  const said = attempt.answers.impression as Record<string, unknown> | undefined
+  return said?.looked === true && typeof said.text !== 'string'
+}
+
 /** Whether every question the attempt is owed has an answer: the follow-ups only when asked, and the task's own question when it has one. */
 function allAnswered(view: ParticipantView, goal: CompiledGoal, answers: Record<string, unknown>): boolean {
   return view.questions.every((q) => (q.askIf && !(typeof answers[q.askIf.id] === 'number' && (answers[q.askIf.id] as number) <= q.askIf.atOrBelow)) || answers[q.id] !== undefined) &&
@@ -234,6 +246,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
   /** The model that codes a run's first look: the one given (tests), else the model the run pins, through this server's key. */
   const modelOf = (run: RunRow): [TextModel | undefined, string | undefined] => {
     if (options.model) return [options.model, undefined]
+    if (options.noModel) return [undefined, options.noModel]
     const found = textModelFor(run.compiled.model, options.env ?? {})
     return 'model' in found ? [found.model, undefined] : [undefined, run.compiled.model ? found.missing : 'no model is configured']
   }
@@ -358,8 +371,10 @@ export function createCollector(options: CollectorOptions): (request: Request) =
       return keyed ? Response.json(barView(run, latest), { headers }) : respond(run, await currentAttempt(store, latest), extra)
     }
     const conflict = (text: string) => refuse(409, text)
-    // The first look is coded before the transaction opens, so a model call never holds a connection.
-    const coded = body.action === 'answers' && body.impression !== undefined ? await codeTour(body.impression, run.compiled.impression.says, ...modelOf(run)) : undefined
+    // The first look is coded before the transaction opens, so a model call never holds a connection; only while the attempt is
+    // waiting for that answer, so an early or repeated one never reaches the model. The transaction checks again.
+    const coded = body.action === 'answers' && body.impression !== undefined && tourWaiting(await store.getAttempt(attempt.id), false)
+      ? await codeTour(body.impression, run.compiled.impression.says, ...modelOf(run)) : undefined
 
     // After the run's deadline nobody new starts: consent and begin are refused. Attempts already under way finish, and so does a person already on a later goal.
     const underWay = body.action === 'begin' && placeOf(run.compiled, attempt).position > 0 && storedOrder(attempt) !== undefined
@@ -368,10 +383,14 @@ export function createCollector(options: CollectorOptions): (request: Request) =
       case 'consent': {
         if (attempt.status === 'created') {
           // People are sampled by group: once a group has its quota, the next person of that group is thanked and goes no further.
-          if (await groupFull(store, run, attempt)) return conflict(GROUP_FULL)
-          // The browser and device are read from the user agent, never asked.
-          const moved = await store.updateAttempt(attempt.id, { status: 'consented', purposes: run.compiled.consent.purposes, environment: { ...attempt.environment, ...environmentOf(userAgent) } }, 'created')
-          if (!moved && (await store.getAttempt(attempt.id))?.status !== 'consented') return conflict('Consent was already given or the attempt moved on')
+          // The count and the consent are one transaction, so two people of a group with one place left cannot both take it.
+          const refused = await store.transaction(async (tx) => {
+            if (await groupFull(tx, run, attempt)) return GROUP_FULL
+            // The browser and device are read from the user agent, never asked.
+            const moved = await tx.updateAttempt(attempt.id, { status: 'consented', purposes: run.compiled.consent.purposes, environment: { ...attempt.environment, ...environmentOf(userAgent) } }, 'created')
+            return !moved && (await tx.getAttempt(attempt.id))?.status !== 'consented' ? 'Consent was already given or the attempt moved on' : undefined
+          })
+          if (refused) return conflict(refused)
         } else if (attempt.status !== 'consented') return conflict('Consent was already given or the attempt moved on')
         // A CLI-secret request has no participant token, so it sets no cookie: the secret never goes into one.
         if (!token) return reload()
@@ -498,8 +517,10 @@ export function createCollector(options: CollectorOptions): (request: Request) =
           // The first look is looked at once and answered once: a repeat of either (a retry after a lost reply) changes nothing.
           const said = current.answers.impression as Record<string, unknown> | undefined
           if (body.looked && said?.looked !== true) given.impression = { ...said, looked: true }
-          if (body.impression !== undefined && coded && typeof said?.text !== 'string') {
+          if (body.impression !== undefined && typeof said?.text !== 'string') {
             if (said?.looked !== true) return { status: 409, text: 'Look at the page before answering' }
+            // Not coded: it was not waiting when the request came in, and has only just become so.
+            if (!coded) return { status: 409, text: 'The attempt moved on; try again' }
             given.impression = { ...said, text: body.impression, ...coded }
           }
           if (body.assistive !== undefined) given[run.compiled.assistive.id] = body.assistive
@@ -543,7 +564,8 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         // Words from the voice win; otherwise whatever was typed before pressing "Talk instead" stays.
         const words = heard || body.typed?.trim() || undefined
         if (key === 'impression') {
-          // Coded before the transaction opens, like a typed answer; the words are coded once they are known.
+          // Coded before the transaction opens, like a typed answer, and only while the first look is waiting for it.
+          if (!tourWaiting(await store.getAttempt(attempt.id), true)) return conflict('The first look is not waiting for an answer')
           const coded = await codeTour(words ?? '', run.compiled.impression.says, ...modelOf(run))
           const result = await store.transaction(async (tx) => {
             const current = await tx.getAttempt(attempt.id)

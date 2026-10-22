@@ -1,7 +1,7 @@
 import type { ScreenerResult } from '../derive/screener.ts'
 import type { TourCode } from '../derive/code-impression.ts'
 import { fillScenario } from '../derive/scenario.ts'
-import { sampleSentence, sentence } from '../derive/sentence.ts'
+import { sentence } from '../derive/sentence.ts'
 import { resultComplete, resultFigures } from '../runner/progress.ts'
 import { primaryGoalIndex } from '../runner/sequence.ts'
 import { videoSegments, type VideoSegments } from '../video.ts'
@@ -169,7 +169,7 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
     attempts,
     lint,
     sentence: sentence({ n: compiled.sample.n, affecting: compiled.sample.affecting, shape: primary?.shape ?? 'goal-only', ...figures, result: run.result, rehearsal: run.rehearsal, goal: (primary?.name ?? '').toLowerCase() }),
-    sampleSentence: sampleSentence(compiled.sample.n, compiled.sample.affecting),
+    sampleSentence: compiled.sample.sentence,
     actor: run.actor,
   }
 }

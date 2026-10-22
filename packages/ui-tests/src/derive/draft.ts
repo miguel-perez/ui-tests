@@ -44,7 +44,7 @@ export type DraftInput = {
   product: string
   /** What people did, said of them, for the prompts. */
   did: string
-  /** The address of the first look's page, to read what it says; absent when the first look is off or `says` is written. */
+  /** The address of the first look's page, to read what it says and its language; absent when the first look is off or both are written. */
   pageUrl?: string
   model?: TextModel
   /** Why there is no model, said for each item it would have drafted. */

@@ -23,7 +23,7 @@ async function files(dir: string): Promise<string[]> {
  */
 const removed: [string, RegExp][] = [
   ['the fixed option lists', /\b(NEUTRAL|NARROW_ROLES|BROAD_AREAS|OTHER_TOOLS)\b/],
-  ['the fit score', /\b(fitScore|FIT_IDS|NEED_BANDS|FIT_OUT_OF)\b|derive\/fit\.ts/],
+  ['the fit score', /\b(fitScore|FIT_IDS|NEED_BANDS|FIT_OUT_OF)\b|derive\/fit\.ts|satisfaction(,| and) fit\b/],
   ['the fit questions', /screener\.(need|today|matters)\b|How much does it matter to you to get this right/],
   ['the flash', /\bflashMs\b|500 ms flash|flashed for 500/],
   ['the word-overlap coder', /\bbyRule\b|codeImpressionWith|word-overlap rule/],

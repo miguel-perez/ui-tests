@@ -135,7 +135,7 @@ export const recruit: Command = async (args, io) => {
   let doorServer: Awaited<ReturnType<typeof startDoorServer>> | undefined
   try {
     if (localOnly) {
-      try { started = await ensureServer({ url: server, store, io }) } catch (error) {
+      try { started = await ensureServer({ url: server, store, io, localOnly: true }) } catch (error) {
         io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`)
         return 2
       }
