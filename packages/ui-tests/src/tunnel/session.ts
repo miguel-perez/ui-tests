@@ -1,4 +1,4 @@
-import { checkReachable } from '../runner/setup.ts'
+import { checkReachable, PROBE_TIMEOUTS_MS } from '../runner/setup.ts'
 import type { RunStore } from '../store/types.ts'
 import { cloudflaredTunnel } from './cloudflared.ts'
 import { fakeTunnel } from './fake.ts'
@@ -20,19 +20,28 @@ async function updateTunnels(store: RunStore, runId: string, change: (tunnels: T
 
 type Opened = { url: string; close(): Promise<void> }
 
+/** How long `recruit --tunnel` waits for a new address to answer: a fresh quick-tunnel name took about 80 seconds to resolve. */
+export const TUNNEL_WAIT_MS = 120_000
+
 /**
- * Opens the tunnel to `localUrl` (for `recruit`, the front door, so the app and the ui-tests server share its address) and waits until
- * the address answers, so a tunnel that started but serves nothing fails before a run exists.
+ * Opens the tunnel to `localUrl` (for `recruit`, the front door, so the app and the ui-tests server share its address) and waits up to
+ * `waitMs` until the address answers, so a tunnel that started but serves nothing fails before a run exists. `onWaiting` hears the
+ * address once, when its first try finds nothing there.
  */
-export async function openReachableTunnel(input: { tunnel: Tunnel; localUrl: string; fetch?: typeof fetch; retryMs?: number; tries?: number }): Promise<Opened> {
-  const { tunnel, localUrl, retryMs = 500, tries = 20 } = input
+export async function openReachableTunnel(input: { tunnel: Tunnel; localUrl: string; fetch?: typeof fetch; retryMs?: number; waitMs?: number; onWaiting?: (url: string) => void }): Promise<Opened> {
+  const { tunnel, localUrl, retryMs = 500, waitMs = TUNNEL_WAIT_MS } = input
   const opened = await tunnel.open(localUrl)
+  const deadline = Date.now() + waitMs
   try {
-    for (let i = 0; i < tries; i++) {
-      if (await checkReachable(opened.url, input.fetch)) return opened
-      await new Promise(resolve => setTimeout(resolve, retryMs))
+    for (let waiting = false; ; waiting = true) {
+      // No single try runs past the deadline.
+      const left = Math.max(1, deadline - Date.now())
+      if (await checkReachable(opened.url, input.fetch, PROBE_TIMEOUTS_MS.map(ms => Math.min(ms, left)))) return opened
+      if (Date.now() >= deadline) break
+      if (!waiting) input.onWaiting?.(opened.url)
+      await new Promise(resolve => setTimeout(resolve, Math.min(retryMs, deadline - Date.now())))
     }
-    throw new Error(`${opened.url} did not answer`)
+    throw new Error(`${opened.url} did not answer within ${waitMs / 1000} seconds`)
   } catch (error) { await opened.close(); throw error }
 }
 
