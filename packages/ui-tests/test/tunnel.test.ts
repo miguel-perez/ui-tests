@@ -16,6 +16,7 @@ import { isSlot } from '../src/runner/invites.ts'
 import { fakeTunnel } from '../src/tunnel/fake.ts'
 import type { TunnelRecord } from '../src/tunnel/types.ts'
 import { freePort } from './server-stub.ts'
+import { draftSnapshots } from './snapshots.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 const LANDING = '<script data-ui-tests="http://localhost:4300"></script>landing'
@@ -40,6 +41,7 @@ beforeAll(async () => {
   work = await mkdtemp(join(fixtures, '.tmp-tunnel-'))
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
   await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' } }\n`)
+  await draftSnapshots(work)
 })
 afterAll(async () => {
   await server.close()

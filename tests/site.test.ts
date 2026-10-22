@@ -46,9 +46,10 @@ it('shows the study file, verbatim, in the landing copy, and names the steps 1 C
 it('carries the contract changes in the PRDs and the taskbar sentence in PRD 06', async () => {
   const prd01 = await readFile('docs/prd/01-dx-contract.md', 'utf8'), prd02 = await readFile('docs/prd/02-study-and-verdict.md', 'utf8')
   expect(await readFile('docs/prd/06-nonfunctional.md', 'utf8')).toContain("styled as a distinct overlay, the inverse of the host page with the author's font and accent, never sharing the host page's panel colour.")
-  for (const text of ['video: true', 'impression: { page }', '`start`', 'What was that page for?']) expect(prd01, text).toContain(text)
+  for (const text of ['video: true', 'firstLook: { page, says }', '`start`', 'What do you make of that page?']) expect(prd01, text).toContain(text)
   expect(prd01).not.toContain("record: 'screen'`")
-  expect(prd02).toContain('What was that page for?')
+  expect(prd02).toContain('What do you make of that page?')
+  expect(prd02).not.toMatch(/Lean Analytics' problem-interview scoring|earlyvangelist screen/)
   expect(prd02).not.toMatch(/"What is this for\?" with the (context's )?purpose/)
 })
 

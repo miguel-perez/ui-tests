@@ -1,15 +1,14 @@
 import { timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
-import { codeImpressionWith } from '../derive/code-impression.ts'
-import { screenReport } from '../derive/screener.ts'
+import { codeTour } from '../derive/code-impression.ts'
+import { screenResult, type ScreenerResult } from '../derive/screener.ts'
 import type { TextModel } from '../model.ts'
-import { FIRST_LOOK_SHOT } from '../runner/screenshot.ts'
-import { fitScore } from '../derive/fit.ts'
 import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
 import { UXLITE_VERSION } from '../measures.ts'
+import { GROUP_FULL } from '../copy.ts'
 import { nullTranscriber, type Transcriber } from '../transcriber.ts'
 import { MAX_VIDEO_BYTES, MAX_VIDEO_CHUNKS, MAX_VIDEO_SEGMENTS, VIDEO_CHUNK_BYTES, VIDEO_DECLINED, VIDEO_GAP, VIDEO_KEY, VIDEO_STOPPED, videoChunks, videoPauses } from '../video.ts'
-import { MORE_TIME, barView, effectiveTimeout, isOwnSite, participantView, type ParticipantView } from './view.ts'
+import { MORE_TIME, barView, effectiveTimeout, participantView, screenerOrder, type ParticipantView } from './view.ts'
 import { ATTEMPT_KEY_TTL_MS, HANDOFF_TTL_MS } from './credentials.ts'
 import { handoffUrl } from './handoff.ts'
 import { appUrlOf, originOf, runOrigins } from './origins.ts'
@@ -20,7 +19,7 @@ export type CollectorOptions = {
   store: () => Promise<RunStore>
   /** The secret the CLI sends as a Bearer token to act on an attempt named by `?attempt=`. */
   cliSecret?: string
-  /** Codes the first-look answer when given; without it a content-word rule does. */
+  /** Codes the first look's answer, part by part; without it the answer is kept uncoded, for the author to code. */
   model?: TextModel
   /** The clock in epoch milliseconds; replaced in tests. */
   now?: () => number
@@ -73,8 +72,10 @@ const message = z.discriminatedUnion('action', [
     action: z.literal('answers'),
     screener: z.record(z.string(), z.union([z.string().max(500), z.array(z.string().max(500)).max(50)])).optional(),
     impression: z.string().max(5000).optional(),
-    /** The first real click on the author's own page: the element (a selector, never its text), the address it led to, and when. */
-    firstClick: z.object({ target: z.string().max(300), url: z.string().max(2000), at: z.number() }).optional(),
+    /** The person has had their look at the start page, on the author's own site. */
+    looked: z.literal(true).optional(),
+    /** The assistive technology the person uses, asked after consent; an empty list is an answer. */
+    assistive: z.array(z.string().max(100)).max(10).optional(),
     ease: scale.optional(),
     difficulty: z.string().max(5000).optional(),
     confidence: scale.optional(),
@@ -100,45 +101,44 @@ type Message = z.infer<typeof message>
 const headers = { 'Cache-Control': 'no-store' }
 const refuse = (status: number, text: string) => new Response(text, { status, headers })
 
-/** What a page holding only an attempt key may send: the bar's own writes, and of the answers only the first click. */
+/** What a page holding only an attempt key may send: the bar's own writes, and of the answers only that the page was looked at. */
 const BAR_ACTIONS = new Set(['events', 'replay', 'video', 'video-note', 'video-declined', 'step', 'end', 'more-time', 'answers'])
 function barMay(raw: unknown): boolean {
   if (typeof raw !== 'object' || raw === null) return false
   const { action, ...rest } = raw as Record<string, unknown>
   if (typeof action !== 'string' || !BAR_ACTIONS.has(action)) return false
-  return action !== 'answers' || (Object.keys(rest).length === 1 && rest.firstClick !== undefined)
+  return action !== 'answers' || (Object.keys(rest).length === 1 && rest.looked !== undefined)
 }
 
 const exchangeBody = z.object({ code: z.string().max(200) })
 
 const cookieValue = (request: Request, name: string) => new RegExp(`(?:^|;\\s*)${name}=([^;]+)`).exec(request.headers.get('cookie') ?? '')?.[1]
 
-/** The usual browser, device and assistive technology a person gave while screening. */
-function environmentOf(given: Record<string, unknown>): Record<string, string> | undefined {
-  const text = (id: string) => { const v = given[id]; return Array.isArray(v) ? v.join(', ') : typeof v === 'string' ? v : undefined }
-  const entries = (['browser', 'device', 'assistive'] as const).flatMap((key) => { const v = text(`screener.${key}`); return v ? [[key, v] as const] : [] })
-  return entries.length ? Object.fromEntries(entries) : undefined
+/** The browser and device a person takes part on, read from their browser's user agent rather than asked. */
+export function environmentOf(userAgent: string | null): Record<string, string> {
+  const ua = userAgent ?? ''
+  const browser = /Edg\//.test(ua) ? 'Edge' : /OPR\/|Opera/.test(ua) ? 'Opera' : /Firefox\//.test(ua) ? 'Firefox' : /Chrome\/|CriOS/.test(ua) ? 'Chrome' : /Safari\//.test(ua) ? 'Safari' : 'Another browser'
+  const device = /iPad|Tablet/.test(ua) || (/Android/.test(ua) && !/Mobile/.test(ua)) ? 'Tablet' : /Mobi|iPhone|Android/.test(ua) ? 'Phone' : 'Laptop or desktop'
+  return { browser, device }
+}
+
+export { GROUP_FULL }
+
+/** Whether the person's group already has its quota: other people of that group who consented, not withdrawn, retired or rehearsing. */
+async function groupFull(store: RunStore, run: RunRow, attempt: AttemptRow): Promise<boolean> {
+  const group = (attempt.answers.screenerResult as ScreenerResult | undefined)?.group
+  const quota = run.compiled.groups?.find((g) => g.name === group)?.quota
+  if (!group || quota === undefined) return false
+  const taken = new Set((await store.listAttempts(run.run))
+    .filter((a) => a.participant !== attempt.participant && a.status !== 'created' && !a.rehearsal && a.reason !== 'withdrew' && !a.flags.includes('retired') && (a.answers.screenerResult as ScreenerResult | undefined)?.group === group)
+    .map((a) => a.participant))
+  return taken.size >= quota
 }
 
 /** Whether every question the attempt is owed has an answer: the follow-ups only when asked, and the task's own question when it has one. */
 function allAnswered(view: ParticipantView, goal: CompiledGoal, answers: Record<string, unknown>): boolean {
   return view.questions.every((q) => (q.askIf && !(typeof answers[q.askIf.id] === 'number' && (answers[q.askIf.id] as number) <= q.askIf.atOrBelow)) || answers[q.id] !== undefined) &&
     (!goal.answer || answers[goal.answer.question] !== undefined)
-}
-
-const pathnameOf = (url: string, base = 'http://placeholder') => { try { return new URL(url, base).pathname.replace(/(.)\/$/, '$1') } catch { return undefined } }
-
-/**
- * Whether the address a first click led to is on the task's path; null when the task has no path to be on. A click that stays on the
- * start page of a path that goes elsewhere has not moved toward it.
- */
-function onGoalPath(url: string, path: string[] | undefined, start: string): boolean | null {
-  if (!path) return null
-  const there = pathnameOf(url)
-  if (there === undefined) return false
-  const wanted = path.map((p) => pathnameOf(p))
-  if (path.length > 1 && there === pathnameOf(start)) return false
-  return wanted.includes(there)
 }
 
 /** The attempts of one person's sequence (one per goal they reached), in creation order; just the attempt itself when it is not one of a sequence. */
@@ -272,7 +272,6 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     const keyed = resolved.via === 'attempt-key'
 
     if (get && (keyed || url.searchParams.get('view') === 'bar')) return Response.json(barView(resolved.run, resolved.attempt), { headers })
-    if (get && url.searchParams.get('shot') === 'first-look') return firstLook(store, resolved.attempt)
     if (get) return respond(resolved.run, resolved.attempt)
 
     // Cookies ride along on cross-site requests, so a write they authorise must come from this origin. Bearer writes (CLI, tests) are not ambient.
@@ -290,7 +289,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     const parsed = message.safeParse(raw)
     if (!parsed.success) return refuse(400, parsed.error.message)
 
-    return act(store, resolved.run, resolved.attempt, parsed.data, 'token' in resolved ? resolved.token : undefined, own.startsWith('https:'), keyed)
+    return act(store, resolved.run, resolved.attempt, parsed.data, 'token' in resolved ? resolved.token : undefined, own.startsWith('https:'), keyed, request.headers.get('user-agent'))
   }
 
   /** Spends a handoff code for an attempt key: the code is the only credential, and it must belong to the run the page names. */
@@ -334,13 +333,6 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     return cookie ? participant(cookie, 'cookie') : undefined
   }
 
-  /** The picture of the page for this attempt's first look; only its owner can ask. */
-  async function firstLook(store: RunStore, attempt: AttemptRow): Promise<Response> {
-    const id = attempt.answers[FIRST_LOOK_SHOT]
-    const blob = typeof id === 'string' ? await store.getBlob(id) : undefined
-    if (!blob) return refuse(404, 'No picture')
-    return new Response(Buffer.from(blob.bytes), { headers: { ...headers, 'Content-Type': blob.contentType } })
-  }
 
   async function respond(run: RunRow, attempt: AttemptRow, extra?: Headers): Promise<Response> {
     const response = Response.json(participantView(run, attempt), { headers })
@@ -348,7 +340,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     return response
   }
 
-  async function act(store: RunStore, run: RunRow, attempt: AttemptRow, body: Message, token: string | undefined, secure: boolean, keyed: boolean): Promise<Response> {
+  async function act(store: RunStore, run: RunRow, attempt: AttemptRow, body: Message, token: string | undefined, secure: boolean, keyed: boolean, userAgent: string | null): Promise<Response> {
     const goal = run.compiled.goals[attempt.goalIndex]!
     // After the last answer of a goal the person is on their next goal's attempt, so the reply is the view of that one. The app's page,
     // holding an attempt key, is answered with the bar's view of its own attempt.
@@ -358,7 +350,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     }
     const conflict = (text: string) => refuse(409, text)
     // The first look is coded before the transaction opens, so a model call never holds a connection.
-    const coded = body.action === 'answers' && body.impression !== undefined ? await codeImpressionWith(body.impression, run.compiled.purpose, options.model) : undefined
+    const coded = body.action === 'answers' && body.impression !== undefined ? await codeTour(body.impression, run.compiled.impression.says, options.model) : undefined
 
     // After the run's deadline nobody new starts: consent and begin are refused. Attempts already under way finish, and so does a person already on a later goal.
     const underWay = body.action === 'begin' && placeOf(run.compiled, attempt).position > 0 && storedOrder(attempt) !== undefined
@@ -366,7 +358,10 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     switch (body.action) {
       case 'consent': {
         if (attempt.status === 'created') {
-          const moved = await store.updateAttempt(attempt.id, { status: 'consented', purposes: run.compiled.consent.purposes }, 'created')
+          // People are sampled by group: once a group has its quota, the next person of that group is thanked and goes no further.
+          if (await groupFull(store, run, attempt)) return conflict(GROUP_FULL)
+          // The browser and device are read from the user agent, never asked.
+          const moved = await store.updateAttempt(attempt.id, { status: 'consented', purposes: run.compiled.consent.purposes, environment: { ...attempt.environment, ...environmentOf(userAgent) } }, 'created')
           if (!moved && (await store.getAttempt(attempt.id))?.status !== 'consented') return conflict('Consent was already given or the attempt moved on')
         } else if (attempt.status !== 'consented') return conflict('Consent was already given or the attempt moved on')
         // A CLI-secret request has no participant token, so it sets no cookie: the secret never goes into one.
@@ -486,28 +481,19 @@ export function createCollector(options: CollectorOptions): (request: Request) =
           const prefix = `goal${goal.index}`
           // Screener answers add up as the person goes.
           if (body.screener) given.screener = { ...(current.answers.screener as Record<string, unknown> | undefined), ...body.screener }
-          // On a link nothing is filtered: the answers are read against the rules and the result kept for the author, and the person goes on to consent.
+          // On a link nothing is filtered: the answers are read against the rules, with the order this person saw, and kept for the
+          // author; the person goes on to consent, where a full group stops them.
           if (body.screener && current.status === 'created') {
-            const report = screenReport(given.screener as Record<string, unknown>, run.compiled.screener)
-            given.screenerResult = { matches: report.result === 'accept', outside: report.outside, fit: fitScore(given.screener as Record<string, unknown>) }
+            given.screenerResult = screenResult(given.screener as Record<string, unknown>, run.compiled.screener, run.compiled.groups, screenerOrder(run, current))
           }
-          // The first look is answered once and clicked once: a repeat of either (a retry after a lost reply) changes nothing, so nothing already stored is dropped.
+          // The first look is looked at once and answered once: a repeat of either (a retry after a lost reply) changes nothing.
           const said = current.answers.impression as Record<string, unknown> | undefined
+          if (body.looked && said?.looked !== true) given.impression = { ...said, looked: true }
           if (body.impression !== undefined && coded && typeof said?.text !== 'string') {
-            const page = run.compiled.impression.page ?? goal.start
-            given.impression = {
-              text: body.impression, code: coded.code, codedBy: coded.codedBy,
-              // Only the first click needs the author's own site; a first look on any other public page ends with the question.
-              ...(!isOwnSite(page, run.target) && { firstClick: null, firstClickReason: 'the first-look page is not on the target, so no recorder was there to take a click' }),
-            }
+            if (said?.looked !== true) return { status: 409, text: 'Look at the page before answering' }
+            given.impression = { ...said, text: body.impression, ...coded }
           }
-          if (body.firstClick) {
-            if (typeof said?.text !== 'string') return { status: 409, text: 'Answer the question before clicking' }
-            if (said.firstClick === undefined) {
-              const start = typeof attempt.setupValues.start === 'string' ? attempt.setupValues.start : goal.start
-              given.impression = { ...said, firstClick: { ...body.firstClick, onPath: onGoalPath(body.firstClick.url, goal.path, start) } }
-            }
-          }
+          if (body.assistive !== undefined) given[run.compiled.assistive.id] = body.assistive
           if (body.ease !== undefined) given[`${prefix}.ease`] = body.ease
           if (body.difficulty !== undefined) given[`${prefix}.difficulty`] = body.difficulty
           if (body.confidence !== undefined) given[`${prefix}.confidence`] = body.confidence
@@ -524,7 +510,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
           const view = participantView(run, { ...current, answers })
           const complete = allAnswered(view, goal, answers)
           const finish = current.status === 'questions' && complete
-          const environment = body.screener ? environmentOf(given.screener as Record<string, unknown>) : undefined
+          const environment = body.assistive?.length ? { ...current.environment, assistive: body.assistive.join(', ') } : undefined
           const ok = await tx.updateAttempt(attempt.id, {
             answers,
             ...(finish && { status: 'finished' as const }),
@@ -537,9 +523,9 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         return result ? refuse(result.status, result.text) : reload()
       }
       case 'voice': {
-        // Only the two open questions after the task take a spoken answer; the first look is coded from words alone.
+        // The two open questions after the task and the first look's prompt take a spoken answer.
         const prefix = `goal${goal.index}`
-        const key = body.question === 'anything' ? 'anything' : body.question === `${prefix}.difficulty` ? body.question : undefined
+        const key = body.question === 'anything' ? 'anything' : body.question === `${prefix}.difficulty` ? body.question : body.question === 'impression' ? 'impression' : undefined
         if (!key) return refuse(400, `Unknown question ${body.question}`)
         const bytes = new Uint8Array(Buffer.from(body.audio, 'base64'))
         if (!bytes.length) return refuse(400, 'No audio')
@@ -547,6 +533,19 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         const heard = body.transcript?.trim() || (await (options.transcriber ?? nullTranscriber).transcribe(bytes).catch((error) => { warnTranscriber(error); return undefined }))?.trim()
         // Words from the voice win; otherwise whatever was typed before pressing "Talk instead" stays.
         const words = heard || body.typed?.trim() || undefined
+        if (key === 'impression') {
+          // Coded before the transaction opens, like a typed answer; the words are coded once they are known.
+          const coded = await codeTour(words ?? '', run.compiled.impression.says, options.model)
+          const result = await store.transaction(async (tx) => {
+            const current = await tx.getAttempt(attempt.id)
+            const said = current?.answers.impression as Record<string, unknown> | undefined
+            if (!current || current.status !== 'consented' || said?.looked !== true || typeof said.text === 'string') return 'The first look is not waiting for an answer'
+            const blob = await tx.putBlob(attempt.id, 'voice', bytes, body.contentType)
+            const ok = await tx.updateAttempt(attempt.id, { answers: { ...current.answers, impression: { ...said, text: words ?? '', ...coded }, 'impression.voice': blob } }, 'consented')
+            return ok ? undefined : 'The attempt moved on; try again'
+          })
+          return result ? conflict(result) : reload()
+        }
         const result = await store.transaction(async (tx) => {
           const current = await tx.getAttempt(attempt.id)
           if (current?.status !== 'questions') return 'Questions are not open'
@@ -593,10 +592,11 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         // Only the participant's own link hands off; the CLI secret has no person to send anywhere.
         if (!token) return refuse(403, 'Only the participant hands off')
         const current = (await store.getAttempt(attempt.id)) ?? attempt
-        // The app is where the task happens, and where the first look's click is taken.
-        if (current.status !== 'active' && !barView(run, current).firstClick) return conflict('Nothing to hand off')
+        // The app is where the task happens, and where the first look's page is toured.
+        const touring = current.status === 'consented' && barView(run, current).tour
+        if (current.status !== 'active' && !touring) return conflict('Nothing to hand off')
         const code = await store.createHandoff(current.id, new Date(now() + HANDOFF_TTL_MS).toISOString())
-        const start = typeof current.setupValues.start === 'string' ? current.setupValues.start : goal.start
+        const start = touring ? (run.compiled.impression.page ?? goal.start) : typeof current.setupValues.start === 'string' ? current.setupValues.start : goal.start
         return Response.json({ url: handoffUrl(start, appUrlOf(run), run.run, code) }, { headers })
       }
     }

@@ -6,7 +6,6 @@ import { createRun } from '../runner/create-run.ts'
 import { agentFingerprint } from '../agents/config.ts'
 import { gitCommit, idempotencyKey } from '../runner/key.ts'
 import { handleOf, refreshRun } from '../runner/progress.ts'
-import { attachFirstLook, playwrightScreenshotter } from '../runner/screenshot.ts'
 import { isLoopbackHost, linkBaseFor, probeLocal, reachabilityOf } from '../runner/hosts.ts'
 import { checkReachable } from '../runner/setup.ts'
 import { openStore } from '../store/open.ts'
@@ -14,7 +13,7 @@ import type { RunHandle, RunRow, RunStore } from '../store/types.ts'
 import { chooseTunnel, openReachableTunnel, recordTunnel } from '../tunnel/session.ts'
 import type { UiTestsConfig } from '../types.ts'
 import { verifyRun } from '../verify.ts'
-import { loadStudies, withProduct } from './lint.ts'
+import { loadStudies, snapshotRefusal, withProduct } from './lint.ts'
 import type { Command, Io } from './main.ts'
 import { answersAsServer, ensureServer, ensureServerKnowsRun, ServerUnreachable, startDoorServer } from './ensure-server.ts'
 import { startFrontDoor } from '../server/front-door.ts'
@@ -86,6 +85,9 @@ export const recruit: Command = async (args, io) => {
 
   const findings = lint({ study: chosen.study, compiled: chosen.compiled, sourceText: chosen.sourceText, config, actor })
   if (findings.some(f => f.severity === 'error')) { io.stderr.write(`${formatFindings(findings)}\n`); return 1 }
+  // People see only what the author reviewed: the screener and first look come from a current snapshot. Agents are not screened.
+  const refusal = actor === 'human' ? snapshotRefusal(chosen, io.cwd) : undefined
+  if (refusal) { io.stderr.write(`${refusal}\n`); return 1 }
 
   const target = config.target?.url ?? 'http://localhost:3000'
   const server = (config.server?.url ?? DEFAULT_SERVER_URL).replace(/\/+$/, '')
@@ -201,9 +203,6 @@ export const recruit: Command = async (args, io) => {
       let invites: string[] | undefined
       if (missing) invites = await createInvites({ store, run, study: chosen.study, count: missing, firstSlot: made + 1, target, linkBase, ...(bypass && { bypass }) })
       if (reissued.length) invites = [...reissued, ...(invites ?? [])]
-      // The first look is a picture of the start page, taken once now and shown to every participant of the run.
-      const shot = await attachFirstLook({ store, run, target, screenshotter: deps.screenshotter ?? playwrightScreenshotter({ loopbackOnly: localOnly }), ...(bypass && { headers: { [BYPASS_HEADER]: bypass } }) })
-      if (shot.error) io.stderr.write(`${shot.error}\n`)
       if (!created) io.stderr.write(`Run ${run.run} already exists for key ${key}; ${missing ? `made ${missing} missing invite${missing === 1 ? '' : 's'}` : 'no new invites'}${reissued.length ? `; ${reissued.length} link${reissued.length === 1 ? '' : 's'} reissued under ${doorBase}` : ''}.\n`)
       const tunnelLine = tunnel ? `Tunnel: ${tunnel.url} (open until ${run.deadline} or until this command ends)\n` : ''
 

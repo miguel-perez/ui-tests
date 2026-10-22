@@ -5,10 +5,11 @@ import { signPath } from '../report/sign.ts'
 import { refreshRun } from '../runner/progress.ts'
 import { openStore } from '../store/open.ts'
 import type { Command } from './main.ts'
+import { firstLookLines, groupLines } from '../record/summary.ts'
 
 /** The record in words: the result line, the problems ranked, and what worked. */
 export function reportText(record: RunRecord): string {
-  const lines = [record.sentence, record.compiled.sample.sentence, record.fit.summary]
+  const lines = [record.sentence, record.compiled.sample.sentence, ...groupLines(record), ...firstLookLines(record)]
   if (record.issues.length) {
     lines.push('', 'Problems, most serious first:')
     record.issues.forEach((issue, i) => lines.push(`${i + 1}. ${issue.title} (${issue.count}, ${issue.impact}) at ${issue.where.page}${issue.where.element ? `, ${issue.where.element}` : ''}`, `   ${issue.suggestedChange}`))

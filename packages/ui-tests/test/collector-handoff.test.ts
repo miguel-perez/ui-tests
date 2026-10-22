@@ -3,7 +3,7 @@ import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import { compileStudy } from '../src/compile.ts'
 import { bundleStudyFile, loadBundle } from '../src/load.ts'
 import { createParticipant } from '../src/runner/invites.ts'
-import { FIRST_LOOK_SHOT } from '../src/runner/screenshot.ts'
+
 import { createCollector } from '../src/server/collector.ts'
 import { handoffUrl } from '../src/server/handoff.ts'
 import type { BarView } from '../src/server/view.ts'
@@ -16,7 +16,7 @@ const file = join(import.meta.dirname, 'fixtures', 'verify.ui.test.ts')
 const server = 'http://ui-tests.test'
 const endpoint = `${server}/api/ui-tests`
 const app = 'http://app.test'
-const barKeys: (keyof BarView)[] = ['run', 'attempt', 'status', 'goal', 'record', 'brand', 'firstClick', 'rehearsal']
+const barKeys: (keyof BarView)[] = ['run', 'attempt', 'status', 'goal', 'record', 'brand', 'tour', 'rehearsal']
 let compiled: CompiledStudy
 let store: SqliteStore
 let run: RunRow
@@ -26,8 +26,8 @@ let collect: (request: Request) => Promise<Response>
 beforeAll(async () => {
   const { code } = await bundleStudyFile(file)
   const full = compileStudy((await loadBundle(code, file))[0]!, {})
-  // Two goals, and a first look on the app's own site so the bar takes the first click.
-  compiled = { ...full, goals: full.goals.slice(0, 2), impression: { ...full.impression, on: true } }
+  // Two goals, and a first look on the app's own site, toured with the bar there.
+  compiled = { ...full, goals: full.goals.slice(0, 2), impression: { ...full.impression, on: true, page: '/landing' } }
 })
 beforeEach(async () => {
   clock = Date.parse('2026-10-19T10:00:00.000Z')
@@ -114,14 +114,24 @@ describe('handoff', () => {
     expect(await refused.text()).toBe('Nothing to hand off')
   })
 
-  it('hands off a consented attempt only while its first click is pending', async () => {
+  it('hands off a consented attempt to the first-look page only while it is still to be toured', async () => {
+    const { token } = await person()
+    await post(token, { action: 'consent' })
+    const tour = await post(token, { action: 'handoff' })
+    expect(tour.status).toBe(200)
+    // The tour is of the first look's page, not the task's start.
+    expect(new URL((await tour.json()).url).pathname).toBe('/landing')
+    expect((await post(token, { action: 'answers', looked: true })).status).toBe(200)
+    expect((await post(token, { action: 'handoff' })).status).toBe(409)
+  })
+
+  it('takes the answer only after the look, and codes nothing without a model', async () => {
     const { attempt, token } = await person()
     await post(token, { action: 'consent' })
-    expect((await post(token, { action: 'handoff' })).status).toBe(409)
-    await store.updateAttempt(attempt.id, { answers: { ...(await store.getAttempt(attempt.id))!.answers, [FIRST_LOOK_SHOT]: 'shot' } })
-    expect((await post(token, { action: 'handoff' })).status).toBe(409)
-    await post(token, { action: 'answers', impression: 'a project board' })
-    expect((await post(token, { action: 'handoff' })).status).toBe(200)
+    expect((await post(token, { action: 'answers', impression: 'a project board' })).status).toBe(409)
+    await post(token, { action: 'answers', looked: true })
+    expect((await post(token, { action: 'answers', impression: 'a project board' })).status).toBe(200)
+    expect((await store.getAttempt(attempt.id))!.answers.impression).toEqual({ looked: true, text: 'a project board', parts: null, uncoded: 'no model is configured' })
   })
 })
 
@@ -129,16 +139,16 @@ describe('attempt key', () => {
   it('does only what the bar does', async () => {
     const { attempt, token } = await person()
     await post(token, { action: 'consent' })
-    await store.updateAttempt(attempt.id, { answers: { ...(await store.getAttempt(attempt.id))!.answers, [FIRST_LOOK_SHOT]: 'shot' } })
-    await post(token, { action: 'answers', impression: 'a project board' })
     const key = await keyFor(token)
 
     const looking = await get(key)
     expect(looking.status).toBe(200)
-    expect((await looking.json()).firstClick).toBe(true)
-    expect((await withKey(key, { action: 'answers', firstClick: { target: 'a', url: `${app}/board`, at: 1 } })).status).toBe(200)
+    expect((await looking.json()).tour).toBe(true)
+    expect((await withKey(key, { action: 'answers', looked: true })).status).toBe(200)
+    expect((await get(key).then(r => r.json())).tour).toBe(false)
     expect((await withKey(key, { action: 'answers', ease: 5 })).status).toBe(403)
-    expect((await withKey(key, { action: 'answers', firstClick: { target: 'a', url: `${app}/board`, at: 1 }, comment: 'x' })).status).toBe(403)
+    expect((await withKey(key, { action: 'answers', looked: true, comment: 'x' })).status).toBe(403)
+    expect((await withKey(key, { action: 'answers', impression: 'a board' })).status).toBe(403)
     expect((await post(token, { action: 'begin' })).status).toBe(200)
     expect((await withKey(key, { action: 'events', events: [{ type: 'click', at: 1, url: `${app}/board` }] })).status).toBe(200)
     expect((await withKey(key, { action: 'step', index: 0 })).status).toBe(200)
@@ -158,7 +168,7 @@ describe('attempt key', () => {
     // The task text the bar shows again on request, as the person read it on the player.
     expect(Object.keys(view.goal).sort()).toEqual(['name', 'scenario', 'steps', 'timeoutSeconds'])
     expect(view.goal.scenario).toEqual(expect.any(String))
-    expect(view).toMatchObject({ run: run.run, attempt: attempt.id, status: 'questions', firstClick: false })
+    expect(view).toMatchObject({ run: run.run, attempt: attempt.id, status: 'questions', tour: false })
   })
 
   it('answers a POST with the bar view, not the participant view', async () => {

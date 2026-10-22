@@ -16,13 +16,13 @@ describe('ui-tests estimate', () => {
   it('prints n and minutes as JSON', async () => {
     const { code, out } = await estimate('example', '--json')
     expect(code).toBe(0)
-    expect(JSON.parse(out)).toEqual({ n: 5, minutes: 3 })
+    expect(JSON.parse(out)).toEqual({ n: 5, minutes: 3, groups: [{ name: 'everyone', quota: 5 }] })
   })
   it('writes the JSON to a file with --out', async () => {
     const dir = await mkdtemp(join(tmpdir(), 'ui-tests-estimate-out-'))
     try {
       expect((await estimate('example', '--out', join(dir, 'estimate.json'))).out).toContain('5 people')
-      expect(JSON.parse(await readFile(join(dir, 'estimate.json'), 'utf8'))).toEqual({ n: 5, minutes: 3 })
+      expect(JSON.parse(await readFile(join(dir, 'estimate.json'), 'utf8'))).toEqual({ n: 5, minutes: 3, groups: [{ name: 'everyone', quota: 5 }] })
     } finally { await rm(dir, { recursive: true, force: true }) }
   })
   it('exits 2 when --out is missing, empty or only whitespace', async () => {
@@ -35,6 +35,11 @@ describe('ui-tests estimate', () => {
   it('says it in words without --json', async () => {
     const { out } = await estimate('example')
     expect(out).toContain('5 people, up to 3 minutes each.')
+  })
+  it('names each group and its quota, since each is sampled on its own', async () => {
+    let out = ''
+    await main(['estimate'], { stdout: { write: t => (out += t) }, stderr: { write: () => true }, cwd: join(import.meta.dirname, 'fixtures/examples/accounting'), env: {} })
+    expect(out).toContain('5 people, up to 3 minutes each. Business owner: 3, Bookkeeper: 2.')
   })
   it('exits 2 for an unknown study and when there are no studies', async () => {
     expect((await estimate('example', '--study', 'nope')).code).toBe(2)

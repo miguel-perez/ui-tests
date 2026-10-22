@@ -1,0 +1,73 @@
+{
+  "version": 1,
+  "studies": {
+    "invite flow": {
+      "purpose": { "from": "plan the week together without emailing screenshots around", "value": "plan the week together without emailing screenshots around", "source": "purpose, person shifted" },
+      "says": { "from": "/", "value": "Weekboard: one board for the whole team week.", "source": "og:description" },
+      "language": { "from": "/", "value": "en", "source": "html lang" },
+      "decoys": {
+        "uses": { "from": ["Trello", "Asana", "Notion", "Linear"], "value": ["Jira", "Basecamp", "Monday.com"], "source": "author" },
+        "not": { "from": ["I work on Weekboard, or have taken part in a test of it", "I work in UX, design, marketing or market research", "I have used Weekboard"], "value": ["I work in a team of more than ten people", "I work remotely most days", "I lead a team"], "source": "author" }
+      },
+      "groups": [
+        { "name": "everyone", "quota": 5, "source": "sample" }
+      ],
+      "screens": [
+        {
+          "id": "screener.recency",
+          "text": "When did you last use a shared tool to plan work with a team?",
+          "options": [
+            { "label": "In the past week", "rule": "accept" },
+            { "label": "Between a week and a month ago", "rule": "accept" },
+            { "label": "Between a month and 3 months ago", "rule": "accept" },
+            { "label": "Between 3 months and a year ago", "rule": "reject" },
+            { "label": "More than a year ago", "rule": "reject" },
+            { "label": "Never", "rule": "reject" }
+          ],
+          "multi": false,
+          "ordered": true,
+          "criterion": "recency",
+          "field": "did",
+          "rule": "accept the bands inside 3 months"
+        },
+        {
+          "id": "screener.uses",
+          "text": "Which of these do you use?",
+          "options": [
+            { "label": "Trello", "rule": "accept" },
+            { "label": "Asana", "rule": "accept" },
+            { "label": "Notion", "rule": "accept" },
+            { "label": "Linear", "rule": "accept" },
+            { "label": "Jira", "rule": "reject" },
+            { "label": "Basecamp", "rule": "reject" },
+            { "label": "Monday.com", "rule": "reject" },
+            { "label": "None of these", "rule": "reject" }
+          ],
+          "multi": true,
+          "ordered": false,
+          "criterion": "uses",
+          "field": "uses",
+          "rule": "accept at least one of the listed; the decoys and \"None of these\" reject"
+        },
+        {
+          "id": "screener.not",
+          "text": "Do any of these apply to you?",
+          "options": [
+            { "label": "I work on Weekboard, or have taken part in a test of it", "rule": "reject", "exclusion": "insider" },
+            { "label": "I work in UX, design, marketing or market research", "rule": "reject", "exclusion": "professional" },
+            { "label": "I have used Weekboard", "rule": "reject", "exclusion": "author" },
+            { "label": "I work in a team of more than ten people", "rule": "may-select" },
+            { "label": "I work remotely most days", "rule": "may-select" },
+            { "label": "I lead a team", "rule": "may-select" },
+            { "label": "None of these", "rule": "may-select" }
+          ],
+          "multi": true,
+          "ordered": false,
+          "criterion": "not",
+          "field": "not",
+          "rule": "reject any of the exclusions; the rest are free to pick"
+        }
+      ]
+    }
+  }
+}

@@ -5,7 +5,6 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { main, type CliDeps, type Io } from '../src/cli/main.ts'
-import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { openStore } from '../src/store/open.ts'
 import type { GitHubClient } from '../src/github/types.ts'
 import type { Tunnel } from '../src/tunnel/types.ts'
@@ -14,6 +13,7 @@ import { buildTrace } from '../src/trace/build.ts'
 import { answersAsServer } from '../src/cli/ensure-server.ts'
 import { startServer } from '../src/server/http.ts'
 import { freePort, stubServer } from './server-stub.ts'
+import { draftSnapshots } from './snapshots.ts'
 import { runOrigins } from '../src/server/origins.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
@@ -37,6 +37,7 @@ beforeAll(async () => {
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
   // A webhook is configured on purpose: local only must not call it.
   await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+  await draftSnapshots(work)
 })
 afterAll(async () => {
   await server.close()
@@ -51,7 +52,7 @@ async function recruit(argv: string[], deps: CliDeps = {}, env: Record<string, s
   let out = ''
   let err = ''
   // --host holds its front door open until the deadline or Ctrl-C; unless a test says otherwise, it is stopped at once.
-  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { pollMs: 1, screenshotter: stubScreenshotter(new Uint8Array([0])), ...(argv.includes('--host') && { signal: AbortSignal.abort() }), ...deps } }
+  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { pollMs: 1, ...(argv.includes('--host') && { signal: AbortSignal.abort() }), ...deps } }
   const code = await main(['recruit', ...argv], io)
   return { code, out, err, json: () => JSON.parse(out) }
 }
@@ -136,6 +137,7 @@ describe('recruit --host', () => {
     })
     cleanup.push(() => running.close())
     await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${running.url}' }, target: { url: '${targetUrl}' } }\n`)
+    await draftSnapshots(work)
     try {
       const stop = new AbortController()
       const holding = recruit(['--json', '--host', '10.0.0.5', '--key', 'perimeter-own'], { signal: stop.signal })
@@ -157,6 +159,7 @@ describe('recruit --host', () => {
       expect(seen.filter(path => path.startsWith('/api/ui-tests') || path.startsWith('/ui-tests'))).toEqual([])
     } finally {
       await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+      await draftSnapshots(work)
     }
   })
 
@@ -228,6 +231,7 @@ describe('recruit --local', () => {
     const net = failingNetwork()
     const url = `http://127.0.0.1:${await freePort()}`
     await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${url}' }, target: { url: '${targetUrl}' } }\n`)
+    await draftSnapshots(work)
     try {
       const stop = new AbortController()
       const running = recruit(['--json', '--local', '--key', 'local-start'], { ...net.deps, signal: stop.signal })
@@ -248,18 +252,21 @@ describe('recruit --local', () => {
       expect(net.fetchSpy).not.toHaveBeenCalled()
     } finally {
       await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+      await draftSnapshots(work)
     }
   })
 
   it('refuses a ui-tests server that is not on this machine', async () => {
     const net = failingNetwork()
     await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: 'https://tests.example.com' }, target: { url: '${targetUrl}' } }\n`)
+    await draftSnapshots(work)
     try {
       const away = await recruit(['--local', '--key', 'away-server'], net.deps)
       expect(away.code).toBe(2)
       expect(away.err).toBe('--local needs the ui-tests server on this machine, not https://tests.example.com.\n')
     } finally {
       await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+      await draftSnapshots(work)
     }
     expect(net.fetchSpy).not.toHaveBeenCalled()
   })
@@ -270,12 +277,14 @@ describe('recruit --local', () => {
     expect(tunnelled.code).toBe(2)
     expect(tunnelled.err).toContain('--local and --tunnel cannot be combined')
     await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: 'http://10.0.0.5:3100' } }\n`)
+    await draftSnapshots(work)
     try {
       const away = await recruit(['--local', '--key', 'away'], net.deps)
       expect(away.code).toBe(2)
       expect(away.err).toContain('--local needs a target on this machine')
     } finally {
       await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+      await draftSnapshots(work)
     }
     expect(net.fetchSpy).not.toHaveBeenCalled()
   })
@@ -286,12 +295,14 @@ describe('recruit --local', () => {
     expect(remote.code).toBe(2)
     expect(remote.err).toContain('--local keeps the store on this machine')
     await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: 'https://localhost:3100' } }\n`)
+    await draftSnapshots(work)
     try {
       const secure = await recruit(['--local', '--key', 'secure'], net.deps)
       expect(secure.code).toBe(2)
       expect(secure.err).toContain('--local supports http targets')
     } finally {
       await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${targetUrl}' }, webhook: { url: 'https://hooks.example.com/ui-tests', secret: 's' } }\n`)
+      await draftSnapshots(work)
     }
     expect(net.fetchSpy).not.toHaveBeenCalled()
   })

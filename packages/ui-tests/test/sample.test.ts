@@ -33,14 +33,21 @@ describe('goalTimeout', () => {
 })
 
 describe('users', () => {
-  it('requires are', () => { expect(validateUsers({ did: 'x' } as never).errors.map(e => e.field)).toContain('are') })
+  it('requires did in the object form, and derives are from it', () => {
+    expect(validateUsers({ are: 'a' }).errors.map(e => e.field)).toEqual(['did'])
+    expect(validateUsers({ did: 'x' }).errors).toEqual([])
+  })
   it('names each bad field', () => {
-    expect(validateUsers({ are: 'a', within: 'soon' }).errors.map(e => e.field)).toEqual(['within'])
-    expect(validateUsers({ are: 'a', where: ['XX1'] }).errors.map(e => e.field)).toEqual(['where'])
-    expect(validateUsers({ are: 'a', age: { min: 60, max: 20 } }).errors.map(e => e.field)).toEqual(['age'])
+    expect(validateUsers({ did: 'x', within: 'soon' }).errors.map(e => e.field)).toEqual(['within'])
+    expect(validateUsers({ did: 'x', where: ['XX1'] }).errors.map(e => e.field)).toEqual(['where'])
+    expect(validateUsers({ did: 'x', age: { min: 60, max: 20 } }).errors.map(e => e.field)).toEqual(['age'])
+    expect(validateUsers({ did: 'x', often: 'hourly' } as never).errors.map(e => e.field)).toEqual(['often'])
+    expect(validateUsers({ did: 'x', role: { Developer: 0 } }).errors.map(e => e.field)).toEqual(['role'])
+    expect(validateUsers({ did: 'x', professionals: 'maybe' } as never).errors.map(e => e.field)).toEqual(['professionals'])
+    expect(validateUsers({ did: 'x', screen: {} } as never).errors.map(e => e.field)).toEqual(['screen'])
   })
   it('accepts a valid object and a string', () => {
-    expect(validateUsers({ are: 'a', within: '3 months', where: ['US', 'PT'], age: { min: 18, max: 65 }, language: 'pt-BR' }).errors).toEqual([])
+    expect(validateUsers({ did: 'x', within: '3 months', where: ['US', 'PT'], age: { min: 18, max: 65 }, language: 'pt-BR', role: { Developer: 3, Designer: 2 }, insiders: 'include' }).errors).toEqual([])
     expect(validateUsers('people').errors).toEqual([])
   })
   it('builds the id from both sentences', () => {

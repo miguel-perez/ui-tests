@@ -13,6 +13,7 @@ import { lint } from '../src/lint.ts'
 import { idempotencyKey } from '../src/runner/key.ts'
 import * as api from '../src/index.ts'
 import { stubServer } from './server-stub.ts'
+import { draftSnapshots } from './snapshots.ts'
 
 const { getStudies, resetStudies } = api
 const fixtures = join(dirname(fileURLToPath(import.meta.url)), 'fixtures')
@@ -129,6 +130,7 @@ describe('the commands', () => {
     data = await mkdtemp(join(tmpdir(), 'ui-tests-actors-'))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
     await writeFile(join(work, 'ui-tests.config.ts'), `export default { server: { url: '${server.url}' }, target: { url: '${url}' }, agents: { model: { provider: 'scripted', name: 'fixture' } } }\n`)
+    await draftSnapshots(work)
   })
   afterAll(async () => {
     await server.close()

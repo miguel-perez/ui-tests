@@ -23,10 +23,12 @@ describe('compileStudy', () => {
     const [goal] = compiled.goals
     expect(goal).toMatchObject({ shape: 'happy-path', startFrom: 'setup', start: '/board', primary: true, hasOutcome: true, path: ['/board', '/settings/members'] })
     expect(goal.timeout.seconds).toBe(180)
-    expect(compiled.impression).toMatchObject({ on: true, page: '/', flashMs: 500 })
+    expect(compiled.impression).toMatchObject({ on: true, page: '/', says: null, parts: ['what', 'who', 'action', 'purpose'] })
     expect(compiled.questions[0].text).toBe('Would Weekboard be useful to you?')
     expect(goal.questions.map(q => q.id)).toEqual(['goal0.ease', 'goal0.difficulty'])
-    expect(compiled.screener.map(q => q.field)).toEqual(['did', 'uses', 'not', 'purpose', 'purpose', 'purpose', 'environment', 'environment', 'environment'])
+    expect(compiled.screener.map(q => q.criterion)).toEqual(['recency', 'uses', 'not'])
+    expect(compiled.groups).toEqual([{ name: 'everyone', quota: 5 }])
+    expect(compiled.draft).toBe(true)
   })
 
   it('parses against the schema and holds no functions', () => {

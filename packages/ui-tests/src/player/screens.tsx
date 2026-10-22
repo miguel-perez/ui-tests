@@ -6,11 +6,8 @@ import type { Screen } from './flow.ts'
 import {
   AGREE, AGREEMENT_ENDS, CARD_FOOTER, CARD_TITLE, CONFIDENCE_ENDS, CONSENT_TITLE, CONTINUE, EASE_ENDS, RECORDING, SCREEN_PROMPT, SCREENER_TITLE,
   PRACTICE_CONFIRM, PRACTICE_DONE, PRACTICE_DONE_NOTE, PRACTICE_INTRO, PRACTICE_NOT_YET, PRACTICE_STUCK, PRACTICE_STUCK_NOTE, PRACTICE_TITLE, PRACTICE_YES,
-  FIRST_CLICK_BODY, FIRST_CLICK_TITLE, OPEN_PAGE, START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, USEFUL_ENDS, WITHDRAW, WITHDRAWN_BODY, WITHDRAWN_TITLE, contact, duration,
+  DRAFT, FULL_BODY, FULL_TITLE, OPEN_PAGE, START_TASK, SUBMIT, TEXT_LABEL, THANKS_BODY, THANKS_TITLE, TOUR_BODY, TOUR_TITLE, USEFUL_ENDS, WITHDRAW, WITHDRAWN_BODY, WITHDRAWN_TITLE, contact, duration,
 } from './copy.ts'
-
-/** Where the collector serves the attempt's first-look picture; the cookie says whose it is. */
-const FIRST_LOOK_SRC = (run: string) => `/api/ui-tests/?run=${encodeURIComponent(run)}&shot=first-look`
 
 export type ScreenProps = {
   view: ParticipantView
@@ -24,13 +21,9 @@ export type ScreenProps = {
   onStart: () => void
   /** Stops and deletes the recording; offered on every screen after consent. */
   onWithdraw?: () => void
-  /** A spoken answer to an open question after the task; `typed` is what was already written. */
+  /** A spoken answer to an open question after the task or to the first look's prompt; `typed` is what was already written. */
   onVoice?: (id: string, blob: Blob, typed?: string) => void
-  /** The flashed picture finished loading. */
-  onFlashLoaded?: () => void
-  /** The flashed picture could not be loaded. */
-  onFlashFailed?: () => void
-  /** Opens the first goal's start page for the first click, when the page did not open by itself. */
+  /** Opens the first look's page on the author's own site, for the tour. */
   onOpenPage?: () => void
   busy?: boolean
   error?: string
@@ -59,8 +52,7 @@ const css = `
 .pl :focus-visible{outline:2px solid var(--pl-accent,var(--pl-fg));outline-offset:2px}
 .pl button.pl-withdraw{margin-top:16px;min-height:44px;color:var(--pl-fg);background:transparent;border:1px solid var(--pl-hair)}
 .pl-error{color:#b3261e}
-.pl-fix{font-size:3rem;text-align:center;margin:auto}
-.pl-shot{display:block;width:100%;height:auto;border:1px solid var(--pl-hair);border-radius:8px}
+.pl-draft{width:100%;max-width:34rem;margin:0 0 16px;padding:8px 12px;border:1px dashed var(--pl-hair);border-radius:8px;font-size:.875rem}
 .pl-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:12px;border:1px solid var(--pl-hair);border-radius:999px}
 .pl button.pl-ghost{color:var(--pl-fg);background:transparent;border:1px solid var(--pl-hair)}
 .pl-voice{display:flex;flex-direction:column;gap:8px}
@@ -80,6 +72,7 @@ function Frame({ view, children, error, onWithdraw }: { view: ParticipantView; c
         {brand.logo && <img src={brand.logo} alt={brand.name} />}
         <span>{brand.name}</span>
       </header>
+      {view.draft && <p className="pl-draft" role="note">{DRAFT}</p>}
       <div className="pl-card">
         {children}
         {error && <p role="alert" className="pl-error">{error}</p>}
@@ -205,10 +198,15 @@ export function PlayerScreen(props: ScreenProps) {
       body = q ? (
         <>
           <p className="pl-dim">{SCREENER_TITLE}</p>
-          {q.open ? <Open id={q.id} question={q.text} value={given(q.id)} onAnswer={onAnswer} /> : <Choice id={q.id} question={q.text} options={q.options} multi={q.multi} value={given(q.id)} onAnswer={onAnswer} />}
+          <Choice id={q.id} question={q.text} options={q.options} multi={q.multi} value={given(q.id)} onAnswer={onAnswer} />
           {next(CONTINUE, answered(q.id))}
         </>
       ) : null
+      break
+    }
+    case 'assistive': {
+      const q = view.assistive
+      body = q ? <><Choice id={q.id} question={q.text} options={q.options} multi value={given(q.id)} onAnswer={onAnswer} />{next(CONTINUE)}</> : null
       break
     }
     case 'practice':
@@ -217,10 +215,14 @@ export function PlayerScreen(props: ScreenProps) {
     case 'impression': {
       const imp = view.impression
       if (!imp) { body = null; break }
-      if (screen.phase === 'fixation') body = <><h1 style={{ position: 'absolute', left: -9999 }}>Get ready</h1><p className="pl-fix" aria-hidden="true">+</p></>
-      else if (screen.phase === 'flash') body = <><h1 style={{ position: 'absolute', left: -9999 }}>Look at this page</h1><img className="pl-shot" alt="" src={FIRST_LOOK_SRC(view.run)} onLoad={props.onFlashLoaded} onError={props.onFlashFailed} /></>
-      else if (screen.phase === 'click') body = <><h1>{FIRST_CLICK_TITLE}</h1><p>{FIRST_CLICK_BODY}</p><button type="button" disabled={busy} onClick={props.onOpenPage}>{OPEN_PAGE}</button></>
-      else body = <><Open id="impression" question={imp.question} value={given('impression')} onAnswer={onAnswer} />{next(CONTINUE)}</>
+      if (screen.phase === 'look') body = <><h1>{TOUR_TITLE}</h1><p>{TOUR_BODY}</p><button type="button" disabled={busy} onClick={props.onOpenPage}>{OPEN_PAGE}</button></>
+      else body = (
+        <>
+          <Open id="impression" question={imp.prompt} value={given('impression')} onAnswer={onAnswer} />
+          {props.onVoice && <VoiceAnswer participant={view.run} disabled={busy} onAnswer={(blob) => props.onVoice?.('impression', blob, typeof given('impression') === 'string' ? (given('impression') as string) : undefined)} />}
+          {next(CONTINUE)}
+        </>
+      )
       break
     }
     case 'card':
@@ -266,7 +268,10 @@ export function PlayerScreen(props: ScreenProps) {
     case 'withdrawn':
       body = <><h1>{WITHDRAWN_TITLE}</h1><p>{WITHDRAWN_BODY}</p></>
       break
+    case 'full':
+      body = <><h1>{FULL_TITLE}</h1><p>{FULL_BODY}</p></>
+      break
   }
-  const after = view.status !== 'created' && !['screener', 'consent', 'withdrawn'].includes(screen.kind)
+  const after = view.status !== 'created' && !['screener', 'consent', 'withdrawn', 'full'].includes(screen.kind)
   return <Frame view={view} error={error} onWithdraw={after ? onWithdraw : undefined}>{body}</Frame>
 }

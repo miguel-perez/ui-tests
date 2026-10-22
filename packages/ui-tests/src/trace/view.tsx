@@ -6,6 +6,7 @@ import type { TunnelRecord } from '../tunnel/types.ts'
 import type { RunRecord } from '../record/schema.ts'
 import { describeRevision, pendingStudyEdits, studyEditSnippet } from '../revisions.ts'
 import { clipOf } from '../video.ts'
+import { PART_LABELS, TOUR_PARTS } from '../derive/tour.ts'
 import { momentLabel } from './reel.ts'
 
 const css = `
@@ -43,7 +44,11 @@ function Shell({ title, actor, children }: { title: string; actor: string; child
   )
 }
 
-const CODES = ['named the purpose', 'did not name it', 'no answer'] as const
+/** What a person who saw the screener met: the group, then each criterion, its answer, and whether it was met. */
+function screenerLine(screener: NonNullable<TraceAttempt['screener']>): string {
+  const criteria = Object.entries(screener.criteria).map(([key, c]) => `${key} ${Array.isArray(c.value) ? (c.value.join(', ') || 'none') : String(c.value)}${c.met ? '' : ' (outside)'}`)
+  return `Screener: ${screener.group === null ? 'in no group' : `group ${screener.group}`}; ${criteria.join('; ') || 'nothing answered'}.`
+}
 
 /** A form that posts one revision to this viewer. Nothing else on the page writes. */
 function Revise({ run, kind, children, label }: { run: string; kind: string; children?: React.ReactNode; label: string }) {
@@ -88,7 +93,7 @@ function Attempt({ item, index, run }: { item: TraceAttempt; index: number; run:
       <h3>Attempt {index + 1}{attempt.rehearsal ? ' (rehearsal)' : ''}: {attempt.reason ?? attempt.status}{excluded ? ' (excluded: not counted, still paid)' : ''}</h3>
       {item.screener && (
         <p>
-          Screener: {item.screener.matches ? 'matches the users' : `outside: ${item.screener.outside.join('; ')}`}. Fit {item.screener.fit.total} of 7: recency {item.screener.fit.recency} of 3, already doing something {item.screener.fit.solving} of 1, matters {item.screener.fit.importance} of 3.
+          {screenerLine(item.screener)}
           {' '}The screener is a gate people can game.
         </p>
       )}
@@ -96,12 +101,18 @@ function Attempt({ item, index, run }: { item: TraceAttempt; index: number; run:
       <p>Time on the task: {seconds(item.timings.onGoalMs)}</p>
       <p>Path taken: <code>{item.path.length ? item.path.join(' → ') : 'none recorded'}</code></p>
       {item.happyPath && <p>Happy path: <code>{item.happyPath.join(' → ')}</code></p>}
+      {item.firstClick && <p>First click: <code>{item.firstClick.target}</code>, to <code>{item.firstClick.url}</code>{item.firstClick.onPath === null ? '' : item.firstClick.onPath ? ', on the path' : ', off the path'}.</p>}
       {item.impression && (
         <>
-          <p>First look: “{item.impression.text}” coded <strong>{item.impression.code}</strong> by {item.impression.codedBy}.</p>
-          <Revise run={run} kind="code-impression" label="Change the code">
+          <p>
+            First look: “{item.impression.text}”{' '}
+            {item.impression.parts
+              ? <>coded by {item.impression.codedBy}: {TOUR_PARTS.map(p => `${PART_LABELS[p]} ${item.impression!.parts![p] ? 'yes' : 'no'}`).join(', ')}.</>
+              : <>not coded ({item.impression.uncoded ?? 'not coded yet'}).</>}
+          </p>
+          <Revise run={run} kind="code-impression" label="Code it">
             <input type="hidden" name="attempt" value={attempt.id} />
-            <select name="code" defaultValue={item.impression.code} aria-label="Code">{CODES.map(c => <option key={c}>{c}</option>)}</select>
+            {TOUR_PARTS.map(p => <label key={p}><input type="checkbox" name={p} defaultChecked={Boolean(item.impression!.parts?.[p])} /> {PART_LABELS[p]}</label>)}
           </Revise>
         </>
       )}

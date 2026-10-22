@@ -10,6 +10,8 @@ let activeTask: AuthoredTask | undefined
 
 /** Old option names and the new name each one is replaced by; lint reports these. */
 const legacyOptions: Record<string, string> = { happyPath: 'path', catch: 'sample', impression: 'firstLook', screen: 'users', video: "record: 'video'" }
+/** Task options that moved to the study: there is one first look per study. */
+const taskOnlyLegacy: Record<string, string> = { firstLook: 'firstLook on the study' }
 
 /** Finds the authoring call site: the first stack frame outside this module, as file and line. */
 function site(): { file: string; line: number } {
@@ -20,8 +22,8 @@ function site(): { file: string; line: number } {
   }
   return { file: '', line: 0 }
 }
-function legacyIn(options: object, where: string) {
-  return Object.keys(options).filter(key => key in legacyOptions).map(key => `${where}: "${key}" is now "${legacyOptions[key]}"`)
+function legacyIn(options: object, where: string, names: Record<string, string> = legacyOptions) {
+  return Object.keys(options).filter(key => key in names).map(key => `${where}: "${key}" is now "${names[key]}"`)
 }
 /** Clears the authored studies so a test file can be evaluated again from scratch. */
 export function resetStudies() { studies = []; activeStudy = undefined; activeTask = undefined }
@@ -53,7 +55,7 @@ export function task(name: string, optionsOrFnOrCheck?: TaskOptions | (() => voi
   const options = typeof optionsOrFnOrCheck === 'object' ? optionsOrFnOrCheck : {}
   const entry: AuthoredTask = { name, options, steps: [], outcomes: [], line }
   activeStudy.tasks.push(entry)
-  activeStudy.legacy.push(...legacyIn(options, `task "${name}"`))
+  activeStudy.legacy.push(...legacyIn(options, `task "${name}"`), ...legacyIn(options, `task "${name}"`, taskOnlyLegacy))
   const body = typeof optionsOrFnOrCheck === 'function' ? optionsOrFnOrCheck as () => void : fn
   activeTask = entry
   try { body?.() } finally { activeTask = undefined }

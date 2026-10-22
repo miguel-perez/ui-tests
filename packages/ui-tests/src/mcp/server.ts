@@ -41,9 +41,12 @@ export function createMcpServer(io: Io): McpServer {
   const server = new McpServer({ name: 'ui-tests', version: '0.0.0' })
 
   server.registerTool('lint', {
-    description: 'Check the study files against the rules and show what a run would do. Same JSON as `ui-tests lint --json`.',
-    inputSchema: { files: z.array(z.string()).optional().describe('Study files relative to the project; default every *.ui.test.ts') },
-  }, ({ files }) => tool(io, ['lint', ...(files ?? []), '--json']))
+    description: 'Check the study files against the rules and show what a run would do. Same JSON as `ui-tests lint --json`. With `update`, first draft or update each study\'s screener snapshot (`ui-tests lint -u`) for the author to review and commit; what could not be drafted is named.',
+    inputSchema: {
+      files: z.array(z.string()).optional().describe('Study files relative to the project; default every *.ui.test.ts'),
+      update: z.boolean().optional().describe('Draft or update the <study file>.screener.snap of each study first'),
+    },
+  }, ({ files, update }) => tool(io, ['lint', ...(files ?? []), ...(update ? ['-u'] : []), '--json']))
 
   server.registerTool('estimate', {
     description: 'How many people (n) and how many minutes each, before anything is spent. Same JSON as `ui-tests estimate --json`.',

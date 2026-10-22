@@ -11,7 +11,7 @@ import { buildRecord } from '../src/record/build.ts'
 import type { RunRecord } from '../src/record/schema.ts'
 import { normalisePath, signedUrl, signPath, verifyPath } from '../src/report/sign.ts'
 import { ReportView } from '../src/report/view.tsx'
-import { FIRST_LOOK_SKIPPED } from '../src/runner/screenshot.ts'
+
 import { reportResponse } from '../src/server/report.ts'
 import { SqliteStore } from '../src/store/sqlite.ts'
 import { serveTrace } from '../src/trace/serve.ts'
@@ -39,7 +39,7 @@ beforeAll(async () => {
     verification: { status: 'correct', steps: [] },
     answers: {
       'goal0.ease': 3, 'goal0.difficulty': 'I could not tell which button to press',
-      impression: { text: 'a tool for invites', code: 'named the purpose', codedBy: 'rule', firstClick: { target: 'a#docs', url: 'http://t.test/docs/getting-started', onPath: true, at: 900 } },
+      impression: { looked: true, text: 'a tool for invites', parts: { what: true, who: true, action: false, purpose: true }, codedBy: 'model' },
     },
   })
   await store.appendEvents(first.id, [
@@ -49,11 +49,11 @@ beforeAll(async () => {
     { type: 'rrweb', at: 9000, url: 'http://t.test/', data: { type: 5, timestamp: 9000, data: { tag: 'end', payload: {} } }, seq: 4 },
   ])
 
-  // The second person was never asked the first look: the picture could not be taken.
+  // The second person's first look was answered with no model to code it.
   const second = (await store.createAttempt({ runId, participant: 'p_private_2', goalIndex: 0, rehearsal: false })).attempt
   await store.updateAttempt(second.id, {
     status: 'finished', reason: 'gave up', purposes: compiled.consent.purposes, startedAt: new Date(0).toISOString(), endedAt: new Date(30_000).toISOString(),
-    answers: { [FIRST_LOOK_SKIPPED]: 'the page could not be pictured' },
+    answers: { impression: { looked: true, text: 'a shop for boards', parts: null, uncoded: 'no model is configured' } },
   })
   await store.createAttempt({ runId, participant: 'p_private_3', goalIndex: 0, rehearsal: false })
   record = await buildRecord(store, runId)
@@ -108,12 +108,12 @@ describe('signed paths', () => {
 })
 
 describe('the report', () => {
-  it('opens with the result line and names the measures, the fit and the first look', () => {
+  it('opens with the result line and names the measures and the first look, coded part by part', () => {
     const words = text(render())
     expect(words).toContain(record.sentence)
-    for (const name of ['Effectiveness', 'Efficiency', 'Satisfaction', 'Fit']) expect(words).toContain(name)
-    expect(words).toContain('What was that page for?')
-    expect(words).toContain('1 named the purpose')
+    for (const name of ['Effectiveness', 'Efficiency', 'Satisfaction']) expect(words).toContain(name)
+    expect(words).not.toContain('Fit')
+    expect(words).toContain('First look, of 1 coded answer: 1 identified it, 1 identified who it is from, 0 named an action, 1 named its purpose.')
   })
 
   it('ranks the problems as cards with where, who, words, moments and a suggested change, and puts what worked last', () => {
@@ -143,17 +143,11 @@ describe('the report', () => {
     expect(html).toContain(`/p1/?sig=${signPath(`/r/${runId}/p1`, SECRET)}&amp;at=4000`)
   })
 
-  it('says a first look that was never asked is not the same as no answer', () => {
+  it('lists the first-look answers nobody has coded, beside the issues and never counted in them', () => {
     const words = text(render())
-    expect(words).toContain('Never asked of 1 person')
-    expect(words).toContain('This is not the same as no answer')
-    expect(words).toContain('0 gave no answer')
-    expect(text(render({ attemptIndex: 1 }))).toContain('never asked: the picture of the page could not be taken')
-    const noAnswer = { ...withFirstLook(record), attempts: record.attempts.map((a, i) => (i === 1 ? { ...a, firstLook: 'asked' as const } : a)), impression: { ...record.impression, neverAsked: 0, noAnswer: 1, denominator: 2 } }
-    const other = text(renderToStaticMarkup(ReportView({ record: noAnswer, attemptIndex: 1 })))
-    expect(other).toContain('asked')
-    expect(other).not.toContain('never asked')
-    expect(text(renderToStaticMarkup(ReportView({ record: noAnswer })))).not.toContain('Never asked of')
+    expect(words).toContain('1 first-look answer is not coded yet (no model is configured); code them in the trace.')
+    expect(record.impression.uncoded).toEqual([{ attempt: record.attempts[1]!.id, reason: 'no model is configured' }])
+    expect(text(render({ attemptIndex: 1 }))).toContain('First look asked')
   })
 
   it('is white-labelled: the author, the brand accent, and no ui-tests name', () => {

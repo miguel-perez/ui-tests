@@ -42,8 +42,8 @@ export async function recordRevision(
         break
       case 'code-impression': {
         needAttempt(revision.attempt)
-        const stored = attempts.find(a => a.id === revision.attempt)!.answers.impression as { code?: unknown } | undefined
-        if (!stored || typeof stored !== 'object' || typeof stored.code !== 'string') refuse('This person gave no first-look answer to code')
+        const stored = attempts.find(a => a.id === revision.attempt)!.answers.impression as { text?: unknown } | undefined
+        if (!stored || typeof stored !== 'object' || typeof stored.text !== 'string') refuse('This person gave no first-look answer to code')
         break
       }
       case 'scenario': case 'promote-path':

@@ -18,7 +18,8 @@ export const revisionSchema = z.discriminatedUnion('kind', [
   z.object({ ...base, kind: z.literal('issue-split'), issue: z.string().min(1), moments: z.array(z.array(z.string().min(1)).min(1)).min(2) }),
   z.object({ ...base, kind: z.literal('scenario'), goalIndex: z.number().int().nonnegative(), text: z.string().trim().min(1) }),
   z.object({ ...base, kind: z.literal('promote-path'), goalIndex: z.number().int().nonnegative(), path: z.array(z.string().min(1)).min(1) }),
-  z.object({ ...base, kind: z.literal('code-impression'), attempt: z.string().min(1), code: z.enum(['named the purpose', 'did not name it', 'no answer']) }),
+  /** The author codes a first-look answer by hand, part by part: what it is, who it is from, an action, its purpose. */
+  z.object({ ...base, kind: z.literal('code-impression'), attempt: z.string().min(1), parts: z.object({ what: z.boolean(), who: z.boolean(), action: z.boolean(), purpose: z.boolean() }) }),
   z.object({ ...base, kind: z.literal('undo'), revision: z.number().int().positive() }),
 ])
 export type Revision = z.infer<typeof revisionSchema>
@@ -88,7 +89,7 @@ export function describeRevision(r: Revision): string {
     case 'issue-split': return `Split issue ${r.issue} into ${r.moments.length}`
     case 'scenario': return `Task ${r.goalIndex + 1} wording: “${r.text}”`
     case 'promote-path': return `Task ${r.goalIndex + 1} path promoted: ${r.path.join(' → ')}`
-    case 'code-impression': return `Coded the first look of attempt ${r.attempt} as ${r.code}`
+    case 'code-impression': return `Coded the first look of attempt ${r.attempt}: ${(['what', 'who', 'action', 'purpose'] as const).filter(p => r.parts[p]).join(', ') || 'none of the parts'}`
     case 'undo': return `Undid revision ${r.revision}`
   }
 }

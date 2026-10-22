@@ -17,7 +17,7 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 export function clauseEvidence(record: Omit<RunRecord, 'evidence' | 'evidenceStatement'>): Clause[] {
   // An agent record is gated out: those clauses are about people, and an agent run is not one.
   if (record.actor === 'agent') return []
-  const { compiled, attempts, measures, fit, issues, revisions, handle } = record
+  const { compiled, attempts, measures, screened, groups, issues, revisions, handle } = record
   // Only people who began: unopened invite slots, retired slots and rehearsals are not people who took part.
   const real = attempts.filter(a => !a.rehearsal && a.timings.startedAt !== undefined && !a.flags.includes('retired'))
   const consented = real.filter(a => a.purposes.length > 0)
@@ -31,7 +31,7 @@ export function clauseEvidence(record: Omit<RunRecord, 'evidence' | 'evidenceSta
   return [
     {
       clause: '5.3', title: 'User involvement',
-      shows: `${plural(fit.screened, 'person', 'people')} answered the screener and ${fit.matched} matched the stated users (${compiled.users.are}); ${plural(consented.length, 'attempt')} carry the purposes the person agreed to. ${fit.summary}`,
+      shows: `${plural(screened.n, 'person', 'people')} answered the screener, ${screened.n - screened.noGroup} of them in a group of the stated users (${compiled.users.are})${groups.length > 1 ? `: ${groups.map(g => `${g.name} ${g.n} of ${g.quota}`).join(', ')}` : ''}; ${plural(consented.length, 'attempt')} carry the purposes the person agreed to.`,
     },
     {
       clause: '5.4', title: 'User-centred evaluation drives and refines the design',

@@ -15,19 +15,18 @@ describe('nextScreen', () => {
     expect(nextScreen(view(), { kind: 'consent' }, {})).toEqual({ kind: 'card' })
   })
 
-  it('orders a link run screener, consent, practice, first look, card', () => {
-    const v = view({ screener: [{ id: 's1', text: 'a', options: ['x'], multi: false }, { id: 's2', text: 'b', options: ['y'], multi: false }], practice: true, impression: { page: '/', flashMs: 500, question: 'What was that page for?', asked: false, click: true } })
+  it('orders a link run screener, consent, assistive technology, practice, the tour, its prompt, card', () => {
+    const v = view({ screener: [{ id: 's1', text: 'a', options: ['x'], multi: false }, { id: 's2', text: 'b', options: ['y'], multi: false }], assistive: { id: 'assistive', text: 'c', options: ['Screen reader'] }, practice: true, impression: { page: '/', prompt: 'What do you make of that page?', looked: false } })
     const path: Screen[] = [entryScreen(v)]
     while (path.at(-1)!.kind !== 'card') path.push(nextScreen(v, path.at(-1)!, {}))
     expect(path).toEqual([
       { kind: 'screener', index: 0 },
       { kind: 'screener', index: 1 },
       { kind: 'consent' },
+      { kind: 'assistive' },
       { kind: 'practice' },
-      { kind: 'impression', phase: 'fixation' },
-      { kind: 'impression', phase: 'flash' },
+      { kind: 'impression', phase: 'look' },
       { kind: 'impression', phase: 'question' },
-      { kind: 'impression', phase: 'click' },
       { kind: 'card' },
     ])
   })

@@ -1,0 +1,94 @@
+{
+  "version": 1,
+  "studies": {
+    "read-only access": {
+      "are": { "from": "paid for accounting software for your own business", "value": "people who paid for accounting software for their own business", "source": "did, person shifted" },
+      "purpose": { "from": "give someone else read-only access to my books", "value": "give someone else read-only access to your books", "source": "purpose, person shifted" },
+      "says": { "from": "/", "value": "Accounting for small businesses: invoices, expenses and reports in one place.", "source": "meta description" },
+      "language": { "from": "/", "value": "en", "source": "html lang" },
+      "often": { "from": "paid for accounting software for your own business", "value": false, "source": "author" },
+      "decoys": {
+        "role": { "from": ["Business owner", "Bookkeeper"], "value": ["Office manager", "Payroll clerk", "Tax preparer", "Financial controller"], "source": "author" },
+        "uses": { "from": ["QuickBooks", "Xero", "FreshBooks"], "value": ["Wave", "Sage", "NetSuite"], "source": "author" },
+        "not": { "from": ["I work on Ledgerly, or have taken part in a test of it", "I work in UX, design, marketing or market research"], "value": ["I run a business with more than ten staff", "I file my taxes online", "I keep receipts on paper"], "source": "author" }
+      },
+      "groups": [
+        { "name": "Business owner", "quota": 3, "source": "role" },
+        { "name": "Bookkeeper", "quota": 2, "source": "role" }
+      ],
+      "screens": [
+        {
+          "id": "screener.recency",
+          "text": "When did you last pay for accounting software for your own business?",
+          "options": [
+            { "label": "In the past week", "rule": "accept" },
+            { "label": "Between a week and a month ago", "rule": "accept" },
+            { "label": "Between a month and 3 months ago", "rule": "accept" },
+            { "label": "Between 3 months and a year ago", "rule": "accept" },
+            { "label": "Between a year and 2 years ago", "rule": "reject" },
+            { "label": "More than 2 years ago", "rule": "reject" },
+            { "label": "Never", "rule": "reject" }
+          ],
+          "multi": false,
+          "ordered": true,
+          "criterion": "recency",
+          "field": "did",
+          "rule": "accept the bands inside 1 year"
+        },
+        {
+          "id": "screener.role",
+          "text": "Which of these is closest to your role?",
+          "options": [
+            { "label": "Business owner", "rule": "accept", "groups": ["Business owner"] },
+            { "label": "Bookkeeper", "rule": "accept", "groups": ["Bookkeeper"] },
+            { "label": "Office manager", "rule": "reject" },
+            { "label": "Payroll clerk", "rule": "reject" },
+            { "label": "Tax preparer", "rule": "reject" },
+            { "label": "Financial controller", "rule": "reject" },
+            { "label": "None of these", "rule": "reject" }
+          ],
+          "multi": false,
+          "ordered": false,
+          "criterion": "role",
+          "field": "role",
+          "rule": "accept \"Business owner\" or \"Bookkeeper\""
+        },
+        {
+          "id": "screener.uses",
+          "text": "Which of these do you use?",
+          "options": [
+            { "label": "QuickBooks", "rule": "accept" },
+            { "label": "Xero", "rule": "accept" },
+            { "label": "FreshBooks", "rule": "accept" },
+            { "label": "Wave", "rule": "reject" },
+            { "label": "Sage", "rule": "reject" },
+            { "label": "NetSuite", "rule": "reject" },
+            { "label": "None of these", "rule": "reject" }
+          ],
+          "multi": true,
+          "ordered": false,
+          "criterion": "uses",
+          "field": "uses",
+          "rule": "accept at least one of the listed; the decoys and \"None of these\" reject"
+        },
+        {
+          "id": "screener.not",
+          "text": "Do any of these apply to you?",
+          "options": [
+            { "label": "I work on Ledgerly, or have taken part in a test of it", "rule": "reject", "exclusion": "insider" },
+            { "label": "I work in UX, design, marketing or market research", "rule": "reject", "exclusion": "professional" },
+            { "label": "I run a business with more than ten staff", "rule": "may-select" },
+            { "label": "I file my taxes online", "rule": "may-select" },
+            { "label": "I keep receipts on paper", "rule": "may-select" },
+            { "label": "None of these", "rule": "may-select" }
+          ],
+          "multi": true,
+          "ordered": false,
+          "criterion": "not",
+          "field": "not",
+          "rule": "reject any of the exclusions; the rest are free to pick"
+        }
+      ]
+    }
+  }
+}

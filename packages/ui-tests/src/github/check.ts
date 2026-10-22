@@ -1,5 +1,6 @@
 import type { RunRecord } from '../record/schema.ts'
 import { buildRecord } from '../record/build.ts'
+import { firstLookLines, groupLines } from '../record/summary.ts'
 import { resultComplete, resultFigures } from '../runner/progress.ts'
 import { primaryGoalIndex } from '../runner/sequence.ts'
 import { signedUrl } from '../report/sign.ts'
@@ -113,7 +114,7 @@ export function checkPage(record: RunRecord, options: PageOptions = {}): string 
   out.push('', `<sub>${footerOf(record)}</sub>`)
   const folded = [
     ...(rest.length ? ['#### More problems', '', ...problemLines(record, rest, links, 4), ''] : []),
-    record.compiled.sample.sentence, '', record.fit.summary,
+    record.compiled.sample.sentence, ...[...groupLines(record), ...firstLookLines(record)].flatMap(line => ['', line]),
   ]
   out.push('', '<details>', '<summary>The rest</summary>', '', ...folded, '', '</details>')
   return out.join('\n')

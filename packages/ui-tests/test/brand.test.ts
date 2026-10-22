@@ -6,7 +6,7 @@ import { exampleFile } from '../../../apps/web/lib/example.ts'
 import * as api from '../src/index.ts'
 import { compileStudy } from '../src/compile.ts'
 import { mountBar } from '../src/browser/mount.tsx'
-import { FirstClickBar, Taskbar } from '../src/browser/taskbar.tsx'
+import { TourBar, Taskbar } from '../src/browser/taskbar.tsx'
 import { brandedHost, chromeTheme, chromeVars, readHost } from '../src/browser/theme.ts'
 import type { Screen } from '../src/player/flow.ts'
 import { PlayerScreen } from '../src/player/screens.tsx'
@@ -65,9 +65,11 @@ describe('the brand', () => {
     const v = view({
       brand,
       status: 'consented',
-      screener: [{ id: 's0', text: 'How often do you send invoices?', options: ['Weekly', 'Monthly'], multi: false }, { id: 's1', text: 'What tool do you use now?', options: [], multi: false, open: true }],
+      screener: [{ id: 's0', text: 'How often do you send invoices?', options: ['Weekly', 'Monthly'], multi: false }, { id: 's1', text: 'Which of these do you use?', options: ['Xero', 'FreshBooks', 'None of these'], multi: true }],
+      assistive: { id: 'assistive', text: 'Do you use any assistive technology? You can skip this.', options: ['Screen reader', 'Another kind'] },
+      draft: true,
       practice: true,
-      impression: { page: '/invoices', flashMs: 5000, question: 'What is this page for?', asked: true, click: true },
+      impression: { page: '/invoices', prompt: 'What do you make of that page?', looked: false },
       goal: { ...view().goal, steps: ['Open invoices', 'Send the invoice'] },
       answer: { question: 'Which plan?', choices: ['A', 'B'] },
     })
@@ -75,8 +77,9 @@ describe('the brand', () => {
     const every: { [K in Screen['kind']]: Extract<Screen, { kind: K }>[] } = {
       consent: [{ kind: 'consent' }],
       screener: [{ kind: 'screener', index: 0 }, { kind: 'screener', index: 1 }],
+      assistive: [{ kind: 'assistive' }],
       practice: [{ kind: 'practice' }],
-      impression: (['fixation', 'flash', 'question', 'click'] as const).map((phase) => ({ kind: 'impression', phase })),
+      impression: (['look', 'question'] as const).map((phase) => ({ kind: 'impression', phase })),
       card: [{ kind: 'card' }],
       step: [{ kind: 'step', index: 0 }, { kind: 'step', index: 1 }],
       answer: [{ kind: 'answer' }],
@@ -87,6 +90,7 @@ describe('the brand', () => {
       comment: [{ kind: 'comment' }],
       thanks: [{ kind: 'thanks' }],
       withdrawn: [{ kind: 'withdrawn' }],
+      full: [{ kind: 'full' }],
     }
     const screens: Screen[] = Object.values(every).flat()
     const pages = screens.map((screen) => renderToStaticMarkup(createElement(PlayerScreen, { view: v, screen, answers: {}, onAnswer: () => {}, onNext: () => {}, onStart: () => {}, onWithdraw: () => {} })))
@@ -95,7 +99,7 @@ describe('the brand', () => {
     expect(pages[0]).toContain('<img src="https://acme.test/l.svg" alt="Acme"')
     const theme = chromeTheme()
     const bar = renderToStaticMarkup(createElement(Taskbar, { view: { goal: { name: 'Send an invoice', scenario: 'You owe Dana.' }, brand }, theme, offerMoreTime: true, busy: false, onEnd: () => {}, onMoreTime: () => {} }))
-    const first = renderToStaticMarkup(createElement(FirstClickBar, { theme, brand }))
+    const first = renderToStaticMarkup(createElement(TourBar, { theme, brand, busy: false, onDone: () => {} }))
     expect(bar).toContain('alt="Acme"')
     expect(first).toContain('alt="Acme"')
     const shell = playerShell({ runId: 'r_01', brand, script: '/ui-tests/assets/player-abc.js' })

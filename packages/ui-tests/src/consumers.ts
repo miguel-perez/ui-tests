@@ -1,13 +1,12 @@
 import type { RunRecord } from './record/schema.ts'
 import { GOAL_ORDER } from './runner/sequence.ts'
-import { FIRST_LOOK_SKIPPED } from './runner/screenshot.ts'
 import { MORE_TIME } from './server/view.ts'
 
 /**
  * The answers that hold none of the person's words: codes, timings, scales and flags. An allowlist, so a free-text answer added later
  * (or one stored inside an object, like the first look's `text`) stays out until it is named here.
  */
-const NON_WORDS = new Set(['uxliteVersion', MORE_TIME, 'replay-truncated', FIRST_LOOK_SKIPPED, GOAL_ORDER, 'screenerResult'])
+const NON_WORDS = new Set(['uxliteVersion', MORE_TIME, 'replay-truncated', GOAL_ORDER, 'screenerResult', 'assistive'])
 const GOAL_SCALE = /^goal\d+\.(ease|confidence)$/
 
 /**
@@ -23,13 +22,13 @@ export function withoutTypedAnswer<T extends { diff?: { actual?: unknown } | und
   return { ...(sameAsAnswer ? rest : v), answer } as T
 }
 
-/** An attempt's answers with every word the person wrote or said taken out; the first look keeps its code and its click, never its text. */
+/** An attempt's answers with every word the person wrote or said taken out; the first look keeps its coded parts, never its text. */
 function withoutWords(answers: Record<string, unknown>, scales: Set<string>): Record<string, unknown> {
   const kept: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(answers)) {
     if (key === 'impression' && value && typeof value === 'object') {
-      const { code, codedBy, firstClick, firstClickReason } = value as Record<string, unknown>
-      kept.impression = { code, codedBy, ...(firstClick !== undefined && { firstClick }), ...(firstClickReason !== undefined && { firstClickReason }) }
+      const { looked, parts, codedBy, uncoded } = value as Record<string, unknown>
+      kept.impression = { looked, parts, ...(codedBy !== undefined && { codedBy }), ...(uncoded !== undefined && { uncoded }) }
     } else if (NON_WORDS.has(key) || ((GOAL_SCALE.test(key) || scales.has(key)) && typeof value === 'number')) kept[key] = value
   }
   return kept

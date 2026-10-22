@@ -4,8 +4,8 @@ import { join } from 'node:path'
 import { expect, test } from '@playwright/test'
 import { main, type Io } from '../../packages/ui-tests/src/cli/main.ts'
 import { lanAddress } from '../../packages/ui-tests/src/runner/hosts.ts'
-import { stubScreenshotter } from '../../packages/ui-tests/src/runner/screenshot.ts'
 import { openStore } from '../../packages/ui-tests/src/store/open.ts'
+import { draftSnapshots } from '../../packages/ui-tests/test/snapshots.ts'
 import { PRODUCT_URL, SERVER_URL, barOf, isBarCall } from './helpers'
 
 /**
@@ -28,6 +28,7 @@ test.beforeAll(async () => {
   await copyFile(fixture, join(work, 'landing.ui.test.ts'))
   // The default server address, where `ui-tests serve` already runs: the door never uses it, and starts its own on the same store.
   await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${PRODUCT_URL}' } }\n`)
+  await draftSnapshots(work)
 })
 test.afterAll(async () => { if (work) await rm(work, { recursive: true, force: true }) })
 
@@ -38,7 +39,7 @@ function recruit(argv: string[]) {
   const stop = new AbortController()
   const io: Io = {
     stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd: work,
-    env: { UI_TESTS_DATA_DIR: process.env.UI_TESTS_DATA_DIR }, deps: { screenshotter: stubScreenshotter(new Uint8Array([0])), signal: stop.signal },
+    env: { UI_TESTS_DATA_DIR: process.env.UI_TESTS_DATA_DIR }, deps: { signal: stop.signal },
   }
   const done = main(['recruit', ...argv], io)
   const ready = async (): Promise<{ run: string; invites: string[] }> => {

@@ -90,20 +90,23 @@ async function traceOf(runId: string): Promise<Trace> {
   try { return await buildTrace(store, runId) } finally { await store.close() }
 }
 
-/** Consent, the first look when the study has one, then the card. */
+/** Consent, the first look (a tour of the live page, then the prompt) when the study has one, then the card. */
 async function throughConsent(page: Page, player: string) {
   await page.goto(player)
   await page.getByRole('button', { name: 'I agree and continue' }).click()
-  const firstLook = page.getByRole('heading', { name: 'What was that page for?' })
+  const firstLook = page.getByRole('heading', { name: 'Before your task, have a look at a page' })
   const card = page.getByRole('heading', { name: 'Your task' })
   await expect(firstLook.or(card)).toBeVisible()
   if (await firstLook.isVisible()) {
-    await page.getByRole('textbox').fill('To start testing what I built')
-    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: 'Open the page' }).click()
     await page.waitForURL(`${PRODUCT_URL}/`)
-    // The bar is the sign the first click is being taken; a click before the tag has mounted it is the page's own.
-    await expect(barOf(page, 'Click where you would start.')).toBeVisible()
-    await page.getByRole('link', { name: 'Get started' }).first().click()
+    // The bar is the sign the page is being toured; nothing on the page can be clicked until the person says they have had a look.
+    const bar = barOf(page, "Have a look around. Scroll if you like; don't click anything yet.")
+    await expect(bar).toBeVisible()
+    await bar.getByRole('button', { name: "I've had a look" }).click()
+    await expect(page.getByRole('heading', { name: /What do you make of that page/ })).toBeVisible()
+    await page.getByRole('textbox').fill('A way to test what I built')
+    await page.getByRole('button', { name: 'Continue' }).click()
   }
   await expect(card).toBeVisible()
 }
@@ -213,12 +216,14 @@ test.describe('the landing study, rehearsed with the CLI', () => {
     await expect(page.getByRole('heading', { name: 'Before you start' })).toBeVisible()
     await axe()
     await press('button', 'I agree and continue', 'Enter')
-    await expect(page.getByRole('heading', { name: 'What was that page for?' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Before your task, have a look at a page' })).toBeVisible()
+    await press('button', 'Open the page', 'Enter')
+    await page.waitForURL(`${PRODUCT_URL}/`)
+    await expect(barOf(page, "Have a look around. Scroll if you like; don't click anything yet.")).toBeVisible()
+    await press('button', "I've had a look", 'Enter')
+    await expect(page.getByRole('heading', { name: /What do you make of that page/ })).toBeVisible()
     await press('textbox', undefined, 'Space')
     await press('button', 'Continue', 'Enter')
-    await page.waitForURL(`${PRODUCT_URL}/`)
-    await expect(barOf(page, 'Click where you would start.')).toBeVisible()
-    await press('link', 'Get started', 'Enter')
     await expect(page.getByRole('heading', { name: 'Your task' })).toBeVisible()
     await axe()
     await press('button', 'Start task', 'Enter')

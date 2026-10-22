@@ -1,4 +1,5 @@
 import type { RunStore } from '../store/types.ts'
+import type { TextModel } from '../model.ts'
 import type { Transcriber } from '../transcriber.ts'
 import { getBundles } from './bundles.ts'
 import { createCollector } from './collector.ts'
@@ -15,6 +16,8 @@ export type ServerOptions = {
   /** Signs shared reports and their videos; without it there are none. */
   shareSecret?: string
   transcriber?: Transcriber
+  /** Codes the first look's answers; without it they are kept uncoded for the author. */
+  model?: TextModel
   /** The clock in epoch milliseconds; replaced in tests. */
   now?: () => number
 }
@@ -46,6 +49,7 @@ export function createHandler(options: ServerOptions): (request: Request) => Pro
     ...(options.publicUrl && { publicUrl: options.publicUrl }),
     ...(options.cliSecret && { cliSecret: options.cliSecret }),
     ...(options.transcriber && { transcriber: options.transcriber }),
+    ...(options.model && { model: options.model }),
     ...(options.now && { now: options.now }),
   })
 

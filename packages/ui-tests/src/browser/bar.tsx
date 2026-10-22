@@ -3,12 +3,12 @@ import type { BarView } from '../server/view.ts'
 import type { RecordedEvent } from '../store/types.ts'
 import { REPLAY_BATCH_BYTES, createBuffer } from './buffer.ts'
 import type { Buffer } from './buffer.ts'
-import { ROOT_ATTRIBUTE, createRecorder, fitSnapshot, serializeSnapshot, shortSelector } from './recorder.ts'
+import { ROOT_ATTRIBUTE, createRecorder, fitSnapshot, serializeSnapshot } from './recorder.ts'
 import { startReplay } from './replay-recorder.ts'
 import { startScreenRecording } from './screen-recorder.ts'
 import type { ScreenRecording } from './screen-recorder.ts'
 import { uploadChunk } from './video-upload.ts'
-import { FirstClickBar, Taskbar } from './taskbar.tsx'
+import { TourBar, Taskbar } from './taskbar.tsx'
 import type { EndReason, ScreenBar } from './taskbar.tsx'
 import { brandedHost, chromeTheme, readHost } from './theme.ts'
 
@@ -18,7 +18,7 @@ export type BarClient = {
   view(): Promise<BarView | undefined>
   /** One of the bar's actions. A body under the browsers' keepalive budget is sent with keepalive unless `keepalive` is false. */
   post(body: unknown, options?: { keepalive?: boolean }): Promise<Response>
-  /** Back to the player for what comes after the task (`after=1`) or after the first click (`after=first-look`). */
+  /** Back to the player for what comes after the task (`after=1`) or after the first look's tour (`after=first-look`). */
   back(query: 'after=1' | 'after=first-look'): void
 }
 
@@ -60,31 +60,33 @@ export function Bar({ client }: { client: BarClient }) {
   // Which step is on survives a full navigation for this attempt; the collector keeps each step's snapshot.
   useEffect(() => { if (attempt) setStepIndex(readStep(attempt)) }, [attempt])
 
-  // The first click of the first look: the one real click on this page before the task begins. It is recorded, not performed, and the
-  // person goes back to the player for the card.
-  const looking = view?.firstClick ? view : undefined
+  // The first look, a home page tour: the page is looked at for as long as the person likes, and nothing on it does anything. Clicks,
+  // presses and submits (Enter on a link or a field ends in one of these) are stopped before the page sees them; scrolling, by wheel, touch
+  // or keys, is left alone. The bar's own button ends the look.
+  const looking = view?.tour ? view : undefined
   const lookingRun = looking?.run
   useEffect(() => {
     if (!lookingRun) return
-    let sent = false
-    const onClick = (event: MouseEvent) => {
+    const stop = (event: Event) => {
       const element = event.target instanceof Element ? event.target : undefined
-      if (!element || element.closest(`[${ROOT_ATTRIBUTE}]`) || sent) return
+      if (element?.closest(`[${ROOT_ATTRIBUTE}]`)) return
       event.preventDefault()
       event.stopPropagation()
-      sent = true
-      const anchor = element.closest('a[href]') as HTMLAnchorElement | null
-      const url = (anchor?.href ?? location.href).slice(0, 2000)
-      void post({ action: 'answers', firstClick: { target: shortSelector(element), url, at: Date.now() } })
-        .then((response) => {
-          if (response.ok || response.status === 409) client.back('after=first-look')
-          else sent = false
-        })
-        .catch(() => { sent = false })
     }
-    document.addEventListener('click', onClick, true)
-    return () => document.removeEventListener('click', onClick, true)
-  }, [lookingRun, post, client])
+    const kinds = ['click', 'auxclick', 'dblclick', 'mousedown', 'pointerdown', 'submit'] as const
+    for (const kind of kinds) document.addEventListener(kind, stop, { capture: true, passive: false })
+    return () => { for (const kind of kinds) document.removeEventListener(kind, stop, { capture: true }) }
+  }, [lookingRun])
+  async function lookedAt() {
+    setBusy(true)
+    try {
+      const response = await post({ action: 'answers', looked: true })
+      if (response.ok || response.status === 409) client.back('after=first-look')
+    } catch {
+      // Keep the button for another try.
+    }
+    setBusy(false)
+  }
 
   // Recording: events go to the buffer, the buffer to the collector.
   useEffect(() => {
@@ -259,7 +261,7 @@ export function Bar({ client }: { client: BarClient }) {
 
   const shown = active ?? looking
   const theme = useMemo(() => (shown ? chromeTheme(brandedHost(readHost(document), shown.brand)) : undefined), [shown])
-  if (looking && theme) return <FirstClickBar theme={theme} brand={looking.brand} />
+  if (looking && theme) return <TourBar theme={theme} brand={looking.brand} busy={busy} onDone={() => void lookedAt()} />
   if (!active || !theme) return null
   const steps = active.goal.steps
   const step = steps.length ? { index: Math.min(stepIndex, steps.length - 1), count: steps.length, name: steps[Math.min(stepIndex, steps.length - 1)]! } : undefined

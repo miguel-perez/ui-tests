@@ -3,8 +3,9 @@ import type { ParticipantView } from '../server/view.ts'
 export type Screen =
   | { kind: 'consent' }
   | { kind: 'screener'; index: number }
+  | { kind: 'assistive' }
   | { kind: 'practice' }
-  | { kind: 'impression'; phase: 'fixation' | 'flash' | 'question' | 'click' }
+  | { kind: 'impression'; phase: 'look' | 'question' }
   | { kind: 'card' }
   | { kind: 'step'; index: number }
   | { kind: 'answer' }
@@ -15,19 +16,25 @@ export type Screen =
   | { kind: 'comment' }
   | { kind: 'thanks' }
   | { kind: 'withdrawn' }
+  | { kind: 'full' }
 
 const UXLITE = ['useful', 'easy'] as const
 
 const has = (view: ParticipantView, id: string) => view.questions.some((q) => q.id === id)
 const easeId = (view: ParticipantView) => `goal${view.goal.index}.ease`
 
-/** Screens between consent and the card: practice, then the first look, when the view carries them. */
+/** Screens between consent and the card: the assistive question, the practice, then the first look, when the view carries them. */
+function afterConsent(view: ParticipantView): Screen {
+  if (view.assistive) return { kind: 'assistive' }
+  return beforeCard(view)
+}
 function beforeCard(view: ParticipantView): Screen {
   if (view.practice) return { kind: 'practice' }
   return afterPractice(view)
 }
 function afterPractice(view: ParticipantView): Screen {
-  return view.impression ? { kind: 'impression', phase: 'fixation' } : { kind: 'card' }
+  if (!view.impression) return { kind: 'card' }
+  return { kind: 'impression', phase: view.impression.looked ? 'question' : 'look' }
 }
 
 /** The first screen of the questions that follow the task. */
@@ -52,9 +59,9 @@ export function entryScreen(view: ParticipantView): Screen {
     case 'created':
       return view.screener.length ? { kind: 'screener', index: 0 } : { kind: 'consent' }
     case 'consented':
-      // Back from the page, or reloaded on the way there: the click is what is left of the first look.
-      if (view.impression?.asked && view.impression.click) return { kind: 'impression', phase: 'click' }
-      return beforeCard(view)
+      // Back from the tour of the page, or reloaded after it: the prompt is what is left of the first look.
+      if (view.impression?.looked) return { kind: 'impression', phase: 'question' }
+      return afterConsent(view)
     case 'active':
       return { kind: 'card' }
     case 'questions':
@@ -65,25 +72,24 @@ export function entryScreen(view: ParticipantView): Screen {
 }
 
 /**
- * The screen after `current`. Link runs go screener, consent, practice, first look, card; the task itself happens in the
- * target; then answer (when the task asks one), ease, difficulty at 4 or below, confidence when nothing verifies the task,
- * the study's own questions, thanks. `answers` is keyed by question id, as the collector stores it.
+ * The screen after `current`. Link runs go screener, consent, assistive technology, practice, first look (the tour of the page on the
+ * author's own site, then the prompt), card; the task itself happens in the target; then answer (when the task asks one), ease,
+ * difficulty at 4 or below, confidence when nothing verifies the task, the study's own questions, thanks. `answers` is keyed by
+ * question id, as the collector stores it.
  */
 export function nextScreen(view: ParticipantView, current: Screen, answers: Record<string, unknown>): Screen {
   switch (current.kind) {
     case 'screener':
       return current.index + 1 < view.screener.length ? { kind: 'screener', index: current.index + 1 } : { kind: 'consent' }
     case 'consent':
+      return afterConsent(view)
+    case 'assistive':
       return beforeCard(view)
     case 'practice':
       return afterPractice(view)
-    case 'impression': {
-      // After the question the click is on the author's own page, which the SDK there takes; a first look on any other page ends with the question.
-      if (current.phase === 'fixation') return { kind: 'impression', phase: 'flash' }
-      if (current.phase === 'flash') return { kind: 'impression', phase: 'question' }
-      if (current.phase === 'question' && view.impression?.click) return { kind: 'impression', phase: 'click' }
-      return { kind: 'card' }
-    }
+    case 'impression':
+      // The look happens on the author's own page, which hands the person back for the prompt; the prompt leads to the card.
+      return current.phase === 'look' ? { kind: 'impression', phase: 'question' } : { kind: 'card' }
     case 'card':
     case 'step':
       return afterTask(view)
@@ -107,6 +113,8 @@ export function nextScreen(view: ParticipantView, current: Screen, answers: Reco
       return { kind: 'thanks' }
     case 'withdrawn':
       return { kind: 'withdrawn' }
+    case 'full':
+      return { kind: 'full' }
   }
 }
 
@@ -122,6 +130,8 @@ export function messageFor(view: ParticipantView, screen: Screen, answers: Recor
     case 'screener':
       // Sent after every question, with everything answered so far, so a rejecting answer ends the screener at once.
       return { action: 'answers', screener: Object.fromEntries(view.screener.slice(0, screen.index + 1).map((q) => [q.id, answers[q.id]]).filter(([, v]) => v !== undefined && v !== '')) }
+    case 'assistive':
+      return view.assistive ? { action: 'answers', assistive: Array.isArray(answers[view.assistive.id]) ? answers[view.assistive.id] : [] } : undefined
     case 'impression':
       if (screen.phase === 'question') return { action: 'answers', impression: String(answers.impression ?? '') }
       return undefined

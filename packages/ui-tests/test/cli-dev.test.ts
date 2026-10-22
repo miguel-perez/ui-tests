@@ -7,12 +7,12 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { main, type CliDeps, type Io } from '../src/cli/main.ts'
 import { loadConfig } from '../src/config.ts'
 import { loadStudies, withProduct } from '../src/cli/lint.ts'
-import { stubScreenshotter } from '../src/runner/screenshot.ts'
 import { createRun } from '../src/runner/create-run.ts'
 import { createCollector } from '../src/server/collector.ts'
 import { openStore } from '../src/store/open.ts'
 import { runSetup, checkReachable } from '../src/runner/setup.ts'
 import { freePort, stubServer } from './server-stub.ts'
+import { draftSnapshots } from './snapshots.ts'
 
 const fixtures = join(import.meta.dirname, 'fixtures')
 let target: Server
@@ -32,6 +32,7 @@ beforeAll(async () => {
   await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(work, 'dev.ui.test.ts'))
   serverUrl = `http://127.0.0.1:${await freePort()}`
   await writeFile(join(work, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, server: { url: '${serverUrl}' } }\n`)
+  await draftSnapshots(work)
 })
 afterAll(async () => {
   target.closeAllConnections()
@@ -45,7 +46,7 @@ function session(cwd = work, deps: CliDeps = {}, env: Record<string, string> = {
   const controller = new AbortController()
   let out = ''
   let err = ''
-  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { signal: controller.signal, pollMs: 20, screenshotter: stubScreenshotter(new Uint8Array([0])), ...deps } }
+  const io: Io = { stdout: { write: t => (out += t) }, stderr: { write: t => (err += t) }, cwd, env: { UI_TESTS_DATA_DIR: data, ...env }, deps: { signal: controller.signal, pollMs: 20, ...deps } }
   cleanup.push(() => controller.abort())
   return { io, controller, out: () => out, err: () => err }
 }
@@ -126,6 +127,7 @@ describe('ui-tests dev mode', () => {
     cleanup.push(() => rm(dir, { recursive: true, force: true }))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
     await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, server: { url: '${running.url}' } }\n`)
+    await draftSnapshots(dir)
     const s = session(dir)
     const done = main(['--no-open'], s.io)
     await until(s.out, /"player"/)
@@ -144,6 +146,7 @@ describe('ui-tests dev mode', () => {
     cleanup.push(() => rm(dir, { recursive: true, force: true }))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
     await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, server: { url: '${elsewhere.url}' } }\n`)
+    await draftSnapshots(dir)
     const s = session(dir)
     expect(await main(['--no-open'], s.io)).toBe(2)
     expect(s.err()).toBe(`ui-tests server at ${elsewhere.url} does not read this project's store: stop it, or point UI_TESTS_DATABASE_URL at the same store\n`)
@@ -158,6 +161,7 @@ describe('ui-tests dev mode', () => {
     cleanup.push(() => rm(dir, { recursive: true, force: true }), () => rm(empty, { recursive: true, force: true }))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
     await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' }, server: { url: '${other.url}' } }\n`)
+    await draftSnapshots(dir)
     const s = session(dir, {}, { UI_TESTS_DATA_DIR: empty })
     expect(await main(['--no-open'], s.io)).toBe(2)
     expect(s.err()).toBe(`ui-tests server not reachable: ${other.url}\n`)
@@ -200,6 +204,7 @@ describe('ui-tests dev mode', () => {
     cleanup.push(() => rm(dir, { recursive: true, force: true }), () => rm(empty, { recursive: true, force: true }))
     await copyFile(join(fixtures, 'cli-dev/dev.ui.test.ts'), join(dir, 'dev.ui.test.ts'))
     await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${url}' } }\n`)
+    await draftSnapshots(dir)
     const s = session(dir, {}, { UI_TESTS_DATA_DIR: empty })
     expect(await main([], s.io)).toBe(2)
     expect(s.err()).toContain(`target not reachable: ${url}`)
@@ -214,6 +219,7 @@ describe('ui-tests dev mode', () => {
     cleanup.push(() => rm(dir, { recursive: true, force: true }), () => rm(empty, { recursive: true, force: true }))
     await copyFile(join(fixtures, 'cli-lint/interface/a.ui.test.ts'), join(dir, 'a.ui.test.ts'))
     await writeFile(join(dir, 'ui-tests.config.ts'), `export default { target: { url: '${targetUrl}' } }\n`)
+    await draftSnapshots(dir)
     const s = session(dir, {}, { UI_TESTS_DATA_DIR: empty })
     expect(await main([], s.io)).toBe(1)
     expect(s.out()).toContain('interface-terms')

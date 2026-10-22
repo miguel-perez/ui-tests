@@ -47,8 +47,8 @@ async function person(s: SqliteStore, id: string, n: number, verdict: 'correct' 
     status: 'finished', reason: 'done', purposes: compiled.consent.purposes, startedAt: new Date(0).toISOString(), endedAt: new Date(20_000).toISOString(),
     verification: { status: verdict, steps: [], ...(verdict === 'incorrect' && { diff: { expected: 'a', actual: 'b' } }) },
     answers: {
-      screenerResult: { matches: n !== 3, outside: n === 3 ? ['Works in marketing'] : [], fit: { recency: 3, solving: 1, importance: 2, total: 6 } },
-      ...(extra.impression && { impression: { text: extra.impression, code: 'did not name it', codedBy: 'rule', firstClick: null } }),
+      screenerResult: { group: n === 3 ? null : 'everyone', criteria: { not: { value: n === 3 ? ['I work in marketing'] : [], met: n !== 3 } }, order: {} },
+      ...(extra.impression && { impression: { looked: true, text: extra.impression, parts: null, uncoded: 'no model is configured' } }),
     },
   })
   await s.appendEvents(attempt.id, [
@@ -68,7 +68,7 @@ describe('exclusion', () => {
     const people = [await person(store, runId, 1, 'correct'), await person(store, runId, 2, 'correct', ['a#pricing']), await person(store, runId, 3, 'correct', ['a#pricing'], { impression: 'a shop' })]
     const before = await buildRecord(store, runId)
     expect(before.measures.byGoal['0']!.effectiveness).toMatchObject({ reached: 3, n: 3 })
-    expect(before.fit).toMatchObject({ screened: 3, matched: 2 })
+    expect(before.screened).toMatchObject({ n: 3, noGroup: 1 })
     expect(before.issues.map(i => i.participants.length)).toEqual([2])
     const revisionBefore = before.handle.revision
 
@@ -77,8 +77,8 @@ describe('exclusion', () => {
     const after = await buildRecord(store, runId)
     expect(after.measures.byGoal['0']!.effectiveness).toMatchObject({ reached: 2, n: 2 })
     expect(after.quality.counted).toBe(2)
-    expect(after.fit).toMatchObject({ screened: 2, matched: 2 })
-    expect(after.impression.denominator).toBe(0)
+    expect(after.screened).toMatchObject({ n: 2, noGroup: 0 })
+    expect(after.impression.answered).toBe(0)
     expect(after.issues.map(i => i.participants)).toEqual([[people[1]!.attempt.participant]])
     // The original attempt stays, with its answers, and the exclusion says who, why and that they stay paid.
     expect(after.attempts).toHaveLength(3)
@@ -204,16 +204,17 @@ describe('study edits and the first look', () => {
     await expect(revise({ kind: 'promote-path', goalIndex: 99, path: ['/'] })).rejects.toThrow(/No task 99/)
   })
 
-  it('changes the code of a first look as a revision; the stored answer stays', async () => {
+  it('codes an uncoded first look by hand, part by part, as a revision; the stored answer stays', async () => {
     const { attempt } = await person(store, runId, 1, 'correct', [], { impression: 'a tool for invites' })
-    expect((await buildRecord(store, runId)).impression).toMatchObject({ named: 0, didNot: 1 })
-    await revise({ kind: 'code-impression', attempt: attempt.id, code: 'named the purpose' })
+    expect((await buildRecord(store, runId)).impression).toMatchObject({ answered: 1, coded: 0, uncoded: [{ attempt: attempt.id, reason: 'no model is configured' }] })
+    const parts = { what: true, who: false, action: true, purpose: false }
+    await revise({ kind: 'code-impression', attempt: attempt.id, parts })
     const record = await buildRecord(store, runId)
-    expect(record.impression).toMatchObject({ named: 1, didNot: 0 })
-    expect((record.attempts[0]!.answers.impression as { code: string }).code).toBe('did not name it')
-    expect((await buildTrace(store, runId)).attempts[0]!.impression).toMatchObject({ code: 'named the purpose', codedBy: 'author' })
+    expect(record.impression).toMatchObject({ answered: 1, coded: 1, parts: { what: 1, who: 0, action: 1, purpose: 0 }, uncoded: [] })
+    expect((record.attempts[0]!.answers.impression as { parts: unknown }).parts).toBeNull()
+    expect((await buildTrace(store, runId)).attempts[0]!.impression).toEqual({ text: 'a tool for invites', parts, codedBy: 'author' })
     const without = await person(store, runId, 2, 'correct')
-    await expect(revise({ kind: 'code-impression', attempt: without.attempt.id, code: 'no answer' })).rejects.toThrow(/no first-look answer/)
+    await expect(revise({ kind: 'code-impression', attempt: without.attempt.id, parts })).rejects.toThrow(/no first-look answer/)
   })
 
   it('records an incentive adjustment for the run or one person', async () => {
@@ -346,7 +347,7 @@ describe('fix round 1', () => {
   it('still lists the issue a withdrawn person caused on a problems-found result, without their words', async () => {
     const made = [await person(store, runId, 1, 'incorrect')]
     for (let i = 2; i <= compiled.sample.n; i++) made.push(await person(store, runId, i, 'correct'))
-    await store.updateAttempt(made[0]!.attempt.id, { answers: { 'goal0.difficulty': 'I could not find it', screenerResult: { matches: true, outside: [], fit: { recency: 1, solving: 1, importance: 1, total: 3 } } } })
+    await store.updateAttempt(made[0]!.attempt.id, { answers: { 'goal0.difficulty': 'I could not find it', screenerResult: { group: 'everyone', criteria: {}, order: {} } } })
     await refreshRun(store, runId)
     expect((await store.getRun(runId))!.result).toBe('problems-found')
     await withdraw(made[0]!.token)
