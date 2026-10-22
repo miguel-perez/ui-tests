@@ -23,7 +23,7 @@ A run is an asynchronous node. It returns a durable handle and completes by webh
 Grounded in [`personas.md`](personas.md), derived from 124 public first-person accounts in [`discovery/report.md`](discovery/report.md).
 
 - **The developer who tests code, not experience.** Has unit and end-to-end tests and no researcher. "QA and unit tests tell me whether the code works but not whether the experience makes sense." Wants the real-user check as a stage, and a method rather than a coffee-shop anecdote. The primary author and the chooser.
-- **The builder who launched to find out.** Ships early because launching is the only test they can run; discounts friends' excitement and surveys; has been burnt building on assumptions. Their question is whether visitors understand what the thing is and whether anyone wants it, which the impression stage and launch-and-learn with issues serve, and which an outcome hook alone does not.
+- **The builder who launched to find out.** Ships early because launching is the only test they can run; discounts friends' excitement and surveys; has been burnt building on assumptions. Their question is whether visitors understand what the thing is and whether anyone wants it, which the first look and launch-and-learn with issues serve, and which an outcome hook alone does not.
 - **The lone UX person without a researcher, budget or backing.** Knows testing matters, carries it alone, is priced out of company tools, and needs evidence for a room that does not care. Reached through the hosted install-once track, not the runner.
 - **Participants**, who get a clear task, a fair rate, and nothing to install.
 - **Agents under test**, for authors who need to prove an agent can use their CLI, MCP server or API. Never counted with people.

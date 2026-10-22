@@ -95,16 +95,13 @@ const screens: Record<string, ReactNode> = {
   </figure>,
   screener: <>
     <Stepped label="Screener questions, one at a time" url="ui-tests.com/t/k2m9" what="question">
-      <Sheet step="A few questions first · 1 of 6" title="When did you last use a shared tool to plan work with a team?"><Options items={['In the past week', '*In the past month', 'In the past 3 months', 'Longer ago, or never']} /><div className="ch-actions"><span className="ch-small">Pick one.</span><Next /></div></Sheet>
-      <Sheet step="A few questions first · 2 of 6" title="Which of these do you use to plan work? Pick all that apply."><Options square items={['Trello', '*Asana', 'Notion', 'Linear', 'Basecamp', 'None of these']} /><div className="ch-actions"><span className="ch-small">Pick all that apply.</span><Next /></div></Sheet>
-      <Sheet step="A few questions first · 3 of 6" title="Which of these have you done? Pick all that apply."><Options square items={['Managed a team of more than five', 'Used Weekboard', '*Taken a course on planning or project management', 'None of these']} /><div className="ch-actions"><span className="ch-small">Pick all that apply.</span><Next /></div></Sheet>
-      <Sheet step="A few questions first · 4 of 6" title="When did you last need to plan a week with other people?"><Options items={['*This week', 'This month', 'Earlier this year', "I don't"]} /><div className="ch-actions"><span className="ch-small">Pick one.</span><Next /></div></Sheet>
-      <Sheet step="A few questions first · 5 of 6" title="How do you do it today?"><Options items={['*A shared document or spreadsheet', 'A planning tool', 'Chat and email', 'In my head']} /><div className="ch-actions"><span className="ch-small">Pick one.</span><Next /></div></Sheet>
-      <Sheet step="A few questions first · 6 of 6" title="How much does it matter to you to get this right?"><Options items={['*A lot: it costs me time every week', 'Some', 'Not much']} /><div className="ch-actions"><span className="ch-small">Pick one.</span><Next /></div></Sheet>
+      <Sheet step="A few questions first · 1 of 3" title="When did you last use a shared tool to plan work with a team?"><Options items={['In the past week', '*Between a week and a month ago', 'Between a month and 3 months ago', 'Between 3 months and a year ago', 'More than a year ago', 'Never']} /><div className="ch-actions"><span className="ch-small">Pick one.</span><Next /></div></Sheet>
+      <Sheet step="A few questions first · 2 of 3" title="Which of these do you use?"><Options square items={['Jira', 'Trello', 'Monday.com', '*Asana', 'Notion', 'Basecamp', 'Linear', 'None of these']} /><div className="ch-actions"><span className="ch-small">Pick all that apply.</span><Next /></div></Sheet>
+      <Sheet step="A few questions first · 3 of 3" title="Do any of these apply to you?"><Options square items={['I work remotely most days', 'I work on Weekboard, or have taken part in a test of it', '*I lead a team', 'I work in UX, design, marketing or market research', 'I have used Weekboard', 'I work in a team of more than ten people', 'None of these']} /><div className="ch-actions"><span className="ch-small">Pick all that apply.</span><Next /></div></Sheet>
     </Stepped>
   </>,
-  impression: <Board label="First look question over the flashed page">
-    <Sheet step="You saw a page for half a second" title="What was that page for?">
+  impression: <Board label="First look question after the look around the page">
+    <Sheet step="You've had a look at the page" title="What do you make of that page? Say what it is, whose it is, what you can do there, and what it's for.">
       <div className="ch-box">In your own words. There is no right answer.</div>
       <div className="ch-actions"><Talk /><button className="ch-btn pri" type="button">Next</button></div>
     </Sheet>

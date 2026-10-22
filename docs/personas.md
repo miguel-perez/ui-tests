@@ -1,6 +1,6 @@
 # Proto-personas
 
-Derived from the purpose groups in [`discovery/report.md`](discovery/report.md), a study of 124 public first-person accounts. Each persona is a bundle of purposes several accounts share, in those people's own words where possible, with the circumstances that produce it. Provisional per Lean UX; the screener places each participant against them, so every run with strangers tests the personas as well as the product. Counts are distinct accounts among 124.
+Derived from the purpose groups in [`discovery/report.md`](discovery/report.md), a study of 124 public first-person accounts. Each persona is a bundle of purposes several accounts share, in those people's own words where possible, with the circumstances that produce it. Provisional per Lean UX. The screener does not place anyone against a persona; a study tests a persona when its groups are written from it, by behaviour and role with a quota each (`role: { Developer: 3, Designer: 2 }`), and each attempt records its group and how the person differed, criterion by criterion. Counts are distinct accounts among 124.
 
 ## 1. The developer who tests code, not experience
 
@@ -29,7 +29,7 @@ Derived from the purpose groups in [`discovery/report.md`](discovery/report.md),
 
 **What gets in the way.** Cannot get the right alpha users without launching; cannot promote something too incomplete, yet gets no feedback without promotion; low traffic makes numbers meaningless, and one usability-test subject saying "no idea what your product is about" is the first real signal (s337).
 
-**Design consequence.** Their question is desirability and recognition, not goal completion. The fit questions answer "do these people have the purpose", the impression stage answers "do visitors recognise it", the issues answer "where did they get stuck", and intercept recruiting on the hosted track lets the struggling visitors of a launched product tell them. An outcome hook alone does not serve this person, and the docs do not claim it does.
+**Design consequence.** Their question is desirability and recognition, not goal completion. The first look, a home page tour, answers "can visitors tell what it is, whose it is, what they can do and what it is for", usefulness after the task answers "would it help them", the issues answer "where did they get stuck", and intercept recruiting on the hosted track lets the struggling visitors of a launched product tell them. An outcome hook alone does not serve this person, and the docs do not claim it does.
 
 ## 3. The lone UX person without a researcher, budget, or backing
 

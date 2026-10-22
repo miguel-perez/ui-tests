@@ -53,8 +53,7 @@ Patton draws the backbone left to right; it is turned on its side here so the ta
 - Lint with rule sources and reasons `R0`
 - Scenario generated from goal and fixture names, editable, pinnable `R0`
 - `participant.answer()` with generated distractors `R0`
-- Impression stage derived from the context: flash, recognition of the purpose, first click `R1`
-- Fit questions derived from the purpose open the report `R1`
+- First look derived from the context: the home page tour of the live start page, coded per part against what the page says; each task's first click on its own start page `R1`
 - The `sample` intent (catch problems); the sentence derived from it `R0`
 - `actors` on a context; `trials`; `ui-tests run --actor agent` `R2`
 
@@ -77,7 +76,7 @@ Patton draws the backbone left to right; it is turned on its side here so the ta
 
 ### Participate › consent, task, questions
 - Consent naming purposes, scenario card, floating taskbar, done or can't; all white-labelled `R0`
-- Screener with behavioural, panel and fit questions; practice screen `R1`
+- Screener with behavioural and panel questions, groups with quotas, decoys drafted into a reviewed snapshot; practice screen `R1`
 - SEQ, confidence, UX-Lite `R1`
 - Keyboard and screen-reader operable; access conditions recorded `R1`
 - Attention item and speeder flag, flagged not excluded; hashed duplicates excluded from n and paid `R3`
@@ -125,9 +124,9 @@ Order follows the opportunity map in [`discovery/redesign.md`](discovery/redesig
 
 ### R1: "Real people from my audience, by link, from CI"
 - **Serves:** opportunities 1 and 2 at n = 5: ranked issues across people, the sentence with real counts; the factory plug through the CI check; evidence for the room through the shareable report; fit and recognition for the desirable rung.
-- **Outcome:** a run from CI against a protected preview, invite links shared by hand, five people from our own network complete the landing context with its fit questions and impression stage, the issues and the sentence come back on a shareable page, the GitHub check completes.
-- **Metric:** the false-door study: do five people from our audience understand the value proposition and start? The issues say what to change. The screener places each of the five against the personas.
-- **Development strategy:** mid game. Idempotent async run and handle, GitHub check and reconciliation with `verify`, Postgres store, protection bypass in invite links, full participant flow with screener, fit questions, questions and accessibility, impression stage, issues from trace signals, event replay reel, shareable report, revisions, JSON record with purposes and clause evidence, webhook.
+- **Outcome:** a run from CI against a protected preview, invite links shared by hand, five people from our own network complete the landing context with its screener and first look, the issues and the sentence come back on a shareable page, the GitHub check completes.
+- **Metric:** the false-door study: do five people from our audience understand the value proposition and start? The issues say what to change. Each of the five is recorded with their group and how they differed, criterion by criterion.
+- **Development strategy:** mid game. Idempotent async run and handle, GitHub check and reconciliation with `verify`, Postgres store, protection bypass in invite links, full participant flow with screener, questions and accessibility, first look, issues from trace signals, event replay reel, shareable report, revisions, JSON record with purposes and clause evidence, webhook.
 - **Check-in:** Miguel reads the issues from five people and decides what to change on the site, and whether the personas held.
 - **Status:** built and verified offline, 20 October 2026; not checked in and the metric is not measured. Built: idempotent `recruit` runs with a handle and invite links (your own; inviting visitors on a live site is H2 and not built) that pass the Vercel protection bypass, `--tunnel` (tested with a local reverse proxy), `--host` and `--local` for runs inside a perimeter or on one box; the full participant flow (screener, first look, scenario card, the questions after with voice, keyboard and screen reader support); issues clustered across people, the highlight reel, the signed shareable report, revisions, the JSON record with its schema, purposes and clause evidence; the Postgres store (tested on PGlite); `ui-tests check` with its reconciliation workflows and the webhook. Documented, not executed: a Neon database, a ui-tests server for a Vercel preview, the GitHub token or App and the repository secrets ([`github-check.md`](github-check.md), [`postgres-store.md`](postgres-store.md)), a named cloudflared tunnel ([`tunnel.md`](tunnel.md)), and the VoiceOver check on Safari. Paying a panel is R3: `recruit` makes your own link, not a paid run. Still needed: the metric itself, five real people from our audience doing the landing study.
 

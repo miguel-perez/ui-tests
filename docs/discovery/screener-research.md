@@ -1,6 +1,6 @@
 # Screener research: how a `users` definition becomes a screener
 
-The doubt: "the user definition doesn't feel right.. how would we infer how to screen participants?" The contract takes `users` as one sentence and promises a derived screener of one behavioural question, panel filters, three fit questions and three persona-placement questions. This note checks that against how practitioners and panels screen, then proposes a shape.
+The doubt: "the user definition doesn't feel right.. how would we infer how to screen participants?" The first contract took `users` as one sentence and promised a derived screener of one behavioural question, panel filters, three fit questions and three persona-placement questions. This note checks that against how practitioners and panels screen (Part 1, web sources; Part 2, panel APIs), then against the design corpus (Part 3), and records the shape that was built (Part 4, issue [#81](https://github.com/miguel-perez/ui-tests/issues/81)). Part 1 and Part 2 are web sources and were not checked against the corpus; where the two disagree, Part 3 governs.
 
 ## Part 1: how screeners are built in practice
 
@@ -18,7 +18,7 @@ The doubt: "the user definition doesn't feel right.. how would we infer how to s
 
 **Lyssna, [screener questions](https://www.lyssna.com/blog/ux-screener-questions/); Userlytics, [11 practices](https://www.userlytics.com/helpcenter/clients/best-practices-for-creating-effective-screener-questions/); Askable, [mistakes](https://www.askable.com/blog/common-mistakes-when-writing-screener-questions-for-ux-and-market-research); Sago, [screeners](https://sago.com/en/resources/blog/its-time-to-change-the-way-we-write-screeners/); EphMRA, [screener guide](https://www.ephmra.org/sites/default/files/2022-10/Screener%20Design%20and%20Best%20Practice_Final%20version%20-%20Sept%2022.pdf).** Concrete counts over vague words; a decoy in a tool list; describe the study in category terms; replace "Do you own a smartwatch?" with "Which devices do you use regularly?"; "Have you used Product X in the past 30 days?" is too specific, ask about the category; drop-off spikes after question twelve; terminates and quotas first; do not re-ask what the panel holds; a security question (does not work in market research, marketing or advertising) and a past-participation window.
 
-**The recurring structure.** Three to seven questions: panel-held demographics not asked; a gate on category behaviour with recency bands; a frequency or role narrowing question; a multi-select (tools, devices) with a decoy and "None of the above"; an exclusion (profession, past participation, current customer); optionally one open question. Every option labelled accept, reject or may-select; the first task re-verifies fit.
+**The recurring structure in these web sources.** Three to ten questions, the shorter the better: panel-held demographics not asked; a gate on category behaviour with recency bands; a frequency or role narrowing question; a multi-select (tools, devices) with a decoy and "None of the above"; an exclusion (profession, past participation, current customer); optionally one open question. Every option labelled accept, reject or may-select; the first task re-verifies fit.
 
 ## Part 2: how panels express criteria in code
 
@@ -35,36 +35,46 @@ Values are choice keys; values within a filter are OR, filters AND; [advanced fi
 
 **Consequence.** Code can specify country, language, age, employment, industry, prior-study exclusion, allowlists, approval rate. Everything behavioural (did X, within Y, uses Z, not a UX professional) is a question the participant answers: paid per screen-out on Prolific; on Connect, criteria it already profiles map to `demographicTargeting`, criteria it does not profile go through a requested demographic, a completion branch with partial pay, or a paid prescreen project, and the adapter picks the cheapest route that Connect allows for each criterion.
 
-## Part 3: proposal
+## Part 3: what the design corpus says
 
-The sentence is right as a name and wrong as a source: "developers who ship UI" names a group, but a screener needs a behaviour, a window and an exclusion, and no generator can read "paid for a team plan in the last three months" out of "small teams".
+Citations are to the designgenome corpus: GDD is Goal-Directed Design (*Designing for the Digital Age*), LCD *Lean Customer Development*, DMMT and RS Krug's *Don't Make Me Think* and *Rocket Surgery Made Easy*, PWU Nielsen's *Prioritizing Web Usability*, LA *Lean Analytics*.
 
-**(b) Typed predicates mapped to panel filters** make the developer learn Prolific's vocabulary, which Connect does not share and which covers only demographics; the criteria that matter are not filters. Rejected.
+**Selection is a sampling plan, not a gate.** The recruiting plan is "a persona hypothesis of sorts": identify likely user roles and multiply for the factors most likely to affect behaviour (GDD ch. 6). GDD's worked screener (Table 6.5) recruits quotas per group. Sauro: to draw conclusions about different types of users, plan for every group to be represented (stratified sampling), and keep each sample homogeneous, testing each group (*Quantifying the User Experience*). Krug: if the audience splits into clearly defined groups, test users from each group (DMMT). Hanington: for each task-based audience segment, study at least four people (*Universal Methods of Design*). So roles that behave differently are separate groups with quotas, and n, the detection sentence and the issues are read per group.
 
-**(c) Persona reference** (`users: personas.accountant` in config) is reuse, not a shape; it needs the same fields underneath. Kept as composition: a persona is a named `Screen`.
+**The gate is past behaviour in a window.** LCD's screening survey asks "When was the last time you [did it]?" with past week, month, three months, year and more (LCD Fig. 3-5); a tangible past action, not a future one, followed by a specific window in the past (LCD pp. 196-198); the best predictor of future behaviour is current behaviour (LCD p. 111). Portigal: criteria are based on behaviour more than attitude (*Interviewing Users*). Options are mutually exclusive, with specific numbers (GDD ch. 9), and a screener avoids phrasing that tells people which answer is wanted (GDD ch. 6), so the accepted band is never the only plausible one.
 
-**(a) Sentence plus a `screen` block**, recommended, because every field is a fact about the author's customers, not a research decision:
+**Decoys are domain content, not method.** GDD's screener lists competitor brands because listing a number of brands conceals which one you are interested in (GDD Table 6.5); Portigal's lists in-domain retailers. Behavioural variables differ from project to project and are found inductively (GDD ch. 11). A fixed list of hobbies, roles or tools shared by every study is off-register and gives the answer away. Decoys come from the same category, drafted for the study and reviewed.
+
+**Review the screener before recruiting.** Review it with stakeholders before starting to recruit (GDD ch. 6); get a second opinion on the request (LCD p. 118); recruiting is data, so revisit the criteria from who turns up (Portigal). Hence a reviewed, committed snapshot of every drafted screen.
+
+**Short, complete, varied.** The ideal screener is relatively short and quickly eliminates ineligible people (GDD ch. 6). Lists should be as complete as possible and allow for people who cannot answer definitively, and list order should vary between respondents to minimise position bias (GDD ch. 9). Do not ask what you could find out yourself (LCD p. 195): browser and device come from the user agent. ISO 9241-210 asks that the environment be identified (7.2.2), not that it be asked before consent.
+
+**Exclusions are relative to the target.** Nielsen screened out people in technology, marketing, web design or usability because they rarely represent mainstream users (PWU), so the exclusion holds only when the target is mainstream. Krug: you cannot use people who work on what you are testing, or support, sell, train or document it, and repeat participants know too much (RS ch. 5). An exclusion that rejects an accepted role contradicts the sample.
+
+**Problem fit is customer discovery, not usability.** The fit questions (has the problem, is solving it, it matters) are the earlyvangelist screen (LCD pp. 31-32; *The Startup Owner's Manual* pp. 58-60), which looks for the people who feel the problem most. ISO 9241-210 5.3 asks for participants who reflect the range of users, and the corpus names the two as in tension. LA's interview scoring weights active solving highest and treats self-rated engagement as least important (LA p. 171); people tell you what they think you want to hear (LA p. 166). And the first look must start cold: avoid discussing the site beforehand (DMMT). So no fit question is asked before the task, and nothing before the first look shows the purpose.
+
+**Recruit loosely, grade on a curve.** For small formative tests, find people who reflect the audience without getting hung up on it, and ask of each problem whether your users would have it (RS ch. 5; DMMT). That needs the record of how each person differed, criterion by criterion, not a single match flag.
+
+## Part 4: the shape built (#81)
+
+The sentence names a group; a screener needs a behaviour, a window, the groups and the exclusions. `users` is the sentence alone (the compiler drafts `did` and `within` from it and lint prints the draft), or an object of facts the author knows:
 
 ```ts
-import { context, goal, outcome, expect } from 'ui-tests'
-
-context({
-  users: 'small-business owners who pay for accounting software',
-  purpose: 'give someone else read-only access to my books',
-  screen: {
-    did: 'paid for accounting software for your own business', // the gate: one verb phrase, category not product
-    within: '3 months',                                          // recency window; default '3 months'
-    often: 'monthly',                                            // optional frequency floor
-    role: ['business owner', 'founder', 'office manager'],       // accept list; asked as broad category then role
-    uses: ['QuickBooks', 'Xero', 'FreshBooks'],                  // may-select list; one decoy is added
-    not: ['has used our product'],                               // always adds: works in UX, design, marketing or market research
-    where: ['US', 'GB'], language: 'en', age: { min: 18 },      // ISO country codes; panel filters where the source has them; age maps to Prolific's lower/upper range and Connect's age targeting
+study('give read-only access', {
+  users: {
+    did: 'paid for accounting software for your own business', // the gate: past behaviour of the category, never the product
+    within: '3 months',                                         // default '3 months'
+    role: { 'Business owner': 3, 'Office manager': 2 },         // two groups with quotas; ['…', '…'] is one group
+    uses: ['QuickBooks', 'Xero', 'FreshBooks'],                 // listed tools accept; same-category decoys reject
+    not: ['I am a bookkeeper or an accountant'],                // in the participant's voice
+    where: ['US', 'GB'], language: 'en', age: { min: 18 },     // panel filters, never asked
   },
-}, () => { /* goals */ })
+  purpose: 'give someone else read-only access to my books',
+}, () => { /* tasks */ })
 ```
 
-Written: the sentence and any subset of `screen`; every field optional. Derived: the recency question with non-overlapping bands, `accept` on bands inside `within`; the frequency question with concrete bands, `accept` at or above `often`; the role question as broad categories with "None of the above" rejecting; the tools multi-select with a decoy and "None of the above"; the exclusion multi-select listing `not` items among neutral options, any listed item rejecting; a category-level study title; `where`, `language`, `age` as Prolific `filters` entries or Connect demographics, never re-asked; prior-participation as a panel filter; the fit questions from `purpose` as today. Order is the funnel: filters, gate, narrowing, tools, exclusion, fit. Asked by lint because it cannot be inferred: a `did` when the sentence has no behaviour verb (`users: 'accountants'` passes today's lint and yields no gate); a non-default `within`; whether `uses` is must-select.
+What the author writes: facts (`did`, `within`, `often`, `role`, `uses`, `not`, `groups`, `where`, `language`, `age`). What is derived deterministically: the recency bands (at least four, mutually exclusive, including bands beyond the window), the frequency bands, the screen order, the accept, reject and may-select labels, the insider exclusion and the professional exclusion minus accepted roles, `are` from `did` and the purpose in the second person ("your books"). What is drafted for the study and reviewed: the same-category decoys for `role`, `uses` and `not`, whether `did` is something people repeat, and what the start page says. `ui-tests lint -u` writes all of it, with each default's source, into `<study file>.screener.snap` beside the study; the configured model drafts the decoys, and with no model lint names each field it could not draft and the author writes it. No generic list stands in. `recruit` and `check` refuse until the snapshot is current.
 
-**Shorthand.** `users` alone stays valid: the generator drafts a `screen` from the sentence, marks each field inferred, and `ui-tests lint` prints the draft as TypeScript to paste in, the same pin mechanism as `scenario`. The trace shows the screener as a table: question, options, each option's accept, reject or may-select label, the `screen` field it came from, the panel filter id and choice keys applied, and the source rule beside each row. Editing a row rewrites the pinned `screen`; a Prolific run lists screen-out slots and their reward as a budget line; a Connect run says the behavioural rows need a paid prescreen project and estimates it.
+At most five screens come before consent, unordered options in an order of their own for each person (stored with the attempt). Browser and device are read from the user agent; assistive technology is asked after consent and filters nobody. Each attempt records its group and each criterion's value, and the report gives n, the detection sentence and the issues per group, says when a group did not fill and when most people fell outside one criterion. On a link nothing is filtered except a person whose group is already full; on a panel the same criteria become filters and paid screen-outs, per Part 2.
 
-The developer fills facts (`did`, `within`, `uses`, `not`); the tool fills method (bands, decoys, order, labels, filter ids); the trace shows the derivation so a wrong inference is a one-line edit, not a surprise.
+The proposal this replaces put every field under a `screen` block and said the tool fills method, decoys included; Part 3 moves decoys to the reviewed side, adds groups and quotas, makes the exclusions conditional, and removes the fit questions from the screener.
