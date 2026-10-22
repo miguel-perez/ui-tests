@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, renameSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -139,7 +139,7 @@ describe('SqliteStore on a database from before schema versioning', () => {
     db.close()
   })
 
-  it('leaves a WAL retained by an unclean shutdown unchanged', () => {
+  it('leaves a WAL retained by an unclean shutdown unchanged and says to move it with the file', async () => {
     const live = tempFile()
     legacyDatabase(live)
     const writer = new DatabaseSync(live)
@@ -154,6 +154,16 @@ describe('SqliteStore on a database from before schema versioning', () => {
     expect(() => new SqliteStore(file)).toThrow(`${file} predates schema versioning`)
     expect(digest(file)).toBe(before)
     expect(digest(`${file}-wal`)).toBe(wal)
+    // The message names the WAL, and following its example keeps the WAL's rows with the moved file.
+    expect(() => new SqliteStore(file)).toThrow(`move it aside together with ${file}-wal`)
+    renameSync(file, `${file}.old`)
+    renameSync(`${file}-wal`, `${file}.old-wal`)
+    rmSync(`${file}-shm`)
+    const fresh = new SqliteStore(file)
+    await fresh.close()
+    const old = new DatabaseSync(`${file}.old`, { readOnly: true })
+    expect(old.prepare('SELECT id FROM runs ORDER BY id').all()).toEqual([{ id: 'old-run' }, { id: 'wal-run' }])
+    old.close()
   })
 
   it('makes a command exit 2 with that message instead of "table runs already exists"', async () => {

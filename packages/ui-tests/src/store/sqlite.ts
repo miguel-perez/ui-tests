@@ -51,7 +51,8 @@ export class SqliteStore implements RunStore {
   private static refuseUnversioned(filename: string, busyTimeoutMs: number) {
     const immutable = pathToFileURL(filename)
     immutable.searchParams.set('immutable', '1')
-    const db = existsSync(`${filename}-wal`)
+    const wal = existsSync(`${filename}-wal`)
+    const db = wal
       ? new DatabaseSync(filename, { readOnly: true, timeout: Math.floor(busyTimeoutMs) })
       : new DatabaseSync(immutable, { readOnly: true })
     let row: { version: number; tables: number }
@@ -63,7 +64,12 @@ export class SqliteStore implements RunStore {
       db.close()
     }
     if (row.version !== 0 || row.tables === 0) return
-    throw new Error(`${filename} predates schema versioning, so ui-tests cannot upgrade it. It has not been changed: move it aside (for example rename it to dev.sqlite.old) and run again to start a fresh store.`)
+    // A WAL left beside the file can hold committed rows the file lacks, and a fresh store deletes a WAL it finds, so it must move too.
+    const base = path.basename(filename)
+    const aside = wal
+      ? `move it aside together with ${filename}-wal, which may hold data not yet in it (for example rename them to ${base}.old and ${base}.old-wal)`
+      : `move it aside (for example rename it to ${base}.old)`
+    throw new Error(`${filename} predates schema versioning, so ui-tests cannot upgrade it. It has not been changed: ${aside} and run again to start a fresh store.`)
   }
 
   /** Applies migrations not yet recorded in `user_version`, each in its own immediate transaction. */
