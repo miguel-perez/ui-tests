@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { PassThrough } from 'node:stream'
-import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { main, type CliDeps, type Io } from '../src/cli/main.ts'
 import { startServer } from '../src/server/http.ts'
 import { runOrigins } from '../src/server/origins.ts'
@@ -14,6 +14,7 @@ import type { RunStore } from '../src/store/types.ts'
 import { cloudflaredTunnel, parseTunnelUrl } from '../src/tunnel/cloudflared.ts'
 import { isSlot } from '../src/runner/invites.ts'
 import { fakeTunnel } from '../src/tunnel/fake.ts'
+import { openReachableTunnel } from '../src/tunnel/session.ts'
 import type { TunnelRecord } from '../src/tunnel/types.ts'
 import { freePort } from './server-stub.ts'
 import { draftSnapshots } from './snapshots.ts'
@@ -193,12 +194,35 @@ describe('recruit --tunnel with the fake tunnel', () => {
     let closed = false
     const code = await main(['recruit', '--tunnel', '--json', '--key', 'k-dead'], {
       stdout: { write: () => true }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data },
-      deps: { pollMs: 1, tunnel: { open: async () => ({ url: 'http://127.0.0.1:1', close: async () => { closed = true } }) } },
+      deps: { pollMs: 1, tunnelWaitMs: 50, tunnel: { open: async () => ({ url: 'http://127.0.0.1:1', close: async () => { closed = true } }) } },
     })
     expect(code).toBe(2)
-    expect(err).toContain('did not answer')
+    expect(err).toContain('tunnel: http://127.0.0.1:1 did not answer within 0.05 seconds')
     expect(closed).toBe(true)
     expect((await (await store()).listRuns()).find(r => r.key === 'k-dead')).toBeUndefined()
+  })
+
+  it('waits for a tunnel that answers only after a delay, printing its address while it waits', async () => {
+    const session = start(['--key', 'k-slow'], { tunnel: fakeTunnel({ answerAfterMs: 300 }), tunnelWaitMs: 10_000 })
+    const handle = await session.ready()
+    expect(session.err()).toContain(`Tunnel at ${handle.tunnel}; waiting for it to answer (up to 10 seconds).`)
+    expect(await text(handle.tunnel)).toContain('landing')
+    session.stop()
+    expect(await session.done).toBe(0)
+  })
+
+  it('gives up on a tunnel that answers after the wait, naming the wait, and closes it', async () => {
+    let err = ''
+    const code = await main(['recruit', '--tunnel', '--json', '--key', 'k-late-answer'], {
+      stdout: { write: () => true }, stderr: { write: t => (err += t) }, cwd: work, env: { UI_TESTS_DATA_DIR: data },
+      deps: { pollMs: 5, tunnelWaitMs: 200, tunnel: fakeTunnel({ answerAfterMs: 5_000 }) },
+    })
+    expect(code).toBe(2)
+    const url = /Tunnel at (\S+);/.exec(err)?.[1]
+    expect(err).toContain('waiting for it to answer (up to 0.2 seconds)')
+    expect(err).toContain(`tunnel: ${url} did not answer within 0.2 seconds`)
+    await expect(fetch(url!)).rejects.toThrow()
+    expect((await (await store()).listRuns()).find(r => r.key === 'k-late-answer')).toBeUndefined()
   })
 
   it('opens no tunnel and reissues nothing when the run is past its deadline', async () => {
@@ -228,6 +252,52 @@ describe('fakeTunnel', () => {
     expect(await text(opened.url)).toBe(LANDING)
     await opened.close()
     await opened.close()
+  })
+
+  it('refuses requests until its delay has passed, as a quick tunnel\'s new name does', async () => {
+    const opened = await fakeTunnel({ answerAfterMs: 200 }).open(targetUrl)
+    cleanup.push(() => opened.close())
+    await expect(fetch(opened.url)).rejects.toThrow()
+    await new Promise(resolve => setTimeout(resolve, 250))
+    expect(await text(opened.url)).toBe(LANDING)
+  })
+})
+
+describe('openReachableTunnel', () => {
+  afterEach(() => { vi.useRealTimers() })
+
+  it('waits 120 seconds by default, saying once that it waits, then closes the tunnel and names the wait', async () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'Date'] })
+    let closed = false
+    const waiting: string[] = []
+    const refused = (async () => { throw new TypeError('fetch failed') }) as unknown as typeof fetch
+    const opening = openReachableTunnel({
+      tunnel: { open: async () => ({ url: 'https://new-name.trycloudflare.com', close: async () => { closed = true } }) },
+      localUrl: 'http://127.0.0.1:1', fetch: refused, onWaiting: url => waiting.push(url),
+    })
+    const outcome = opening.then(() => 'answered', (error: Error) => error.message)
+    await vi.advanceTimersByTimeAsync(119_000)
+    expect(closed).toBe(false)
+    expect(waiting).toEqual(['https://new-name.trycloudflare.com'])
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(await outcome).toBe('https://new-name.trycloudflare.com did not answer within 120 seconds')
+    expect(closed).toBe(true)
+  })
+
+  it('ends a probe that hangs by the deadline, not a longer second try after it', async () => {
+    let tries = 0
+    const hangs = ((_url: string, init: RequestInit) => {
+      tries++
+      return new Promise((_resolve, reject) => { init.signal!.addEventListener('abort', () => reject(init.signal!.reason)) })
+    }) as unknown as typeof fetch
+    const started = Date.now()
+    const outcome = await openReachableTunnel({
+      tunnel: { open: async () => ({ url: 'https://hangs.trycloudflare.com', close: async () => {} }) },
+      localUrl: 'http://127.0.0.1:1', fetch: hangs, waitMs: 400,
+    }).then(() => 'answered', (error: Error) => error.message)
+    expect(outcome).toBe('https://hangs.trycloudflare.com did not answer within 0.4 seconds')
+    expect(Date.now() - started).toBeLessThan(700)
+    expect(tries).toBeLessThanOrEqual(2)
   })
 })
 
