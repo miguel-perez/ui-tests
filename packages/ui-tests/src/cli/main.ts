@@ -31,6 +31,8 @@ export type CliDeps = {
   fetch?: typeof fetch
   /** What `recruit --tunnel` opens; the default is cloudflared, or the fake when `UI_TESTS_TUNNEL=fake`. */
   tunnel?: Tunnel
+  /** How long `recruit --tunnel` waits for the tunnel's address to answer; the default is two minutes. */
+  tunnelWaitMs?: number
   /** The GitHub `check` talks to; the default is the REST API with `GITHUB_TOKEN`. */
   github?: GitHubClient
   /** Packs the local package for agent cli trials; the default runs `npm pack` once per run, tests pass a stub. */

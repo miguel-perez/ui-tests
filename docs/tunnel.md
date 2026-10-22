@@ -12,7 +12,7 @@ The door never sends a `ui-tests-*` cookie to the app, and the participant's coo
 
 1. Install `cloudflared` (https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/downloads/).
 2. Start the build the study targets (`target.url` in `ui-tests.config.ts`, `http://localhost:3000` by default), with the tag in its layout.
-3. Run `ui-tests recruit --tunnel`. It starts the front door, runs `cloudflared tunnel --url <front door>`, waits for the `https://*.trycloudflare.com` address and prints the links.
+3. Run `ui-tests recruit --tunnel`. It starts the front door, runs `cloudflared tunnel --url <front door>`, waits for the `https://*.trycloudflare.com` address, then waits up to two minutes for it to answer, and prints the links. A new quick-tunnel name can take over a minute to resolve; while it does, the command prints the address and that it is waiting for it to answer. An address that still does not answer after two minutes ends the command with exit code 2 and the tunnel closed, before any run exists.
 
 The command stays running while the tunnel is open; the front door and its ui-tests server run as long as the command. The tunnel closes at the run's deadline, on Ctrl-C, or when the process ends, whichever is first. Close the laptop and the tunnel goes with it; run the same command again (same key) to reopen it: it reissues the links nobody has opened yet under the new address, prints them, and records the new address.
 
