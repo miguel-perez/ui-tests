@@ -1,6 +1,6 @@
 import { NO_MODEL, type TextModel } from '../model.ts'
 import { pageLanguage, pageSays } from './impression.ts'
-import { neighbours } from './distractors.ts'
+import { isWrongAnswer, neighbours } from './distractors.ts'
 import { areFromDid, toSecondPerson } from './person.ts'
 import { current, distractorEntry, distractorsOf, type DraftNeeds, type Drafted, type StudySnapshot } from './snapshot.ts'
 
@@ -127,13 +127,13 @@ export async function draftSnapshot(input: DraftInput): Promise<{ entry: StudySn
   // A count's neighbours are drafted by rule, for the author to review; every other answer's by the model.
   const distractors: Record<string, Drafted<string[]>> = {}
   for (const [question, expected] of Object.entries(needs.distractors)) {
-    const kept = keep(distractorEntry(previous, question), expected)
+    const kept = keep(distractorEntry(previous, question, expected), expected)
     if (kept) { distractors[question] = kept; continue }
     const near = neighbours(expected)
     if (near) { distractors[question] = { from: expected, value: near, source: 'neighbours of a count' }; continue }
     const answer = model ? await ask(model, `${distractorPrompt(question, expected, input.did, input.product)}\nReply with only a JSON array of strings.`) : { error: input.noModel ?? NO_MODEL }
     const list = 'reply' in answer ? readList(answer.reply) : undefined
-    const wrong = list?.filter((d, i) => d.toLowerCase() !== expected.toLowerCase() && list.findIndex(o => o.toLowerCase() === d.toLowerCase()) === i).slice(0, DISTRACTORS)
+    const wrong = list?.filter((d, i) => isWrongAnswer(d, expected) && list.findIndex(o => o.toLowerCase() === d.toLowerCase()) === i).slice(0, DISTRACTORS)
     distractors[question] = { from: expected, value: wrong?.length ? wrong : null, source: wrong?.length ? 'model' : 'not drafted' }
     if (!wrong?.length) notDrafted.push({ item: distractorsOf(question), reason: 'error' in answer ? answer.error : 'the model reply was not a list' })
   }

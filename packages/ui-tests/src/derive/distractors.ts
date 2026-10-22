@@ -13,6 +13,14 @@ export function neighbours(expected: string): string[] | undefined {
   return (value === 0 ? [1, 2, 3] : [value - 1, value + 1, value + 2]).map(String)
 }
 
+/**
+ * Whether `choice` can stand as a wrong answer beside `expected`: a non-blank string that is not the expected answer, ignoring case and
+ * surrounding spaces, so no blank choice and no second copy of the right answer reaches a participant.
+ */
+export function isWrongAnswer(choice: unknown, expected: string): choice is string {
+  return typeof choice === 'string' && choice.trim() !== '' && choice.trim().toLowerCase() !== expected.trim().toLowerCase()
+}
+
 function random(seed: string): () => number {
   let state = createHash('sha256').update(seed).digest().readUInt32LE(0)
   return () => {

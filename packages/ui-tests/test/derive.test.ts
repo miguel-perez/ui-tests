@@ -73,6 +73,15 @@ describe('distractors', () => {
     expect(made.compiled.draft).toBe(true)
     expect(made.snapshot.reasons).toContain('distractors of "Q1" is not drafted yet')
   })
+  it('reads a snapshot list with a blank or the expected answer in it as not drafted, so no choice that is not one reaches people', () => {
+    for (const value of [['red'], [''], [' ', 'red'], ['blue', ''], ['blue', 'Red'], ['blue', ' red ']]) {
+      resetStudies()
+      study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('Q1', { expected: 'red' })) })
+      const made = compileWithSnapshot(getStudies()[0], {}, { decoys: {}, groups: [], screens: [], distractors: { Q1: { from: 'red', value, source: 'model' } } })
+      expect(made.compiled.goals[0].answer!.choices, JSON.stringify(value)).toEqual(['red'])
+      expect(made.snapshot.reasons, JSON.stringify(value)).toContain('distractors of "Q1" is not drafted yet')
+    }
+  })
   it('gives a count its neighbours before the snapshot holds them, and asks the snapshot to show them for review', () => {
     study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('How many people did you invite?', { expected: '3' })) })
     const made = compileWithSnapshot(getStudies()[0], {})
@@ -90,6 +99,13 @@ describe('distractors', () => {
       resetStudies()
       study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('Q1', { expected: 'red', distractors })) })
       expect(() => compileWithSnapshot(getStudies()[0], {}), JSON.stringify(distractors)).toThrow(/task "one": participant.answer\("Q1"\) has no distractors other than its expected answer/)
+    }
+  })
+  it('refuses written distractors with a blank or the expected answer in another case among them, which would show as choices', () => {
+    for (const distractors of [['blue', ''], ['blue', 'Red'], ['blue', ' red']]) {
+      resetStudies()
+      study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('Q1', { expected: 'red', distractors })) })
+      expect(() => compileWithSnapshot(getStudies()[0], {}), JSON.stringify(distractors)).toThrow(/task "one": participant.answer\("Q1"\) has distractors that are blank or its expected answer "red"/)
     }
   })
   it('refuses the same question expecting different answers, whose drafted distractors would share one snapshot entry', () => {

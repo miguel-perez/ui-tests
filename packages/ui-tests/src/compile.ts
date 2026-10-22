@@ -2,7 +2,7 @@ import { agentConfigOf, agentFingerprint } from './agents/config.ts'
 import { StudyLoadError } from './load.ts'
 import type { AuthoredStudy, AuthoredTask } from './authoring.ts'
 import { consentText } from './derive/consent.ts'
-import { neighbours, shuffleChoices } from './derive/distractors.ts'
+import { isWrongAnswer, neighbours, shuffleChoices } from './derive/distractors.ts'
 import { deriveBrand } from './derive/brand.ts'
 import { deriveImpression, type SaysSource } from './derive/impression.ts'
 import { areFromDid, toSecondPerson } from './derive/person.ts'
@@ -140,14 +140,17 @@ function compile(study: AuthoredStudy, config: UiTestsConfig, snapshot: StudySna
   const wrongAnswers = (task: AuthoredTask, answer: NonNullable<AuthoredTask['answer']>): string[] => {
     if (answer.distractors) {
       // Written distractors with no wrong answer among them would ask a question with one choice; nothing drafts them, so it is an error.
-      if (!answer.distractors.some(d => d.trim() && d !== answer.expected)) throw new Error(`task "${task.name}": participant.answer(${JSON.stringify(answer.question)}) has no distractors other than its expected answer; write the wrong answers, or leave distractors out for ui-tests lint -u to draft them`)
+      if (!answer.distractors.some(d => isWrongAnswer(d, answer.expected))) throw new Error(`task "${task.name}": participant.answer(${JSON.stringify(answer.question)}) has no distractors other than its expected answer; write the wrong answers, or leave distractors out for ui-tests lint -u to draft them`)
+      // A blank one, or the right answer again in other case, would reach a participant as a choice of its own.
+      const bad = answer.distractors.filter(d => !isWrongAnswer(d, answer.expected))
+      if (bad.length) throw new Error(`task "${task.name}": participant.answer(${JSON.stringify(answer.question)}) has distractors that are blank or its expected answer ${JSON.stringify(answer.expected)}: ${bad.map(d => JSON.stringify(d)).join(', ')}; remove them`)
       return answer.distractors
     }
     // The snapshot holds distractors by question, drafted from one expected answer: the same question expecting another would read the wrong entry.
     const other = needs.distractors[answer.question]
     if (other !== undefined && other !== answer.expected) throw new Error(`task "${task.name}" asks ${JSON.stringify(answer.question)} expecting ${JSON.stringify(answer.expected)}, and an earlier task asks it expecting ${JSON.stringify(other)}; word the questions apart, or write distractors on one`)
     needs.distractors[answer.question] = answer.expected
-    return current(distractorEntry(snapshot, answer.question), answer.expected) ?? neighbours(answer.expected) ?? []
+    return current(distractorEntry(snapshot, answer.question, answer.expected), answer.expected) ?? neighbours(answer.expected) ?? []
   }
   const goals: CompiledGoal[] = study.tasks.map((task, index) => {
     const { path, start, minutes, scenario } = task.options

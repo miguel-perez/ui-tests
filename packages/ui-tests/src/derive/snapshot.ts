@@ -3,6 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { basename } from 'node:path'
 import type { CompiledScreenerQuestion } from '../schema/compiled.ts'
 import type { SaysSource } from './impression.ts'
+import { isWrongAnswer } from './distractors.ts'
 
 /**
  * One thing ui-tests drafted rather than the author wrote: the input it was drafted `from`, its `value` (null until drafted; the author
@@ -44,10 +45,16 @@ export type DraftNeeds = {
 /** How lint names the distractors of a task question. */
 export const distractorsOf = (question: string) => `distractors of ${JSON.stringify(question)}`
 
-/** A task question's drafted distractors as the snapshot holds them; an empty list asks a question with one choice, so it is not drafted. */
-export function distractorEntry(entry: StudySnapshot | undefined, question: string): Drafted<string[]> | undefined {
+/**
+ * A task question's drafted distractors as the snapshot holds them. A value an author's edit left with no wrong answer in it (an empty
+ * list), or with a blank or the expected answer again among them, would show participants one choice or a choice that is not one, so it
+ * is not drafted: lint names it, recruit and check refuse, and lint -u drafts it again.
+ */
+export function distractorEntry(entry: StudySnapshot | undefined, question: string, expected: string): Drafted<string[]> | undefined {
   const item = entry?.distractors?.[question]
-  return item && Array.isArray(item.value) && item.value.length === 0 ? { ...item, value: null } : item
+  if (!item || item.value === null || item.value === undefined) return item
+  const valid = Array.isArray(item.value) && item.value.length > 0 && item.value.every(d => isWrongAnswer(d, expected))
+  return valid ? item : { ...item, value: null }
 }
 
 /** The snapshot file of a study file: next to it, like a Vitest snapshot. */
@@ -101,7 +108,7 @@ function needed(needs: DraftNeeds): [string, unknown, (s: StudySnapshot) => Draf
   if (needs.language !== undefined) items.push(['users.language', needs.language, s => s.language])
   if (needs.often !== undefined) items.push(['often', needs.often, s => s.often])
   for (const kind of ['role', 'uses', 'not'] as const) if (needs.decoys[kind]) items.push([`decoys.${kind}`, needs.decoys[kind], s => s.decoys?.[kind]])
-  for (const [question, expected] of Object.entries(needs.distractors)) items.push([distractorsOf(question), expected, s => distractorEntry(s, question)])
+  for (const [question, expected] of Object.entries(needs.distractors)) items.push([distractorsOf(question), expected, s => distractorEntry(s, question, expected)])
   return items
 }
 
