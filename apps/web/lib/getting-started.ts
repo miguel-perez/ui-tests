@@ -42,7 +42,7 @@ export const gettingStarted = {
       'On the task page, press Tab until the bar is read: the task, Done, and I couldn\'t do this. Press Done and listen for "Finished this task?".',
       'When the bar offers more time, listen for the offer, then press the button once with the keyboard.',
     ],
-    then: 'Do this by hand. It is not part of the automated checks. Each person also says which browser, device and assistive technology they use, and that is kept with their attempt. Spoken answers are kept as audio; set `UI_TESTS_TRANSCRIBER` to a module whose default export turns audio into text to keep the words too.',
+    then: 'Do this by hand. It is not part of the automated checks. Each person\'s browser and device are read from their browser, and after the consent they may say which assistive technology they use; both are kept with their attempt. Spoken answers are kept as audio; set `UI_TESTS_TRANSCRIBER` to a module whose default export turns audio into text to keep the words too.',
   },
   steps: [
     { id: 'install', heading: 'Install', text: install.does, command: install.command },

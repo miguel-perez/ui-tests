@@ -111,7 +111,7 @@ export const sources = {
       cost: 'Free', costNote: 'Pay them if you like; the consent says so either way',
       time: 'As each person finishes', timeNote: 'Closes at the deadline, 48 h unless you set one',
       goodFor: 'What almost anybody would stumble on, today, and every week',
-      steps: ['`npx ui-tests recruit` prints the link. It can point at a branch preview, at your laptop through a tunnel, or at your live site.', 'You send it. Ask a friend to pass it on rather than take it themselves.', 'Whoever opens it answers the same short screener, so the report still says who they were. Each attempt lands as the person finishes.'],
+      steps: ['`npx ui-tests lint -u` drafts the screener into a snapshot next to the study; read it, then `npx ui-tests recruit` prints the link. It can point at a branch preview, at your laptop through a tunnel, or at your live site.', 'You send it. Ask a friend to pass it on rather than take it themselves.', 'Whoever opens it answers the same short screener, so the report still says who they were. Each attempt lands as the person finishes.'],
       caveat: ['Friends are kind and people in tech know too much.', 'Send it beyond your team and beyond tech where you can, and for each problem ask whether your users would hit it too.'],
     },
     {
