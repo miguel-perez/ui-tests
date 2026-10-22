@@ -60,7 +60,10 @@ test('a signed link renders the report with no ui-tests branding; each person an
   expect(response?.status()).toBe(200)
   await expect(page.getByRole('heading', { level: 1, name: 'mount fixture' })).toBeVisible()
   await expect(page.getByText('By Acme Labs')).toBeVisible()
-  for (const name of ['Effectiveness', 'Efficiency', 'Satisfaction', 'Fit']) await expect(page.getByText(name).first()).toBeVisible()
+  for (const name of ['Effectiveness', 'Efficiency', 'Satisfaction']) await expect(page.getByText(name).first()).toBeVisible()
+  // The fit score is removed (#81): the section says who took part and what they made of the first look.
+  await expect(page.getByRole('heading', { name: 'Who took part, and the first look' })).toBeVisible()
+  await expect(page.getByText(/\bFit\b/)).toHaveCount(0)
   await expect(page.getByRole('heading', { name: 'What worked' })).toBeVisible()
 
   // The title, the description and everything on the page leave the site that serves it out.
