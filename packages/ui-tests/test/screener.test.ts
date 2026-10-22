@@ -422,6 +422,11 @@ study('s', { users: { did: 'planned a week with a team' }, purpose: 'plan the we
     await run(['lint', '-u'], { model, fetch: page })
     expect(asked).toHaveLength(before)
     expect((await readSnapshotFile(file))!.studies.s!.distractors!['Which plan was shown?']!.value).toEqual(['Solo', 'Business', 'Agency'])
+    // An emptied list would ask a question with one choice: lint says it is not drafted, and updating drafts it again.
+    await writeFile(file, (await readFile(file, 'utf8')).replace('["Solo", "Business", "Agency"]', '[]'))
+    expect((await run(['lint'])).out).toContain('distractors of "Which plan was shown?" is not drafted yet')
+    await run(['lint', '-u'], { model, fetch: page })
+    expect((await readSnapshotFile(file))!.studies.s!.distractors!['Which plan was shown?']!.value).toEqual(['Solo', 'Business', 'Enterprise'])
     await writeFile(join(dir, 'a.ui.test.ts'), answersStudy.replace("expected: 'Team'", "expected: 'Business'"))
     expect((await run(['lint'])).out).toContain('distractors of "Which plan was shown?" was drafted from something the study no longer says')
   })

@@ -44,6 +44,12 @@ export type DraftNeeds = {
 /** How lint names the distractors of a task question. */
 export const distractorsOf = (question: string) => `distractors of ${JSON.stringify(question)}`
 
+/** A task question's drafted distractors as the snapshot holds them; an empty list asks a question with one choice, so it is not drafted. */
+export function distractorEntry(entry: StudySnapshot | undefined, question: string): Drafted<string[]> | undefined {
+  const item = entry?.distractors?.[question]
+  return item && Array.isArray(item.value) && item.value.length === 0 ? { ...item, value: null } : item
+}
+
 /** The snapshot file of a study file: next to it, like a Vitest snapshot. */
 export const snapshotFileOf = (studyFile: string) => `${studyFile}.screener.snap`
 
@@ -95,7 +101,7 @@ function needed(needs: DraftNeeds): [string, unknown, (s: StudySnapshot) => Draf
   if (needs.language !== undefined) items.push(['users.language', needs.language, s => s.language])
   if (needs.often !== undefined) items.push(['often', needs.often, s => s.often])
   for (const kind of ['role', 'uses', 'not'] as const) if (needs.decoys[kind]) items.push([`decoys.${kind}`, needs.decoys[kind], s => s.decoys?.[kind]])
-  for (const [question, expected] of Object.entries(needs.distractors)) items.push([distractorsOf(question), expected, s => s.distractors?.[question]])
+  for (const [question, expected] of Object.entries(needs.distractors)) items.push([distractorsOf(question), expected, s => distractorEntry(s, question)])
   return items
 }
 

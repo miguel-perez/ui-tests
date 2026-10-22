@@ -2,7 +2,7 @@ import { NO_MODEL, type TextModel } from '../model.ts'
 import { pageLanguage, pageSays } from './impression.ts'
 import { neighbours } from './distractors.ts'
 import { areFromDid, toSecondPerson } from './person.ts'
-import { current, distractorsOf, type DraftNeeds, type Drafted, type StudySnapshot } from './snapshot.ts'
+import { current, distractorEntry, distractorsOf, type DraftNeeds, type Drafted, type StudySnapshot } from './snapshot.ts'
 
 /** Something `lint -u` could not draft, and why; the author writes it into the snapshot. */
 export type NotDrafted = { item: string; reason: string }
@@ -127,7 +127,7 @@ export async function draftSnapshot(input: DraftInput): Promise<{ entry: StudySn
   // A count's neighbours are drafted by rule, for the author to review; every other answer's by the model.
   const distractors: Record<string, Drafted<string[]>> = {}
   for (const [question, expected] of Object.entries(needs.distractors)) {
-    const kept = keep(previous?.distractors?.[question], expected)
+    const kept = keep(distractorEntry(previous, question), expected)
     if (kept) { distractors[question] = kept; continue }
     const near = neighbours(expected)
     if (near) { distractors[question] = { from: expected, value: near, source: 'neighbours of a count' }; continue }

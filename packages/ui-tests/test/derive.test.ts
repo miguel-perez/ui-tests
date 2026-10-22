@@ -66,6 +66,13 @@ describe('distractors', () => {
     expect([...compileWithSnapshot(getStudies()[0], {}, entry('red')).compiled.goals[0].answer!.choices].sort()).toEqual(['green', 'orange', 'red', 'yellow'])
     expect(compileWithSnapshot(getStudies()[0], {}, entry('crimson')).compiled.goals[0].answer!.choices).toEqual(['red'])
   })
+  it('reads an empty list in the snapshot as not drafted, so the study stays a draft that recruit refuses', () => {
+    study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('Q1', { expected: 'red' })) })
+    const made = compileWithSnapshot(getStudies()[0], {}, { decoys: {}, groups: [], screens: [], distractors: { Q1: { from: 'red', value: [], source: 'model' } } })
+    expect(made.compiled.goals[0].answer!.choices).toEqual(['red'])
+    expect(made.compiled.draft).toBe(true)
+    expect(made.snapshot.reasons).toContain('distractors of "Q1" is not drafted yet')
+  })
   it('gives a count its neighbours before the snapshot holds them, and asks the snapshot to show them for review', () => {
     study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('How many people did you invite?', { expected: '3' })) })
     const made = compileWithSnapshot(getStudies()[0], {})
@@ -77,6 +84,28 @@ describe('distractors', () => {
     const made = compileWithSnapshot(getStudies()[0], {})
     expect([...made.compiled.goals[0].answer!.choices].sort()).toEqual(['blue', 'red'])
     expect(made.needs.distractors).toEqual({})
+  })
+  it('refuses written distractors with no wrong answer among them, which would ask a question with one choice', () => {
+    for (const distractors of [[], [''], ['red']]) {
+      resetStudies()
+      study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('Q1', { expected: 'red', distractors })) })
+      expect(() => compileWithSnapshot(getStudies()[0], {}), JSON.stringify(distractors)).toThrow(/task "one": participant.answer\("Q1"\) has no distractors other than its expected answer/)
+    }
+  })
+  it('refuses the same question expecting different answers, whose drafted distractors would share one snapshot entry', () => {
+    study('s', { users: 'people' }, () => {
+      task('one', {}, () => participant.answer('Which plan?', { expected: 'Team' }))
+      task('two', {}, () => participant.answer('Which plan?', { expected: 'Pro' }))
+    })
+    expect(() => compileWithSnapshot(getStudies()[0], {})).toThrow(/task "two" asks "Which plan\?" expecting "Pro", and an earlier task asks it expecting "Team"/)
+  })
+  it('shares one drafted entry between tasks asking the same question with the same answer, or where one writes its own', () => {
+    study('s', { users: 'people' }, () => {
+      task('one', {}, () => participant.answer('Which plan?', { expected: 'Team' }))
+      task('two', {}, () => participant.answer('Which plan?', { expected: 'Team' }))
+      task('three', {}, () => participant.answer('Which plan?', { expected: 'Pro', distractors: ['Team', 'Free'] }))
+    })
+    expect(compileWithSnapshot(getStudies()[0], {}).needs.distractors).toEqual({ 'Which plan?': 'Team' })
   })
 })
 
