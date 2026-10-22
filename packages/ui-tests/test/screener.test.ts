@@ -406,7 +406,7 @@ study('s', { users: { did: 'planned a week with a team' }, purpose: 'plan the we
   it("drafts a text answer's distractors with the model, without the right answer, and keeps them while the answer is the same", async () => {
     await writeFile(join(dir, 'a.ui.test.ts'), answersStudy)
     const asked: string[] = []
-    const model = { complete: async (prompt: string) => { asked.push(prompt); return /yes or no/.test(prompt) ? 'no' : '["Solo", "team", "Business", "Enterprise", "Solo", "Agency"]' } }
+    const model = { complete: async (prompt: string) => { asked.push(prompt); return /yes or no/.test(prompt) ? 'no' : '["Solo", "team", "SOLO", "Business", "Enterprise", "Solo", "Agency"]' } }
     expect((await run(['lint', '-u'], { model, fetch: page })).code).toBe(0)
     const file = join(dir, 'a.ui.test.ts.screener.snap')
     const entry = (await readSnapshotFile(file))!.studies.s!

@@ -13,12 +13,20 @@ export function neighbours(expected: string): string[] | undefined {
   return (value === 0 ? [1, 2, 3] : [value - 1, value + 1, value + 2]).map(String)
 }
 
+/** Whether two answers read as the same choice to a participant: equal ignoring case and surrounding spaces. */
+export const sameAnswer = (a: string, b: string) => a.trim().toLowerCase() === b.trim().toLowerCase()
+
 /**
  * Whether `choice` can stand as a wrong answer beside `expected`: a non-blank string that is not the expected answer, ignoring case and
  * surrounding spaces, so no blank choice and no second copy of the right answer reaches a participant.
  */
 export function isWrongAnswer(choice: unknown, expected: string): choice is string {
-  return typeof choice === 'string' && choice.trim() !== '' && choice.trim().toLowerCase() !== expected.trim().toLowerCase()
+  return typeof choice === 'string' && choice.trim() !== '' && !sameAnswer(choice, expected)
+}
+
+/** The answers in `list` that repeat an earlier one, ignoring case and surrounding spaces: each would show a participant the same choice twice. */
+export function repeated(list: string[]): string[] {
+  return list.filter((choice, i) => list.findIndex(other => sameAnswer(other, choice)) !== i)
 }
 
 function random(seed: string): () => number {

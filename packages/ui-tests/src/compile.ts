@@ -2,7 +2,7 @@ import { agentConfigOf, agentFingerprint } from './agents/config.ts'
 import { StudyLoadError } from './load.ts'
 import type { AuthoredStudy, AuthoredTask } from './authoring.ts'
 import { consentText } from './derive/consent.ts'
-import { isWrongAnswer, neighbours, shuffleChoices } from './derive/distractors.ts'
+import { isWrongAnswer, neighbours, repeated, shuffleChoices } from './derive/distractors.ts'
 import { deriveBrand } from './derive/brand.ts'
 import { deriveImpression, type SaysSource } from './derive/impression.ts'
 import { areFromDid, toSecondPerson } from './derive/person.ts'
@@ -144,6 +144,9 @@ function compile(study: AuthoredStudy, config: UiTestsConfig, snapshot: StudySna
       // A blank one, or the right answer again in other case, would reach a participant as a choice of its own.
       const bad = answer.distractors.filter(d => !isWrongAnswer(d, answer.expected))
       if (bad.length) throw new Error(`task "${task.name}": participant.answer(${JSON.stringify(answer.question)}) has distractors that are blank or its expected answer ${JSON.stringify(answer.expected)}: ${bad.map(d => JSON.stringify(d)).join(', ')}; remove them`)
+      // Two that differ only in case or surrounding spaces would show the same choice twice.
+      const twice = repeated(answer.distractors)
+      if (twice.length) throw new Error(`task "${task.name}": participant.answer(${JSON.stringify(answer.question)}) has distractors that repeat another: ${twice.map(d => JSON.stringify(d)).join(', ')}; remove them`)
       return answer.distractors
     }
     // The snapshot holds distractors by question, drafted from one expected answer: the same question expecting another would read the wrong entry.

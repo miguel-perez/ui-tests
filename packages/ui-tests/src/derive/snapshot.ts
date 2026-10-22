@@ -3,7 +3,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { basename } from 'node:path'
 import type { CompiledScreenerQuestion } from '../schema/compiled.ts'
 import type { SaysSource } from './impression.ts'
-import { isWrongAnswer } from './distractors.ts'
+import { isWrongAnswer, repeated } from './distractors.ts'
 
 /**
  * One thing ui-tests drafted rather than the author wrote: the input it was drafted `from`, its `value` (null until drafted; the author
@@ -47,13 +47,13 @@ export const distractorsOf = (question: string) => `distractors of ${JSON.string
 
 /**
  * A task question's drafted distractors as the snapshot holds them. A value an author's edit left with no wrong answer in it (an empty
- * list), or with a blank or the expected answer again among them, would show participants one choice or a choice that is not one, so it
- * is not drafted: lint names it, recruit and check refuse, and lint -u drafts it again.
+ * list), or with a blank, the expected answer or one answer twice among them (ignoring case and surrounding spaces), would show
+ * participants one choice, a choice that is not one, or the same choice twice, so it is not drafted: lint names it, recruit and check refuse, and lint -u drafts it again.
  */
 export function distractorEntry(entry: StudySnapshot | undefined, question: string, expected: string): Drafted<string[]> | undefined {
   const item = entry?.distractors?.[question]
   if (!item || item.value === null || item.value === undefined) return item
-  const valid = Array.isArray(item.value) && item.value.length > 0 && item.value.every(d => isWrongAnswer(d, expected))
+  const valid = Array.isArray(item.value) && item.value.length > 0 && item.value.every(d => isWrongAnswer(d, expected)) && !repeated(item.value).length
   return valid ? item : { ...item, value: null }
 }
 

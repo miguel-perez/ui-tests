@@ -3,6 +3,7 @@ import { example } from '../../../apps/web/lib/copy.ts'
 import { exampleFile } from '../../../apps/web/lib/example.ts'
 import * as api from '../src/index.ts'
 import { compileStudy, compileWithSnapshot } from '../src/compile.ts'
+import { planLines } from '../src/lint.ts'
 import { CARD_FOOTER, START_TASK } from '../src/copy.ts'
 import { consentText, payoutLine } from '../src/derive/consent.ts'
 import { neighbours, shuffleChoices } from '../src/derive/distractors.ts'
@@ -107,6 +108,27 @@ describe('distractors', () => {
       study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('Q1', { expected: 'red', distractors })) })
       expect(() => compileWithSnapshot(getStudies()[0], {}), JSON.stringify(distractors)).toThrow(/task "one": participant.answer\("Q1"\) has distractors that are blank or its expected answer "red"/)
     }
+  })
+  it('refuses written distractors that repeat one another in another case or with spaces, which would show one choice twice', () => {
+    for (const distractors of [['blue', 'Blue'], ['blue', ' blue '], ['blue', 'green', 'blue']]) {
+      resetStudies()
+      study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('Q1', { expected: 'red', distractors })) })
+      expect(() => compileWithSnapshot(getStudies()[0], {}), JSON.stringify(distractors)).toThrow(/task "one": participant.answer\("Q1"\) has distractors that repeat another/)
+    }
+  })
+  it('reads a snapshot list that repeats an answer in another case or with spaces as not drafted', () => {
+    for (const value of [['blue', 'Blue'], ['blue', 'blue '], ['blue', 'green', 'blue']]) {
+      resetStudies()
+      study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('Q1', { expected: 'red' })) })
+      const made = compileWithSnapshot(getStudies()[0], {}, { decoys: {}, groups: [], screens: [], distractors: { Q1: { from: 'red', value, source: 'model' } } })
+      expect(made.compiled.goals[0].answer!.choices, JSON.stringify(value)).toEqual(['red'])
+      expect(made.snapshot.reasons, JSON.stringify(value)).toContain('distractors of "Q1" is not drafted yet')
+    }
+  })
+  it('does not tell the author lint -u drafts the distractors of a study only agents take, which it does not draft', () => {
+    study('s', { users: 'people', actors: ['agent'] }, () => { task('one', {}, () => participant.answer('Q1', { expected: 'red' })) })
+    const lines = planLines(compileWithSnapshot(getStudies()[0], {}).compiled)
+    expect(lines).toContain('Task 1 asks "Q1": red (expected)')
   })
   it('refuses the same question expecting different answers, whose drafted distractors would share one snapshot entry', () => {
     study('s', { users: 'people' }, () => {
