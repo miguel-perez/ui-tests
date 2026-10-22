@@ -2,7 +2,7 @@ import type { ScreenerResult } from '../derive/screener.ts'
 import type { TourCode } from '../derive/code-impression.ts'
 import { fillScenario } from '../derive/scenario.ts'
 import { sentence } from '../derive/sentence.ts'
-import { resultComplete, resultFigures } from '../runner/progress.ts'
+import { groupFigures, resultComplete, resultFigures } from '../runner/progress.ts'
 import { primaryGoalIndex } from '../runner/sequence.ts'
 import { videoSegments, type VideoSegments } from '../video.ts'
 import { highlightReel, type ReelMoment } from './reel.ts'
@@ -155,6 +155,8 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
   // The same figures as the check title: the primary goal's attempts counted in the result, by the one counting rule.
   const primary = compiled.goals[primaryGoalIndex(compiled)]
   const figures = resultFigures(rows, primaryGoalIndex(compiled), resultComplete(run))
+  // A study of several groups says its result per group, of each group's own people and quota.
+  const groups = groupFigures(rows, compiled.groups ?? [], primaryGoalIndex(compiled), resultComplete(run))
   const first = compiled.goals[0]
   const firstAttempt = rows.find(a => a.goalIndex === 0)
   return {
@@ -168,7 +170,7 @@ export async function buildTrace(store: RunStore, runId: string, lint: LintFindi
     revisions: numbered(revisions),
     attempts,
     lint,
-    sentence: sentence({ n: compiled.sample.n, affecting: compiled.sample.affecting, shape: primary?.shape ?? 'goal-only', ...figures, result: run.result, rehearsal: run.rehearsal, goal: (primary?.name ?? '').toLowerCase() }),
+    sentence: sentence({ n: compiled.sample.n, affecting: compiled.sample.affecting, shape: primary?.shape ?? 'goal-only', ...figures, result: run.result, rehearsal: run.rehearsal, goal: (primary?.name ?? '').toLowerCase(), ...(groups && { groups }) }),
     sampleSentence: compiled.sample.sentence,
     actor: run.actor,
   }

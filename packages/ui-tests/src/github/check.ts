@@ -1,7 +1,7 @@
 import type { RunRecord } from '../record/schema.ts'
 import { buildRecord } from '../record/build.ts'
 import { firstLookLines, groupLines } from '../record/summary.ts'
-import { resultComplete, resultFigures } from '../runner/progress.ts'
+import { groupFigures, resultComplete, resultFigures, type GroupFigures } from '../runner/progress.ts'
 import { primaryGoalIndex } from '../runner/sequence.ts'
 import { signedUrl } from '../report/sign.ts'
 import type { RunResult, RunRow, RunStore } from '../store/types.ts'
@@ -23,8 +23,15 @@ export type Outcome = 'problems' | 'none' | 'inconclusive'
 export const outcomeOf = (result: Finished): Outcome => result === 'problems-found' ? 'problems' : result === 'none-found' ? 'none' : 'inconclusive'
 
 /** The merge-box title. `reached` of `n` people reached the goal; `attempted` of `n` attempts completed. Same wording as the landing's check (apps/web/lib/check.ts). */
-export function checkTitle(input: { n: number; reached: number; attempted: number; problems: number; result: Finished }): string {
-  const { n, reached, attempted, problems, result } = input
+export function checkTitle(input: { n: number; reached: number; attempted: number; problems: number; result: Finished; groups?: GroupFigures[] }): string {
+  const { n, reached, attempted, problems, result, groups } = input
+  // Several groups are counted each against its own quota, never pooled.
+  if (groups && groups.length > 1) {
+    const each = (count: (g: GroupFigures) => number) => groups.map(g => `${g.name} ${count(g)} of ${g.quota}`).join(', ')
+    if (result === 'inconclusive') return `Inconclusive · only ${each(g => g.attempted)} attempts completed`
+    if (result === 'none-found') return `No problems found · ${each(g => g.reached)} reached the goal`
+    return `${problems} problem${problems === 1 ? '' : 's'} found · ${each(g => g.reached)} reached the goal`
+  }
   if (result === 'inconclusive') return `Inconclusive · only ${attempted} of ${n} attempts completed`
   if (result === 'none-found') return `No problems found with ${n} people · ${reached} of ${n} reached the goal`
   return `${problems} problem${problems === 1 ? '' : 's'} found · ${reached} of ${n} people reached the goal`
@@ -38,10 +45,12 @@ export function checkConclusion(result: Finished, blockOn?: 'problems'): 'neutra
 /** The numbers a title needs, read from the record: people counted toward n, and how many of them reached the outcome. */
 export function figuresOf(record: RunRecord) {
   const complete = resultComplete({ states: record.handle.states, result: record.handle.result })
-  const { attempted, reached } = resultFigures(record.attempts.map(a => ({ ...a, startedAt: a.timings.startedAt })), primaryGoalIndex(record.compiled), complete)
+  const counted = record.attempts.map(a => ({ ...a, startedAt: a.timings.startedAt }))
+  const { attempted, reached } = resultFigures(counted, primaryGoalIndex(record.compiled), complete)
+  const groups = groupFigures(counted, record.compiled.groups ?? [], primaryGoalIndex(record.compiled), complete)
   const result = record.handle.result === 'pending' ? 'inconclusive' : record.handle.result
   const problems = result === 'problems-found' ? Math.max(record.issues.length, 1) : 0
-  return { n: record.compiled.sample.n, reached, attempted, problems, result } as const
+  return { n: record.compiled.sample.n, reached, attempted, problems, result, ...(groups && { groups }) } as const
 }
 
 export const titleOf = (record: RunRecord) => checkTitle(figuresOf(record))
@@ -138,8 +147,9 @@ export function pendingSummary(run: RunRow, options: PageOptions = {}): { title:
   const seconds = compiled.goals.reduce((total, goal) => total + goal.timeout.seconds, 0)
   const minutes = Math.max(1, Math.ceil(seconds / 60))
   const n = compiled.sample.n
+  const several = (compiled.groups ?? []).length > 1 ? ` (${compiled.groups.map(g => `${g.name} ${g.quota}`).join(', ')})` : ''
   return {
-    title: `Waiting for ${n} ${n === 1 ? 'person' : 'people'}`,
+    title: `Waiting for ${n} ${n === 1 ? 'person' : 'people'}${several}`,
     summary: [
       compiled.sample.sentence,
       `Estimate: ${n} ${n === 1 ? 'person' : 'people'}, up to ${minutes} ${minutes === 1 ? 'minute' : 'minutes'} each. The run closes at ${run.deadline} at the latest.`,

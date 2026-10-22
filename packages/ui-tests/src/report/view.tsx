@@ -115,7 +115,7 @@ export function ReportView({ record, attemptIndex, base, link = identity, replay
       </p>
       <h1>{compiled.name}</h1>
       <p className="uit-dim">
-        {compiled.author ? `By ${compiled.author} · ` : ''}{compiled.product} · {record.actor === 'agent' ? 'capability test, not usability' : plural(compiled.sample.n, 'person', 'people')}
+        {compiled.author ? `By ${compiled.author} · ` : ''}{compiled.product} · {record.actor === 'agent' ? 'capability test, not usability' : `${plural(compiled.sample.n, 'person', 'people')}${(compiled.groups ?? []).length > 1 ? ` (${compiled.groups.map((g) => `${g.name} ${g.quota}`).join(', ')})` : ''}`}
       </p>
     </header>
   )

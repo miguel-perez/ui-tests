@@ -13,6 +13,7 @@ import { lint } from '../src/lint.ts'
 import { bundleStudyFile, loadBundle } from '../src/load.ts'
 import { main, type Io } from '../src/cli/main.ts'
 import { buildRecord } from '../src/record/build.ts'
+import { pendingSummary, titleOf } from '../src/github/check.ts'
 import { createCollector, GROUP_FULL } from '../src/server/collector.ts'
 import { participantView } from '../src/server/view.ts'
 import { SqliteStore } from '../src/store/sqlite.ts'
@@ -298,6 +299,11 @@ describe('quotas per group', () => {
     expect(record.groups[0]!.issues).toEqual(record.issues.map(i => i.id))
     expect(record.groups[1]!.issues).toEqual([])
     expect(record.attempts.map(a => a.group)).toEqual(['Developer', 'Developer', 'Designer'])
+    // The result sentence, the sample sentence and the check title name each group, of its own quota; nothing pools the three.
+    expect(record.sentence).toBe('Developer: Two people give a 56% chance of seeing any problem that hits at least one person in three. Designer: One person gives a 33% chance of seeing any problem that hits at least one person in three.')
+    expect(record.compiled.sample.sentence).toBe(record.sentence)
+    expect(titleOf(record)).toBe('Inconclusive · only Developer 2 of 2, Designer 1 of 1 attempts completed')
+    expect(pendingSummary(run).title).toBe('Waiting for 3 people (Developer 2, Designer 1)')
   })
 })
 

@@ -31,6 +31,34 @@ describe('sentence', () => {
   })
 })
 
+describe('sentence, for a study that samples several groups', () => {
+  const groups = [
+    { name: 'Developer', quota: 3, attempted: 3, reached: 3, failed: 0, unknown: 0 },
+    { name: 'Designer', quota: 2, attempted: 2, reached: 2, failed: 0, unknown: 0 },
+  ]
+  const several = { ...base, groups }
+  it('says each group its own chance, of its own n, and never the pooled five', () => {
+    const said = sentence(several)
+    expect(said).toBe('Developer: Three people gave a 70% chance of seeing any problem that hits one in three; none was seen. Designer: Two people gave a 56% chance of seeing any problem that hits one in three; none was seen. That is not a completion rate.')
+    expect(said).not.toMatch(/Five|87%/)
+  })
+  it('says the pending chance per group', () => {
+    expect(sentence({ ...several, result: 'pending' })).toBe('Developer: Three people give a 70% chance of seeing any problem that hits at least one person in three. Designer: Two people give a 56% chance of seeing any problem that hits at least one person in three.')
+  })
+  it('says problems found per group, with each group\'s own counts', () => {
+    const found = sentence({ ...several, result: 'problems-found', goal: 'invite a colleague', groups: [{ ...groups[0]!, reached: 2, failed: 1 }, groups[1]!] })
+    expect(found).toBe('Developer: 1 of 3 could not invite a colleague; 2 of 3 reached the outcome by their own route. Designer: 0 of 2 could not invite a colleague; 2 of 2 reached the outcome by their own route.')
+  })
+  it('says inconclusive and rehearsal per group', () => {
+    expect(sentence({ ...several, result: 'inconclusive', groups: [{ ...groups[0]!, attempted: 2, unknown: 1 }, { ...groups[1]!, attempted: 0 }] }))
+      .toBe('Inconclusive. Developer: 2 of 3 attempts completed, 1 of them could not be verified. Designer: 0 of 2 attempts completed. That is not enough to say whether a problem that hits one in three was there.')
+    expect(sentence({ ...several, rehearsal: true })).toBe('Rehearsal: 0 planned attempts recorded (Developer 0 of 3, Designer 0 of 2).')
+  })
+  it('reads exactly as before with one group', () => {
+    expect(sentence({ ...base, groups: [{ name: 'everyone', quota: 5, attempted: 5, reached: 5, failed: 0, unknown: 0 }] })).toBe(sentence(base))
+  })
+})
+
 describe('resultOf', () => {
   it('stays pending until n counted attempts or the deadline', () => {
     expect(resultOf({ n: 5, verified: ['correct', 'unknown'], deadlinePassed: false })).toBe('pending')
