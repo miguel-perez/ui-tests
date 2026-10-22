@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
@@ -137,6 +137,23 @@ describe('SqliteStore on a database from before schema versioning', () => {
     expect(db.prepare('PRAGMA user_version').get()).toEqual({ user_version: 0 })
     expect(db.prepare('SELECT id FROM runs').all()).toEqual([{ id: 'old-run' }])
     db.close()
+  })
+
+  it('leaves a WAL retained by an unclean shutdown unchanged', () => {
+    const live = tempFile()
+    legacyDatabase(live)
+    const writer = new DatabaseSync(live)
+    writer.exec('PRAGMA wal_autocheckpoint = 0')
+    writer.prepare('INSERT INTO runs VALUES (?, ?, ?)').run('wal-run', 'wal-token', '{"status":"finished"}')
+    const file = tempFile()
+    mkdirSync(path.dirname(file), { recursive: true })
+    for (const suffix of ['', '-wal', '-shm']) copyFileSync(live + suffix, file + suffix)
+    writer.close()
+    const before = digest(file)
+    const wal = digest(`${file}-wal`)
+    expect(() => new SqliteStore(file)).toThrow(`${file} predates schema versioning`)
+    expect(digest(file)).toBe(before)
+    expect(digest(`${file}-wal`)).toBe(wal)
   })
 
   it('makes a command exit 2 with that message instead of "table runs already exists"', async () => {

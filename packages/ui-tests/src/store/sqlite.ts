@@ -1,7 +1,8 @@
 import { createHash } from 'node:crypto'
-import { mkdirSync } from 'node:fs'
+import { existsSync, mkdirSync } from 'node:fs'
 import { DatabaseSync } from 'node:sqlite'
 import path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { newId, newRunId, newToken } from '../ids.ts'
 import { readRun } from '../schema/compiled.ts'
 import { sqliteMigrations } from './migrations.ts'
@@ -28,23 +29,40 @@ export class SqliteStore implements RunStore {
       this.shared = shared
       return
     }
-    if (filename !== ':memory:') mkdirSync(path.dirname(filename), { recursive: true })
+    if (filename !== ':memory:') {
+      mkdirSync(path.dirname(filename), { recursive: true })
+      if (existsSync(filename)) SqliteStore.refuseUnversioned(filename, busyTimeoutMs)
+    }
     const db = new DatabaseSync(filename)
     db.exec(`PRAGMA busy_timeout = ${Math.floor(busyTimeoutMs)}`)
-    SqliteStore.refuseUnversioned(db, filename)
     db.exec('PRAGMA journal_mode = WAL')
     db.exec('PRAGMA foreign_keys = ON')
     this.migrate(db)
     this.shared = { db, gate: Promise.resolve() }
   }
 
-  /** Refuses a file with tables but no recorded version, as written before schema versioning: migration 1 cannot apply to it, so it is closed unchanged. One statement reads both, so a concurrent first migration is seen whole or not at all. */
-  private static refuseUnversioned(db: DatabaseSync, filename: string) {
-    const { version, tables } = db.prepare(
-      "SELECT (SELECT user_version FROM pragma_user_version) AS version, (SELECT count(*) FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%') AS tables",
-    ).get() as { version: number; tables: number }
-    if (version !== 0 || tables === 0) return
-    db.close()
+  /**
+   * Refuses a file with tables but no recorded version, as written before schema versioning: migration 1 cannot apply to it.
+   * The check reads without write access, so the file and any WAL beside it stay unchanged: a read-only connection when a WAL
+   * exists (its close cannot checkpoint or remove a WAL left by an unclean shutdown), and an immutable read when none does
+   * (every page is then in the file, and nothing creates a WAL or shared-memory file). One statement reads both values,
+   * so a concurrent first migration, which writes through its WAL, is seen whole or not at all.
+   */
+  private static refuseUnversioned(filename: string, busyTimeoutMs: number) {
+    const immutable = pathToFileURL(filename)
+    immutable.searchParams.set('immutable', '1')
+    const db = existsSync(`${filename}-wal`)
+      ? new DatabaseSync(filename, { readOnly: true, timeout: Math.floor(busyTimeoutMs) })
+      : new DatabaseSync(immutable, { readOnly: true })
+    let row: { version: number; tables: number }
+    try {
+      row = db.prepare(
+        "SELECT (SELECT user_version FROM pragma_user_version) AS version, (SELECT count(*) FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%') AS tables",
+      ).get() as { version: number; tables: number }
+    } finally {
+      db.close()
+    }
+    if (row.version !== 0 || row.tables === 0) return
     throw new Error(`${filename} predates schema versioning, so ui-tests cannot upgrade it. It has not been changed: move it aside (for example rename it to dev.sqlite.old) and run again to start a fresh store.`)
   }
 
