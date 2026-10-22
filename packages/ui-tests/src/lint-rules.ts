@@ -297,7 +297,7 @@ export const rules: Rule[] = [
   },
   {
     id: 'screener-snapshot', severity: 'warning', source: 'Goal-Directed Design; Portigal, Interviewing Users (review the screener before recruiting)',
-    reason: 'What ui-tests drafts (the decoys, who the users are, the purpose said to "you", what the page says) is reviewed before anyone is recruited; recruit and check refuse until the snapshot is current.',
+    reason: 'What ui-tests drafts (the decoys, who the users are, the purpose said to "you", what the page says, the wrong answers to a task question) is reviewed before anyone is recruited; recruit and check refuse until the snapshot is current.',
     run({ study, compiled, snapshot }, emit) {
       if (!snapshot || snapshot.state === 'current' || !compiled.actors.includes('human')) return
       emit({ message: `${snapshot.file} is ${snapshot.state}: ${snapshot.reasons.join('; ')}`, fix: `run ui-tests lint -u, review ${snapshot.file} and commit it`, line: study.line })

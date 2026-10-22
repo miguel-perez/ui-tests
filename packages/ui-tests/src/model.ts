@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk'
 import type { ModelConfig } from './agents/config.ts'
 
-/** A configured text model: drafts the screener's decoys into the snapshot and codes the first look. */
+/** A configured text model: drafts the screener's decoys and the task questions' distractors into the snapshot, and codes the first look. */
 export interface TextModel { complete(prompt: string): Promise<string> }
 
 /** What lint says when the config names no model it can draft with. */

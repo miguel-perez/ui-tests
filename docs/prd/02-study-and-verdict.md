@@ -15,6 +15,7 @@
 | `goals[].shape` | goal-only, happy-path, steps, or time-boxed, from what the author wrote | no |
 | `goals[].tasks[]` | the steps, when the goal has them, each with its wording and optional check | wording only, one at a time |
 | `goals[].happyPath`, `goals[].answer`, `goals[].outcome` | the inputs | no |
+| `goals[].answer.choices` | the expected answer among its distractors: the author's, else from the reviewed snapshot (a count's neighbours, else drafted by the model); never padded from a generic list | the question and the choices, shuffled; never which one is expected |
 | `goals[].timeout` | `timeLimit`, else happy-path or step count × 90 seconds, minimum 3 minutes; silent, never shown as a countdown | yes, to end the attempt; never displayed |
 | `goals[].questions` | SEQ (7-point ease), confidence (7-point) | yes |
 | `questions` | UX-Lite, two items, usefulness and ease | yes |
