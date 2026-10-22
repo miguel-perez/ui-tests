@@ -1,8 +1,10 @@
-import { mkdtempSync, rmSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { DatabaseSync } from 'node:sqlite'
 import { afterAll, describe, expect, it } from 'vitest'
+import { main } from '../src/cli/main.ts'
 import { newId, newRunId, newToken } from '../src/ids.ts'
 import { dataDirectory, openStore } from '../src/store/open.ts'
 import { sqliteMigrations } from '../src/store/migrations.ts'
@@ -102,6 +104,55 @@ describe('SqliteStore migrations', () => {
     const reopened = new SqliteStore(file)
     expect((await reopened.authorize(token))?.attempt.id).toBe(attempt.id)
     await reopened.close()
+  })
+})
+
+/** Writes a database the way the store before schema versioning did: five tables, WAL, `user_version` left at 0, one run. */
+const legacyDatabase = (file: string) => {
+  mkdirSync(path.dirname(file), { recursive: true })
+  const db = new DatabaseSync(file)
+  db.exec('PRAGMA journal_mode = WAL')
+  db.exec(`CREATE TABLE runs (id TEXT PRIMARY KEY, token TEXT NOT NULL, data TEXT NOT NULL);
+    CREATE TABLE attempts (run_id TEXT PRIMARY KEY REFERENCES runs(id), rehearsal INTEGER NOT NULL DEFAULT 1, data TEXT NOT NULL);
+    CREATE TABLE events (id INTEGER PRIMARY KEY, run_id TEXT NOT NULL REFERENCES runs(id), data TEXT NOT NULL);
+    CREATE TABLE snapshots (run_id TEXT PRIMARY KEY REFERENCES runs(id), url TEXT NOT NULL, dom TEXT NOT NULL);
+    CREATE TABLE recordings (id TEXT PRIMARY KEY, run_id TEXT NOT NULL REFERENCES runs(id), mime TEXT NOT NULL, audio BLOB NOT NULL, created_at INTEGER NOT NULL);
+    CREATE INDEX recordings_run ON recordings(run_id);
+    CREATE INDEX recordings_created ON recordings(created_at);`)
+  db.prepare('INSERT INTO runs VALUES (?, ?, ?)').run('old-run', 'old-token', '{"status":"finished"}')
+  db.close()
+}
+const digest = (file: string) => createHash('sha256').update(readFileSync(file)).digest('hex')
+
+describe('SqliteStore on a database from before schema versioning', () => {
+  it('refuses to open it, names the file and leaves it unchanged', () => {
+    const file = tempFile()
+    legacyDatabase(file)
+    const before = digest(file)
+    expect(() => new SqliteStore(file)).toThrow(`${file} predates schema versioning`)
+    expect(() => new SqliteStore(file)).toThrow(/move it aside/)
+    expect(digest(file)).toBe(before)
+    expect(readdirSync(path.dirname(file))).toEqual(['dev.sqlite'])
+    const db = new DatabaseSync(file, { readOnly: true })
+    expect(db.prepare('PRAGMA user_version').get()).toEqual({ user_version: 0 })
+    expect(db.prepare('SELECT id FROM runs').all()).toEqual([{ id: 'old-run' }])
+    db.close()
+  })
+
+  it('makes a command exit 2 with that message instead of "table runs already exists"', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'ui-tests-legacy-'))
+    dirs.push(dir)
+    const file = path.join(dir, 'dev.sqlite')
+    legacyDatabase(file)
+    const before = digest(file)
+    let stderr = ''
+    const io = { stdout: { write: () => true }, stderr: { write: (text: string) => (stderr += text) }, cwd: dir, env: { UI_TESTS_DATA_DIR: dir } }
+    expect(await main(['status', 'r_missing'], io)).toBe(2)
+    expect(stderr).toContain(`${file} predates schema versioning`)
+    expect(stderr).toContain('move it aside')
+    expect(stderr).not.toContain('already exists')
+    expect(digest(file)).toBe(before)
+    expect(existsSync(file)).toBe(true)
   })
 })
 

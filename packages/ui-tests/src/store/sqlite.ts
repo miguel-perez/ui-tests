@@ -31,10 +31,21 @@ export class SqliteStore implements RunStore {
     if (filename !== ':memory:') mkdirSync(path.dirname(filename), { recursive: true })
     const db = new DatabaseSync(filename)
     db.exec(`PRAGMA busy_timeout = ${Math.floor(busyTimeoutMs)}`)
+    SqliteStore.refuseUnversioned(db, filename)
     db.exec('PRAGMA journal_mode = WAL')
     db.exec('PRAGMA foreign_keys = ON')
     this.migrate(db)
     this.shared = { db, gate: Promise.resolve() }
+  }
+
+  /** Refuses a file with tables but no recorded version, as written before schema versioning: migration 1 cannot apply to it, so it is closed unchanged. One statement reads both, so a concurrent first migration is seen whole or not at all. */
+  private static refuseUnversioned(db: DatabaseSync, filename: string) {
+    const { version, tables } = db.prepare(
+      "SELECT (SELECT user_version FROM pragma_user_version) AS version, (SELECT count(*) FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%') AS tables",
+    ).get() as { version: number; tables: number }
+    if (version !== 0 || tables === 0) return
+    db.close()
+    throw new Error(`${filename} predates schema versioning, so ui-tests cannot upgrade it. It has not been changed: move it aside (for example rename it to dev.sqlite.old) and run again to start a fresh store.`)
   }
 
   /** Applies migrations not yet recorded in `user_version`, each in its own immediate transaction. */
