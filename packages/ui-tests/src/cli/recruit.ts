@@ -10,7 +10,7 @@ import { isLoopbackHost, linkBaseFor, probeLocal, reachabilityOf } from '../runn
 import { checkReachable } from '../runner/setup.ts'
 import { openStore } from '../store/open.ts'
 import type { RunHandle, RunRow, RunStore } from '../store/types.ts'
-import { chooseTunnel, openReachableTunnel, recordTunnel } from '../tunnel/session.ts'
+import { chooseTunnel, openReachableTunnel, recordTunnel, TUNNEL_WAIT_MS } from '../tunnel/session.ts'
 import type { UiTestsConfig } from '../types.ts'
 import { verifyRun } from '../verify.ts'
 import { loadStudies, snapshotRefusal, withProduct } from './lint.ts'
@@ -163,7 +163,9 @@ export const recruit: Command = async (args, io) => {
     }
     // A tunnel is run-scoped: it is opened to the front door (and must answer) before any run exists, recorded on the run, and closed at the deadline or when this command ends.
     if (tunneling && door) {
-      try { opened = await openReachableTunnel({ tunnel: chooseTunnel(io.env, deps.tunnel), localUrl: door.url, ...(deps.fetch && { fetch: deps.fetch }), retryMs: deps.pollMs ?? 500 }) } catch (error) {
+      const waitMs = deps.tunnelWaitMs ?? TUNNEL_WAIT_MS
+      const onWaiting = (url: string) => { diagnostics.write(`Tunnel at ${url}; waiting for it to answer (up to ${waitMs / 1000} seconds).\n`) }
+      try { opened = await openReachableTunnel({ tunnel: chooseTunnel(io.env, deps.tunnel), localUrl: door.url, ...(deps.fetch && { fetch: deps.fetch }), retryMs: deps.pollMs ?? 500, waitMs, onWaiting }) } catch (error) {
         io.stderr.write(`tunnel: ${error instanceof Error ? error.message : String(error)}\n`)
         await door.close()
         return 2

@@ -8,11 +8,14 @@ export async function runSetup(study: AuthoredStudy, target: string, headers: Re
   try { return { ...await study.setup({ request }) } } finally { await request.dispose() }
 }
 
+/** How long `checkReachable` waits for an answer: a short try, then a long one for a first page still compiling. */
+export const PROBE_TIMEOUTS_MS = [3000, 30000]
+
 /**
  * Whether anything answers at `url`; any HTTP response counts, a refused connection does not. A dev server compiles its first page
  * on the first request, which can take longer than a few seconds, so a request that only timed out gets one longer try.
  */
-export async function checkReachable(url: string, fetchImpl: typeof fetch = fetch, timeouts: number[] = [3000, 30000]): Promise<boolean> {
+export async function checkReachable(url: string, fetchImpl: typeof fetch = fetch, timeouts: number[] = PROBE_TIMEOUTS_MS): Promise<boolean> {
   for (const ms of timeouts) {
     try {
       await fetchImpl(url, { method: 'GET', redirect: 'manual', signal: AbortSignal.timeout(ms) })
