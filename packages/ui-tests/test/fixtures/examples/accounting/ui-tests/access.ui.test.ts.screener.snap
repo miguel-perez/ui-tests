@@ -4,7 +4,7 @@
     "read-only access": {
       "are": { "from": "paid for accounting software for your own business", "value": "people who paid for accounting software for their own business", "source": "did, person shifted" },
       "purpose": { "from": "give someone else read-only access to my books", "value": "give someone else read-only access to your books", "source": "purpose, person shifted" },
-      "says": { "from": "/", "value": "Accounting for small businesses: invoices, expenses and reports in one place.", "source": "meta description" },
+      "says": { "from": "/", "value": "Accounting for small businesses: invoices, expenses and reports in one place", "source": "h1" },
       "language": { "from": "/", "value": "en", "source": "html lang" },
       "often": { "from": "paid for accounting software for your own business", "value": false, "source": "author" },
       "decoys": {

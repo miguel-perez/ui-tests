@@ -464,7 +464,7 @@ describe('recruit and the screener snapshot', () => {
     const dir = await mkdtemp(join(fixtures, '.tmp-recruit-agent-'))
     cleanup.push(() => rm(dir, { recursive: true, force: true }))
     await writeFile(join(dir, 'agent.ui.test.ts'), `import { study, task } from 'ui-tests'\nstudy('agent', { users: 'Agents', actors: ['agent'], target: { cli: 'npx ui-tests' } }, () => { task('Run', { minutes: 2 }, () => {}) })\n`)
-    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' }, agents: { model: { provider: 'scripted', name: 'fixture' } } }\n`)
+    await writeFile(join(dir, 'ui-tests.config.ts'), `export default { server: { url: '${serverUrl}' }, target: { url: '${targetUrl}' }, model: { provider: 'scripted', name: 'fixture' } }\n`)
     const s = session({}, {}, dir)
     await main(['recruit', '--json', '--actor', 'agent'], s.io)
     expect(s.err()).not.toContain('screener snapshot')

@@ -6,19 +6,19 @@ import { TOUR_PARTS, TOUR_PROMPT } from './tour.ts'
 
 export { PART_LABELS, TOUR_PARTS, TOUR_PROMPT, type TourPart } from './tour.ts'
 
-/** Where `says` came from: the page's meta description, its og:description, its first heading, or the author. */
-export type SaysSource = 'meta description' | 'og:description' | 'h1' | 'author'
+/** Where `says` came from: the page's first heading, its meta description, its og:description, or the author. */
+export type SaysSource = 'h1' | 'meta description' | 'og:description' | 'author'
 
-/** What the start page says about itself: its meta description, else its og:description, else its first heading. Undefined when it says none. */
+/** What the start page says about itself: its first heading, else its meta description, else its og:description. Undefined when it says none. */
 export function pageSays(html: string): { says: string; source: SaysSource } | undefined {
   const { document } = parseHTML(html)
   const clean = (text: string | null | undefined) => text?.replace(/\s+/g, ' ').trim() || undefined
+  const h1 = clean(document.querySelector('h1')?.textContent)
+  if (h1) return { says: h1, source: 'h1' }
   const meta = clean(document.querySelector('meta[name="description" i]')?.getAttribute('content'))
   if (meta) return { says: meta, source: 'meta description' }
   const og = clean(document.querySelector('meta[property="og:description" i]')?.getAttribute('content'))
-  if (og) return { says: og, source: 'og:description' }
-  const h1 = clean(document.querySelector('h1')?.textContent)
-  return h1 ? { says: h1, source: 'h1' } : undefined
+  return og ? { says: og, source: 'og:description' } : undefined
 }
 
 /** The language the start page says it is in, from `<html lang>`, as a language code; undefined when it says none. */

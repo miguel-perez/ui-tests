@@ -2,7 +2,7 @@ import { timingSafeEqual } from 'node:crypto'
 import { z } from 'zod'
 import { codeTour } from '../derive/code-impression.ts'
 import { screenResult, type ScreenerResult } from '../derive/screener.ts'
-import type { TextModel } from '../model.ts'
+import { textModelFor, type TextModel } from '../model.ts'
 import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
 import { UXLITE_VERSION } from '../measures.ts'
 import { GROUP_FULL } from '../copy.ts'
@@ -19,8 +19,10 @@ export type CollectorOptions = {
   store: () => Promise<RunStore>
   /** The secret the CLI sends as a Bearer token to act on an attempt named by `?attempt=`. */
   cliSecret?: string
-  /** Codes the first look's answer, part by part; without it the answer is kept uncoded, for the author to code. */
+  /** Codes the first look's answer, part by part, in place of the run's own `model`; for tests. */
   model?: TextModel
+  /** Where the server's `ANTHROPIC_API_KEY` is read, for the model the run pins; without a model the answer is kept uncoded, for the author to code. */
+  env?: Record<string, string | undefined>
   /** The clock in epoch milliseconds; replaced in tests. */
   now?: () => number
   /** Makes text from a spoken answer when the browser did not; without it the audio is kept as it is. */
@@ -229,6 +231,13 @@ export function createCollector(options: CollectorOptions): (request: Request) =
   /** A failing transcriber is named once on stderr; the audio is kept either way. */
   const warnTranscriber = (error: unknown) => { if (!warned) { warned = true; console.error(`ui-tests: the transcriber failed, voice answers are kept without text: ${error instanceof Error ? error.message : String(error)}`) } }
 
+  /** The model that codes a run's first look: the one given (tests), else the model the run pins, through this server's key. */
+  const modelOf = (run: RunRow): [TextModel | undefined, string | undefined] => {
+    if (options.model) return [options.model, undefined]
+    const found = textModelFor(run.compiled.model, options.env ?? {})
+    return 'model' in found ? [found.model, undefined] : [undefined, run.compiled.model ? found.missing : 'no model is configured']
+  }
+
   return async function collector(request: Request): Promise<Response> {
     const url = new URL(request.url)
     const own = (options.publicUrl && originOf(options.publicUrl)) || publicOrigin(request, url)
@@ -350,7 +359,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
     }
     const conflict = (text: string) => refuse(409, text)
     // The first look is coded before the transaction opens, so a model call never holds a connection.
-    const coded = body.action === 'answers' && body.impression !== undefined ? await codeTour(body.impression, run.compiled.impression.says, options.model) : undefined
+    const coded = body.action === 'answers' && body.impression !== undefined ? await codeTour(body.impression, run.compiled.impression.says, ...modelOf(run)) : undefined
 
     // After the run's deadline nobody new starts: consent and begin are refused. Attempts already under way finish, and so does a person already on a later goal.
     const underWay = body.action === 'begin' && placeOf(run.compiled, attempt).position > 0 && storedOrder(attempt) !== undefined
@@ -535,7 +544,7 @@ export function createCollector(options: CollectorOptions): (request: Request) =
         const words = heard || body.typed?.trim() || undefined
         if (key === 'impression') {
           // Coded before the transaction opens, like a typed answer; the words are coded once they are known.
-          const coded = await codeTour(words ?? '', run.compiled.impression.says, options.model)
+          const coded = await codeTour(words ?? '', run.compiled.impression.says, ...modelOf(run))
           const result = await store.transaction(async (tx) => {
             const current = await tx.getAttempt(attempt.id)
             const said = current?.answers.impression as Record<string, unknown> | undefined

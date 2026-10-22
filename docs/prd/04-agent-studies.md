@@ -47,7 +47,7 @@ study('first run', {
 
 `npx ui-tests --actor agent` runs this with the cli harness and the configured model, five trials, fixtures reset between trials. A study on `target.cli` that lists `human` in `actors` fails lint, because a human terminal harness is a planned omission. The same study against `target.url` could admit both. The inputs are unchanged. `trials` replaces sample size for agent runs; the scenario wording is given to the agent as its prompt.
 
-An agent is model plus harness plus context: provider and version, system instructions, visible tools, permissions, and budgets, set in the config under `agents` and pinned into the compiled run. Changing any of them is a different run.
+An agent is model plus harness plus context: provider and version, system instructions, visible tools, permissions, and budgets, set in the config: the model under `model` (the project's one model, which also drafts the screener snapshot and codes the first look) and the rest under `agents`, pinned into the compiled run. Changing any of them is a different run.
 
 ## Measures
 

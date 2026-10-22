@@ -4,7 +4,7 @@
     "getting started": {
       "are": { "from": "shipped a user interface you built yourself", "value": "people who shipped a user interface they built themselves", "source": "did, person shifted" },
       "purpose": { "from": "find out whether people can use what I built, without a researcher", "value": "find out whether people can use what you built, without a researcher", "source": "purpose, person shifted" },
-      "says": { "from": "/", "value": "Say who your users are, what they are trying to do, and how you would know they did it, in one small file next to your code. One command puts real people in front of your site, records every attempt, and hands back the problems they hit, ranked, with the moment to watch, the words they said, and what to change.", "source": "meta description" },
+      "says": { "from": "/", "value": "See where people get stuck on what you just shipped.", "source": "h1" },
       "language": { "from": "/", "value": "en", "source": "html lang" },
       "decoys": {
         "role": { "from": ["Developer", "Designer", "Founder"], "value": ["Data analyst", "QA engineer", "Technical writer", "Sales engineer"], "source": "author" },

@@ -176,7 +176,7 @@ The `sample` line sets how many, for the whole study: one in three at 85% confid
 
 **Subtitle.** on for public pages
 
-**Note.** A look around the live page, for as long as they like: they can scroll, but nothing is clickable yet. Then one open question: what it is, whose it is, what they can do there and what it is for. It is the page the task starts on when that page is public, and off when the start is behind a sign-in, as Weekboard's board is; `firstLook: { page }` names the public page where the purpose lives, here the home page. Each answer is coded part by part against what the page says, its meta description unless you write `says`, never against the `purpose`, which the person never sees. Without a model the answers are listed for you to read.
+**Note.** A look around the live page, for as long as they like: they can scroll, but nothing is clickable yet. Then one open question: what it is, whose it is, what they can do there and what it is for. It is the page the task starts on when that page is public, and off when the start is behind a sign-in, as Weekboard's board is; `firstLook: { page }` names the public page where the purpose lives, here the home page. Each answer is coded part by part against what the page says, its first heading unless you write `says`, never against the `purpose`, which the person never sees. Without a model the answers are listed for you to read.
 
 **Screen.** After the look around the page: "You've had a look at the page". "What do you make of that page? Say what it is, whose it is, what you can do there, and what it's for." [ In your own words. There is no right answer. ] Talk instead · [ Next ]
 

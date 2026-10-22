@@ -7,7 +7,7 @@ import { CARD_FOOTER, START_TASK } from '../src/copy.ts'
 import { consentText, payoutLine } from '../src/derive/consent.ts'
 import { distractors, shuffleChoices } from '../src/derive/distractors.ts'
 import { fillScenario, scenarioTemplate } from '../src/derive/scenario.ts'
-import { textModelFrom } from '../src/model.ts'
+import { NO_MODEL, textModelFor } from '../src/model.ts'
 
 const { getStudies, resetStudies, study, task, setup, participant, outcome } = api
 function evaluate(source: string) {
@@ -106,7 +106,11 @@ describe('copy and model', () => {
   it('holds the card words, and a model only when the author has a key', () => {
     expect(CARD_FOOTER).toBe("When you think you've finished, press Done. If you get stuck, press I couldn't do this.")
     expect(START_TASK).toBe('Start task')
-    expect(textModelFrom({})).toBeUndefined()
-    expect(textModelFrom({ ANTHROPIC_API_KEY: 'key' })).toBeDefined()
+    // One place for the model: the config's `model`; the key stays in the environment, and nothing stands in for either.
+    expect(textModelFor(undefined, { ANTHROPIC_API_KEY: 'key' })).toEqual({ missing: NO_MODEL })
+    expect(NO_MODEL).toContain("set model: { provider: 'anthropic', name } in ui-tests.config.ts")
+    expect(textModelFor({ provider: 'anthropic', name: 'claude-sonnet-5-5' }, {})).toEqual({ missing: 'model is set in ui-tests.config.ts but ANTHROPIC_API_KEY is not in the environment' })
+    expect(textModelFor({ provider: 'scripted', name: 'fixture' }, { ANTHROPIC_API_KEY: 'key' })).toHaveProperty('missing')
+    expect(textModelFor({ provider: 'anthropic', name: 'claude-sonnet-5-5' }, { ANTHROPIC_API_KEY: 'key' })).toHaveProperty('model')
   })
 })

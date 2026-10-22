@@ -41,7 +41,7 @@ The usability method in the design corpus is Krug's home page tour, done in ever
 
 - **The page.** The live start page (`firstLook.page`, else the primary task's start), with no time limit. The person can scroll; nothing is clickable. There is no picture and no flash.
 - **The prompt.** One open prompt in four parts: what it is, whose it is, what you can do there, what it is for. Typed, or spoken with "Talk instead".
-- **What it is coded against.** `firstLook.says`, what the page should get across: written by the author, or read from the start page's meta description, og:description or `<h1>`, and reviewed in the study's snapshot. Never the `purpose`, and nothing before the first look shows the purpose.
+- **What it is coded against.** `firstLook.says`, what the page should get across: written by the author, or read from the start page's `<h1>`, meta description or og:description, and reviewed in the study's snapshot. Never the `purpose`, and nothing before the first look shows the purpose.
 - **The codes.** Per part: identified it, identified who it is from, named an action, named its purpose. The configured model codes them; without one, or when its reply does not parse, the answer is left uncoded and listed for the author, who can code it in the trace. Nothing guesses.
 - **Where it goes.** Beside the issues, never inside the counts or the sentence. Five to ten people are enough for qualitative comprehension.
 - **First click.** Each task's first click is read on its own start page, against its own goal and path, from the task's own events; it predicts navigation success weakly on a live page (about 78% versus 70%) and strongly when the task is pure findability.

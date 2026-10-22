@@ -591,6 +591,29 @@
           ],
           "additionalProperties": false
         },
+        "model": {
+          "type": "object",
+          "properties": {
+            "provider": {
+              "type": "string",
+              "enum": [
+                "anthropic",
+                "scripted"
+              ]
+            },
+            "name": {
+              "type": "string"
+            },
+            "version": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "provider",
+            "name"
+          ],
+          "additionalProperties": false
+        },
         "sample": {
           "type": "object",
           "properties": {
@@ -650,9 +673,9 @@
                 {
                   "type": "string",
                   "enum": [
+                    "h1",
                     "meta description",
                     "og:description",
-                    "h1",
                     "author"
                   ]
                 },

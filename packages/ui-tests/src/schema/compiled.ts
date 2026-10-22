@@ -61,7 +61,7 @@ export const compiledImpressionSchema = z.object({
   prompt: z.string(),
   parts: z.array(z.enum(['what', 'who', 'action', 'purpose'])),
   says: z.string().nullable(),
-  source: z.enum(['meta description', 'og:description', 'h1', 'author']).nullable(),
+  source: z.enum(['h1', 'meta description', 'og:description', 'author']).nullable(),
   reason: z.string(),
 })
 export type CompiledImpression = z.infer<typeof compiledImpressionSchema>
@@ -84,8 +84,10 @@ export const compiledConsentSchema = z.object({
 })
 export type CompiledConsent = z.infer<typeof compiledConsentSchema>
 
+export const modelConfigSchema = z.object({ provider: z.enum(['anthropic', 'scripted']), name: z.string(), version: z.string().optional() })
+
 export const agentConfigSchema = z.object({
-  model: z.object({ provider: z.enum(['anthropic', 'scripted']), name: z.string(), version: z.string().optional() }),
+  model: modelConfigSchema,
   system: z.string().optional(),
   tools: z.array(z.string()).optional(),
   permissions: z.object({ network: z.boolean().optional(), write: z.boolean().optional() }).optional(),
@@ -165,6 +167,8 @@ export const compiledStudySchema = z.object({
   independent: z.boolean().optional(),
   /** The agent configuration pinned into the run, with its fingerprint; present when the study admits the agent actor. */
   agents: z.object({ config: agentConfigSchema, fingerprint: z.string() }).optional(),
+  /** The config's `model`, pinned into the run: the server codes the first look with it, through its own `ANTHROPIC_API_KEY`. */
+  model: modelConfigSchema.optional(),
   sample: z.object({ affecting: z.number(), confidence: z.number(), n: z.number(), sentence: z.string() }),
   impression: compiledImpressionSchema,
   /** The groups sampled, with their quotas; `sample.n` is their total. */

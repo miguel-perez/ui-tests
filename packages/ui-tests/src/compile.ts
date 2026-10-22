@@ -1,4 +1,4 @@
-import { agentFingerprint } from './agents/config.ts'
+import { agentConfigOf, agentFingerprint } from './agents/config.ts'
 import { StudyLoadError } from './load.ts'
 import type { AuthoredStudy, AuthoredTask } from './authoring.ts'
 import { consentText } from './derive/consent.ts'
@@ -119,7 +119,7 @@ function compile(study: AuthoredStudy, config: UiTestsConfig, snapshot: StudySna
   derive('actors', study.options.actors ? 'as authored' : 'human unless actors says otherwise', 'actors')
   if (actors.includes('agent')) {
     derive('goals[].agent', 'the task target, else the study target, else the config target; 5 trials and reliability all unless the task says otherwise', 'task.target, task.trials, task.reliability, study.target, config.target')
-    derive('agents', 'config agents, pinned with a fingerprint so any change is a different run', 'config.agents')
+    derive('agents', 'config model with config agents, pinned with a fingerprint so any change is a different run', 'config.model, config.agents')
   }
   const product = config.product ?? hostname(config.target?.url ?? 'http://localhost:3000')
   derive('product', config.product ? 'config product' : 'hostname of the target url', 'config.product, config.target.url')
@@ -182,7 +182,7 @@ function compile(study: AuthoredStudy, config: UiTestsConfig, snapshot: StudySna
   }
   derive('users.language', fields.language !== undefined ? 'as authored' : "the first look's page's <html lang>, read into the snapshot by lint -u; a panel filter, never asked", 'users.language, snapshot')
   derive('impression', impression.reason, 'firstLook, setup')
-  derive('impression.says', written !== undefined ? 'as authored' : "the start page's meta description, else og:description, else its h1, read into the snapshot by lint -u; never the purpose", 'firstLook.says, snapshot')
+  derive('impression.says', written !== undefined ? 'as authored' : "the start page's h1, else its meta description, else its og:description, read into the snapshot by lint -u; never the purpose", 'firstLook.says, snapshot')
 
   const inputs = draftInputs(study.options.users, resolved, product)
   if (inputs.role) needs.decoys.role = inputs.role
@@ -231,7 +231,9 @@ function compile(study: AuthoredStudy, config: UiTestsConfig, snapshot: StudySna
     record,
     actors,
     ...(study.options.independent !== undefined && { independent: study.options.independent }),
-    ...(actors.includes('agent') && config.agents && { agents: { config: config.agents, fingerprint: agentFingerprint(config.agents) } }),
+    ...(actors.includes('agent') && agentConfigOf(config) && { agents: { config: agentConfigOf(config)!, fingerprint: agentFingerprint(agentConfigOf(config)) } }),
+    // The model that codes the first look on the server, pinned like the agent; its key stays on the server.
+    ...(config.model && { model: config.model }),
     sample: { affecting: sampleOptions.affecting, confidence: sampleOptions.confidence, n, sentence: sampleSentence(n, sampleOptions.affecting) },
     impression,
     groups,

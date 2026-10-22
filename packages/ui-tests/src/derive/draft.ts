@@ -1,4 +1,4 @@
-import type { TextModel } from '../model.ts'
+import { NO_MODEL, type TextModel } from '../model.ts'
 import { pageLanguage, pageSays } from './impression.ts'
 import { areFromDid, toSecondPerson } from './person.ts'
 import { current, type DraftNeeds, type Drafted, type StudySnapshot } from './snapshot.ts'
@@ -47,6 +47,8 @@ export type DraftInput = {
   /** The address of the first look's page, to read what it says; absent when the first look is off or `says` is written. */
   pageUrl?: string
   model?: TextModel
+  /** Why there is no model, said for each item it would have drafted. */
+  noModel?: string
   fetch?: typeof fetch
 }
 
@@ -76,7 +78,7 @@ export async function draftSnapshot(input: DraftInput): Promise<{ entry: StudySn
       if (said) entry.says = { from: needs.says, value: said.says, source: said.source }
       else {
         entry.says = { from: needs.says, value: null, source: 'not drafted' }
-        notDrafted.push({ item: 'firstLook.says', reason: 'error' in got ? got.error : `${input.pageUrl} has no meta description, og:description or h1` })
+        notDrafted.push({ item: 'firstLook.says', reason: 'error' in got ? got.error : `${input.pageUrl} has no h1, meta description or og:description` })
       }
     }
   }
@@ -93,7 +95,7 @@ export async function draftSnapshot(input: DraftInput): Promise<{ entry: StudySn
   if (needs.often !== undefined) {
     entry.often = keep(previous?.often, needs.often)
     if (!entry.often) {
-      const answer = model ? await ask(model, `Is "${needs.often}" something a person does again and again, so it makes sense to ask how often they do it? Reply with only yes or no.`) : { error: 'no model is configured' }
+      const answer = model ? await ask(model, `Is "${needs.often}" something a person does again and again, so it makes sense to ask how often they do it? Reply with only yes or no.`) : { error: input.noModel ?? NO_MODEL }
       const value = 'reply' in answer ? (/^\s*yes\b/i.test(answer.reply) ? true : /^\s*no\b/i.test(answer.reply) ? false : undefined) : undefined
       entry.often = { from: needs.often, value: value ?? null, source: value === undefined ? 'not drafted' : 'model' }
       if (value === undefined) notDrafted.push({ item: 'often', reason: 'error' in answer ? answer.error : 'the model reply was not yes or no' })
@@ -105,7 +107,7 @@ export async function draftSnapshot(input: DraftInput): Promise<{ entry: StudySn
     if (!from) continue
     const kept = keep(previous?.decoys?.[kind], from)
     if (kept) { entry.decoys[kind] = kept; continue }
-    const answer = model ? await ask(model, `${PROMPTS[kind](from, input.did, input.product)}\nReply with only a JSON array of strings.`) : { error: 'no model is configured' }
+    const answer = model ? await ask(model, `${PROMPTS[kind](from, input.did, input.product)}\nReply with only a JSON array of strings.`) : { error: input.noModel ?? NO_MODEL }
     const list = 'reply' in answer ? readList(answer.reply) : undefined
     const decoys = list?.filter(d => !from.some(f => f.toLowerCase() === d.toLowerCase())).slice(0, DECOYS[kind])
     entry.decoys[kind] = { from, value: decoys?.length ? decoys : null, source: decoys?.length ? 'model' : 'not drafted' }

@@ -65,8 +65,8 @@ export type TaskOptions = {
   target?: Target
   [legacy: string]: unknown
 }
-export type { AgentConfig } from './agents/config.ts'
-import type { AgentConfig } from './agents/config.ts'
+export type { AgentConfig, AgentSettings, ModelConfig } from './agents/config.ts'
+import type { AgentSettings, ModelConfig } from './agents/config.ts'
 /** The shape of `ui-tests.config.ts`; every key is optional. */
 export type UiTestsConfig = {
   target?: Target
@@ -77,7 +77,13 @@ export type UiTestsConfig = {
   ci?: { on?: string[] }
   reporters?: ('default' | 'github-actions' | 'json')[]
   actor?: 'human' | 'agent'
-  agents?: AgentConfig
+  /**
+   * The one model of the project: the agent of an agent run, and what drafts the screener snapshot (`ui-tests lint -u`) and codes the
+   * first look. Its key stays in the environment (`ANTHROPIC_API_KEY`).
+   */
+  model?: ModelConfig
+  /** The agent's prompt, tools, permissions and budgets; its model is `model`. */
+  agents?: AgentSettings
   product?: string
   author?: string
   /** What participants see instead of ours: the name, logo, colours and font of the author. The name defaults to `author`, then `product`. */

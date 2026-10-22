@@ -13,7 +13,7 @@ export async function agentStudy(input: { target: Target; hook: Hook; trials?: n
     task('get a result', { trials: input.trials ?? 5, scenario: input.scenario ?? 'Get a first result from the tool.' }, () => { outcome(input.hook) })
   })
   const authored = getStudies()[0]
-  const compiled = compileStudy(authored, { product: 'weekboard', agents: { model: { provider: 'scripted', name: 'fixture' } } })
+  const compiled = compileStudy(authored, { product: 'weekboard', model: { provider: 'scripted', name: 'fixture' } })
   const store = new SqliteStore(':memory:')
   const { run } = await store.createRun(newRun(`k-${Math.random()}`, { compiled, actor: 'agent', target: input.runTarget ?? 'http://127.0.0.1:9' }))
   return { study: authored, compiled, goal: compiled.goals[0], store, run: run as RunRow }

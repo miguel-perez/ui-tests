@@ -299,7 +299,7 @@ describe('lint -u and the snapshot', () => {
   it('names each field it could not draft with no model, and substitutes nothing', async () => {
     const result = await run(['lint', '-u'], { fetch: page })
     expect(result.out).toContain('wrote a.ui.test.ts.screener.snap')
-    for (const item of ['decoys.role', 'decoys.uses', 'decoys.not']) expect(result.out).toContain(`could not draft ${item}: no model is configured; write it into a.ui.test.ts.screener.snap`)
+    for (const item of ['decoys.role', 'decoys.uses', 'decoys.not']) expect(result.out).toContain(`could not draft ${item}: no model is configured: set model: { provider: 'anthropic', name } in ui-tests.config.ts; write it into a.ui.test.ts.screener.snap`)
     const entry = (await readSnapshotFile(join(dir, 'a.ui.test.ts.screener.snap')))!.studies.s!
     expect(entry.decoys.role).toEqual({ from: ['Planner', 'Manager'], value: null, source: 'not drafted' })
     expect(entry.says).toEqual({ from: '/', value: 'Plan your team week on one board.', source: 'meta description' })

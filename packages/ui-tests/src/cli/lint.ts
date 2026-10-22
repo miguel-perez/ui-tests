@@ -9,7 +9,7 @@ import { readUsers } from '../derive/screener.ts'
 import { readSnapshotFile, snapshotFileOf, writeSnapshotFile, type SnapshotFile, type StudySnapshot } from '../derive/snapshot.ts'
 import { formatFindings, lint, planLines, type LintFinding } from '../lint.ts'
 import { bundleStudyFile, loadBundle, StudyLoadError } from '../load.ts'
-import { textModelFrom } from '../model.ts'
+import { textModelFor } from '../model.ts'
 import type { UiTestsConfig } from '../types.ts'
 import type { Command, Io } from './main.ts'
 
@@ -60,7 +60,8 @@ export function snapshotRefusal(chosen: LoadedStudy, cwd: string): string | unde
  * screens are rendered from the result, and studies no longer in the file are dropped. Returns each study recompiled, with what was not drafted.
  */
 async function updateSnapshots(loaded: LoadedStudy[], config: UiTestsConfig, io: Io): Promise<{ loaded: LoadedStudy[]; notDrafted: Map<LoadedStudy, NotDrafted[]>; written: string[] }> {
-  const model = io.deps?.model ?? textModelFrom(io.env)
+  // The config's one model, through the author's key; a test may pass its own.
+  const configured = io.deps?.model ? { model: io.deps.model } : textModelFor(config.model, io.env)
   const notDrafted = new Map<LoadedStudy, NotDrafted[]>()
   const written: string[] = []
   const out: LoadedStudy[] = []
@@ -75,7 +76,7 @@ async function updateSnapshots(loaded: LoadedStudy[], config: UiTestsConfig, io:
       const { entry, notDrafted: missed } = await draftSnapshot({
         needs: item.needs, groups: item.groups, ...(item.entry && { previous: item.entry }), product: item.compiled.product, did: toThirdPerson(did),
         ...(page && item.needs.says !== undefined && { pageUrl: new URL(page, config.target?.url ?? 'http://localhost:3000').toString() }),
-        ...(model && { model }), ...(io.deps?.fetch && { fetch: io.deps.fetch }),
+        ...('model' in configured ? { model: configured.model } : { noModel: configured.missing }), ...(io.deps?.fetch && { fetch: io.deps.fetch }),
       })
       // The screens come from the drafts: compile with them, then keep what compiling rendered.
       const recompiled = compileWithSnapshot(item.study, config, entry)

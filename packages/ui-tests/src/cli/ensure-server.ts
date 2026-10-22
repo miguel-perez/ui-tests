@@ -3,7 +3,6 @@ import { request as httpsRequest } from 'node:https'
 import { isLoopbackHost } from '../runner/hosts.ts'
 import { startServer } from '../server/http.ts'
 import type { RunStore } from '../store/types.ts'
-import { textModelFrom } from '../model.ts'
 import { moduleTranscriber } from '../transcriber.ts'
 import type { Io } from './main.ts'
 
@@ -99,7 +98,7 @@ export async function answersAsServer(url: string, fetcher?: typeof fetch): Prom
 const serverOptions = (store: RunStore, env: Io['env']) => ({
   store: async () => store,
   transcriber: moduleTranscriber(() => env.UI_TESTS_TRANSCRIBER),
-  ...(textModelFrom(env) && { model: textModelFrom(env)! }),
+  env,
   ...(env.UI_TESTS_CLI_SECRET && { cliSecret: env.UI_TESTS_CLI_SECRET }),
   ...(env.UI_TESTS_SHARE_SECRET && { shareSecret: env.UI_TESTS_SHARE_SECRET }),
 })

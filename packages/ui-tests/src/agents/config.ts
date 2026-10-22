@@ -1,8 +1,13 @@
 import { createHash } from 'node:crypto'
 
+/** The one model a project configures (`model` in ui-tests.config.ts): the agent of an agent run, and what drafts the screener snapshot and codes the first look. */
+export type ModelConfig = { provider: 'anthropic' | 'scripted'; name: string; version?: string }
+/** What `agents` in the config sets about the agent besides its model: prompt, tools, permissions and budgets. */
+export type AgentSettings = { system?: string; tools?: string[]; permissions?: { network?: boolean; write?: boolean }; budgets?: { tokens?: number; calls?: number; seconds?: number; dollars?: number } }
+
 /** The agent a run puts through the study: its model, prompt, tools, permissions and budgets. Any change is a different run. */
 export type AgentConfig = {
-  model: { provider: 'anthropic' | 'scripted'; name: string; version?: string }
+  model: ModelConfig
   system?: string
   tools?: string[]
   permissions?: { network?: boolean; write?: boolean }
@@ -19,4 +24,9 @@ function canonical(value: unknown): unknown {
 export function agentFingerprint(agent: AgentConfig | undefined): string {
   if (!agent) return 'none'
   return createHash('sha256').update(JSON.stringify(canonical(agent))).digest('hex').slice(0, 12)
+}
+
+/** The agent a run puts through the study: the config's `model` with its `agents` settings; undefined when no model is configured. */
+export function agentConfigOf(config: { model?: ModelConfig; agents?: AgentSettings }): AgentConfig | undefined {
+  return config.model ? { ...config.agents, model: config.model } : undefined
 }

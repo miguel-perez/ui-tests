@@ -33,7 +33,7 @@ describe('ui-tests init', () => {
     expect(out).toContain(`\nAdd this tag to your app's HTML layout:\n  ${initTag}\n\nThe address differs between rehearsal, previews and production. Read it from the environment:\n`)
     expect(TAG_SETUPS.map(s => s.name)).toEqual(['Vite', 'Astro', 'Next.js', 'Rails', 'Plain HTML'])
     for (const setup of TAG_SETUPS) expect(out).toContain(`\n  ${setup.name}: ${setup.line}\n`)
-    expect(out.endsWith('\nStart the server with: npx ui-tests serve (rehearsal starts it for you)\nBefore you recruit anyone, draft the screener with: npx ui-tests lint -u (review <study file>.screener.snap and commit it)\n')).toBe(true)
+    expect(out.endsWith('\nStart the server with: npx ui-tests serve (rehearsal starts it for you)\nBefore you recruit anyone, draft the screener with: npx ui-tests lint -u (set model in ui-tests.config.ts; review <study file>.screener.snap and commit it)\n')).toBe(true)
     // Nothing to mount: no component or route import from the package.
     expect(out).not.toMatch(/ui-tests\/(?:next|server)\b/)
   })

@@ -4,13 +4,13 @@
 
 ## The agent
 
-Set it in `ui-tests.config.ts` under `agents`; it is pinned into the run by its fingerprint, so changing anything is a different run.
+Set its model with `model` in `ui-tests.config.ts`, the project's one model (the same one `ui-tests lint -u` drafts the screener snapshot with and the server codes the first look with), and the rest under `agents`. Both are pinned into the run by its fingerprint, so changing anything is a different run.
 
 ```ts
+model: { provider: 'anthropic', name: 'claude-opus-5-5' },
 agents: {
-  model: { provider: 'anthropic', name: 'claude-opus-5-5' },
   budgets: { calls: 30, seconds: 600, tokens: 500000, dollars: 5 },
-}
+},
 ```
 
 - `anthropic`: Claude through the Messages API (`@anthropic-ai/sdk`). `name` is the model id. Needs `ANTHROPIC_API_KEY` in the environment of the command; without it the command exits 2 before making a run. Not run from here. There is no fallback to another model: a refusal is what stopped the trial.

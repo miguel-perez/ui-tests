@@ -5,7 +5,6 @@ import { startServer } from '../server/http.ts'
 import { dataDirectory, openStore } from '../store/open.ts'
 import { applyRetention } from '../store/retention.ts'
 import type { RunStore } from '../store/types.ts'
-import { textModelFrom } from '../model.ts'
 import { moduleTranscriber } from '../transcriber.ts'
 import type { Command, Io } from './main.ts'
 import { pause } from './trace.ts'
@@ -75,7 +74,7 @@ export const serve: Command = async (args, io) => {
       port,
       host: bindFlag ?? '0.0.0.0',
       transcriber: moduleTranscriber(() => env.UI_TESTS_TRANSCRIBER),
-      ...(textModelFrom(env) && { model: textModelFrom(env)! }),
+      env,
       ...(publicUrl && { publicUrl }),
       ...(env.UI_TESTS_CLI_SECRET && { cliSecret: env.UI_TESTS_CLI_SECRET }),
       ...(env.UI_TESTS_SHARE_SECRET && { shareSecret: env.UI_TESTS_SHARE_SECRET }),

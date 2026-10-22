@@ -21,10 +21,10 @@ const says = 'Send invoices and get paid on time. Free for freelancers.'
 const model = (reply: string, seen: string[] = []) => ({ complete: async (prompt: string) => { seen.push(prompt); return reply } })
 
 describe('what the page says', () => {
-  it('is the meta description, else og:description, else the first heading, with its source', () => {
-    expect(pageSays('<html><head><meta name="description" content=" Send invoices. "><meta property="og:description" content="og"></head><body><h1>Hi</h1></body></html>')).toEqual({ says: 'Send invoices.', source: 'meta description' })
-    expect(pageSays('<html><head><meta property="og:description" content="Invoices for freelancers"></head><body><h1>Hi</h1></body></html>')).toEqual({ says: 'Invoices for freelancers', source: 'og:description' })
-    expect(pageSays('<html><body><h1>Invoices,\n made simple</h1></body></html>')).toEqual({ says: 'Invoices, made simple', source: 'h1' })
+  it('is the first heading, else the meta description, else og:description, with its source', () => {
+    expect(pageSays('<html><head><meta name="description" content="Send invoices."><meta property="og:description" content="og"></head><body><h1>Invoices,\n made simple</h1></body></html>')).toEqual({ says: 'Invoices, made simple', source: 'h1' })
+    expect(pageSays('<html><head><meta name="description" content=" Send invoices. "><meta property="og:description" content="og"></head><body><p>x</p></body></html>')).toEqual({ says: 'Send invoices.', source: 'meta description' })
+    expect(pageSays('<html><head><meta property="og:description" content="Invoices for freelancers"></head><body></body></html>')).toEqual({ says: 'Invoices for freelancers', source: 'og:description' })
     expect(pageSays('<html><body><p>nothing</p></body></html>')).toBeUndefined()
   })
 
@@ -155,6 +155,16 @@ describe('the tour on the server', () => {
     expect(await impressionOf(attempt.id)).toEqual({ looked: true, text: 'a place to send invoices', parts: { what: true, who: false, action: true, purpose: true }, codedBy: 'model' })
     expect(seen[0]).toContain(says)
     expect((await buildRecord(store, run.run)).impression).toMatchObject({ answered: 1, coded: 1, parts: { what: 1, who: 0, action: 1, purpose: 1 } })
+  })
+
+  it('codes with the model the run pins from the config, through the server\'s own key, and says which is missing', async () => {
+    const pinned = (await store.createRun(newRun('pinned', { compiled: { ...run.compiled, model: { provider: 'anthropic', name: 'claude-sonnet-5-5' } }, hooksBundle: code }))).run
+    collect = createCollector({ store: async () => store, env: {} })
+    const made = await store.createAttempt({ runId: pinned.run, participant: 'p1', goalIndex: 0, rehearsal: false })
+    await post(made.token, { action: 'consent' })
+    await post(made.token, { action: 'answers', looked: true })
+    await post(made.token, { action: 'answers', impression: 'an invoicing tool' })
+    expect(await impressionOf(made.attempt.id)).toMatchObject({ parts: null, uncoded: 'model is set in ui-tests.config.ts but ANTHROPIC_API_KEY is not in the environment' })
   })
 
   it('takes a spoken answer to the prompt, codes its words, and keeps the audio', async () => {

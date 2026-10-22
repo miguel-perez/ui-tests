@@ -20,9 +20,9 @@ function readParts(reply: string): TourCode | undefined {
  * an action they can take, and its purpose. Only a configured model codes; without one, or when its reply does not parse, the answer is
  * left uncoded with the reason, for the author to code in the trace.
  */
-export async function codeTour(answer: string, says: string | null, model?: TextModel): Promise<Coded> {
+export async function codeTour(answer: string, says: string | null, model?: TextModel, missing = 'no model is configured'): Promise<Coded> {
   if (!answer.trim()) return { parts: null, uncoded: 'no answer' }
-  if (!model) return { parts: null, uncoded: 'no model is configured' }
+  if (!model) return { parts: null, uncoded: missing }
   if (!says) return { parts: null, uncoded: 'the study has no firstLook.says to code against' }
   let reply: string
   try {

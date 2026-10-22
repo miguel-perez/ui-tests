@@ -250,7 +250,7 @@ describe('the package installed in a trial', () => {
     const data = await mkdtemp(join(tmpdir(), 'ui-tests-first-run-'))
     try {
       await copyFile(join(import.meta.dirname, '..', '..', '..', 'apps', 'web', 'ui-tests', 'cli-first-run.ui.test.ts'), join(work, 'cli-first-run.ui.test.ts'))
-      await writeFile(join(work, 'ui-tests.config.ts'), "export default { reporters: ['default', 'json'], agents: { model: { provider: 'scripted', name: './agent-script.json' } } }\n")
+      await writeFile(join(work, 'ui-tests.config.ts'), "export default { reporters: ['default', 'json'], model: { provider: 'scripted', name: './agent-script.json' } }\n")
       const line = (command: string): ScriptedTurn => ({ toolCalls: [{ name: 'run', input: { command } }] })
       await writeFile(join(work, 'agent-script.json'), JSON.stringify([line('npm i -D ui-tests'), line('npx ui-tests init'), line('npx ui-tests lint --out ui-tests-lint.json'), done]))
       let out = '', err = ''
@@ -283,12 +283,12 @@ study('first run', { users: 'developers trying ui-tests for the first time', pur
   })
 })
 `
-  async function project(agents: string, script?: unknown, trials = 2, cli?: string) {
+  async function project(model: string, script?: unknown, trials = 2, cli?: string) {
     const work = await mkdtemp(join(fixtures, '.tmp-agent-run-'))
     const data = await mkdtemp(join(tmpdir(), 'ui-tests-agent-run-'))
     await copyFile(join(fixtures, 'fake-cli.mjs'), join(work, 'fake-cli.mjs'))
     await writeFile(join(work, 'first-run.ui.test.ts'), studySource(trials, cli))
-    await writeFile(join(work, 'ui-tests.config.ts'), `export default { reporters: ['default', 'json'], agents: ${agents} }\n`)
+    await writeFile(join(work, 'ui-tests.config.ts'), `export default { reporters: ['default', 'json'], model: ${model} }\n`)
     if (script) await writeFile(join(work, 'agent-script.json'), JSON.stringify(script))
     const cli_ = async (argv: string[], deps: Io['deps'] = {}) => {
       let out = '', err = ''
@@ -297,7 +297,7 @@ study('first run', { users: 'developers trying ui-tests for the first time', pur
     }
     return { work, data, cli: cli_, cleanup: async () => { await rm(work, { recursive: true, force: true }); await rm(data, { recursive: true, force: true }) } }
   }
-  const scripted = "{ model: { provider: 'scripted', name: './agent-script.json' } }"
+  const scripted = "{ provider: 'scripted', name: './agent-script.json' }"
   const passing = [{ toolCalls: [{ name: 'run', input: { command: 'node ./fake-cli.mjs' } }] }, { toolCalls: [{ name: 'done', input: {} }] }]
 
   it('runs the trials, prints the table under the capability heading, and writes report.json', async () => {
@@ -372,7 +372,7 @@ study('first run', { users: 'developers trying ui-tests for the first time', pur
       vitestExpect(failed.out).toContain('pass^k: fail · 0 of 2 verified')
       vitestExpect(failed.out).toContain('(said it was done)')
     } finally { await p.cleanup() }
-    const keyless = await project("{ model: { provider: 'anthropic', name: 'claude-opus-5-5' } }")
+    const keyless = await project("{ provider: 'anthropic', name: 'claude-opus-5-5' }")
     try {
       const result = await keyless.cli(['--actor', 'agent'])
       vitestExpect(result.code).toBe(2)
@@ -397,7 +397,7 @@ study('web', { users: 'People who read the landing page', firstLook: false, acto
   task('Open the guide', { path: ['/'], trials: 1 }, () => { outcome(async ({ page }) => { expect(page.url()).toContain('/') }) })
 })
 `)
-      await writeFile(join(work, 'ui-tests.config.ts'), "export default { server: { url: 'https://tests.example.com' }, agents: { model: { provider: 'scripted', name: 'fixture' } } }\n")
+      await writeFile(join(work, 'ui-tests.config.ts'), "export default { server: { url: 'https://tests.example.com' }, model: { provider: 'scripted', name: 'fixture' } }\n")
       const asked: string[] = []
       // The app answers; the address named as the server is some other site, whose collector path is a 404.
       const fetcher = (async (url: string) => { asked.push(String(url)); return new Response('ok', { status: String(url).includes('/api/ui-tests/') ? 404 : 200 }) }) as unknown as typeof fetch

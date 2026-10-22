@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import { join, resolve } from 'node:path'
 import { anthropicModel } from '../agents/anthropic.ts'
-import { agentFingerprint, type AgentConfig } from '../agents/config.ts'
+import { agentConfigOf, agentFingerprint, type AgentConfig } from '../agents/config.ts'
 import { cliHarness } from '../agents/harness-cli.ts'
 import { httpHarness } from '../agents/harness-http.ts'
 import { mcpHarness } from '../agents/harness-mcp.ts'
@@ -95,7 +95,8 @@ export const agentRun: Command = async (args, io) => {
   if (!chosen) { io.stderr.write('No study admits the agent actor\n'); return 2 }
   const findings = lint({ study: chosen.study, compiled: chosen.compiled, sourceText: chosen.sourceText, config, actor: 'agent' })
   if (findings.some(f => f.severity === 'error')) { out.write(`${formatFindings(findings)}\n`); return 1 }
-  if (!config.agents) { io.stderr.write('No agent is configured: set agents: { model: { provider, name } } in ui-tests.config.ts\n'); return 2 }
+  const agent = agentConfigOf(config)
+  if (!agent) { io.stderr.write('No model is configured: set model: { provider, name } in ui-tests.config.ts\n'); return 2 }
 
   const taskName = args.flags.get('task')
   const goals = typeof taskName === 'string' ? chosen.compiled.goals.filter(g => g.name === taskName) : chosen.compiled.goals
@@ -121,12 +122,12 @@ export const agentRun: Command = async (args, io) => {
     }
   }
   let model: AgentModel
-  try { model = await modelFor(config.agents, io) } catch (error) { io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`); return 2 }
+  try { model = await modelFor(agent, io) } catch (error) { io.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`); return 2 }
 
   const commitFlag = args.flags.get('commit')
   const commit = typeof commitFlag === 'string' ? commitFlag : await gitCommit(io.cwd)
   const keyFlag = args.flags.get('key')
-  const fingerprint = chosen.compiled.agents?.fingerprint ?? agentFingerprint(config.agents)
+  const fingerprint = chosen.compiled.agents?.fingerprint ?? agentFingerprint(agent)
   const key = typeof keyFlag === 'string' ? keyFlag : idempotencyKey({ commit, contextId: chosen.compiled.id, actor: 'agent', fingerprint })
   // The run's target is the web page the agent uses when a task has one: the tag there sends its bar to the ui-tests server.
   const target = goals.find(g => g.agent?.target.kind === 'web')?.agent?.target.value ?? config.target?.url ?? 'http://localhost:3000'
@@ -156,7 +157,7 @@ export const agentRun: Command = async (args, io) => {
         return 2
       }
     }
-    out.write(`Agent run ${run.run} · ${AGENT_HEADING}\n${chosen.compiled.name} · model ${config.agents.model.provider}/${config.agents.model.name} · agent ${fingerprint}\n`)
+    out.write(`Agent run ${run.run} · ${AGENT_HEADING}\n${chosen.compiled.name} · model ${agent.model.provider}/${agent.model.name} · agent ${fingerprint}\n`)
     const stored = (await store.listAttempts(run.run)).filter(a => a.answers[TRIAL_ANSWER] !== undefined)
     if (!created && stored.length) out.write(`Run ${run.run} already exists for key ${key}; its ${stored.length} stored trial${stored.length === 1 ? ' is' : 's are'} kept. Pass --key to start again.\n`)
     const results: { goal: CompiledGoal; trials: Trial[]; verdict: Read }[] = []
@@ -193,7 +194,7 @@ export const agentRun: Command = async (args, io) => {
       actor: 'agent' as const,
       heading: AGENT_HEADING,
       study: chosen.compiled.name,
-      agent: { fingerprint, config: config.agents },
+      agent: { fingerprint, config: agent },
       tasks: results.map(({ goal, trials, verdict }) => ({ name: goal.name, target: goal.agent?.target, trials: trials.map(({ transcript: _transcript, ...rest }) => rest), reliability: goal.agent?.reliability ?? 'all', result: verdict.result, passK: verdict.result === 'pending' ? null : verdict.passK, passAtK: verdict.result === 'pending' ? null : verdict.passAtK })),
     }
     if (config.reporters?.includes('json')) {

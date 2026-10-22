@@ -3,7 +3,7 @@ import { formatFindings, lint, planLines } from '../lint.ts'
 import { StudyLoadError } from '../load.ts'
 import { BYPASS_HEADER, createInvites, reissueInvites, slotCount } from '../runner/invites.ts'
 import { createRun } from '../runner/create-run.ts'
-import { agentFingerprint } from '../agents/config.ts'
+import { agentConfigOf, agentFingerprint } from '../agents/config.ts'
 import { gitCommit, idempotencyKey } from '../runner/key.ts'
 import { handleOf, refreshRun } from '../runner/progress.ts'
 import { isLoopbackHost, linkBaseFor, probeLocal, reachabilityOf } from '../runner/hosts.ts'
@@ -127,7 +127,7 @@ export const recruit: Command = async (args, io) => {
   const keyFlag = args.flags.get('key')
   const prFlag = args.flags.get('pr')
   const pr = typeof prFlag === 'string' && /^[1-9]\d*$/.test(prFlag) ? Number(prFlag) : undefined
-  const key = typeof keyFlag === 'string' ? keyFlag : idempotencyKey({ commit, ...(pr !== undefined && { pr }), contextId: chosen.compiled.id, actor, ...(actor === 'agent' && { fingerprint: agentFingerprint(config.agents) }) })
+  const key = typeof keyFlag === 'string' ? keyFlag : idempotencyKey({ commit, ...(pr !== undefined && { pr }), contextId: chosen.compiled.id, actor, ...(actor === 'agent' && { fingerprint: agentFingerprint(agentConfigOf(config)) }) })
   const bypass = io.env.VERCEL_AUTOMATION_BYPASS_SECRET || undefined
 
   const store = await openStore(io.env)

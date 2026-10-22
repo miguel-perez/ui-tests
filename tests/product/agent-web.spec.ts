@@ -37,7 +37,7 @@ function reader(link: RegExp, ending: ToolCall | undefined): AgentModel {
 async function setUp() {
   const { code } = await bundleStudyFile(fixture)
   const [authored] = await loadBundle(code, fixture)
-  const compiled = compileStudy(authored!, { agents: { model: { provider: 'scripted', name: 'fixture' } } })
+  const compiled = compileStudy(authored!, { model: { provider: 'scripted', name: 'fixture' } })
   const store = await openStore()
   const make = (actor: 'human' | 'agent') => store.createRun({
     key: `e2e-agent:${actor}:${Date.now()}:${Math.random().toString(36).slice(2)}`,

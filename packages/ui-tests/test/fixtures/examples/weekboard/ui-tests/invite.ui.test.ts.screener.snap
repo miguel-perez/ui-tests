@@ -3,7 +3,7 @@
   "studies": {
     "invite flow": {
       "purpose": { "from": "plan the week together without emailing screenshots around", "value": "plan the week together without emailing screenshots around", "source": "purpose, person shifted" },
-      "says": { "from": "/", "value": "Weekboard: one board for the whole team week.", "source": "og:description" },
+      "says": { "from": "/", "value": "One board for the whole team week", "source": "h1" },
       "language": { "from": "/", "value": "en", "source": "html lang" },
       "decoys": {
         "uses": { "from": ["Trello", "Asana", "Notion", "Linear"], "value": ["Jira", "Basecamp", "Monday.com"], "source": "author" },
