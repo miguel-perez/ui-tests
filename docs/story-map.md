@@ -22,7 +22,7 @@ Patton draws the backbone left to right; it is turned on its side here so the ta
 | **Author** | Name the users and the purpose, write a goal, steps if the route matters | Write the outcome | Fix the lint |
 | **Rehearse** | Run it on myself | See the generated scenario | Watch the replay |
 | **Run** | Run it in CI against a preview, or from the hosted UI | Invite people, or let the site invite them | Spend within a cap |
-| **Participate** | Consent and screen | Try the goal | Answer the fit and the two questions |
+| **Participate** | Screen and consent | Take the first look, try the goal | Answer the questions after |
 | **Verify and report** | Verify through the outcome in the runner | State the sentence and the issues | Open the trace, share the report, hand the record to an auditor |
 | **Iterate** | Read the issues and fix | Re-run on the new build | Promote a path people took |
 | **Integrate** | Feed the record to a workflow | Await the handle in a DAG | Keep humans and agents apart |
@@ -90,7 +90,7 @@ Patton draws the backbone left to right; it is turned on its side here so the ta
 - Issues from trace signals across people, ranked, three most serious per goal `R1`
 - Event replay highlight reel `R1`
 - Shareable report page by signed link `R1`
-- Impression and fit results beside the issues; measures named effectiveness, efficiency, satisfaction, fit `R1`
+- The first look's coded parts and uncoded answers beside the issues; groups with their n; measures named effectiveness, efficiency, satisfaction `R1`
 - Clause-evidence section in the record `R1`
 - pass^k and per-trial table for agents `R2`
 
@@ -123,7 +123,7 @@ Order follows the opportunity map in [`discovery/redesign.md`](discovery/redesig
 - **Status:** built and verified offline, 20 October 2026, from a clean clone; production at https://ui-tests.com, repository public. Built: the package with its authoring API, config loading, compile and lint; the CLI (`init`, `lint`, dev mode, `serve`, `verify`, `status`, `report`, `trace`); the script tag (recorder, retry buffer, bar), and the player and the collector on the ui-tests server; the SQLite store; verified outcomes, signals and the single-attempt trace; the getting-started page and a rehearsal of the landing study. The landing's content, block by block, is [`design/landing-content.md`](design/landing-content.md). The package is not on npm (documented: `npm publish`), so install is from a clone with `npm ci && npm run dev`. Miguel's R0 check-in has not happened.
 
 ### R1: "Real people from my audience, by link, from CI"
-- **Serves:** opportunities 1 and 2 at n = 5: ranked issues across people, the sentence with real counts; the factory plug through the CI check; evidence for the room through the shareable report; fit and recognition for the desirable rung.
+- **Serves:** opportunities 1 and 2 at n = 5: ranked issues across people, the sentence with real counts; the factory plug through the CI check; evidence for the room through the shareable report; who took part and what the first look got across, for the desirable rung.
 - **Outcome:** a run from CI against a protected preview, invite links shared by hand, five people from our own network complete the landing context with its screener and first look, the issues and the sentence come back on a shareable page, the GitHub check completes.
 - **Metric:** the false-door study: do five people from our audience understand the value proposition and start? The issues say what to change. Each of the five is recorded with their group and how they differed, criterion by criterion.
 - **Development strategy:** mid game. Idempotent async run and handle, GitHub check and reconciliation with `verify`, Postgres store, protection bypass in invite links, full participant flow with screener, questions and accessibility, first look, issues from trace signals, event replay reel, shareable report, revisions, JSON record with purposes and clause evidence, webhook.

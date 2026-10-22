@@ -1,6 +1,7 @@
 import { request as httpRequest } from 'node:http'
 import { request as httpsRequest } from 'node:https'
 import { isLoopbackHost } from '../runner/hosts.ts'
+import { LOCAL_NO_MODEL } from '../copy.ts'
 import { startServer } from '../server/http.ts'
 import type { RunStore } from '../store/types.ts'
 import { moduleTranscriber } from '../transcriber.ts'
@@ -94,8 +95,7 @@ export async function answersAsServer(url: string, fetcher?: typeof fetch): Prom
   try { return (JSON.parse(body ?? '') as { name?: unknown } | null)?.name === 'ui-tests' } catch { return false }
 }
 
-/** Why a server started for a local-only run never codes with a model: the run promises that no model call is made. */
-export const LOCAL_NO_MODEL = 'a local-only run makes no model call'
+export { LOCAL_NO_MODEL }
 
 /** What a server the CLI starts runs with: the command's store, and the transcriber and secrets of its environment; no model when local only. */
 const serverOptions = (store: RunStore, env: Io['env'], localOnly = false) => ({

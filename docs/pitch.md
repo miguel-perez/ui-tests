@@ -41,7 +41,7 @@ Your tests prove it works and keeps working. ui-tests proves people can use it, 
 1. Install the package, run `npx ui-tests init`, add the script tag it prints to their app, whatever it is built with, and change the study it writes to their own site.
 2. Run it on themselves in dev mode, which starts the ui-tests server on their machine. For real people they run the server themselves, `npx ui-tests serve` or the Docker image, while the study is open.
 3. Share a link with five people from their audience, or add a panel key and a cap. Put `npx ui-tests check` in the job that deploys the preview: one run per pull request, within the cap.
-4. Read the fit, the problems and the sentence. Fix the UI, or the purpose. Re-run.
+4. Read who took part, the problems and the sentence. Fix the UI, or the purpose. Re-run.
 
 ## Riskiest assumption and how we test it
 

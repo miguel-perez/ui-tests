@@ -5,7 +5,7 @@ import { screenResult, type ScreenerResult } from '../derive/screener.ts'
 import { textModelFor, type TextModel } from '../model.ts'
 import type { AttemptReason, AttemptRow, RecordedEvent, RunRow, RunStore } from '../store/types.ts'
 import { UXLITE_VERSION } from '../measures.ts'
-import { GROUP_FULL } from '../copy.ts'
+import { GROUP_FULL, LOCAL_NO_MODEL } from '../copy.ts'
 import { nullTranscriber, type Transcriber } from '../transcriber.ts'
 import { MAX_VIDEO_BYTES, MAX_VIDEO_CHUNKS, MAX_VIDEO_SEGMENTS, VIDEO_CHUNK_BYTES, VIDEO_DECLINED, VIDEO_GAP, VIDEO_KEY, VIDEO_STOPPED, videoChunks, videoPauses } from '../video.ts'
 import { MORE_TIME, barView, effectiveTimeout, participantView, screenerOrder, type ParticipantView } from './view.ts'
@@ -243,8 +243,12 @@ export function createCollector(options: CollectorOptions): (request: Request) =
   /** A failing transcriber is named once on stderr; the audio is kept either way. */
   const warnTranscriber = (error: unknown) => { if (!warned) { warned = true; console.error(`ui-tests: the transcriber failed, voice answers are kept without text: ${error instanceof Error ? error.message : String(error)}`) } }
 
-  /** The model that codes a run's first look: the one given (tests), else the model the run pins, through this server's key. */
+  /**
+   * The model that codes a run's first look: none for a local-only run, even on a server that was already running with a key; else
+   * the one given (tests), else the model the run pins, through this server's key.
+   */
   const modelOf = (run: RunRow): [TextModel | undefined, string | undefined] => {
+    if ((run.reachability as { localOnly?: unknown } | undefined)?.localOnly === true) return [undefined, LOCAL_NO_MODEL]
     if (options.model) return [options.model, undefined]
     if (options.noModel) return [undefined, options.noModel]
     const found = textModelFor(run.compiled.model, options.env ?? {})

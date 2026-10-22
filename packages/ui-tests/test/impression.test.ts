@@ -174,6 +174,18 @@ describe('the tour on the server', () => {
     expect(await impressionOf(local.attempt.id)).toMatchObject({ parts: null, uncoded: 'a local-only run makes no model call' })
   })
 
+  it('never calls the model for a local-only run, even on a server that was already running with one', async () => {
+    const seen: string[] = []
+    collect = createCollector({ store: async () => store, model: model('{"what": true, "who": true, "action": true, "purpose": true}', seen) })
+    const local = (await store.createRun(newRun('local', { compiled: run.compiled, hooksBundle: code, reachability: { url: 'http://localhost:3000', reachable: true, checkedAt: new Date(0).toISOString(), mode: 'link', localOnly: true } }))).run
+    const made = await store.createAttempt({ runId: local.run, participant: 'p1', goalIndex: 0, rehearsal: false })
+    await post(made.token, { action: 'consent' })
+    await post(made.token, { action: 'answers', looked: true })
+    await post(made.token, { action: 'answers', impression: 'an invoicing tool' })
+    expect(seen).toHaveLength(0)
+    expect(await impressionOf(made.attempt.id)).toMatchObject({ text: 'an invoicing tool', parts: null, uncoded: 'a local-only run makes no model call' })
+  })
+
   it('takes a spoken answer to the prompt, codes its words, and keeps the audio', async () => {
     const { attempt, token } = await consented()
     await post(token, { action: 'answers', looked: true })
@@ -229,5 +241,18 @@ describe('each task\'s first click', () => {
     ])
     expect((await buildTrace(store, run.run)).attempts[0]!.firstClick).toEqual({ target: 'a.cta', url: `http://site.test${path[1]}`, onPath: true, at: 1000 })
     expect((await buildRecord(store, run.run)).measures.byGoal['0']!.firstClick).toEqual({ onPath: 1, offPath: 0, of: 1 })
+  })
+
+  it('takes only the address its own click led to, not one a later click led to', async () => {
+    const made = await store.createAttempt({ runId: run.run, participant: 'p1', goalIndex: 0, rehearsal: false })
+    await store.updateAttempt(made.attempt.id, { status: 'finished', reason: 'done', startedAt: new Date(0).toISOString(), endedAt: new Date(9_000).toISOString(), verification: { status: 'correct', steps: [] } })
+    const path = run.compiled.goals[0]!.path!
+    await store.appendEvents(made.attempt.id, [
+      { type: 'url', at: 0, url: `http://site.test${path[0]}`, seq: 1 },
+      { type: 'click', at: 1000, url: `http://site.test${path[0]}`, target: 'p.text', seq: 2 },
+      { type: 'click', at: 2000, url: `http://site.test${path[0]}`, target: 'a.cta', seq: 3 },
+      { type: 'url', at: 2100, url: `http://site.test${path[1]}`, seq: 4 },
+    ])
+    expect((await buildTrace(store, run.run)).attempts[0]!.firstClick).toEqual({ target: 'p.text', url: `http://site.test${path[0]}`, onPath: false, at: 1000 })
   })
 })

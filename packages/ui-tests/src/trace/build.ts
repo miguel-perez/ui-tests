@@ -92,7 +92,10 @@ export function firstClickOf(events: RecordedEvent[], path: string[] | undefined
   const index = events.findIndex(e => e.type === 'click')
   const click = events[index]
   if (!click) return undefined
-  const led = events.slice(index + 1).find(e => e.type === 'url')?.url ?? click.url
+  // Only an address before the next click is this click's: a later one was led to by another click.
+  const after = events.slice(index + 1)
+  const next = after.findIndex(e => e.type === 'click')
+  const led = (next < 0 ? after : after.slice(0, next)).find(e => e.type === 'url')?.url ?? click.url
   let onPath: boolean | null = null
   if (path) {
     const there = pathOf(led)
