@@ -52,7 +52,7 @@ Patton draws the backbone left to right; it is turned on its side here so the ta
 - `context` with `users` and `purpose`, `goal`, `task`, `outcome`, `expect`, `beforeEach`; the four shapes of a goal `R0`
 - Lint with rule sources and reasons `R0`
 - Scenario generated from goal and fixture names, editable, pinnable `R0`
-- `participant.answer()` with generated distractors `R0`
+- `participant.answer()` with distractors the author writes or reviews in the snapshot (a count's neighbours, else drafted by the model) `R0`
 - First look derived from the context: the home page tour of the live start page, coded per part against what the page says; each task's first click on its own start page `R1`
 - The `sample` intent (catch problems); the sentence derived from it `R0`
 - `actors` on a context; `trials`; `ui-tests run --actor agent` `R2`

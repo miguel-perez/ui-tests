@@ -2,10 +2,11 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { example } from '../../../apps/web/lib/copy.ts'
 import { exampleFile } from '../../../apps/web/lib/example.ts'
 import * as api from '../src/index.ts'
-import { compileStudy } from '../src/compile.ts'
+import { compileStudy, compileWithSnapshot } from '../src/compile.ts'
 import { CARD_FOOTER, START_TASK } from '../src/copy.ts'
 import { consentText, payoutLine } from '../src/derive/consent.ts'
-import { distractors, shuffleChoices } from '../src/derive/distractors.ts'
+import { neighbours, shuffleChoices } from '../src/derive/distractors.ts'
+import type { StudySnapshot } from '../src/derive/snapshot.ts'
 import { fillScenario, scenarioTemplate } from '../src/derive/scenario.ts'
 import { NO_MODEL, textModelFor } from '../src/model.ts'
 
@@ -35,11 +36,13 @@ describe('scenario', () => {
 })
 
 describe('distractors', () => {
-  it('gives neighbours and double for numbers', () => { expect(distractors('10', [], 's')).toEqual(['9', '11', '20']) })
-  it('takes up to two distinct pool strings, then pads', () => {
-    expect(distractors('a', ['a', 'b', 'b', 'c', 'd'], 's')).toEqual(['b', 'c'])
-    expect(distractors('a', ['b'], 's')).toEqual(['b', 'None of these'])
-    expect(distractors('a', [], 's')).toEqual(['None of these'])
+  it('gives a count its nearest whole numbers, none below zero', () => {
+    expect(neighbours('10')).toEqual(['9', '11', '12'])
+    expect(neighbours('1')).toEqual(['0', '2', '3'])
+    expect(neighbours('0')).toEqual(['1', '2', '3'])
+  })
+  it('gives no neighbours where they are not plausible: years, prices, signed or padded numbers, and text', () => {
+    for (const expected of ['2024', '19.99', '-3', '007', 'Team', '']) expect(neighbours(expected), expected).toBeUndefined()
   })
   it('shuffles the choices the same way for the same seed and keeps all of them', () => {
     const a = shuffleChoices('x', ['p', 'q', 'r'], 'seed'), b = shuffleChoices('x', ['p', 'q', 'r'], 'seed')
@@ -47,14 +50,33 @@ describe('distractors', () => {
     expect([...a].sort()).toEqual(['p', 'q', 'r', 'x'])
     expect(new Set(['a', 'b', 'c', 'd', 'e', 'f'].map(s => shuffleChoices('x', ['p', 'q', 'r'], s)[0])).size).toBeGreaterThan(1)
   })
-  it('compiles generated distractors from the other answers in the study', () => {
+  it('pads nothing: a text answer has no distractors until the snapshot holds them, and the study is a draft until then', () => {
     study('s', { users: 'people' }, () => {
       task('one', {}, () => participant.answer('Q1', { expected: 'red' }))
       task('two', {}, () => participant.answer('Q2', { expected: 'blue' }))
     })
-    const [one] = compileStudy(getStudies()[0], {}).goals
-    expect([...one.answer!.choices].sort()).toEqual(['None of these', 'blue', 'red'])
-    expect(compileStudy(getStudies()[0], {}).goals[0].answer!.choices).toEqual(one.answer!.choices)
+    const made = compileWithSnapshot(getStudies()[0], {})
+    expect(made.compiled.goals.map(g => g.answer!.choices)).toEqual([['red'], ['blue']])
+    expect(made.needs.distractors).toEqual({ Q1: 'red', Q2: 'blue' })
+    expect(made.compiled.draft).toBe(true)
+  })
+  it('reads the distractors from the snapshot while they were drafted from the expected answer', () => {
+    study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('Q1', { expected: 'red' })) })
+    const entry = (from: string): StudySnapshot => ({ decoys: {}, groups: [], screens: [], distractors: { Q1: { from, value: ['green', 'yellow', 'orange'], source: 'model' } } })
+    expect([...compileWithSnapshot(getStudies()[0], {}, entry('red')).compiled.goals[0].answer!.choices].sort()).toEqual(['green', 'orange', 'red', 'yellow'])
+    expect(compileWithSnapshot(getStudies()[0], {}, entry('crimson')).compiled.goals[0].answer!.choices).toEqual(['red'])
+  })
+  it('gives a count its neighbours before the snapshot holds them, and asks the snapshot to show them for review', () => {
+    study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('How many people did you invite?', { expected: '3' })) })
+    const made = compileWithSnapshot(getStudies()[0], {})
+    expect([...made.compiled.goals[0].answer!.choices].sort()).toEqual(['2', '3', '4', '5'])
+    expect(made.needs.distractors).toEqual({ 'How many people did you invite?': '3' })
+  })
+  it('needs nothing drafted for distractors the author wrote', () => {
+    study('s', { users: 'people' }, () => { task('one', {}, () => participant.answer('Q1', { expected: 'red', distractors: ['blue'] })) })
+    const made = compileWithSnapshot(getStudies()[0], {})
+    expect([...made.compiled.goals[0].answer!.choices].sort()).toEqual(['blue', 'red'])
+    expect(made.needs.distractors).toEqual({})
   })
 })
 

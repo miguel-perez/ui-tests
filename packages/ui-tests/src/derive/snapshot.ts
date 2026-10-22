@@ -10,7 +10,10 @@ import type { SaysSource } from './impression.ts'
  */
 export type Drafted<T> = { from: unknown; value: T | null; source: string }
 
-/** Everything about one study's screener and first look that was drafted for the author to review, and the screens it renders to. */
+/**
+ * Everything about one study's screener, first look and task questions that was drafted for the author to review, and the screens it
+ * renders to. `distractors` holds the wrong answers of each task question by its words, drafted from its expected answer.
+ */
 export type StudySnapshot = {
   are?: Drafted<string>
   purpose?: Drafted<string>
@@ -20,10 +23,14 @@ export type StudySnapshot = {
   decoys: { role?: Drafted<string[]>; uses?: Drafted<string[]>; not?: Drafted<string[]> }
   groups: { name: string; quota: number; source: string }[]
   screens: CompiledScreenerQuestion[]
+  distractors?: Record<string, Drafted<string[]>>
 }
 export type SnapshotFile = { version: 1; studies: Record<string, StudySnapshot> }
 
-/** What each drafted item must have been drafted from for the snapshot to be current; absent when the study needs no such item. */
+/**
+ * What each drafted item must have been drafted from for the snapshot to be current; absent when the study needs no such item.
+ * `distractors` maps each task question whose distractors the author did not write to its expected answer.
+ */
 export type DraftNeeds = {
   are?: string
   purpose?: string
@@ -31,7 +38,11 @@ export type DraftNeeds = {
   language?: string
   often?: string
   decoys: { role?: string[]; uses?: string[]; not?: string[] }
+  distractors: Record<string, string>
 }
+
+/** How lint names the distractors of a task question. */
+export const distractorsOf = (question: string) => `distractors of ${JSON.stringify(question)}`
 
 /** The snapshot file of a study file: next to it, like a Vitest snapshot. */
 export const snapshotFileOf = (studyFile: string) => `${studyFile}.screener.snap`
@@ -84,6 +95,7 @@ function needed(needs: DraftNeeds): [string, unknown, (s: StudySnapshot) => Draf
   if (needs.language !== undefined) items.push(['users.language', needs.language, s => s.language])
   if (needs.often !== undefined) items.push(['often', needs.often, s => s.often])
   for (const kind of ['role', 'uses', 'not'] as const) if (needs.decoys[kind]) items.push([`decoys.${kind}`, needs.decoys[kind], s => s.decoys?.[kind]])
+  for (const [question, expected] of Object.entries(needs.distractors)) items.push([distractorsOf(question), expected, s => s.distractors?.[question]])
   return items
 }
 

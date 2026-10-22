@@ -35,6 +35,8 @@ export function planLines(compiled: CompiledStudy): string[] {
     `Sample: ${compiled.sample.n} people. ${compiled.sample.sentence}`,
     ...(compiled.groups.length > 1 ? [`Groups: ${compiled.groups.map(g => `${g.name} ${g.quota}`).join(', ')}, each reported on its own`] : []),
     ...compiled.goals.map(g => `Task ${g.index + 1}: ${g.name} (up to ${minutesOf(g.timeout.seconds)})`),
+    // Each task question with its choices in the order shown, so the author reviews the distractors beside the right answer.
+    ...compiled.goals.flatMap(g => g.answer ? [`Task ${g.index + 1} asks ${JSON.stringify(g.answer.question)}: ${g.answer.choices.map(c => c === g.answer!.expected ? `${c} (expected)` : c).join(', ')}${g.answer.choices.length < 2 ? '; no distractors yet, ui-tests lint -u drafts them' : ''}`] : []),
     ...(compiled.actors.includes('human') ? [`Screener: ${compiled.screener.length} ${compiled.screener.length === 1 ? 'screen' : 'screens'} before consent${compiled.draft ? ' (draft: the snapshot is missing or out of date; ui-tests lint -u drafts it)' : ''}`] : []),
     `First look: ${compiled.impression.on ? `a tour of ${compiled.impression.page}, coded against ${compiled.impression.says === null ? 'what the page says (not read yet)' : `"${compiled.impression.says}" (${compiled.impression.source})`}` : 'off'}`,
     recording,

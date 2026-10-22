@@ -1,22 +1,16 @@
 import { createHash } from 'node:crypto'
 
-const numeric = /^-?\d+(\.\d+)?$/
-export const noneOfThese = 'None of these'
+/** A count: a whole number from 0 to 999 written without leading zeros, whose neighbours are plausible wrong answers. */
+const count = /^(0|[1-9]\d{0,2})$/
 
 /**
- * Wrong answers for a question with `expected`. A number gives its neighbours and double; text gives up to two
- * distinct other strings from `pool`, then one "None of these" if fewer than two were found. `seed` is accepted so
- * callers pass one rule for everything seeded; the choice here is deterministic from the inputs alone.
+ * The wrong answers for a count: the nearest whole numbers to it, none below zero. Undefined for anything else (a year, a price, a
+ * code, text), whose distractors the author writes or the model drafts into the snapshot.
  */
-export function distractors(expected: string, pool: string[], _seed: string): string[] {
-  if (numeric.test(expected.trim())) {
-    const value = Number(expected)
-    return [value - 1, value + 1, value * 2].map(String)
-  }
-  const picked: string[] = []
-  for (const candidate of pool) if (candidate !== expected && !picked.includes(candidate) && picked.length < 2) picked.push(candidate)
-  if (picked.length < 2 && expected !== noneOfThese) picked.push(noneOfThese)
-  return picked
+export function neighbours(expected: string): string[] | undefined {
+  if (!count.test(expected)) return undefined
+  const value = Number(expected)
+  return (value === 0 ? [1, 2, 3] : [value - 1, value + 1, value + 2]).map(String)
 }
 
 function random(seed: string): () => number {

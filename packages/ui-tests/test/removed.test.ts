@@ -34,6 +34,26 @@ const removed: [string, RegExp][] = [
   ['matches and outside as the record of a match', /screenerResult\.(matches|outside)|\bmatches: (true|false), outside:/],
 ]
 
+/** Issue #84 removes the generic padding of a task's wrong answers: the pool of other answers, "None of these", and double a number. */
+const removedByDistractors: [string, RegExp][] = [
+  ['the pool of other answers', /\banswerPool\b|from the other answers in the study/],
+  ['the "None of these" padding', /\bnoneOfThese\b/],
+  ['neighbours and double', /neighbours and double|value \* 2\b/],
+  ['distractors from the generator', /distractors from the generator|generated distractors/],
+]
+
+describe('what issue #84 removes', () => {
+  it('is gone from the source, the docs that spec it, and the tests', async () => {
+    const scanned = [...await files('packages/ui-tests'), ...await files('apps/web'), ...await files('tests'), ...await files('docs/prd'), ...await files('docs/design'), 'docs/story-map.md']
+    const hits: string[] = []
+    for (const file of scanned) {
+      const text = await readFile(join(root, file), 'utf8')
+      for (const [what, pattern] of removedByDistractors) if (pattern.test(text)) hits.push(`${file}: ${what}`)
+    }
+    expect(hits).toEqual([])
+  })
+})
+
 describe('what issue #81 removes', () => {
   it('is gone from the source, the types, the record schema, the report, the docs that spec it, and the tests', async () => {
     const scanned = [...await files('packages/ui-tests'), ...await files('apps/web'), ...await files('tests'), ...await files('docs/prd'), ...await files('docs/design')]

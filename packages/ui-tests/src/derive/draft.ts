@@ -1,7 +1,8 @@
 import { NO_MODEL, type TextModel } from '../model.ts'
 import { pageLanguage, pageSays } from './impression.ts'
+import { neighbours } from './distractors.ts'
 import { areFromDid, toSecondPerson } from './person.ts'
-import { current, type DraftNeeds, type Drafted, type StudySnapshot } from './snapshot.ts'
+import { current, distractorsOf, type DraftNeeds, type Drafted, type StudySnapshot } from './snapshot.ts'
 
 /** Something `lint -u` could not draft, and why; the author writes it into the snapshot. */
 export type NotDrafted = { item: string; reason: string }
@@ -22,6 +23,15 @@ const PROMPTS: Record<keyof typeof DECOYS, (from: string[], did: string, product
     `The people it looks for ${did}. Write ${DECOYS.not} other first-person statements in the same register and length that would apply to many of those people ` +
     'and exclude nobody, so the exclusions do not stand out. Do not mention the product, testing, research, or what the study is for.',
 }
+
+/** How many wrong answers a task question gets: with the right one, four choices. */
+const DISTRACTORS = 3
+
+const distractorPrompt = (question: string, expected: string, did: string, product: string) =>
+  `After a task in a usability study of ${product}, each person is asked "${question}". The right answer is ${JSON.stringify(expected)}. ` +
+  (did ? `The people taking part ${did}. ` : '') +
+  `Write ${DISTRACTORS} wrong answers of the same kind, form and length as the right one, each something a person who did not finish the task ` +
+  'could believe, so the right answer does not stand out. None may be the right answer or mean the same.'
 
 /** A JSON array of non-empty strings in a model's reply; undefined when there is none. */
 function readList(reply: string): string[] | undefined {
@@ -55,8 +65,8 @@ export type DraftInput = {
 /**
  * Drafts what a study's snapshot needs, keeping every item still drafted from what the study says (the author may have edited it):
  * `are` and the "you" form of the purpose by shifting the person, `says` from the start page, the decoys and whether `did` is repeated
- * from the configured model. What cannot be drafted is written as null and named; nothing generic stands in. `screens` is left to the
- * caller, which renders it from the result.
+ * from the configured model, and each task question's distractors (a count's neighbours, else from the model). What cannot be drafted
+ * is written as null and named; nothing generic stands in. `screens` is left to the caller, which renders it from the result.
  */
 export async function draftSnapshot(input: DraftInput): Promise<{ entry: StudySnapshot; notDrafted: NotDrafted[] }> {
   const { needs, previous, model } = input
@@ -113,9 +123,23 @@ export async function draftSnapshot(input: DraftInput): Promise<{ entry: StudySn
     entry.decoys[kind] = { from, value: decoys?.length ? decoys : null, source: decoys?.length ? 'model' : 'not drafted' }
     if (!decoys?.length) notDrafted.push({ item: `decoys.${kind}`, reason: 'error' in answer ? answer.error : 'the model reply was not a list' })
   }
-  // In reading order: who, what for, what the page says, then the screener's drafts, the groups and the screens.
+
+  // A count's neighbours are drafted by rule, for the author to review; every other answer's by the model.
+  const distractors: Record<string, Drafted<string[]>> = {}
+  for (const [question, expected] of Object.entries(needs.distractors)) {
+    const kept = keep(previous?.distractors?.[question], expected)
+    if (kept) { distractors[question] = kept; continue }
+    const near = neighbours(expected)
+    if (near) { distractors[question] = { from: expected, value: near, source: 'neighbours of a count' }; continue }
+    const answer = model ? await ask(model, `${distractorPrompt(question, expected, input.did, input.product)}\nReply with only a JSON array of strings.`) : { error: input.noModel ?? NO_MODEL }
+    const list = 'reply' in answer ? readList(answer.reply) : undefined
+    const wrong = list?.filter((d, i) => d.toLowerCase() !== expected.toLowerCase() && list.findIndex(o => o.toLowerCase() === d.toLowerCase()) === i).slice(0, DISTRACTORS)
+    distractors[question] = { from: expected, value: wrong?.length ? wrong : null, source: wrong?.length ? 'model' : 'not drafted' }
+    if (!wrong?.length) notDrafted.push({ item: distractorsOf(question), reason: 'error' in answer ? answer.error : 'the model reply was not a list' })
+  }
+  // In reading order: who, what for, what the page says, then the screener's drafts, the groups and the screens, then the tasks' distractors.
   const { are, purpose, says, language, often, decoys, groups, screens } = entry
-  return { entry: { ...(are && { are }), ...(purpose && { purpose }), ...(says && { says }), ...(language && { language }), ...(often && { often }), decoys, groups, screens }, notDrafted }
+  return { entry: { ...(are && { are }), ...(purpose && { purpose }), ...(says && { says }), ...(language && { language }), ...(often && { often }), decoys, groups, screens, ...(Object.keys(distractors).length > 0 && { distractors }) }, notDrafted }
 }
 
 /** The start page's HTML; the reason when it cannot be read. */
