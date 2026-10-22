@@ -283,6 +283,22 @@ describe('openReachableTunnel', () => {
     expect(await outcome).toBe('https://new-name.trycloudflare.com did not answer within 120 seconds')
     expect(closed).toBe(true)
   })
+
+  it('ends a probe that hangs by the deadline, not a longer second try after it', async () => {
+    let tries = 0
+    const hangs = ((_url: string, init: RequestInit) => {
+      tries++
+      return new Promise((_resolve, reject) => { init.signal!.addEventListener('abort', () => reject(init.signal!.reason)) })
+    }) as unknown as typeof fetch
+    const started = Date.now()
+    const outcome = await openReachableTunnel({
+      tunnel: { open: async () => ({ url: 'https://hangs.trycloudflare.com', close: async () => {} }) },
+      localUrl: 'http://127.0.0.1:1', fetch: hangs, waitMs: 400,
+    }).then(() => 'answered', (error: Error) => error.message)
+    expect(outcome).toBe('https://hangs.trycloudflare.com did not answer within 0.4 seconds')
+    expect(Date.now() - started).toBeLessThan(700)
+    expect(tries).toBeLessThanOrEqual(2)
+  })
 })
 
 const sample = `2026-10-19T10:00:00Z INF Thank you for trying Cloudflare Tunnel.

@@ -23,6 +23,18 @@ type Opened = { url: string; close(): Promise<void> }
 /** How long `recruit --tunnel` waits for a new address to answer: a fresh quick-tunnel name took about 80 seconds to resolve. */
 export const TUNNEL_WAIT_MS = 120_000
 
+/** The probe's timeouts cut to `leftMs`, so its tries together (a timed-out try leads to the next) end by the deadline; at least one 1 ms try. */
+function probeTimeouts(leftMs: number): number[] {
+  let budget = Math.max(1, leftMs)
+  const timeouts: number[] = []
+  for (const ms of PROBE_TIMEOUTS_MS) {
+    if (budget <= 0) break
+    timeouts.push(Math.min(ms, budget))
+    budget -= ms
+  }
+  return timeouts
+}
+
 /**
  * Opens the tunnel to `localUrl` (for `recruit`, the front door, so the app and the ui-tests server share its address) and waits up to
  * `waitMs` until the address answers, so a tunnel that started but serves nothing fails before a run exists. `onWaiting` hears the
@@ -34,9 +46,7 @@ export async function openReachableTunnel(input: { tunnel: Tunnel; localUrl: str
   const deadline = Date.now() + waitMs
   try {
     for (let waiting = false; ; waiting = true) {
-      // No single try runs past the deadline.
-      const left = Math.max(1, deadline - Date.now())
-      if (await checkReachable(opened.url, input.fetch, PROBE_TIMEOUTS_MS.map(ms => Math.min(ms, left)))) return opened
+      if (await checkReachable(opened.url, input.fetch, probeTimeouts(deadline - Date.now()))) return opened
       if (Date.now() >= deadline) break
       if (!waiting) input.onWaiting?.(opened.url)
       await new Promise(resolve => setTimeout(resolve, Math.min(retryMs, deadline - Date.now())))
